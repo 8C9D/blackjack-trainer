@@ -1,0 +1,34 @@
+export type Suit = 'spades' | 'hearts' | 'diamonds' | 'clubs';
+
+export type Rank =
+  | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10'
+  | 'J' | 'Q' | 'K' | 'A';
+
+export interface Card {
+  readonly rank: Rank;
+  readonly suit: Suit;
+}
+
+export const ALL_RANKS: readonly Rank[] = [
+  '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A',
+] as const;
+
+export const ALL_SUITS: readonly Suit[] = [
+  'spades', 'hearts', 'diamonds', 'clubs',
+] as const;
+
+export function isTenValue(card: Card): boolean {
+  return card.rank === '10' || card.rank === 'J' || card.rank === 'Q' || card.rank === 'K';
+}
+
+export function isAce(card: Card): boolean {
+  return card.rank === 'A';
+}
+
+// Returns the card's blackjack value, treating aces as 11. Hand-total
+// computation softens aces from 11 to 1 separately.
+export function cardHighValue(card: Card): number {
+  if (isAce(card)) return 11;
+  if (isTenValue(card)) return 10;
+  return Number(card.rank);
+}
