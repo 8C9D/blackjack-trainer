@@ -1,6 +1,5 @@
 import { Component, computed, HostListener, inject, signal } from '@angular/core';
 
-import type { Card } from '../../core/models/card.model';
 import {
   ACTION_LABELS,
   type Action,
@@ -13,6 +12,7 @@ import {
   CardGeneratorService,
   type Scenario,
 } from '../../core/services/card-generator.service';
+import { BlackjackTableComponent } from './blackjack-table.component';
 
 interface SessionStats {
   readonly attempts: number;
@@ -32,19 +32,11 @@ const KEYBOARD_BINDINGS: Readonly<Record<string, Action>> = {
   i: 'INS',
 };
 
-const SUIT_GLYPH: Readonly<Record<Card['suit'], string>> = {
-  spades: '♠',
-  hearts: '♥',
-  diamonds: '♦',
-  clubs: '♣',
-};
-
-// Slice 1 placeholder: text-rendered cards, plain controls, ephemeral stats.
-// Slice 2 will swap text cards for cardsJS images. Slice 3 will extract
-// sub-components and persist stats to localStorage.
+// Slice 3 will extract the controls / actions / feedback / stats into their
+// own components and persist stats to localStorage.
 @Component({
   selector: 'app-basic-strategy-page',
-  imports: [],
+  imports: [BlackjackTableComponent],
   template: `
     <div class="page">
       <header class="page__header">
@@ -96,21 +88,10 @@ const SUIT_GLYPH: Readonly<Record<Card['suit'], string>> = {
         </fieldset>
       </section>
 
-      <section class="hand hand--dealer" aria-label="Dealer hand">
-        <h2>Dealer</h2>
-        <div class="cards">
-          <div class="card">{{ formatCard(scenario().dealerUpcard) }}</div>
-          <div class="card card--face-down" aria-label="Face-down card">?</div>
-        </div>
-      </section>
-
-      <section class="hand hand--player" aria-label="Player hand">
-        <h2>Player</h2>
-        <div class="cards">
-          <div class="card">{{ formatCard(scenario().player[0]) }}</div>
-          <div class="card">{{ formatCard(scenario().player[1]) }}</div>
-        </div>
-      </section>
+      <app-blackjack-table
+        [player]="scenario().player"
+        [dealerUpcard]="scenario().dealerUpcard"
+      />
 
       <section class="actions" aria-label="Player actions">
         @for (a of actions; track a) {
@@ -223,10 +204,6 @@ export class BasicStrategyPageComponent {
   protected nextHand(): void {
     this.scenario.set(this.generator.generate());
     this.result.set(null);
-  }
-
-  protected formatCard(card: Card): string {
-    return `${card.rank}${SUIT_GLYPH[card.suit]}`;
   }
 
   protected labelFor(action: Action): string {
