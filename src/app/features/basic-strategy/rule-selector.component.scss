@@ -1,0 +1,32 @@
+.rule-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+
+  &__group {
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    padding: 0.5rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    legend {
+      padding: 0 0.35rem;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.75;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+  }
+}
