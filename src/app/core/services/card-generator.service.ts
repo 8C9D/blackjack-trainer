@@ -23,14 +23,23 @@ export class CardGeneratorService {
 
   generate(): Scenario {
     return {
-      player: [this.randomCard(), this.randomCard()],
-      dealerUpcard: this.randomCard(),
+      player: [this.generateCard(), this.generateCard()],
+      dealerUpcard: this.generateCard(),
     };
   }
 
-  private randomCard(): Card {
+  // A single random card drawn with replacement. Shared by both trainers so
+  // they get the same `setRandomSource()` test seam.
+  generateCard(): Card {
     const rank = ALL_RANKS[Math.floor(this.random() * ALL_RANKS.length)];
     const suit = ALL_SUITS[Math.floor(this.random() * ALL_SUITS.length)];
     return { rank, suit };
+  }
+
+  // A sequence of N independently-drawn random cards (with replacement).
+  generateSequence(n: number): Card[] {
+    const cards: Card[] = [];
+    for (let i = 0; i < n; i++) cards.push(this.generateCard());
+    return cards;
   }
 }
