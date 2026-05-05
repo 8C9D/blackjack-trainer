@@ -1,0 +1,58 @@
+.settings {
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem 0.85rem;
+  margin-bottom: 1.25rem;
+
+  legend {
+    padding: 0 0.35rem;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.75;
+  }
+
+  &__fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.9rem;
+
+    span {
+      opacity: 0.85;
+    }
+
+    input {
+      width: 7rem;
+      padding: 0.3rem 0.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.25);
+      color: white;
+      font-size: 1rem;
+
+      &:focus-visible {
+        outline: 2px solid rgba(255, 255, 255, 0.85);
+        outline-offset: 2px;
+      }
+    }
+  }
+
+  &__errors {
+    margin: 0.75rem 0 0;
+    padding-left: 1.25rem;
+    color: #ffcdd2;
+    font-size: 0.85rem;
+  }
+
+  &[disabled] {
+    opacity: 0.6;
+  }
+}
