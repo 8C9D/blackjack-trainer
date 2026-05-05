@@ -1,0 +1,60 @@
+.answer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1rem 0 1.5rem;
+
+  &__label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+
+    input {
+      width: 8rem;
+      padding: 0.5rem 0.75rem;
+      font-size: 1.4rem;
+      text-align: center;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.25);
+      color: white;
+      font-variant-numeric: tabular-nums;
+
+      &:focus-visible {
+        outline: 2px solid rgba(255, 255, 255, 0.85);
+        outline-offset: 2px;
+      }
+    }
+  }
+
+  &__submit {
+    background: white;
+    color: #0f4a2c;
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem 1.1rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid rgba(255, 255, 255, 0.95);
+      outline-offset: 2px;
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+  }
+
+  &__hint {
+    margin-left: 0.3rem;
+    font-size: 0.75rem;
+    opacity: 0.6;
+    font-weight: 400;
+  }
+}
