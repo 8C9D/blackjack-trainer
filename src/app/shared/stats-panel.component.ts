@@ -1,6 +1,6 @@
 import { Component, computed, input, output } from '@angular/core';
 
-import type { SessionStats } from '../core/services/stats.service';
+import type { SessionStats } from '../core/services/stats-store';
 
 @Component({
   selector: 'app-stats-panel',

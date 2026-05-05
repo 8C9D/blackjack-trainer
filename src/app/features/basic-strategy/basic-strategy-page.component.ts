@@ -7,11 +7,11 @@ import {
   type RuleSet,
 } from '../../core/models/strategy.model';
 import { BasicStrategyEngineService } from '../../core/services/basic-strategy-engine.service';
+import { BasicStrategyStatsService } from '../../core/services/basic-strategy-stats.service';
 import {
   CardGeneratorService,
   type Scenario,
 } from '../../core/services/card-generator.service';
-import { StatsService } from '../../core/services/stats.service';
 import { StatsPanelComponent } from '../../shared/stats-panel.component';
 import { ActionButtonsComponent } from './action-buttons.component';
 import { BlackjackTableComponent } from './blackjack-table.component';
@@ -78,7 +78,7 @@ const KEYBOARD_BINDINGS: Readonly<Record<string, Action>> = {
 export class BasicStrategyPageComponent {
   private readonly engine = inject(BasicStrategyEngineService);
   private readonly generator = inject(CardGeneratorService);
-  protected readonly statsService = inject(StatsService);
+  protected readonly statsService = inject(BasicStrategyStatsService);
 
   protected readonly ruleSet = signal<RuleSet>('S17');
   protected readonly options = signal<EngineOptions>({
