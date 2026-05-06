@@ -6,7 +6,7 @@ import {
   CARD_COUNTING_STATS_KEY,
   CardCountingStatsService,
 } from './card-counting-stats.service';
-import { StatsStore } from './stats-store';
+import { StatsStore, cleanupLegacyStatsKeys } from './stats-store';
 
 const TEST_KEY = 'test-stats-store';
 
@@ -126,5 +126,30 @@ describe('Stats service subclasses', () => {
     expect(a.stats().correct).toBe(3);
     expect(b.stats().attempts).toBe(1);
     expect(b.stats().correct).toBe(0);
+  });
+});
+
+describe('cleanupLegacyStatsKeys', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('removes the v1 stats key if present', () => {
+    localStorage.setItem('blackjack-trainer:stats:v1', '{"attempts":5}');
+    cleanupLegacyStatsKeys();
+    expect(localStorage.getItem('blackjack-trainer:stats:v1')).toBeNull();
+  });
+
+  it('is a no-op when the legacy key is absent', () => {
+    expect(() => cleanupLegacyStatsKeys()).not.toThrow();
+    expect(localStorage.getItem('blackjack-trainer:stats:v1')).toBeNull();
+  });
+
+  it('does not touch current-version keys', () => {
+    localStorage.setItem(BASIC_STRATEGY_STATS_KEY, '{"attempts":3,"correct":3,"streak":3,"longestStreak":3}');
+    localStorage.setItem(CARD_COUNTING_STATS_KEY, '{"attempts":2,"correct":1,"streak":0,"longestStreak":1}');
+    cleanupLegacyStatsKeys();
+    expect(localStorage.getItem(BASIC_STRATEGY_STATS_KEY)).not.toBeNull();
+    expect(localStorage.getItem(CARD_COUNTING_STATS_KEY)).not.toBeNull();
   });
 });
