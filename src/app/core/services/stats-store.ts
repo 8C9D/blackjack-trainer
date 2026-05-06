@@ -1,5 +1,20 @@
 import { signal, type Signal } from '@angular/core';
 
+// Stats keys from earlier versions that are no longer read. Bootstrap calls
+// cleanupLegacyStatsKeys() once to wipe them so they don't accumulate in
+// localStorage. Drop this list (and the helper below) once no installations
+// of those versions remain.
+const LEGACY_STATS_KEYS: readonly string[] = [
+  'blackjack-trainer:stats:v1',
+];
+
+export function cleanupLegacyStatsKeys(): void {
+  if (typeof localStorage === 'undefined') return;
+  for (const key of LEGACY_STATS_KEYS) {
+    localStorage.removeItem(key);
+  }
+}
+
 export interface SessionStats {
   readonly attempts: number;
   readonly correct: number;
