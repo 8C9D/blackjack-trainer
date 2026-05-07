@@ -4,9 +4,10 @@ import type { Card } from '../models/card.model';
 import {
   MAX_CARDS_PER_DRILL,
   MIN_MILLISECONDS_BETWEEN_CARDS,
-  type CountingDrillResult,
   type CountingDrillSettings,
+  type RunningCountDrillResult,
   type SettingsValidation,
+  type TrueCountDrillResult,
 } from '../models/card-counting.model';
 import type { CountingSystem } from '../models/counting-system.model';
 
@@ -21,6 +22,13 @@ export class CountingEngineService {
     return total;
   }
 
+  // True count = running count / decks remaining, truncated toward zero.
+  // Truncation (not floor) is the standard convention: a running count of
+  // -5 over 2 decks should round to -2, not -3.
+  trueCount(runningCount: number, decksRemaining: number): number {
+    return Math.trunc(runningCount / decksRemaining);
+  }
+
   // Compare the user's claimed running count to the true count for the
   // sequence. The result also includes the cards so the UI can show a
   // breakdown without recomputing.
@@ -28,13 +36,35 @@ export class CountingEngineService {
     cards: readonly Card[],
     userRunningCount: number,
     system: CountingSystem,
-  ): CountingDrillResult {
+  ): RunningCountDrillResult {
     const correctRunningCount = this.runningCount(cards, system);
     return {
+      mode: 'running-count',
       cards,
       correctRunningCount,
       userRunningCount,
       isCorrect: userRunningCount === correctRunningCount,
+    };
+  }
+
+  // Compare the user's claimed true count against the truncated true count
+  // derived from the sequence's running count and the given decks remaining.
+  evaluateTrueCount(
+    cards: readonly Card[],
+    userTrueCount: number,
+    decksRemaining: number,
+    system: CountingSystem,
+  ): TrueCountDrillResult {
+    const correctRunningCount = this.runningCount(cards, system);
+    const correctTrueCount = this.trueCount(correctRunningCount, decksRemaining);
+    return {
+      mode: 'true-count',
+      cards,
+      correctRunningCount,
+      decksRemaining,
+      correctTrueCount,
+      userTrueCount,
+      isCorrect: userTrueCount === correctTrueCount,
     };
   }
 
@@ -55,6 +85,16 @@ export class CountingEngineService {
       errors.push('Time between cards must be a number.');
     } else if (settings.millisecondsBetweenCards < MIN_MILLISECONDS_BETWEEN_CARDS) {
       errors.push(`Time between cards must be at least ${MIN_MILLISECONDS_BETWEEN_CARDS}ms.`);
+    }
+
+    // Decks remaining is only required when the user is being asked for a
+    // true count. In running-count mode it has no bearing on the drill.
+    if (settings.mode === 'true-count') {
+      if (!Number.isFinite(settings.decksRemaining)) {
+        errors.push('Decks remaining must be a number.');
+      } else if (settings.decksRemaining <= 0) {
+        errors.push('Decks remaining must be greater than 0.');
+      }
     }
 
     return { valid: errors.length === 0, errors };

@@ -9,8 +9,8 @@ import {
 
 import type { Card } from '../../core/models/card.model';
 import type {
-  CountingDrillResult,
   CountingDrillSettings,
+  RunningCountDrillResult,
 } from '../../core/models/card-counting.model';
 import { HI_LO } from '../../data/counting-systems';
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
@@ -98,12 +98,14 @@ export class CardCountingPageComponent {
 
   protected readonly state = signal<DrillState>('idle');
   protected readonly settings = signal<CountingDrillSettings>({
+    mode: 'running-count',
     numberOfCards: 20,
     millisecondsBetweenCards: 1000,
+    decksRemaining: 1,
   });
   protected readonly cards = signal<readonly Card[]>([]);
   protected readonly currentIndex = signal(0);
-  protected readonly result = signal<CountingDrillResult | null>(null);
+  protected readonly result = signal<RunningCountDrillResult | null>(null);
 
   protected readonly currentCard = computed<Card | null>(() => {
     const list = this.cards();
