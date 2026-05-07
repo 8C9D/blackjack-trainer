@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 
 import type { Card } from '../models/card.model';
 import {
+  MAX_CARDS_PER_DRILL,
   MIN_MILLISECONDS_BETWEEN_CARDS,
   type CountingDrillResult,
   type CountingDrillSettings,
@@ -46,6 +47,8 @@ export class CountingEngineService {
       errors.push('Number of cards must be a whole number.');
     } else if (settings.numberOfCards < 1) {
       errors.push('Number of cards must be at least 1.');
+    } else if (settings.numberOfCards > MAX_CARDS_PER_DRILL) {
+      errors.push(`Number of cards must be at most ${MAX_CARDS_PER_DRILL}.`);
     }
 
     if (!Number.isFinite(settings.millisecondsBetweenCards)) {
