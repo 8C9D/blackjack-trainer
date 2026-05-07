@@ -1,12 +1,12 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 
-import type { CountingDrillResult } from '../../core/models/card-counting.model';
+import type { RunningCountDrillResult } from '../../core/models/card-counting.model';
 import type { CountingSystem } from '../../core/models/counting-system.model';
 import { CardImageComponent } from '../../shared/card-image.component';
 
 interface BreakdownEntry {
   readonly index: number;
-  readonly card: CountingDrillResult['cards'][number];
+  readonly card: RunningCountDrillResult['cards'][number];
   readonly deltaLabel: string;
   readonly runningTotal: number;
 }
@@ -62,7 +62,7 @@ interface BreakdownEntry {
   styleUrl: './count-feedback-panel.component.scss',
 })
 export class CountFeedbackPanelComponent {
-  readonly result = input.required<CountingDrillResult>();
+  readonly result = input.required<RunningCountDrillResult>();
   readonly system = input.required<CountingSystem>();
   readonly next = output<void>();
 
