@@ -1,4 +1,5 @@
 import type { Card, Rank } from '../models/card.model';
+import { MAX_CARDS_PER_DRILL } from '../models/card-counting.model';
 import { HI_LO } from '../../data/counting-systems';
 import { CardGeneratorService } from './card-generator.service';
 import { CountingEngineService } from './counting-engine.service';
@@ -145,6 +146,23 @@ describe('CountingEngineService', () => {
     it('rejects NaN card counts', () => {
       const v = engine.validateSettings({ numberOfCards: NaN, millisecondsBetweenCards: 500 });
       expect(v.valid).toBe(false);
+    });
+
+    it(`accepts the boundary maximum of exactly MAX_CARDS_PER_DRILL (${MAX_CARDS_PER_DRILL})`, () => {
+      const v = engine.validateSettings({
+        numberOfCards: MAX_CARDS_PER_DRILL,
+        millisecondsBetweenCards: 500,
+      });
+      expect(v.valid).toBe(true);
+    });
+
+    it('rejects card counts above MAX_CARDS_PER_DRILL', () => {
+      const v = engine.validateSettings({
+        numberOfCards: MAX_CARDS_PER_DRILL + 1,
+        millisecondsBetweenCards: 500,
+      });
+      expect(v.valid).toBe(false);
+      expect(v.errors.some((e) => e.includes(String(MAX_CARDS_PER_DRILL)))).toBe(true);
     });
 
     it('rejects sub-100ms timing', () => {

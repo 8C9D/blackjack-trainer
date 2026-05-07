@@ -58,8 +58,11 @@ Navigate to `/basic-strategy` or `/card-counting` (top nav links).
   own `localStorage` key, with a per-trainer reset button.
 - **Real card images** — 52 SVGs + face-down back from
   [richardschneider/cardsJS](https://github.com/richardschneider/cardsJS).
-- **Routing + top nav** — switch trainers without losing in-memory state
-  for the other.
+- **Routing + top nav** — switch trainers via the top nav. Each route's
+  component is destroyed and recreated by Angular's router, so in-memory
+  drill state (current cards, in-progress answer, current hand) is reset
+  on navigation. Only persisted session stats survive route changes,
+  since they're rehydrated from `localStorage` on component reinit.
 
 ## Tech stack
 
