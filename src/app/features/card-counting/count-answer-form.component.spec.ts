@@ -25,6 +25,20 @@ describe('CountAnswerFormComponent', () => {
     });
   });
 
+  it('defaults to the running-count prompt label', () => {
+    const fixture = TestBed.createComponent(CountAnswerFormComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('running count');
+    expect(fixture.nativeElement.textContent).not.toContain('true count');
+  });
+
+  it('renders the true-count prompt label when mode is true-count', () => {
+    const fixture = TestBed.createComponent(CountAnswerFormComponent);
+    fixture.componentRef.setInput('mode', 'true-count');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('true count');
+  });
+
   it('disables Submit when input is empty', () => {
     const fixture = TestBed.createComponent(CountAnswerFormComponent);
     fixture.detectChanges();

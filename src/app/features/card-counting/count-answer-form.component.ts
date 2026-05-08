@@ -4,11 +4,13 @@ import {
   afterNextRender,
   computed,
   inject,
+  input,
   output,
   signal,
   viewChild,
 } from '@angular/core';
 
+import type { DrillMode } from '../../core/models/card-counting.model';
 import { CountingEngineService } from '../../core/services/counting-engine.service';
 
 @Component({
@@ -16,7 +18,7 @@ import { CountingEngineService } from '../../core/services/counting-engine.servi
   template: `
     <form class="answer" (submit)="onSubmit($event)">
       <label class="answer__label">
-        <span>What is the running count?</span>
+        <span>{{ promptLabel() }}</span>
         <input
           #input
           type="number"
@@ -39,10 +41,14 @@ export class CountAnswerFormComponent {
   private readonly engine = inject(CountingEngineService);
   private readonly inputRef = viewChild.required<ElementRef<HTMLInputElement>>('input');
 
+  readonly mode = input<DrillMode>('running-count');
   readonly answer = output<number>();
 
   protected readonly raw = signal('');
   protected readonly canSubmit = computed(() => this.engine.isValidIntegerAnswer(this.raw()));
+  protected readonly promptLabel = computed(() =>
+    this.mode() === 'true-count' ? 'What is the true count?' : 'What is the running count?',
+  );
 
   constructor() {
     afterNextRender(() => {
