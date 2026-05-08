@@ -8,14 +8,17 @@ import {
 } from '@angular/core';
 
 import type { Card } from '../../core/models/card.model';
-import type {
-  CountingDrillSettings,
-  RunningCountDrillResult,
+import {
+  DECKS_REMAINING_PRESETS,
+  type CountingDrillResult,
+  type CountingDrillSettings,
+  type DrillMode,
 } from '../../core/models/card-counting.model';
 import { HI_LO } from '../../data/counting-systems';
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
 import { CardGeneratorService } from '../../core/services/card-generator.service';
 import { CountingEngineService } from '../../core/services/counting-engine.service';
+import { TrueCountStatsService } from '../../core/services/true-count-stats.service';
 import { StatsPanelComponent } from '../../shared/stats-panel.component';
 import { CardStreamComponent } from './card-stream.component';
 import { CountAnswerFormComponent } from './count-answer-form.component';
@@ -41,12 +44,17 @@ type DrillState = 'idle' | 'streaming' | 'answering' | 'feedback';
       </header>
 
       <app-counting-settings
+        [mode]="settings().mode"
         [numberOfCards]="settings().numberOfCards"
         [millisecondsBetweenCards]="settings().millisecondsBetweenCards"
+        [decksRemaining]="settings().decksRemaining"
+        [decksRemainingPresets]="decksRemainingPresets"
         [errors]="validationErrors()"
         [disabled]="isDrillActive()"
+        (modeChange)="updateMode($event)"
         (numberOfCardsChange)="updateNumberOfCards($event)"
         (millisecondsBetweenCardsChange)="updateMs($event)"
+        (decksRemainingChange)="updateDecksRemaining($event)"
       />
 
       @if (state() === 'idle') {
@@ -70,7 +78,10 @@ type DrillState = 'idle' | 'streaming' | 'answering' | 'feedback';
       }
 
       @if (state() === 'answering') {
-        <app-count-answer-form (answer)="onAnswer($event)" />
+        <app-count-answer-form
+          [mode]="settings().mode"
+          (answer)="onAnswer($event)"
+        />
       }
 
       @if (state() === 'feedback' && result(); as r) {
@@ -82,8 +93,8 @@ type DrillState = 'idle' | 'streaming' | 'answering' | 'feedback';
       }
 
       <app-stats-panel
-        [stats]="statsService.stats()"
-        (reset)="statsService.reset()"
+        [stats]="activeStats()"
+        (reset)="resetActiveStats()"
       />
     </div>
   `,
@@ -92,9 +103,14 @@ type DrillState = 'idle' | 'streaming' | 'answering' | 'feedback';
 export class CardCountingPageComponent {
   private readonly cardGenerator = inject(CardGeneratorService);
   private readonly engine = inject(CountingEngineService);
+  // statsService is the running-count store; trueCountStatsService is the
+  // true-count store. They're persisted under separate keys and only the
+  // active mode's stats are visible at a time.
   protected readonly statsService = inject(CardCountingStatsService);
+  protected readonly trueCountStatsService = inject(TrueCountStatsService);
 
   protected readonly system = HI_LO;
+  protected readonly decksRemainingPresets = DECKS_REMAINING_PRESETS;
 
   protected readonly state = signal<DrillState>('idle');
   protected readonly settings = signal<CountingDrillSettings>({
@@ -105,7 +121,7 @@ export class CardCountingPageComponent {
   });
   protected readonly cards = signal<readonly Card[]>([]);
   protected readonly currentIndex = signal(0);
-  protected readonly result = signal<RunningCountDrillResult | null>(null);
+  protected readonly result = signal<CountingDrillResult | null>(null);
 
   protected readonly currentCard = computed<Card | null>(() => {
     const list = this.cards();
@@ -120,6 +136,12 @@ export class CardCountingPageComponent {
   protected readonly isValid = computed(() => this.validation().valid);
   protected readonly isDrillActive = computed(
     () => this.state() === 'streaming' || this.state() === 'answering',
+  );
+
+  protected readonly activeStats = computed(() =>
+    this.settings().mode === 'true-count'
+      ? this.trueCountStatsService.stats()
+      : this.statsService.stats(),
   );
 
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -145,10 +167,26 @@ export class CardCountingPageComponent {
 
   protected onAnswer(userCount: number): void {
     if (this.state() !== 'answering') return;
-    const evaluated = this.engine.evaluate(this.cards(), userCount, this.system);
-    this.result.set(evaluated);
+    const s = this.settings();
+    if (s.mode === 'true-count') {
+      const evaluated = this.engine.evaluateTrueCount(
+        this.cards(),
+        userCount,
+        s.decksRemaining,
+        this.system,
+      );
+      this.result.set(evaluated);
+      this.trueCountStatsService.recordAttempt(evaluated.isCorrect);
+    } else {
+      const evaluated = this.engine.evaluate(this.cards(), userCount, this.system);
+      this.result.set(evaluated);
+      this.statsService.recordAttempt(evaluated.isCorrect);
+    }
     this.state.set('feedback');
-    this.statsService.recordAttempt(evaluated.isCorrect);
+  }
+
+  protected updateMode(mode: DrillMode): void {
+    this.settings.update((s) => ({ ...s, mode }));
   }
 
   protected updateNumberOfCards(n: number): void {
@@ -157,6 +195,18 @@ export class CardCountingPageComponent {
 
   protected updateMs(n: number): void {
     this.settings.update((s) => ({ ...s, millisecondsBetweenCards: n }));
+  }
+
+  protected updateDecksRemaining(n: number): void {
+    this.settings.update((s) => ({ ...s, decksRemaining: n }));
+  }
+
+  protected resetActiveStats(): void {
+    if (this.settings().mode === 'true-count') {
+      this.trueCountStatsService.reset();
+    } else {
+      this.statsService.reset();
+    }
   }
 
   private scheduleAdvance(): void {
@@ -188,7 +238,16 @@ export class CardCountingPageComponent {
     if (event.key !== 'Enter') return;
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     const target = event.target as HTMLElement | null;
-    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+    // Don't hijack Enter while focus is on a form control — radio buttons,
+    // number inputs, and the decks-remaining select all use Enter natively.
+    if (
+      target &&
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT')
+    ) {
+      return;
+    }
     if (this.state() === 'idle' && this.isValid()) {
       event.preventDefault();
       this.start();

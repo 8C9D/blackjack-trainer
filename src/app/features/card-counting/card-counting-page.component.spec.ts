@@ -1,28 +1,39 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
-import type { CountingDrillSettings } from '../../core/models/card-counting.model';
+import type {
+  CountingDrillResult,
+  CountingDrillSettings,
+  DrillMode,
+} from '../../core/models/card-counting.model';
 import { CardCountingPageComponent } from './card-counting-page.component';
 
 // The page component exposes its signals and methods as `protected` for
 // TypeScript's sake; at runtime they're just properties. This mirror lets
 // the tests read/poke them without scattering `as any` casts.
+type StatsLike = {
+  stats(): { attempts: number; correct: number; streak: number; longestStreak: number };
+  reset(): void;
+};
+
 type Internals = {
   state(): 'idle' | 'streaming' | 'answering' | 'feedback';
   settings(): CountingDrillSettings;
   cards(): readonly unknown[];
   currentIndex(): number;
-  result(): unknown;
+  result(): CountingDrillResult | null;
   isValid(): boolean;
   isDrillActive(): boolean;
-  statsService: {
-    stats(): { attempts: number; correct: number; streak: number; longestStreak: number };
-    reset(): void;
-  };
+  statsService: StatsLike;
+  trueCountStatsService: StatsLike;
+  activeStats(): { attempts: number; correct: number; streak: number; longestStreak: number };
   start(): void;
   onAnswer(n: number): void;
+  updateMode(m: DrillMode): void;
   updateNumberOfCards(n: number): void;
   updateMs(n: number): void;
+  updateDecksRemaining(n: number): void;
+  resetActiveStats(): void;
   timeoutId: ReturnType<typeof setTimeout> | null;
 };
 
@@ -272,6 +283,151 @@ describe('CardCountingPageComponent', () => {
         streak: 0,
         longestStreak: 0,
       });
+    });
+  });
+
+  describe('mode and decks-remaining wiring', () => {
+    it('defaults to running-count mode', () => {
+      const { c } = createPage();
+      expect(c.settings().mode).toBe('running-count');
+    });
+
+    it('updateMode() switches the mode signal', () => {
+      const { c } = createPage();
+      c.updateMode('true-count');
+      expect(c.settings().mode).toBe('true-count');
+      c.updateMode('running-count');
+      expect(c.settings().mode).toBe('running-count');
+    });
+
+    it('updateDecksRemaining() updates the decks-remaining signal', () => {
+      const { c } = createPage();
+      c.updateDecksRemaining(2);
+      expect(c.settings().decksRemaining).toBe(2);
+    });
+  });
+
+  describe('answer evaluation by mode', () => {
+    it('running-count mode evaluates as a running-count result', () => {
+      const { c } = createPage();
+      c.updateNumberOfCards(2);
+      c.updateMs(100);
+      c.start();
+      vi.advanceTimersByTime(200);
+      c.onAnswer(0);
+      const r = c.result();
+      expect(r).not.toBeNull();
+      expect(r!.mode).toBe('running-count');
+    });
+
+    it('true-count mode evaluates as a true-count result', () => {
+      const { c } = createPage();
+      c.updateMode('true-count');
+      c.updateDecksRemaining(2);
+      c.updateNumberOfCards(2);
+      c.updateMs(100);
+      c.start();
+      vi.advanceTimersByTime(200);
+      c.onAnswer(0);
+      const r = c.result();
+      expect(r).not.toBeNull();
+      expect(r!.mode).toBe('true-count');
+      if (r && r.mode === 'true-count') {
+        expect(r.decksRemaining).toBe(2);
+      }
+    });
+  });
+
+  describe('stats routing by mode', () => {
+    it('records running-count attempts on CardCountingStatsService only', () => {
+      const { c } = createPage();
+      c.updateNumberOfCards(1);
+      c.updateMs(100);
+      c.start();
+      vi.advanceTimersByTime(100);
+      c.onAnswer(0);
+      expect(c.statsService.stats().attempts).toBe(1);
+      expect(c.trueCountStatsService.stats().attempts).toBe(0);
+    });
+
+    it('records true-count attempts on TrueCountStatsService only', () => {
+      const { c } = createPage();
+      c.updateMode('true-count');
+      c.updateDecksRemaining(2);
+      c.updateNumberOfCards(1);
+      c.updateMs(100);
+      c.start();
+      vi.advanceTimersByTime(100);
+      c.onAnswer(0);
+      expect(c.trueCountStatsService.stats().attempts).toBe(1);
+      expect(c.statsService.stats().attempts).toBe(0);
+    });
+
+    it('activeStats() reflects the currently selected mode', () => {
+      const { c } = createPage();
+      c.updateNumberOfCards(1);
+      c.updateMs(100);
+      // Record one RC attempt.
+      c.start();
+      vi.advanceTimersByTime(100);
+      c.onAnswer(0);
+      expect(c.activeStats().attempts).toBe(1);
+      // Switching to true-count should swap the visible stats.
+      c.updateMode('true-count');
+      expect(c.activeStats().attempts).toBe(0);
+      // And switching back should bring RC's stats back.
+      c.updateMode('running-count');
+      expect(c.activeStats().attempts).toBe(1);
+    });
+
+    it('resetActiveStats() only clears the active mode (RC)', () => {
+      const { c } = createPage();
+      c.updateNumberOfCards(1);
+      c.updateMs(100);
+      // Record one RC attempt.
+      c.start();
+      vi.advanceTimersByTime(100);
+      c.onAnswer(0);
+      // Record one TC attempt.
+      c.updateMode('true-count');
+      c.updateDecksRemaining(2);
+      c.start();
+      vi.advanceTimersByTime(100);
+      c.onAnswer(0);
+      expect(c.statsService.stats().attempts).toBe(1);
+      expect(c.trueCountStatsService.stats().attempts).toBe(1);
+      // Back to RC and reset.
+      c.updateMode('running-count');
+      c.resetActiveStats();
+      expect(c.statsService.stats().attempts).toBe(0);
+      expect(c.trueCountStatsService.stats().attempts).toBe(1);
+    });
+
+    it('resetActiveStats() only clears the active mode (TC)', () => {
+      const { c } = createPage();
+      c.updateNumberOfCards(1);
+      c.updateMs(100);
+      // Record one RC attempt, then one TC.
+      c.start();
+      vi.advanceTimersByTime(100);
+      c.onAnswer(0);
+      c.updateMode('true-count');
+      c.updateDecksRemaining(2);
+      c.start();
+      vi.advanceTimersByTime(100);
+      c.onAnswer(0);
+      // While in TC mode, reset only TC.
+      c.resetActiveStats();
+      expect(c.trueCountStatsService.stats().attempts).toBe(0);
+      expect(c.statsService.stats().attempts).toBe(1);
+    });
+
+    it('does not start when true-count settings are invalid (decksRemaining=0)', () => {
+      const { c } = createPage();
+      c.updateMode('true-count');
+      c.updateDecksRemaining(0);
+      c.start();
+      expect(c.state()).toBe('idle');
     });
   });
 });

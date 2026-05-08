@@ -37,6 +37,13 @@
     }
   }
 
+  &__formula {
+    margin: 0 0 0.75rem;
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.9;
+  }
+
   &__toggle {
     background: transparent;
     color: white;
