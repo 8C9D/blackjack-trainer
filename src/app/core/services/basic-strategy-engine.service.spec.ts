@@ -222,9 +222,13 @@ describe('BasicStrategyEngineService', () => {
       expect(engine.decide(scenario('10', '5', 'A', 'S17', { lateSurrender: true })).action).toBe('H');
     });
 
-    it('Hard 16 vs A: SUR in H17 (with LS), H in S17', () => {
+    it('Hard 16 vs A: SUR in both rule sets when LS enabled; H when LS disabled', () => {
+      // Per BJA 2024 S17/H17 charts, the LS overlay includes 16 v A in
+      // both rule sets. Without LS, 16 v A reverts to Hit per the hard chart.
       expect(engine.decide(scenario('10', '6', 'A', 'H17', { lateSurrender: true })).action).toBe('SUR');
-      expect(engine.decide(scenario('10', '6', 'A', 'S17', { lateSurrender: true })).action).toBe('H');
+      expect(engine.decide(scenario('10', '6', 'A', 'S17', { lateSurrender: true })).action).toBe('SUR');
+      expect(engine.decide(scenario('10', '6', 'A', 'H17', { lateSurrender: false })).action).toBe('H');
+      expect(engine.decide(scenario('10', '6', 'A', 'S17', { lateSurrender: false })).action).toBe('H');
     });
 
     it('Hard 17 vs A: SUR_S in H17 (with LS), S in S17', () => {
