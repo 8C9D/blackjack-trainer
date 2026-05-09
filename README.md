@@ -1,13 +1,16 @@
 # Blackjack Trainer
 
-A frontend-only Angular app for practicing two blackjack skills:
+A frontend-only Angular app for practicing three blackjack skills:
 
 1. **Basic Strategy Trainer** — initial two-card hands against H17/S17 charts
    from [Blackjack Apprenticeship](https://www.blackjackapprenticeship.com/).
-2. **Hi-Lo Card Counting Trainer** — running-count drills on random card
+2. **Hi-Lo Running Count Trainer** — running-count drills on random card
    streams of configurable length and speed.
+3. **Hi-Lo True Count Trainer** — same card streams, but the user answers the
+   true count (`runningCount / decksRemaining`, truncated toward zero) given
+   a chosen decks-remaining value.
 
-Both trainers persist independent session stats to `localStorage` and reuse
+All three modes persist independent session stats to `localStorage` and reuse
 the same card model + cardsJS images.
 
 ## Quick start
@@ -38,7 +41,19 @@ Navigate to `/basic-strategy` or `/card-counting` (top nav links).
 - **Keyboard shortcuts** — `H` / `S` / `D` / `P` / `R` (surrender) /
   `I` (insurance) for actions, `Enter` to deal the next hand.
 
-### Hi-Lo Card Counting Trainer (v2)
+### Hi-Lo Card Counting Trainer (v2 + v3)
+
+The card counting page hosts two drill modes that share the same flow. A
+mode selector switches between them at drill setup.
+
+**Running count mode (v2)** — user watches a card stream and submits the
+Hi-Lo running count at the end of the stream.
+
+**True count mode (v3)** — same card stream, plus a decks-remaining preset.
+User submits the true count, computed as
+`Math.trunc(runningCount / decksRemaining)`.
+
+#### Shared mechanics
 
 - **Hi-Lo running count** — 2–6 = +1, 7–9 = 0, 10/J/Q/K/A = −1.
 - **Configurable drill** — number of cards and time between cards (≥ 100ms).
@@ -50,6 +65,20 @@ Navigate to `/basic-strategy` or `/card-counting` (top nav links).
   feedback. The answer form has its own native Enter-to-submit.
 - **Card-by-card breakdown** — expandable view shows each card's Hi-Lo
   delta and the running total at that point.
+
+#### True count specifics
+
+- **Decks remaining presets** — `0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6`. Half-deck
+  granularity below 3 decks (where small changes swing the true count the
+  most), whole decks from 3 to 6. The selector only appears in true count
+  mode.
+- **Truncation toward zero** — the trainer scores against
+  `Math.trunc(runningCount / decksRemaining)`. Examples:
+  `5 / 2 = 2`, `-5 / 2 = -2`, `3 / 0.5 = 6`. This app uses truncation toward
+  zero for true count answers; other references may use different rounding
+  rules, and this is the convention this trainer scores against.
+- **Separate stats** — true count attempts are persisted under their own
+  `localStorage` key (see [Stats persistence](#stats-persistence)).
 
 ### Shared
 
@@ -83,7 +112,7 @@ src/app/
 │   │   ├── card.model.ts                       Rank, Suit, Card, helpers
 │   │   ├── strategy.model.ts                   Action, RuleSet, chart cell types
 │   │   ├── counting-system.model.ts            CountingSystem, CountValue
-│   │   └── card-counting.model.ts              Drill settings + result types
+│   │   └── card-counting.model.ts              Drill settings, result types, decks-remaining presets
 │   └── services/
 │       ├── basic-strategy-engine.service.ts    pure-TS strategy logic
 │       ├── basic-strategy-engine.service.spec.ts  40 engine tests
@@ -93,7 +122,8 @@ src/app/
 │       ├── stats-store.ts                      parameterized stats container
 │       ├── stats-store.spec.ts                 10 stats tests
 │       ├── basic-strategy-stats.service.ts     Basic strategy StatsStore subclass
-│       └── card-counting-stats.service.ts      Card counting StatsStore subclass
+│       ├── card-counting-stats.service.ts      Hi-Lo running count StatsStore subclass
+│       └── true-count-stats.service.ts         Hi-Lo true count StatsStore subclass
 ├── data/
 │   ├── h17-basic-strategy.ts                   BJA H17 chart (PDF linked)
 │   ├── s17-basic-strategy.ts                   BJA S17 chart (PDF linked)
@@ -151,15 +181,28 @@ Also pure TypeScript, generic over `CountingSystem` so additional systems
 
 - `runningCount(cards, system)` — sum of per-card values. Empty sequence
   returns 0. Constant time per card.
+- `trueCount(runningCount, decksRemaining)` — returns
+  `Math.trunc(runningCount / decksRemaining)`. Truncation toward zero is
+  this trainer's convention: a running count of `-5` over 2 decks rounds
+  to `-2`, not `-3`.
 - `evaluate(cards, userCount, system)` — wraps `runningCount` and returns
-  a `CountingDrillResult` carrying the cards, both counts, and `isCorrect`.
-- `validateSettings(settings)` — returns `{ valid, errors }` where `errors`
-  is the full list (number-of-cards must be a positive integer; time
-  between cards must be a finite number ≥ 100ms).
+  a `RunningCountDrillResult` carrying the cards, both counts, and
+  `isCorrect`.
+- `evaluateTrueCount(cards, userTrueCount, decksRemaining, system)` —
+  wraps `runningCount` + `trueCount` and returns a `TrueCountDrillResult`
+  carrying the cards, the running count, the decks remaining, both true
+  counts, and `isCorrect`.
+- `validateSettings(settings)` — returns `{ valid, errors }`. Cards count
+  must be a positive integer; time between cards must be ≥ 100ms. In true
+  count mode `decksRemaining` must be a finite number greater than 0; in
+  running count mode it's ignored.
 - `isValidIntegerAnswer(raw)` — drives the answer form's Submit button.
+  Same shape for both modes (signed integers; decimals rejected).
 
 Hi-Lo values are defined in `data/counting-systems.ts` with a comment
-linking to the Blackjack Apprenticeship reference.
+linking to the Blackjack Apprenticeship reference. Decks remaining
+presets are defined in `core/models/card-counting.model.ts` as
+`DECKS_REMAINING_PRESETS` (`0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6`).
 
 ## Chart encoding & assumptions (Basic Strategy)
 
@@ -197,17 +240,23 @@ Other encoding choices:
 
 ## Stats persistence
 
-Each trainer persists its own stats under a dedicated `localStorage` key
-via a `StatsStore` base class:
+Each trainer (and each card-counting mode) persists its own stats under a
+dedicated `localStorage` key via a `StatsStore` base class:
 
-| Trainer | Key |
+| Trainer / mode | Key |
 |---|---|
 | Basic Strategy | `blackjack-basic-strategy-stats` |
-| Card Counting | `blackjack-card-counting-stats` |
+| Hi-Lo Running Count | `blackjack-card-counting-stats` |
+| Hi-Lo True Count | `blackjack-true-count-stats` |
+
+The stats panel on the card counting page reflects the currently selected
+mode, and the **Reset** button only resets the active mode's stats —
+the other mode's stats are untouched. Switching modes mid-drill is blocked
+(the mode selector is disabled while a drill is in flight).
 
 Note: v2 dropped the v1 key (`blackjack-trainer:stats:v1`). If you were
 running v1 locally, your previous basic-strategy stats are orphaned in
-storage — they're not loaded by v2.
+storage — they're not loaded by v2 or v3.
 
 ## Card asset attribution
 
@@ -221,13 +270,17 @@ LGPL files are committed alongside the SVGs to preserve attribution.
 
 ## Roadmap (not yet implemented)
 
-The codebase is organized to make these additions straightforward later:
+The codebase is organized to make these additions straightforward later.
+None of the items in this list ship in the current build.
 
-- **True count** — deck-estimation + true-count drills (running count is
-  in v2).
-- **Counting deviations** — Illustrious 18, Fab 4, etc.
-- **Additional counting systems** — KO, Omega II, Wong Halves (data-only
-  addition; the engine already accepts arbitrary `CountingSystem` values).
-- **Multi-hand / shoe simulation** — playing through a real deck, not
-  independently-drawn scenarios.
-- **Accounts, online leaderboards, server-side persistence.**
+- **Deviations trainer** — drills against H17/S17 deviation charts
+  (Illustrious 18, Fab 4, etc.). **Not implemented yet** — the current
+  basic strategy trainer is count-unaware.
+- **Additional counting systems later** — KO, Omega II, Wong Halves
+  (data-only addition; the engine already accepts arbitrary
+  `CountingSystem` values).
+- **Finite shoe / deck estimation later** — playing through a real shoe
+  and estimating decks remaining from observed cards, rather than picking
+  a preset before each drill.
+- **Showdowns later** — multi-hand / dealer-resolution scenarios after
+  the count drill ends.
