@@ -1,0 +1,90 @@
+import { Component, input, output } from '@angular/core';
+
+import type { DeviationRule } from '../../core/models/deviation.model';
+import { ACTION_LABELS, type Action } from '../../core/models/strategy.model';
+
+export type DeviationEvalSource = 'insurance' | 'playing';
+
+export interface DeviationTrainerResult {
+  readonly userAction: Action;
+  readonly expectedAction: Action;
+  readonly basicAction: Action;
+  readonly trueCount: number;
+  readonly handDescription: string;
+  readonly deviationApplied: boolean;
+  readonly matchedRule?: DeviationRule;
+  readonly source: DeviationEvalSource;
+  readonly correct: boolean;
+  readonly explanation: string;
+}
+
+@Component({
+  selector: 'app-deviation-feedback-panel',
+  template: `
+    @if (result(); as r) {
+      <section
+        class="feedback"
+        [class.feedback--correct]="r.correct"
+        [class.feedback--incorrect]="!r.correct"
+        aria-live="polite"
+      >
+        <p class="feedback__verdict">
+          {{ r.correct ? 'Correct.' : 'Incorrect.' }}
+        </p>
+        <dl class="feedback__details">
+          <dt>Hand</dt>
+          <dd>{{ r.handDescription }}</dd>
+          <dt>True count</dt>
+          <dd>{{ formatTrueCount(r.trueCount) }}</dd>
+          <dt>Your action</dt>
+          <dd>{{ labelFor(r.userAction) }}</dd>
+          <dt>Correct action</dt>
+          <dd>{{ labelFor(r.expectedAction) }}</dd>
+          <dt>Basic strategy</dt>
+          <dd>{{ labelFor(r.basicAction) }}</dd>
+          <dt>Deviation applied</dt>
+          <dd>{{ r.deviationApplied ? 'Yes' : 'No' }}</dd>
+          @if (r.matchedRule; as rule) {
+            <dt>Matched rule</dt>
+            <dd>
+              {{ rule.playerHandLabel }} vs {{ rule.dealerUpcard }} —
+              {{ labelFor(rule.deviationAction) }} when
+              {{ formatThreshold(rule) }}
+            </dd>
+          }
+          <dt>Why</dt>
+          <dd>{{ r.explanation }}</dd>
+        </dl>
+        <button type="button" class="feedback__next" (click)="next.emit()">
+          Deal next hand [Enter]
+        </button>
+      </section>
+    }
+  `,
+  styleUrl: './deviation-feedback-panel.component.scss',
+})
+export class DeviationFeedbackPanelComponent {
+  readonly result = input<DeviationTrainerResult | null>(null);
+  readonly next = output<void>();
+
+  protected labelFor(action: Action): string {
+    return ACTION_LABELS[action];
+  }
+
+  protected formatTrueCount(tc: number): string {
+    return tc > 0 ? `+${tc}` : String(tc);
+  }
+
+  protected formatThreshold(rule: DeviationRule): string {
+    switch (rule.direction) {
+      case 'at-or-above':
+        return `TC ≥ ${this.formatTrueCount(rule.index)}`;
+      case 'at-or-below':
+        return `TC ≤ ${this.formatTrueCount(rule.index)}`;
+      case 'positive':
+        return 'TC > 0';
+      case 'negative':
+        return 'TC < 0';
+    }
+  }
+}

@@ -16,6 +16,11 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
         routerLink="/card-counting"
         routerLinkActive="nav__link--active"
       >Card Counting</a>
+      <a
+        class="nav__link"
+        routerLink="/deviations"
+        routerLinkActive="nav__link--active"
+      >Deviations</a>
     </nav>
     <router-outlet />
   `,
