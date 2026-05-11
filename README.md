@@ -10,9 +10,10 @@ A frontend-only Angular app for practicing four blackjack skills:
    true count (`runningCount / decksRemaining`, truncated toward zero) given
    a chosen decks-remaining value.
 4. **Deviations Trainer** — initial two-card hands against the BJA H17/S17
-   Hi-Lo deviation charts, given a randomly generated true count. Evaluates
-   the playing decision against basic strategy + the deviation overlay, plus
-   an insurance overlay when the dealer shows an Ace.
+   Hi-Lo deviation charts, with the true count either randomly generated or
+   manually entered to drill exact thresholds. Evaluates the playing
+   decision against basic strategy + the deviation overlay, plus an
+   insurance overlay when the dealer shows an Ace.
 
 All four modes persist independent session stats to `localStorage` and reuse
 the same card model + cardsJS images.
@@ -98,9 +99,15 @@ one of Hit / Stand / Double / Split / Surrender / Insurance.
   evaluator's live basic-strategy call honors both toggles, so deviations
   resolve on top of the same basic-strategy answer the trainer would give
   in v1.
-- **Random true count** — uniform integer in `[-5, +8]`, displayed above
-  the action buttons. Wide enough to exercise both negative- and
-  positive-side deviations from the BJA chart.
+- **True count source — Random or Manual.**
+  - **Random** (default) — each hand draws a fresh uniform integer in
+    `[-5, +8]`. Wide enough to exercise both negative- and positive-side
+    deviations from the BJA chart.
+  - **Manual** — type an integer in `[-20, +20]` and every dealt hand
+    uses that count until you change it. Useful for drilling exact
+    thresholds (e.g. `16 v 10` at `0`, insurance at `+3`, `15 v 10` at
+    `+4`, `13 v 2` at `-1`). Invalid input blocks the next-hand button
+    until corrected.
 - **Six action choices** — Hit, Stand, Double, Split, Surrender, Insurance.
   Insurance is treated as a single action choice rather than a separate
   pre-decision prompt.
