@@ -55,7 +55,12 @@ export interface DeviationTrainerResult {
           <dt>Why</dt>
           <dd>{{ r.explanation }}</dd>
         </dl>
-        <button type="button" class="feedback__next" (click)="next.emit()">
+        <button
+          type="button"
+          class="feedback__next"
+          [disabled]="nextDisabled()"
+          (click)="next.emit()"
+        >
           Deal next hand [Enter]
         </button>
       </section>
@@ -65,6 +70,7 @@ export interface DeviationTrainerResult {
 })
 export class DeviationFeedbackPanelComponent {
   readonly result = input<DeviationTrainerResult | null>(null);
+  readonly nextDisabled = input<boolean>(false);
   readonly next = output<void>();
 
   protected labelFor(action: Action): string {

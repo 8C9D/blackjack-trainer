@@ -25,12 +25,15 @@ import {
   DeviationFeedbackPanelComponent,
   type DeviationTrainerResult,
 } from './deviation-feedback-panel.component';
-import { DeviationSettingsComponent } from './deviation-settings.component';
+import {
+  DeviationSettingsComponent,
+  type TrueCountSource,
+} from './deviation-settings.component';
 
 // Inclusive range used for random true-count generation. Wide enough to
 // exercise both negative- and positive-side deviations from the BJA chart.
-const TC_MIN = -5;
-const TC_MAX = 8;
+export const MIN_RANDOM_TRUE_COUNT = -5;
+export const MAX_RANDOM_TRUE_COUNT = 8;
 
 const KEYBOARD_BINDINGS: Readonly<Record<string, Action>> = {
   h: 'H',
@@ -66,8 +69,12 @@ export interface DeviationScenario extends Scenario {
       <app-deviation-settings
         [ruleSet]="ruleSet()"
         [options]="options()"
+        [trueCountSource]="trueCountSource()"
+        [manualTrueCount]="manualTrueCount()"
         (ruleSetChange)="ruleSet.set($event)"
         (optionsChange)="options.set($event)"
+        (trueCountSourceChange)="setTrueCountSource($event)"
+        (manualTrueCountChange)="manualTrueCount.set($event)"
       />
 
       <app-blackjack-table
@@ -75,8 +82,8 @@ export interface DeviationScenario extends Scenario {
         [dealerUpcard]="scenario().dealerUpcard"
       />
 
-      <section class="true-count" aria-label="Current true count">
-        <span class="true-count__label">True count</span>
+      <section class="true-count" aria-label="Practice true count">
+        <span class="true-count__label">Practice true count</span>
         <span class="true-count__value">{{ formattedTrueCount() }}</span>
       </section>
 
@@ -87,6 +94,7 @@ export interface DeviationScenario extends Scenario {
 
       <app-deviation-feedback-panel
         [result]="result()"
+        [nextDisabled]="!canDealNextHand()"
         (next)="nextHand()"
       />
 
@@ -109,6 +117,10 @@ export class DeviationsPageComponent {
     doubleAfterSplit: false,
     lateSurrender: false,
   });
+  protected readonly trueCountSource = signal<TrueCountSource>('random');
+  // `null` represents an invalid user input (out of range, empty, non-integer).
+  // The page gates next-hand generation on this being non-null in manual mode.
+  protected readonly manualTrueCount = signal<number | null>(0);
   protected readonly scenario = signal<DeviationScenario>(this.generateScenario());
   protected readonly result = signal<DeviationTrainerResult | null>(null);
 
@@ -116,6 +128,21 @@ export class DeviationsPageComponent {
     const tc = this.scenario().trueCount;
     return tc > 0 ? `+${tc}` : String(tc);
   });
+
+  protected readonly canDealNextHand = computed(() => {
+    if (this.trueCountSource() === 'random') return true;
+    return this.manualTrueCount() !== null;
+  });
+
+  // Switching to manual with no current value (null from a previous invalid
+  // edit) resets to 0; otherwise the prior manual value is preserved.
+  protected setTrueCountSource(source: TrueCountSource): void {
+    if (source === this.trueCountSource()) return;
+    this.trueCountSource.set(source);
+    if (source === 'manual' && this.manualTrueCount() === null) {
+      this.manualTrueCount.set(0);
+    }
+  }
 
   protected answer(action: Action): void {
     if (this.result() !== null) return;
@@ -126,6 +153,7 @@ export class DeviationsPageComponent {
   }
 
   protected nextHand(): void {
+    if (!this.canDealNextHand()) return;
     this.scenario.set(this.generateScenario());
     this.result.set(null);
   }
@@ -195,18 +223,30 @@ export class DeviationsPageComponent {
     };
   }
 
-  // Random scenario: two-card hand and dealer upcard drawn independently,
-  // true count drawn uniformly from [TC_MIN, TC_MAX]. TODO(deviation-only):
-  // wrap this in a loop that re-rolls until resolveDeviationDecision returns
-  // deviationApplied=true, gated by a settings flag.
+  // Random scenario: two-card hand and dealer upcard drawn independently.
+  // The true count comes from `pickTrueCount`, which honors the current
+  // trueCountSource setting. TODO(deviation-only): wrap this in a loop that
+  // re-rolls until resolveDeviationDecision returns deviationApplied=true,
+  // gated by a settings flag.
   private generateScenario(): DeviationScenario {
     const base = this.cardGenerator.generate();
-    return { ...base, trueCount: this.randomTrueCount() };
+    return { ...base, trueCount: this.pickTrueCount() };
+  }
+
+  private pickTrueCount(): number {
+    if (this.trueCountSource() === 'manual') {
+      const v = this.manualTrueCount();
+      // canDealNextHand prevents callers from reaching here with a null
+      // manual value; the fallback is a defensive default rather than a
+      // user-visible path.
+      return v ?? 0;
+    }
+    return this.randomTrueCount();
   }
 
   private randomTrueCount(): number {
-    const span = TC_MAX - TC_MIN + 1;
-    return TC_MIN + Math.floor(Math.random() * span);
+    const span = MAX_RANDOM_TRUE_COUNT - MIN_RANDOM_TRUE_COUNT + 1;
+    return MIN_RANDOM_TRUE_COUNT + Math.floor(Math.random() * span);
   }
 
   @HostListener('window:keydown', ['$event'])
@@ -217,7 +257,7 @@ export class DeviationsPageComponent {
       return;
     }
     if (event.key === 'Enter') {
-      if (this.result() !== null) {
+      if (this.result() !== null && this.canDealNextHand()) {
         event.preventDefault();
         this.nextHand();
       }
