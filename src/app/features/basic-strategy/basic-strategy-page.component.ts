@@ -1,6 +1,7 @@
 import { Component, HostListener, inject, signal } from '@angular/core';
 
 import {
+  DEFAULT_ENGINE_OPTIONS,
   type Action,
   type EngineOptions,
   type EvaluationResult,
@@ -81,10 +82,7 @@ export class BasicStrategyPageComponent {
   protected readonly statsService = inject(BasicStrategyStatsService);
 
   protected readonly ruleSet = signal<RuleSet>('S17');
-  protected readonly options = signal<EngineOptions>({
-    doubleAfterSplit: false,
-    lateSurrender: false,
-  });
+  protected readonly options = signal<EngineOptions>(DEFAULT_ENGINE_OPTIONS);
   protected readonly scenario = signal<Scenario>(this.generator.generate());
   protected readonly result = signal<EvaluationResult | null>(null);
 
