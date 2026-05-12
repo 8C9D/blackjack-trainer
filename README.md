@@ -11,9 +11,10 @@ A frontend-only Angular app for practicing four blackjack skills:
    a chosen decks-remaining value.
 4. **Deviations Trainer** — initial two-card hands against the BJA H17/S17
    Hi-Lo deviation charts, with the true count either randomly generated or
-   manually entered to drill exact thresholds. Evaluates the playing
-   decision against basic strategy + the deviation overlay, plus an
-   insurance overlay when the dealer shows an Ace.
+   manually entered to drill exact thresholds. Practice all hands or
+   restrict to deviation-candidate hands. Evaluates the playing decision
+   against basic strategy + the deviation overlay, plus an insurance
+   overlay when the dealer shows an Ace.
 
 All four modes persist independent session stats to `localStorage` and reuse
 the same card model + cardsJS images.
@@ -108,6 +109,18 @@ one of Hit / Stand / Double / Split / Surrender / Insurance.
     thresholds (e.g. `16 v 10` at `0`, insurance at `+3`, `15 v 10` at
     `+4`, `13 v 2` at `-1`). Invalid input blocks the next-hand button
     until corrected.
+- **Practice mode — All hands or Deviation-only.**
+  - **All hands** (default) — random player hand, dealer upcard, and
+    true count. Most dealt hands are ordinary basic-strategy hands.
+  - **Deviation-only** — each scenario is built around a randomly chosen
+    encoded deviation rule for the current rule set, so the user
+    practices the chart cells where deviations actually matter. A
+    "Deviation candidate hand" note appears in the feedback panel.
+    Deviation-only means the *hand* has an encoded rule — the true count
+    may or may not trigger the deviation, so the user still has to
+    decide whether to apply it. Under Random true count, the count is
+    biased toward each rule's threshold (50% met / 50% unmet). Under
+    Manual true count, the typed value is used as-is.
 - **Six action choices** — Hit, Stand, Double, Split, Surrender, Insurance.
   Insurance is treated as a single action choice rather than a separate
   pre-decision prompt.
@@ -251,8 +264,9 @@ src/app/
 │   │   └── count-feedback-panel.component.ts   verdict + breakdown
 │   └── deviations/
 │       ├── deviations-page.component.ts        orchestrator (hand + TC + action eval)
-│       ├── deviation-settings.component.ts     H17/S17 + DAS + LS toggles
-│       └── deviation-feedback-panel.component.ts  result + deviation rationale
+│       ├── deviation-settings.component.ts     H17/S17 + DAS + LS + practice mode toggles
+│       ├── deviation-feedback-panel.component.ts  result + deviation rationale
+│       └── scenario-generators.ts              pure helpers for Deviation-only mode
 └── shared/
     ├── card-image.component.ts                 face-up/face-down card
     └── stats-panel.component.ts                stats + reset
@@ -399,12 +413,6 @@ LGPL files are committed alongside the SVGs to preserve attribution.
 The codebase is organized to make these additions straightforward later.
 None of the items in this list ship in the current build.
 
-- **Manual true-count override for deviations** — let the user pick the
-  true count instead of (or in addition to) a random draw, for targeted
-  drilling of specific deviation thresholds.
-- **Deviation-only mode** — re-roll random scenarios until one with a
-  matching deviation rule appears, so the user practices the chart cells
-  themselves instead of mostly basic-strategy hands.
 - **Additional counting systems later** — KO, Omega II, Wong Halves
   (data-only addition; the engine already accepts arbitrary
   `CountingSystem` values).

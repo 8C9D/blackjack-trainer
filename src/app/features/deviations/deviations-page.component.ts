@@ -1,7 +1,10 @@
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 
 import { isAce, type Card } from '../../core/models/card.model';
-import type { DeviationDecision } from '../../core/models/deviation.model';
+import type {
+  DeviationDecision,
+  DeviationRule,
+} from '../../core/models/deviation.model';
 import {
   ACTION_LABELS,
   type Action,
@@ -27,8 +30,14 @@ import {
 } from './deviation-feedback-panel.component';
 import {
   DeviationSettingsComponent,
+  type DeviationPracticeMode,
   type TrueCountSource,
 } from './deviation-settings.component';
+import {
+  generateScenarioForDeviationRule,
+  pickDeviationRule,
+  pickTrueCountForDeviationRule,
+} from './scenario-generators';
 
 // Inclusive range used for random true-count generation. Wide enough to
 // exercise both negative- and positive-side deviations from the BJA chart.
@@ -46,6 +55,10 @@ const KEYBOARD_BINDINGS: Readonly<Record<string, Action>> = {
 
 export interface DeviationScenario extends Scenario {
   readonly trueCount: number;
+  // True when this scenario was generated to match an encoded deviation
+  // rule (deviation-only practice mode). The feedback panel surfaces a
+  // small "Deviation candidate hand" note when this is set.
+  readonly generatedAsDeviationCandidate?: boolean;
 }
 
 @Component({
@@ -71,10 +84,12 @@ export interface DeviationScenario extends Scenario {
         [options]="options()"
         [trueCountSource]="trueCountSource()"
         [manualTrueCount]="manualTrueCount()"
+        [practiceMode]="practiceMode()"
         (ruleSetChange)="ruleSet.set($event)"
         (optionsChange)="options.set($event)"
         (trueCountSourceChange)="setTrueCountSource($event)"
         (manualTrueCountChange)="manualTrueCount.set($event)"
+        (practiceModeChange)="practiceMode.set($event)"
       />
 
       <app-blackjack-table
@@ -121,6 +136,7 @@ export class DeviationsPageComponent {
   // `null` represents an invalid user input (out of range, empty, non-integer).
   // The page gates next-hand generation on this being non-null in manual mode.
   protected readonly manualTrueCount = signal<number | null>(0);
+  protected readonly practiceMode = signal<DeviationPracticeMode>('all-hands');
   protected readonly scenario = signal<DeviationScenario>(this.generateScenario());
   protected readonly result = signal<DeviationTrainerResult | null>(null);
 
@@ -179,6 +195,7 @@ export class DeviationsPageComponent {
     const insurance: DeviationDecision | null = dealerAce
       ? this.deviationEngine.resolveInsuranceDecision(scenario.trueCount, this.ruleSet())
       : null;
+    const isDeviationCandidate = scenario.generatedAsDeviationCandidate === true;
 
     if (insurance && insurance.deviationApplied) {
       // Insurance is offered before the playing decision and dominates when
@@ -196,6 +213,7 @@ export class DeviationsPageComponent {
         matchedRule,
         source: 'insurance',
         correct,
+        isDeviationCandidate,
         explanation: correct
           ? `Take insurance: dealer shows an Ace and the true count is ${formatTC(scenario.trueCount)} (≥ +3 makes insurance +EV).`
           : `Take insurance: dealer shows an Ace and the true count is ${formatTC(scenario.trueCount)} (≥ +3 makes insurance +EV). You picked ${ACTION_LABELS[userAction]}.`,
@@ -214,6 +232,7 @@ export class DeviationsPageComponent {
       matchedRule: playing.matchedRule,
       source: 'playing',
       correct,
+      isDeviationCandidate,
       explanation: explainPlaying({
         dealerAce,
         userAction,
@@ -223,12 +242,26 @@ export class DeviationsPageComponent {
     };
   }
 
-  // Random scenario: two-card hand and dealer upcard drawn independently.
-  // The true count comes from `pickTrueCount`, which honors the current
-  // trueCountSource setting. TODO(deviation-only): wrap this in a loop that
-  // re-rolls until resolveDeviationDecision returns deviationApplied=true,
-  // gated by a settings flag.
+  // Generates the next scenario. In 'all-hands' mode the player hand and
+  // dealer upcard are drawn independently and the true count comes from
+  // `pickTrueCount`. In 'deviation-only' mode the scenario is built around
+  // a randomly chosen encoded deviation rule for the current rule set; the
+  // true count is biased toward the rule's threshold (50% met / 50% unmet)
+  // so the user still has to decide whether the deviation applies.
   private generateScenario(): DeviationScenario {
+    if (this.practiceMode() === 'deviation-only') {
+      const rule = pickDeviationRule(this.ruleSet(), Math.random);
+      const { player, dealerUpcard } = generateScenarioForDeviationRule({
+        rule,
+        random: Math.random,
+      });
+      return {
+        player,
+        dealerUpcard,
+        trueCount: this.pickTrueCountForRule(rule),
+        generatedAsDeviationCandidate: true,
+      };
+    }
     const base = this.cardGenerator.generate();
     return { ...base, trueCount: this.pickTrueCount() };
   }
@@ -242,6 +275,18 @@ export class DeviationsPageComponent {
       return v ?? 0;
     }
     return this.randomTrueCount();
+  }
+
+  private pickTrueCountForRule(rule: DeviationRule): number {
+    if (this.trueCountSource() === 'manual') {
+      return this.manualTrueCount() ?? 0;
+    }
+    return pickTrueCountForDeviationRule(
+      rule,
+      Math.random,
+      MIN_RANDOM_TRUE_COUNT,
+      MAX_RANDOM_TRUE_COUNT,
+    );
   }
 
   private randomTrueCount(): number {
