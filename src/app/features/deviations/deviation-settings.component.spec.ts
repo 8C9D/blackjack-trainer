@@ -9,6 +9,7 @@ import {
   MAX_MANUAL_TRUE_COUNT,
   MIN_MANUAL_TRUE_COUNT,
   parseManualTrueCount,
+  type DeviationPracticeMode,
   type TrueCountSource,
 } from './deviation-settings.component';
 
@@ -18,6 +19,7 @@ function createSettings(
     options: EngineOptions;
     trueCountSource: TrueCountSource;
     manualTrueCount: number | null;
+    practiceMode: DeviationPracticeMode;
   }> = {},
 ): ComponentFixture<DeviationSettingsComponent> {
   const fixture = TestBed.createComponent(DeviationSettingsComponent);
@@ -32,6 +34,7 @@ function createSettings(
     'manualTrueCount',
     overrides.manualTrueCount === undefined ? 0 : overrides.manualTrueCount,
   );
+  ref.setInput('practiceMode', overrides.practiceMode ?? 'all-hands');
   fixture.detectChanges();
   return fixture;
 }
@@ -238,6 +241,54 @@ describe('DeviationSettingsComponent', () => {
       fixture.componentRef.setInput('manualTrueCount', null);
       fixture.detectChanges();
       expect(input.value).toBe('99');
+    });
+  });
+
+  describe('practice mode controls', () => {
+    it('renders both practice-mode radios', () => {
+      const fixture = createSettings();
+      const radios = fixture.nativeElement.querySelectorAll(
+        'input[type=radio][name=deviation-practiceMode]',
+      ) as NodeListOf<HTMLInputElement>;
+      expect(radios.length).toBe(2);
+      const values = Array.from(radios).map((r) => r.value);
+      expect(values).toEqual(['all-hands', 'deviation-only']);
+    });
+
+    it('marks the active practice-mode radio as checked', () => {
+      const fixture = createSettings({ practiceMode: 'deviation-only' });
+      const all = fixture.nativeElement.querySelector(
+        'input[type=radio][name=deviation-practiceMode][value="all-hands"]',
+      ) as HTMLInputElement;
+      const dev = fixture.nativeElement.querySelector(
+        'input[type=radio][name=deviation-practiceMode][value="deviation-only"]',
+      ) as HTMLInputElement;
+      expect(all.checked).toBe(false);
+      expect(dev.checked).toBe(true);
+    });
+
+    it('emits practiceModeChange when a mode radio is selected', () => {
+      const fixture = createSettings({ practiceMode: 'all-hands' });
+      let received: DeviationPracticeMode | undefined;
+      fixture.componentInstance.practiceModeChange.subscribe((m) => {
+        received = m;
+      });
+      const dev = fixture.nativeElement.querySelector(
+        'input[type=radio][name=deviation-practiceMode][value="deviation-only"]',
+      ) as HTMLInputElement;
+      dev.checked = true;
+      dev.dispatchEvent(new Event('change'));
+      expect(received).toBe('deviation-only');
+    });
+
+    it('renders the help text describing what deviation-only means', () => {
+      const fixture = createSettings();
+      const help = fixture.nativeElement.querySelector(
+        '#deviation-practice-mode-help',
+      ) as HTMLElement | null;
+      expect(help).not.toBeNull();
+      expect(help!.textContent).toContain('Deviation-only');
+      expect(help!.textContent).toContain('encoded deviation rule');
     });
   });
 

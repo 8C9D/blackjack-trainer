@@ -20,6 +20,14 @@
     font-weight: 700;
   }
 
+  &__candidate {
+    margin: -0.25rem 0 0.5rem;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.85;
+  }
+
   &__details {
     margin: 0 0 0.75rem;
     display: grid;

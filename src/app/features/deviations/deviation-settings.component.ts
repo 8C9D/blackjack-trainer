@@ -7,6 +7,11 @@ import type {
 
 export type TrueCountSource = 'random' | 'manual';
 
+// 'all-hands' preserves the v4 behavior (uniformly-random hand + dealer
+// upcard). 'deviation-only' generates hands matching an encoded deviation
+// rule so the user practices chart cells where deviations are relevant.
+export type DeviationPracticeMode = 'all-hands' | 'deviation-only';
+
 // Inclusive validation range for the manual true-count input. Wide enough to
 // cover any plausible deviation threshold (the BJA charts top out at +6) while
 // still rejecting obvious garbage like 999.
@@ -57,6 +62,37 @@ export const MAX_MANUAL_TRUE_COUNT = 20;
           />
           Late Surrender
         </label>
+      </fieldset>
+
+      <fieldset class="deviation-settings__group">
+        <legend>Practice mode</legend>
+        <label>
+          <input
+            type="radio"
+            name="deviation-practiceMode"
+            value="all-hands"
+            [checked]="practiceMode() === 'all-hands'"
+            (change)="practiceModeChange.emit('all-hands')"
+          />
+          All hands
+        </label>
+        <label>
+          <input
+            type="radio"
+            name="deviation-practiceMode"
+            value="deviation-only"
+            [checked]="practiceMode() === 'deviation-only'"
+            (change)="practiceModeChange.emit('deviation-only')"
+          />
+          Deviation-only
+        </label>
+        <p
+          id="deviation-practice-mode-help"
+          class="deviation-settings__help"
+        >
+          Deviation-only generates hands that have an encoded deviation rule.
+          The true count may or may not trigger the deviation.
+        </p>
       </fieldset>
 
       <fieldset class="deviation-settings__group deviation-settings__group--tc">
@@ -121,11 +157,13 @@ export class DeviationSettingsComponent {
   readonly options = input.required<EngineOptions>();
   readonly trueCountSource = input.required<TrueCountSource>();
   readonly manualTrueCount = input.required<number | null>();
+  readonly practiceMode = input.required<DeviationPracticeMode>();
 
   readonly ruleSetChange = output<RuleSet>();
   readonly optionsChange = output<EngineOptions>();
   readonly trueCountSourceChange = output<TrueCountSource>();
   readonly manualTrueCountChange = output<number | null>();
+  readonly practiceModeChange = output<DeviationPracticeMode>();
 
   // `null` means "not yet typed since the manual input mounted" → fall back to
   // displaying the parent's `manualTrueCount`. Once the user types anything,
