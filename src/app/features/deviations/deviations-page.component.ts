@@ -7,6 +7,7 @@ import type {
 } from '../../core/models/deviation.model';
 import {
   ACTION_LABELS,
+  DEFAULT_ENGINE_OPTIONS,
   type Action,
   type EngineOptions,
   type RuleSet,
@@ -128,10 +129,7 @@ export class DeviationsPageComponent {
   protected readonly statsService = inject(DeviationStatsService);
 
   protected readonly ruleSet = signal<RuleSet>('S17');
-  protected readonly options = signal<EngineOptions>({
-    doubleAfterSplit: false,
-    lateSurrender: false,
-  });
+  protected readonly options = signal<EngineOptions>(DEFAULT_ENGINE_OPTIONS);
   protected readonly trueCountSource = signal<TrueCountSource>('random');
   // `null` represents an invalid user input (out of range, empty, non-integer).
   // The page gates next-hand generation on this being non-null in manual mode.
