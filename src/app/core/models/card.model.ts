@@ -32,3 +32,10 @@ export function cardHighValue(card: Card): number {
   if (isTenValue(card)) return 10;
   return Number(card.rank);
 }
+
+// Initial two-card deal: the player's two cards plus the dealer's upcard.
+// Shared by the trainers' scenario generators.
+export interface Scenario {
+  readonly player: readonly [Card, Card];
+  readonly dealerUpcard: Card;
+}
