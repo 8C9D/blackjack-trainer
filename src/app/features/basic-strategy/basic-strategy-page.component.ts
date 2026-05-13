@@ -1,5 +1,6 @@
 import { Component, HostListener, inject, signal } from '@angular/core';
 
+import type { Scenario } from '../../core/models/card.model';
 import {
   DEFAULT_ENGINE_OPTIONS,
   type Action,
@@ -9,10 +10,7 @@ import {
 } from '../../core/models/strategy.model';
 import { BasicStrategyEngineService } from '../../core/services/basic-strategy-engine.service';
 import { BasicStrategyStatsService } from '../../core/services/basic-strategy-stats.service';
-import {
-  CardGeneratorService,
-  type Scenario,
-} from '../../core/services/card-generator.service';
+import { CardGeneratorService } from '../../core/services/card-generator.service';
 import { StatsPanelComponent } from '../../shared/stats-panel.component';
 import { ActionButtonsComponent } from './action-buttons.component';
 import { BlackjackTableComponent } from './blackjack-table.component';

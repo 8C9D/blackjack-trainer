@@ -3,6 +3,10 @@ import { provideRouter } from '@angular/router';
 
 import type { Card, Rank, Suit } from '../../core/models/card.model';
 import type {
+  DeviationScenario,
+  DeviationTrainerResult,
+} from '../../core/models/deviation.model';
+import type {
   EngineOptions,
   RuleSet,
 } from '../../core/models/strategy.model';
@@ -10,9 +14,7 @@ import {
   DeviationsPageComponent,
   MAX_RANDOM_TRUE_COUNT,
   MIN_RANDOM_TRUE_COUNT,
-  type DeviationScenario,
 } from './deviations-page.component';
-import type { DeviationTrainerResult } from './deviation-feedback-panel.component';
 import type {
   DeviationPracticeMode,
   TrueCountSource,
