@@ -8,6 +8,7 @@
 // with the user-selected TrueCountSource (random/manual).
 
 import {
+  ALL_RANKS,
   ALL_SUITS,
   type Card,
   type Rank,
@@ -160,21 +161,18 @@ function makeAnyTwoCards(random: () => number): readonly [Card, Card] {
 function randomAnyCard(random: () => number): Card {
   // Drawn from the full 13 ranks (A and ten-value variants included) so
   // insurance scenarios show realistic player hands.
-  const allRanks: readonly Rank[] = [
-    '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A',
-  ];
   return {
-    rank: allRanks[Math.floor(random() * allRanks.length)],
+    rank: ALL_RANKS[Math.floor(random() * ALL_RANKS.length)],
     suit: randomSuit(random),
   };
 }
 
-// value: 2..9 → that rank; 10 → random of '10' | 'J' | 'Q' | 'K'; 11 → 'A'.
+// value: 2..9 → that rank; 10 → random of '10' | 'J' | 'Q' | 'K'.
+// Callers (makeHardTotalCards, makeSoftTotalCards) only ever pass values in
+// 2..10; Aces are produced by makeSoftTotalCards / makePairCards directly.
 function cardOfValue(value: number, random: () => number): Card {
   let rank: Rank;
-  if (value === 11) {
-    rank = 'A';
-  } else if (value === 10) {
+  if (value === 10) {
     const tens: readonly Rank[] = ['10', 'J', 'Q', 'K'];
     rank = tens[Math.floor(random() * tens.length)];
   } else {
