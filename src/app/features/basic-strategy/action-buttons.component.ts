@@ -1,18 +1,10 @@
 import { Component, input, output } from '@angular/core';
 
+import { ACTION_KEY_HINTS } from '../../core/keyboard';
 import {
   ACTION_LABELS,
   type Action,
 } from '../../core/models/strategy.model';
-
-const KEY_HINTS: Readonly<Record<Action, string>> = {
-  H: 'H',
-  S: 'S',
-  D: 'D',
-  P: 'P',
-  SUR: 'R',
-  INS: 'I',
-};
 
 @Component({
   selector: 'app-action-buttons',
@@ -44,6 +36,6 @@ export class ActionButtonsComponent {
   }
 
   protected keyHintFor(a: Action): string {
-    return KEY_HINTS[a];
+    return ACTION_KEY_HINTS[a];
   }
 }

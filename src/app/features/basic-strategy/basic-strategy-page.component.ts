@@ -1,5 +1,6 @@
 import { Component, HostListener, inject, signal } from '@angular/core';
 
+import { actionForKey, shouldIgnoreKeyboardEvent } from '../../core/keyboard';
 import type { Scenario } from '../../core/models/card.model';
 import {
   DEFAULT_ENGINE_OPTIONS,
@@ -16,17 +17,6 @@ import { ActionButtonsComponent } from './action-buttons.component';
 import { BlackjackTableComponent } from './blackjack-table.component';
 import { FeedbackPanelComponent } from './feedback-panel.component';
 import { RuleSelectorComponent } from './rule-selector.component';
-
-// Keyboard letter → Action. Enter is handled separately (advances to next
-// hand once feedback is shown).
-const KEYBOARD_BINDINGS: Readonly<Record<string, Action>> = {
-  h: 'H',
-  s: 'S',
-  d: 'D',
-  p: 'P',
-  r: 'SUR',
-  i: 'INS',
-};
 
 @Component({
   selector: 'app-basic-strategy-page',
@@ -106,12 +96,7 @@ export class BasicStrategyPageComponent {
 
   @HostListener('window:keydown', ['$event'])
   protected onKeyDown(event: KeyboardEvent): void {
-    if (event.ctrlKey || event.metaKey || event.altKey) return;
-    const target = event.target as HTMLElement | null;
-    // Don't hijack typing in form controls.
-    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-      return;
-    }
+    if (shouldIgnoreKeyboardEvent(event)) return;
     if (event.key === 'Enter') {
       if (this.result() !== null) {
         event.preventDefault();
@@ -119,7 +104,7 @@ export class BasicStrategyPageComponent {
       }
       return;
     }
-    const action = KEYBOARD_BINDINGS[event.key.toLowerCase()];
+    const action = actionForKey(event.key);
     if (action) {
       event.preventDefault();
       this.answer(action);
