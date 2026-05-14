@@ -7,6 +7,7 @@ import {
   signal,
 } from '@angular/core';
 
+import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
 import type { Card } from '../../core/models/card.model';
 import {
   DECKS_REMAINING_PRESETS,
@@ -236,18 +237,7 @@ export class CardCountingPageComponent {
   @HostListener('window:keydown', ['$event'])
   protected onKeyDown(event: KeyboardEvent): void {
     if (event.key !== 'Enter') return;
-    if (event.ctrlKey || event.metaKey || event.altKey) return;
-    const target = event.target as HTMLElement | null;
-    // Don't hijack Enter while focus is on a form control — radio buttons,
-    // number inputs, and the decks-remaining select all use Enter natively.
-    if (
-      target &&
-      (target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.tagName === 'SELECT')
-    ) {
-      return;
-    }
+    if (shouldIgnoreKeyboardEvent(event)) return;
     if (this.state() === 'idle' && this.isValid()) {
       event.preventDefault();
       this.start();
