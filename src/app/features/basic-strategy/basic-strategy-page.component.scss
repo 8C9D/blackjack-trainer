@@ -23,6 +23,14 @@
     opacity: 0.8;
     font-size: 0.95rem;
   }
+
+  &__rule-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
 }
 
 @media (max-width: 600px) {

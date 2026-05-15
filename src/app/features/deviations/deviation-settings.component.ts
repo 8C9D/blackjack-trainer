@@ -1,5 +1,6 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 
+import { RuleControlsComponent } from '../../shared/rule-controls.component';
 import type {
   EngineOptions,
   RuleSet,
@@ -20,49 +21,16 @@ export const MAX_MANUAL_TRUE_COUNT = 20;
 
 @Component({
   selector: 'app-deviation-settings',
+  imports: [RuleControlsComponent],
   template: `
     <section class="deviation-settings" aria-label="Deviation trainer settings">
-      <fieldset class="deviation-settings__group">
-        <legend>Dealer rule</legend>
-        <label>
-          <input
-            type="radio"
-            name="deviation-ruleSet"
-            [checked]="ruleSet() === 'S17'"
-            (change)="ruleSetChange.emit('S17')"
-          />
-          S17 — stand on soft 17
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="deviation-ruleSet"
-            [checked]="ruleSet() === 'H17'"
-            (change)="ruleSetChange.emit('H17')"
-          />
-          H17 — hit on soft 17
-        </label>
-      </fieldset>
-
-      <fieldset class="deviation-settings__group">
-        <legend>Table options</legend>
-        <label>
-          <input
-            type="checkbox"
-            [checked]="options().doubleAfterSplit"
-            (change)="toggle('doubleAfterSplit')"
-          />
-          Double After Split (DAS)
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            [checked]="options().lateSurrender"
-            (change)="toggle('lateSurrender')"
-          />
-          Late Surrender
-        </label>
-      </fieldset>
+      <app-rule-controls
+        name="deviation-ruleSet"
+        [ruleSet]="ruleSet()"
+        [options]="options()"
+        (ruleSetChange)="ruleSetChange.emit($event)"
+        (optionsChange)="optionsChange.emit($event)"
+      />
 
       <fieldset class="deviation-settings__group">
         <legend>Practice mode</legend>
@@ -177,11 +145,6 @@ export class DeviationSettingsComponent {
     const v = this.manualTrueCount();
     return v === null ? '' : String(v);
   });
-
-  protected toggle(key: keyof EngineOptions): void {
-    const next: EngineOptions = { ...this.options(), [key]: !this.options()[key] };
-    this.optionsChange.emit(next);
-  }
 
   protected onManualInput(event: Event): void {
     const raw = (event.target as HTMLInputElement).value;
