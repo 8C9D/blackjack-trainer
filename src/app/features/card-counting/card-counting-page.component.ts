@@ -13,7 +13,6 @@ import {
   DECKS_REMAINING_PRESETS,
   type CountingDrillResult,
   type CountingDrillSettings,
-  type DrillMode,
 } from '../../core/models/card-counting.model';
 import { HI_LO } from '../../data/counting-systems';
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
@@ -52,10 +51,10 @@ type DrillState = 'idle' | 'streaming' | 'answering' | 'feedback';
         [decksRemainingPresets]="decksRemainingPresets"
         [errors]="validationErrors()"
         [disabled]="isDrillActive()"
-        (modeChange)="updateMode($event)"
-        (numberOfCardsChange)="updateNumberOfCards($event)"
-        (millisecondsBetweenCardsChange)="updateMs($event)"
-        (decksRemainingChange)="updateDecksRemaining($event)"
+        (modeChange)="updateSetting('mode', $event)"
+        (numberOfCardsChange)="updateSetting('numberOfCards', $event)"
+        (millisecondsBetweenCardsChange)="updateSetting('millisecondsBetweenCards', $event)"
+        (decksRemainingChange)="updateSetting('decksRemaining', $event)"
       />
 
       @if (state() === 'idle') {
@@ -186,20 +185,11 @@ export class CardCountingPageComponent {
     this.state.set('feedback');
   }
 
-  protected updateMode(mode: DrillMode): void {
-    this.settings.update((s) => ({ ...s, mode }));
-  }
-
-  protected updateNumberOfCards(n: number): void {
-    this.settings.update((s) => ({ ...s, numberOfCards: n }));
-  }
-
-  protected updateMs(n: number): void {
-    this.settings.update((s) => ({ ...s, millisecondsBetweenCards: n }));
-  }
-
-  protected updateDecksRemaining(n: number): void {
-    this.settings.update((s) => ({ ...s, decksRemaining: n }));
+  protected updateSetting<K extends keyof CountingDrillSettings>(
+    key: K,
+    value: CountingDrillSettings[K],
+  ): void {
+    this.settings.update((s) => ({ ...s, [key]: value }));
   }
 
   protected resetActiveStats(): void {
