@@ -1,5 +1,6 @@
 import { Component, input, output } from '@angular/core';
 
+import { FeedbackShellComponent } from '../../shared/feedback-shell.component';
 import {
   ACTION_LABELS,
   type EvaluationResult,
@@ -7,17 +8,10 @@ import {
 
 @Component({
   selector: 'app-feedback-panel',
+  imports: [FeedbackShellComponent],
   template: `
     @if (result(); as r) {
-      <section
-        class="feedback"
-        [class.feedback--correct]="r.correct"
-        [class.feedback--incorrect]="!r.correct"
-        aria-live="polite"
-      >
-        <p class="feedback__verdict">
-          {{ r.correct ? 'Correct.' : 'Incorrect.' }}
-        </p>
+      <app-feedback-shell [correct]="r.correct" (next)="next.emit()">
         <dl class="feedback__details">
           <dt>Hand</dt>
           <dd>{{ r.handDescription }}</dd>
@@ -26,10 +20,7 @@ import {
           <dt>Why</dt>
           <dd>{{ r.reason }}</dd>
         </dl>
-        <button type="button" class="feedback__next" (click)="next.emit()">
-          Deal next hand [Enter]
-        </button>
-      </section>
+      </app-feedback-shell>
     }
   `,
   styleUrl: './feedback-panel.component.scss',

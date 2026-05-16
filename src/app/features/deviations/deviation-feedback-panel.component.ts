@@ -1,5 +1,6 @@
 import { Component, input, output } from '@angular/core';
 
+import { FeedbackShellComponent } from '../../shared/feedback-shell.component';
 import type {
   DeviationRule,
   DeviationTrainerResult,
@@ -8,17 +9,14 @@ import { ACTION_LABELS, type Action } from '../../core/models/strategy.model';
 
 @Component({
   selector: 'app-deviation-feedback-panel',
+  imports: [FeedbackShellComponent],
   template: `
     @if (result(); as r) {
-      <section
-        class="feedback"
-        [class.feedback--correct]="r.correct"
-        [class.feedback--incorrect]="!r.correct"
-        aria-live="polite"
+      <app-feedback-shell
+        [correct]="r.correct"
+        [nextDisabled]="nextDisabled()"
+        (next)="next.emit()"
       >
-        <p class="feedback__verdict">
-          {{ r.correct ? 'Correct.' : 'Incorrect.' }}
-        </p>
         @if (r.isDeviationCandidate) {
           <p class="feedback__candidate">Deviation candidate hand.</p>
         }
@@ -46,15 +44,7 @@ import { ACTION_LABELS, type Action } from '../../core/models/strategy.model';
           <dt>Why</dt>
           <dd>{{ r.explanation }}</dd>
         </dl>
-        <button
-          type="button"
-          class="feedback__next"
-          [disabled]="nextDisabled()"
-          (click)="next.emit()"
-        >
-          Deal next hand [Enter]
-        </button>
-      </section>
+      </app-feedback-shell>
     }
   `,
   styleUrl: './deviation-feedback-panel.component.scss',
