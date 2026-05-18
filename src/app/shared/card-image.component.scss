@@ -1,0 +1,18 @@
+:host {
+  display: inline-block;
+  line-height: 0;
+}
+
+.card-image {
+  display: block;
+  width: 96px;
+  aspect-ratio: 224 / 313;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+  background: white;
+  user-select: none;
+
+  &--face-down {
+    background: #1f3b8a;
+  }
+}
