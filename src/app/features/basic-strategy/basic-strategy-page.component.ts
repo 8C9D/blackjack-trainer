@@ -1,7 +1,6 @@
-import { Component, computed, HostListener, inject, signal } from '@angular/core';
+import { Component, HostListener, inject, signal } from '@angular/core';
 
 import {
-  ACTION_LABELS,
   type Action,
   type EngineOptions,
   type EvaluationResult,
@@ -12,17 +11,15 @@ import {
   CardGeneratorService,
   type Scenario,
 } from '../../core/services/card-generator.service';
+import { StatsService } from '../../core/services/stats.service';
+import { StatsPanelComponent } from '../../shared/stats-panel.component';
+import { ActionButtonsComponent } from './action-buttons.component';
 import { BlackjackTableComponent } from './blackjack-table.component';
+import { FeedbackPanelComponent } from './feedback-panel.component';
+import { RuleSelectorComponent } from './rule-selector.component';
 
-interface SessionStats {
-  readonly attempts: number;
-  readonly correct: number;
-  readonly streak: number;
-  readonly longestStreak: number;
-}
-
-const ACTION_ORDER: readonly Action[] = ['H', 'S', 'D', 'P', 'SUR', 'INS'];
-
+// Keyboard letter → Action. Enter is handled separately (advances to next
+// hand once feedback is shown).
 const KEYBOARD_BINDINGS: Readonly<Record<string, Action>> = {
   h: 'H',
   s: 'S',
@@ -32,11 +29,15 @@ const KEYBOARD_BINDINGS: Readonly<Record<string, Action>> = {
   i: 'INS',
 };
 
-// Slice 3 will extract the controls / actions / feedback / stats into their
-// own components and persist stats to localStorage.
 @Component({
   selector: 'app-basic-strategy-page',
-  imports: [BlackjackTableComponent],
+  imports: [
+    RuleSelectorComponent,
+    BlackjackTableComponent,
+    ActionButtonsComponent,
+    FeedbackPanelComponent,
+    StatsPanelComponent,
+  ],
   template: `
     <div class="page">
       <header class="page__header">
@@ -44,100 +45,32 @@ const KEYBOARD_BINDINGS: Readonly<Record<string, Action>> = {
         <p class="page__subtitle">Practice initial two-card hands.</p>
       </header>
 
-      <section class="controls" aria-label="Rule controls">
-        <fieldset class="controls__group">
-          <legend>Dealer rule</legend>
-          <label>
-            <input
-              type="radio"
-              name="ruleSet"
-              [checked]="ruleSet() === 'S17'"
-              (change)="setRuleSet('S17')"
-            />
-            S17 — stand on soft 17
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="ruleSet"
-              [checked]="ruleSet() === 'H17'"
-              (change)="setRuleSet('H17')"
-            />
-            H17 — hit on soft 17
-          </label>
-        </fieldset>
-
-        <fieldset class="controls__group">
-          <legend>Table options</legend>
-          <label>
-            <input
-              type="checkbox"
-              [checked]="options().doubleAfterSplit"
-              (change)="toggleDAS()"
-            />
-            Double After Split (DAS)
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              [checked]="options().lateSurrender"
-              (change)="toggleSurrender()"
-            />
-            Late Surrender
-          </label>
-        </fieldset>
-      </section>
+      <app-rule-selector
+        [ruleSet]="ruleSet()"
+        [options]="options()"
+        (ruleSetChange)="ruleSet.set($event)"
+        (optionsChange)="options.set($event)"
+      />
 
       <app-blackjack-table
         [player]="scenario().player"
         [dealerUpcard]="scenario().dealerUpcard"
       />
 
-      <section class="actions" aria-label="Player actions">
-        @for (a of actions; track a) {
-          <button
-            type="button"
-            class="actions__button"
-            [disabled]="result() !== null"
-            (click)="answer(a)"
-          >
-            {{ labelFor(a) }}
-            <span class="actions__hint">[{{ keyHint(a) }}]</span>
-          </button>
-        }
-      </section>
+      <app-action-buttons
+        [disabled]="result() !== null"
+        (action)="answer($event)"
+      />
 
-      @if (result(); as r) {
-        <section
-          class="feedback"
-          [class.feedback--correct]="r.correct"
-          [class.feedback--incorrect]="!r.correct"
-          aria-live="polite"
-        >
-          <p class="feedback__verdict">
-            {{ r.correct ? 'Correct.' : 'Incorrect.' }}
-          </p>
-          <dl class="feedback__details">
-            <dt>Hand</dt>
-            <dd>{{ r.handDescription }}</dd>
-            <dt>Correct action</dt>
-            <dd>{{ labelFor(r.action) }}</dd>
-            <dt>Why</dt>
-            <dd>{{ r.reason }}</dd>
-          </dl>
-          <button type="button" class="feedback__next" (click)="nextHand()">
-            Deal next hand [Enter]
-          </button>
-        </section>
-      }
+      <app-feedback-panel
+        [result]="result()"
+        (next)="nextHand()"
+      />
 
-      <section class="stats" aria-label="Session statistics">
-        <div><strong>Attempts</strong>: {{ stats().attempts }}</div>
-        <div><strong>Correct</strong>: {{ stats().correct }}</div>
-        <div><strong>Accuracy</strong>: {{ accuracyDisplay() }}</div>
-        <div><strong>Streak</strong>: {{ stats().streak }}</div>
-        <div><strong>Longest streak</strong>: {{ stats().longestStreak }}</div>
-      </section>
+      <app-stats-panel
+        [stats]="statsService.stats()"
+        (reset)="statsService.reset()"
+      />
     </div>
   `,
   styleUrl: './basic-strategy-page.component.scss',
@@ -145,8 +78,7 @@ const KEYBOARD_BINDINGS: Readonly<Record<string, Action>> = {
 export class BasicStrategyPageComponent {
   private readonly engine = inject(BasicStrategyEngineService);
   private readonly generator = inject(CardGeneratorService);
-
-  protected readonly actions = ACTION_ORDER;
+  protected readonly statsService = inject(StatsService);
 
   protected readonly ruleSet = signal<RuleSet>('S17');
   protected readonly options = signal<EngineOptions>({
@@ -155,30 +87,6 @@ export class BasicStrategyPageComponent {
   });
   protected readonly scenario = signal<Scenario>(this.generator.generate());
   protected readonly result = signal<EvaluationResult | null>(null);
-  protected readonly stats = signal<SessionStats>({
-    attempts: 0,
-    correct: 0,
-    streak: 0,
-    longestStreak: 0,
-  });
-
-  protected readonly accuracyDisplay = computed(() => {
-    const s = this.stats();
-    if (s.attempts === 0) return '—';
-    return `${Math.round((s.correct / s.attempts) * 100)}%`;
-  });
-
-  protected setRuleSet(rs: RuleSet): void {
-    this.ruleSet.set(rs);
-  }
-
-  protected toggleDAS(): void {
-    this.options.update((o) => ({ ...o, doubleAfterSplit: !o.doubleAfterSplit }));
-  }
-
-  protected toggleSurrender(): void {
-    this.options.update((o) => ({ ...o, lateSurrender: !o.lateSurrender }));
-  }
 
   protected answer(action: Action): void {
     if (this.result() !== null) return;
@@ -192,13 +100,7 @@ export class BasicStrategyPageComponent {
       action,
     );
     this.result.set(result);
-    this.stats.update((s) => {
-      const attempts = s.attempts + 1;
-      const correct = s.correct + (result.correct ? 1 : 0);
-      const streak = result.correct ? s.streak + 1 : 0;
-      const longestStreak = Math.max(s.longestStreak, streak);
-      return { attempts, correct, streak, longestStreak };
-    });
+    this.statsService.recordAttempt(result.correct);
   }
 
   protected nextHand(): void {
@@ -206,20 +108,14 @@ export class BasicStrategyPageComponent {
     this.result.set(null);
   }
 
-  protected labelFor(action: Action): string {
-    return ACTION_LABELS[action];
-  }
-
-  protected keyHint(action: Action): string {
-    for (const [key, mapped] of Object.entries(KEYBOARD_BINDINGS)) {
-      if (mapped === action) return key.toUpperCase();
-    }
-    return '';
-  }
-
   @HostListener('window:keydown', ['$event'])
   protected onKeyDown(event: KeyboardEvent): void {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
+    const target = event.target as HTMLElement | null;
+    // Don't hijack typing in form controls.
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+      return;
+    }
     if (event.key === 'Enter') {
       if (this.result() !== null) {
         event.preventDefault();
