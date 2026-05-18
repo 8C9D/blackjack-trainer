@@ -6,6 +6,7 @@ import type {
   DeviationTrainerResult,
 } from '../../core/models/deviation.model';
 import { ACTION_LABELS, type Action } from '../../core/models/strategy.model';
+import { formatTrueCount } from '../../core/services/deviation-evaluator.service';
 
 @Component({
   selector: 'app-deviation-feedback-panel',
@@ -58,9 +59,10 @@ export class DeviationFeedbackPanelComponent {
     return ACTION_LABELS[action];
   }
 
-  protected formatTrueCount(tc: number): string {
-    return tc > 0 ? `+${tc}` : String(tc);
-  }
+  // Reuse the shared true-count formatter (also used by the evaluator service
+  // and the deviations page) so the display rule lives in one place. Exposed
+  // as a field so the template and formatThreshold can call it.
+  protected readonly formatTrueCount = formatTrueCount;
 
   protected formatThreshold(rule: DeviationRule): string {
     switch (rule.direction) {
