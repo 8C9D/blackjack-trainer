@@ -1,0 +1,52 @@
+:host {
+  display: block;
+  background: #0f4a2c;
+  color: #f4f4f4;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+}
+
+.nav {
+  display: flex;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 0.6rem 1rem;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+  &__link {
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    font-size: 0.95rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 4px;
+    transition: background 0.15s ease, color 0.15s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+    }
+
+    &--active {
+      color: white;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    &:focus-visible {
+      outline: 2px solid rgba(255, 255, 255, 0.85);
+      outline-offset: 2px;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .nav {
+    gap: 0.5rem;
+    padding: 0.5rem 0.5rem;
+
+    &__link {
+      font-size: 0.9rem;
+      padding: 0.25rem 0.5rem;
+    }
+  }
+}
