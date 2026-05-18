@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { signal, type Signal } from '@angular/core';
 
 export interface SessionStats {
   readonly attempts: number;
@@ -14,16 +14,18 @@ const EMPTY_STATS: SessionStats = {
   longestStreak: 0,
 };
 
-// Bumping the suffix here will discard any previously-stored stats. Increase
-// it when the shape changes in a backwards-incompatible way.
-const STORAGE_KEY = 'blackjack-trainer:stats:v1';
+// Stats container parameterized by storage key. Concrete services
+// (BasicStrategyStatsService, CardCountingStatsService) extend this and
+// pass their key — multiple feature areas can persist independent stats
+// without sharing state.
+export class StatsStore {
+  private readonly _stats;
+  readonly stats: Signal<SessionStats>;
 
-@Injectable({ providedIn: 'root' })
-export class StatsService {
-  private readonly _stats = signal<SessionStats>(this.load());
-
-  // Read-only signal consumed by views.
-  readonly stats = this._stats.asReadonly();
+  constructor(private readonly storageKey: string) {
+    this._stats = signal<SessionStats>(this.load());
+    this.stats = this._stats.asReadonly();
+  }
 
   recordAttempt(correct: boolean): void {
     const prev = this._stats();
@@ -46,7 +48,7 @@ export class StatsService {
   private load(): SessionStats {
     if (typeof localStorage === 'undefined') return EMPTY_STATS;
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(this.storageKey);
       if (!raw) return EMPTY_STATS;
       const parsed = JSON.parse(raw) as Partial<SessionStats>;
       if (
@@ -71,7 +73,7 @@ export class StatsService {
   private persist(stats: SessionStats): void {
     if (typeof localStorage === 'undefined') return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
+      localStorage.setItem(this.storageKey, JSON.stringify(stats));
     } catch {
       // localStorage can throw on quota / private browsing; tolerate silently.
     }

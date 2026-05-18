@@ -13,8 +13,10 @@ import type {
   CountingDrillSettings,
 } from '../../core/models/card-counting.model';
 import { HI_LO } from '../../data/counting-systems';
+import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
 import { CardGeneratorService } from '../../core/services/card-generator.service';
 import { CountingEngineService } from '../../core/services/counting-engine.service';
+import { StatsPanelComponent } from '../../shared/stats-panel.component';
 import { CardStreamComponent } from './card-stream.component';
 import { CountAnswerFormComponent } from './count-answer-form.component';
 import { CountFeedbackPanelComponent } from './count-feedback-panel.component';
@@ -29,6 +31,7 @@ type DrillState = 'idle' | 'streaming' | 'answering' | 'feedback';
     CardStreamComponent,
     CountAnswerFormComponent,
     CountFeedbackPanelComponent,
+    StatsPanelComponent,
   ],
   template: `
     <div class="page">
@@ -77,6 +80,11 @@ type DrillState = 'idle' | 'streaming' | 'answering' | 'feedback';
           (next)="start()"
         />
       }
+
+      <app-stats-panel
+        [stats]="statsService.stats()"
+        (reset)="statsService.reset()"
+      />
     </div>
   `,
   styleUrl: './card-counting-page.component.scss',
@@ -84,6 +92,7 @@ type DrillState = 'idle' | 'streaming' | 'answering' | 'feedback';
 export class CardCountingPageComponent {
   private readonly cardGenerator = inject(CardGeneratorService);
   private readonly engine = inject(CountingEngineService);
+  protected readonly statsService = inject(CardCountingStatsService);
 
   protected readonly system = HI_LO;
 
@@ -133,6 +142,7 @@ export class CardCountingPageComponent {
     const evaluated = this.engine.evaluate(this.cards(), userCount, this.system);
     this.result.set(evaluated);
     this.state.set('feedback');
+    this.statsService.recordAttempt(evaluated.isCorrect);
   }
 
   protected updateNumberOfCards(n: number): void {
