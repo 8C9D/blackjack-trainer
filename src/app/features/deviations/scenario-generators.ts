@@ -167,24 +167,21 @@ function randomAnyCard(random: () => number): Card {
   };
 }
 
+// The four ten-value ranks. Used wherever a chart "10" cell must be expanded
+// into a concrete card so the table doesn't always show the same face.
+const TEN_VALUE_RANKS: readonly Rank[] = ['10', 'J', 'Q', 'K'];
+
 // value: 2..9 → that rank; 10 → random of '10' | 'J' | 'Q' | 'K'.
 // Callers (makeHardTotalCards, makeSoftTotalCards) only ever pass values in
 // 2..10; Aces are produced by makeSoftTotalCards / makePairCards directly.
 function cardOfValue(value: number, random: () => number): Card {
-  let rank: Rank;
-  if (value === 10) {
-    const tens: readonly Rank[] = ['10', 'J', 'Q', 'K'];
-    rank = tens[Math.floor(random() * tens.length)];
-  } else {
-    rank = String(value) as Rank;
-  }
-  return { rank, suit: randomSuit(random) };
+  if (value === 10) return tenValueCard(random);
+  return { rank: String(value) as Rank, suit: randomSuit(random) };
 }
 
 function tenValueCard(random: () => number): Card {
-  const tens: readonly Rank[] = ['10', 'J', 'Q', 'K'];
   return {
-    rank: tens[Math.floor(random() * tens.length)],
+    rank: TEN_VALUE_RANKS[Math.floor(random() * TEN_VALUE_RANKS.length)],
     suit: randomSuit(random),
   };
 }
