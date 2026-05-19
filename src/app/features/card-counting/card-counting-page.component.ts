@@ -128,6 +128,10 @@ export class CardCountingPageComponent {
   }
 
   protected start(): void {
+    // Ignore start while a drill is mid-flight. The UI hides Start outside
+    // 'idle' / 'feedback', but the keyboard listener and programmatic
+    // callers route through here too — this keeps the method safe.
+    if (this.isDrillActive()) return;
     if (!this.isValid()) return;
     const seq = this.cardGenerator.generateSequence(this.settings().numberOfCards);
     this.cards.set(seq);
