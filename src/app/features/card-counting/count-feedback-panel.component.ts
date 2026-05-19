@@ -1,6 +1,10 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 
-import type { RunningCountDrillResult } from '../../core/models/card-counting.model';
+import type {
+  CountingDrillResult,
+  RunningCountDrillResult,
+  TrueCountDrillResult,
+} from '../../core/models/card-counting.model';
 import type { CountingSystem } from '../../core/models/counting-system.model';
 import { CardImageComponent } from '../../shared/card-image.component';
 
@@ -24,12 +28,30 @@ interface BreakdownEntry {
       <p class="feedback__verdict">
         {{ result().isCorrect ? 'Correct!' : 'Incorrect' }}
       </p>
-      <dl class="feedback__details">
-        <dt>Your count</dt>
-        <dd>{{ result().userRunningCount }}</dd>
-        <dt>Correct count</dt>
-        <dd>{{ result().correctRunningCount }}</dd>
-      </dl>
+
+      @if (runningCountResult(); as rc) {
+        <dl class="feedback__details">
+          <dt>Your count</dt>
+          <dd>{{ rc.userRunningCount }}</dd>
+          <dt>Correct count</dt>
+          <dd>{{ rc.correctRunningCount }}</dd>
+        </dl>
+      } @else if (trueCountResult(); as tc) {
+        <dl class="feedback__details">
+          <dt>Your true count</dt>
+          <dd>{{ tc.userTrueCount }}</dd>
+          <dt>Correct true count</dt>
+          <dd>{{ tc.correctTrueCount }}</dd>
+          <dt>Running count</dt>
+          <dd>{{ tc.correctRunningCount }}</dd>
+          <dt>Decks remaining</dt>
+          <dd>{{ tc.decksRemaining }}</dd>
+        </dl>
+        <p class="feedback__formula">
+          Running count {{ tc.correctRunningCount }} ÷ {{ tc.decksRemaining }} decks =
+          true count {{ tc.correctTrueCount }}
+        </p>
+      }
 
       <button
         type="button"
@@ -62,11 +84,23 @@ interface BreakdownEntry {
   styleUrl: './count-feedback-panel.component.scss',
 })
 export class CountFeedbackPanelComponent {
-  readonly result = input.required<RunningCountDrillResult>();
+  readonly result = input.required<CountingDrillResult>();
   readonly system = input.required<CountingSystem>();
   readonly next = output<void>();
 
   protected readonly showBreakdown = signal(false);
+
+  // Mode-narrowed views so the template can read mode-specific fields without
+  // repeated type guards in expressions.
+  protected readonly runningCountResult = computed<RunningCountDrillResult | null>(() => {
+    const r = this.result();
+    return r.mode === 'running-count' ? r : null;
+  });
+
+  protected readonly trueCountResult = computed<TrueCountDrillResult | null>(() => {
+    const r = this.result();
+    return r.mode === 'true-count' ? r : null;
+  });
 
   protected readonly breakdown = computed<readonly BreakdownEntry[]>(() => {
     const sys = this.system();

@@ -7,6 +7,10 @@ import {
   CardCountingStatsService,
 } from './card-counting-stats.service';
 import { StatsStore, cleanupLegacyStatsKeys } from './stats-store';
+import {
+  TRUE_COUNT_STATS_KEY,
+  TrueCountStatsService,
+} from './true-count-stats.service';
 
 const TEST_KEY = 'test-stats-store';
 
@@ -115,6 +119,14 @@ describe('Stats service subclasses', () => {
     expect(localStorage.getItem(BASIC_STRATEGY_STATS_KEY)).toBeNull();
   });
 
+  it('TrueCountStatsService persists under its dedicated key', () => {
+    const svc = new TrueCountStatsService();
+    svc.recordAttempt(true);
+    expect(localStorage.getItem(TRUE_COUNT_STATS_KEY)).not.toBeNull();
+    expect(localStorage.getItem(CARD_COUNTING_STATS_KEY)).toBeNull();
+    expect(localStorage.getItem(BASIC_STRATEGY_STATS_KEY)).toBeNull();
+  });
+
   it('two services hold independent state', () => {
     const a = new BasicStrategyStatsService();
     const b = new CardCountingStatsService();
@@ -126,6 +138,19 @@ describe('Stats service subclasses', () => {
     expect(a.stats().correct).toBe(3);
     expect(b.stats().attempts).toBe(1);
     expect(b.stats().correct).toBe(0);
+  });
+
+  it('running-count and true-count stats are isolated', () => {
+    const rc = new CardCountingStatsService();
+    const tc = new TrueCountStatsService();
+    rc.recordAttempt(true);
+    rc.recordAttempt(false);
+    tc.recordAttempt(true);
+    expect(rc.stats().attempts).toBe(2);
+    expect(tc.stats().attempts).toBe(1);
+    rc.reset();
+    expect(rc.stats().attempts).toBe(0);
+    expect(tc.stats().attempts).toBe(1);
   });
 });
 
