@@ -189,4 +189,5 @@ succeeds; no unused locals/params.**
 |---|---------|---------------|------------|--------|------|-------|
 | 0 | Add refactor-opportunities report | docs/refactor-opportunities.md | n/a (docs) | e1253d3 | pushed | Report committed first. |
 | 1 | Opportunity A: dedup `formatTrueCount` | deviation-feedback-panel.component.ts | 355 tests pass; build ok | 2865a7d | pushed | Reuses exported `formatTrueCount`; no behavior change. |
-| 2 | Opportunity B: `TEN_VALUE_RANKS` const | scenario-generators.ts | 355 tests pass; build ok | _this commit_ | pushed | Extracted const + delegated `cardOfValue` 10-branch to `tenValueCard`; `random()` call order preserved. |
+| 2 | Opportunity B: `TEN_VALUE_RANKS` const | scenario-generators.ts | 355 tests pass; build ok | dd6c0f0 | pushed | Extracted const + delegated `cardOfValue` 10-branch to `tenValueCard`; `random()` call order preserved. |
+| 3 | Opportunity C: delegate `deviationRulesFor` | scenario-generators.ts | 355 tests pass; build ok | _this commit_ | pushed | `deviationRulesFor` now calls core `deviationsFor`; dropped unused data imports. Referential equality (`.toBe`) preserved. |

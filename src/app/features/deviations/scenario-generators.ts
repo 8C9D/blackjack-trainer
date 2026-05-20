@@ -16,11 +16,13 @@ import {
 } from '../../core/models/card.model';
 import type { DeviationRule } from '../../core/models/deviation.model';
 import type { DealerUpcard, RuleSet } from '../../core/models/strategy.model';
-import { H17_DEVIATIONS } from '../../data/h17-deviations';
-import { S17_DEVIATIONS } from '../../data/s17-deviations';
+import { deviationsFor } from '../../core/services/deviation-engine.service';
 
+// Thin wrapper around the engine's deviationsFor so the rule-set → table
+// mapping has a single source of truth. Kept as a named export because the
+// scenario generators (and their tests) reference it directly.
 export function deviationRulesFor(ruleSet: RuleSet): readonly DeviationRule[] {
-  return ruleSet === 'H17' ? H17_DEVIATIONS : S17_DEVIATIONS;
+  return deviationsFor(ruleSet);
 }
 
 export function pickDeviationRule(
