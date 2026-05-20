@@ -11,7 +11,7 @@ describe('App', () => {
     }).compileComponents();
   });
 
-  it('renders a primary nav with both trainer links', async () => {
+  it('renders a primary nav with all trainer links', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
@@ -19,6 +19,16 @@ describe('App', () => {
       .map((a) => a.textContent?.trim());
     expect(labels).toContain('Basic Strategy');
     expect(labels).toContain('Card Counting');
+    expect(labels).toContain('Deviations');
+  });
+
+  it('exposes a /deviations route in the primary nav', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const hrefs = Array.from(compiled.querySelectorAll('nav a'))
+      .map((a) => a.getAttribute('href'));
+    expect(hrefs).toContain('/deviations');
   });
 
   it('renders a router outlet', async () => {

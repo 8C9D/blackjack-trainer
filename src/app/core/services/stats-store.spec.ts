@@ -6,6 +6,10 @@ import {
   CARD_COUNTING_STATS_KEY,
   CardCountingStatsService,
 } from './card-counting-stats.service';
+import {
+  DEVIATION_STATS_KEY,
+  DeviationStatsService,
+} from './deviation-stats.service';
 import { StatsStore, cleanupLegacyStatsKeys } from './stats-store';
 import {
   TRUE_COUNT_STATS_KEY,
@@ -125,6 +129,15 @@ describe('Stats service subclasses', () => {
     expect(localStorage.getItem(TRUE_COUNT_STATS_KEY)).not.toBeNull();
     expect(localStorage.getItem(CARD_COUNTING_STATS_KEY)).toBeNull();
     expect(localStorage.getItem(BASIC_STRATEGY_STATS_KEY)).toBeNull();
+  });
+
+  it('DeviationStatsService persists under its dedicated key', () => {
+    const svc = new DeviationStatsService();
+    svc.recordAttempt(true);
+    expect(localStorage.getItem(DEVIATION_STATS_KEY)).not.toBeNull();
+    expect(localStorage.getItem(BASIC_STRATEGY_STATS_KEY)).toBeNull();
+    expect(localStorage.getItem(CARD_COUNTING_STATS_KEY)).toBeNull();
+    expect(localStorage.getItem(TRUE_COUNT_STATS_KEY)).toBeNull();
   });
 
   it('two services hold independent state', () => {
