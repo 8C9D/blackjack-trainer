@@ -6,13 +6,15 @@
 // Cell encoding: see strategy.model.ts.
 //
 // Differences from H17 (encoded inline for easy visual verification):
-//   Hard 11 vs A : H (H17: D)
-//   Hard 15 vs A : H (H17: SUR_H)
-//   Hard 16 vs A : H (H17: SUR_H)
-//   Hard 17 vs A : S (H17: SUR_S)
-//   Soft A,7 vs 2: S (H17: Ds)
-//   Soft A,8 vs 6: S (H17: Ds)
-//   Pair 8,8 vs A: Y (H17: SUR_Y)
+//   Hard 11 vs A : H    (H17: D)
+//   Hard 15 vs A : H    (H17: SUR_H)
+//   Hard 17 vs A : S    (H17: SUR_S)
+//   Soft A,7 vs 2: S    (H17: Ds)
+//   Soft A,8 vs 6: S    (H17: Ds)
+//   Pair 8,8 vs A: Y    (H17: SUR_Y)
+//
+// Hard 16 vs A is SUR_H in both rule sets per the 2024 BJA charts: the S17
+// PDF's Late Surrender table marks 16 v A as SUR alongside 16 v 9 and 16 v 10.
 
 import type { StrategyChart } from '../core/models/strategy.model';
 
@@ -32,7 +34,7 @@ export const S17_CHART: StrategyChart = {
     13: { '2':'S', '3':'S', '4':'S', '5':'S', '6':'S', '7':'H', '8':'H', '9':'H', '10':'H',     'A':'H' },
     14: { '2':'S', '3':'S', '4':'S', '5':'S', '6':'S', '7':'H', '8':'H', '9':'H', '10':'H',     'A':'H' },
     15: { '2':'S', '3':'S', '4':'S', '5':'S', '6':'S', '7':'H', '8':'H', '9':'H', '10':'SUR_H', 'A':'H' },
-    16: { '2':'S', '3':'S', '4':'S', '5':'S', '6':'S', '7':'H', '8':'H', '9':'SUR_H','10':'SUR_H','A':'H' },
+    16: { '2':'S', '3':'S', '4':'S', '5':'S', '6':'S', '7':'H', '8':'H', '9':'SUR_H','10':'SUR_H','A':'SUR_H' },
     17: { '2':'S', '3':'S', '4':'S', '5':'S', '6':'S', '7':'S', '8':'S', '9':'S', '10':'S',     'A':'S' },
     18: { '2':'S', '3':'S', '4':'S', '5':'S', '6':'S', '7':'S', '8':'S', '9':'S', '10':'S',     'A':'S' },
     19: { '2':'S', '3':'S', '4':'S', '5':'S', '6':'S', '7':'S', '8':'S', '9':'S', '10':'S',     'A':'S' },
