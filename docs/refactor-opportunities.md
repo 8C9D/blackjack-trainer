@@ -190,4 +190,17 @@ succeeds; no unused locals/params.**
 | 0 | Add refactor-opportunities report | docs/refactor-opportunities.md | n/a (docs) | e1253d3 | pushed | Report committed first. |
 | 1 | Opportunity A: dedup `formatTrueCount` | deviation-feedback-panel.component.ts | 355 tests pass; build ok | 2865a7d | pushed | Reuses exported `formatTrueCount`; no behavior change. |
 | 2 | Opportunity B: `TEN_VALUE_RANKS` const | scenario-generators.ts | 355 tests pass; build ok | dd6c0f0 | pushed | Extracted const + delegated `cardOfValue` 10-branch to `tenValueCard`; `random()` call order preserved. |
-| 3 | Opportunity C: delegate `deviationRulesFor` | scenario-generators.ts | 355 tests pass; build ok | _this commit_ | pushed | `deviationRulesFor` now calls core `deviationsFor`; dropped unused data imports. Referential equality (`.toBe`) preserved. |
+| 3 | Opportunity C: delegate `deviationRulesFor` | scenario-generators.ts | 355 tests pass; build ok | 7b5939b | pushed | `deviationRulesFor` now calls core `deviationsFor`; dropped unused data imports. Referential equality (`.toBe`) preserved. |
+
+### Run summary
+
+All three planned low-risk cleanups (A, B, C) were implemented, validated
+(355 tests + production build green after each), committed separately, and
+pushed to `origin/chore/repo-cleanup-autopilot`. Every change is mechanical
+and behavior-preserving.
+
+**Stopped here intentionally.** The remaining candidates (§5: shared keyboard
+handler, unified signed-integer formatter) are behavioral and/or risk
+over-abstraction — they need human judgment, which is outside this autopilot's
+safety envelope. No further auto-safe cleanups remain; the codebase was
+already in good shape.
