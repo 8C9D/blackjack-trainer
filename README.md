@@ -1,6 +1,6 @@
 # Blackjack Trainer
 
-A frontend-only Angular app for practicing three blackjack skills:
+A frontend-only Angular app for practicing four blackjack skills:
 
 1. **Basic Strategy Trainer** — initial two-card hands against H17/S17 charts
    from [Blackjack Apprenticeship](https://www.blackjackapprenticeship.com/).
@@ -9,8 +9,12 @@ A frontend-only Angular app for practicing three blackjack skills:
 3. **Hi-Lo True Count Trainer** — same card streams, but the user answers the
    true count (`runningCount / decksRemaining`, truncated toward zero) given
    a chosen decks-remaining value.
+4. **Deviations Trainer** — initial two-card hands against the BJA H17/S17
+   Hi-Lo deviation charts, given a randomly generated true count. Evaluates
+   the playing decision against basic strategy + the deviation overlay, plus
+   an insurance overlay when the dealer shows an Ace.
 
-All three modes persist independent session stats to `localStorage` and reuse
+All four modes persist independent session stats to `localStorage` and reuse
 the same card model + cardsJS images.
 
 ## Quick start
@@ -24,7 +28,8 @@ npm test         # vitest, single run in CI / watch in TTY
 npm run build    # production bundle in dist/blackjack-trainer/
 ```
 
-Navigate to `/basic-strategy` or `/card-counting` (top nav links).
+Navigate to `/basic-strategy`, `/card-counting`, or `/deviations` (top nav
+links).
 
 ## Features
 
@@ -80,6 +85,97 @@ User submits the true count, computed as
 - **Separate stats** — true count attempts are persisted under their own
   `localStorage` key (see [Stats persistence](#stats-persistence)).
 
+### Deviations Trainer (v4)
+
+Drills initial two-card hands against the BJA Hi-Lo deviation charts on top
+of basic strategy. Each scenario presents a random two-card player hand,
+random dealer upcard, and a random integer true count, and the user picks
+one of Hit / Stand / Double / Split / Surrender / Insurance.
+
+- **H17 or S17 rule set** — toggle which dealer rule (and which deviation
+  chart) to practice against.
+- **Toggleable Double After Split (DAS) and Late Surrender (LS)** — the
+  evaluator's live basic-strategy call honors both toggles, so deviations
+  resolve on top of the same basic-strategy answer the trainer would give
+  in v1.
+- **Random true count** — uniform integer in `[-5, +8]`, displayed above
+  the action buttons. Wide enough to exercise both negative- and
+  positive-side deviations from the BJA chart.
+- **Six action choices** — Hit, Stand, Double, Split, Surrender, Insurance.
+  Insurance is treated as a single action choice rather than a separate
+  pre-decision prompt.
+- **Keyboard shortcuts** — same bindings as the basic strategy page:
+  `H` / `S` / `D` / `P` / `R` (surrender) / `I` (insurance), `Enter` to
+  deal the next hand after feedback.
+
+#### Final-action evaluation
+
+For each attempt the engine computes the correct action by combining:
+
+- basic strategy (H17 or S17 chart, with DAS / LS toggles applied),
+- the displayed true count,
+- the BJA deviation rules for the active rule set,
+- the insurance overlay (Ace upcard only).
+
+The expected action is the result of that combination; the user's pick is
+correct iff it matches.
+
+#### Resolution order
+
+The deviation engine resolves a playing decision in this order:
+
+1. Compute the live basic-strategy action (honoring DAS / LS toggles).
+2. Check the **surrender deviation overlay** first. Surrender deviations
+   live in their own category and convert a non-surrender basic action to
+   SUR when the threshold is met.
+3. If the live basic action is already SUR (LS enabled + chart cell is
+   `SUR_*`), respect it — do **not** let a hard/soft/pair deviation
+   downgrade surrender to stand or hit.
+4. Otherwise check the natural-category deviation (hard / soft / pair).
+5. If nothing matches or the threshold isn't met, the basic action stands.
+
+Surrender precedence (step 3) matters because natural deviations like
+`16 v 10 stand @ 0+` would otherwise downgrade a basic surrender when
+Late Surrender is available — the BJA LS overlay says surrender wins at
+any count for those cells, so the basic-strategy SUR is preserved.
+
+Insurance is offered before the playing decision and is evaluated on its
+own path:
+
+- **Only when the dealer upcard is Ace.** For any other upcard, insurance
+  is incorrect — clicking Insurance prints a hint that insurance is only
+  offered against a dealer Ace and shows the correct playing action.
+- **Correct at true count ≥ +3.** Otherwise decline.
+- **Single action choice.** The current trainer presents insurance as one
+  of the six action buttons rather than a separate pre-decision step; the
+  evaluator decides between "take insurance" and "play the hand normally"
+  based on whether the insurance threshold is met.
+
+#### Deviation source of truth
+
+Deviation data is statically encoded from the
+[Blackjack Apprenticeship Hi-Lo Deviation Charts](https://www.blackjackapprenticeship.com/hi-lo-deviations/):
+
+- `data/h17-deviations.ts` — H17 deviation chart.
+- `data/s17-deviations.ts` — S17 deviation chart.
+
+Both files were transcribed from and verified against the BJA H17 / S17
+deviation PDFs (linked from the chart page above). Each rule cites the
+chart section it came from in its `source` field. **The PDFs are not
+scraped at runtime** — the charts ship as static TypeScript literals,
+exactly like the basic-strategy charts in v1.
+
+The BJA chart legend uses `0+` for "any positive running count" and `0-`
+for "any negative running count"; this trainer treats them inclusively
+(TC ≥ 0 and TC ≤ 0 respectively) to align with the canonical
+Illustrious 18 framing. For integer true counts this only affects the
+boundary at TC = 0.
+
+A handful of LS-category rules (e.g. `16 v 9 SUR @ -1-`, `15 v 10 SUR @ 0-`)
+are encoded for chart faithfulness even though basic strategy already
+returns SUR for the same hand when LS is enabled. These entries are
+no-ops at runtime but document the chart cell.
+
 ### Shared
 
 - **Persistent session stats per trainer** — attempts, correct count,
@@ -112,22 +208,27 @@ src/app/
 │   │   ├── card.model.ts                       Rank, Suit, Card, helpers
 │   │   ├── strategy.model.ts                   Action, RuleSet, chart cell types
 │   │   ├── counting-system.model.ts            CountingSystem, CountValue
-│   │   └── card-counting.model.ts              Drill settings, result types, decks-remaining presets
+│   │   ├── card-counting.model.ts              Drill settings, result types, decks-remaining presets
+│   │   └── deviation.model.ts                  DeviationRule / DeviationDecision types
 │   └── services/
 │       ├── basic-strategy-engine.service.ts    pure-TS strategy logic
 │       ├── basic-strategy-engine.service.spec.ts  40 engine tests
 │       ├── counting-engine.service.ts          pure-TS Hi-Lo engine
 │       ├── counting-engine.service.spec.ts     30 engine tests
+│       ├── deviation-engine.service.ts         pure-TS Hi-Lo deviation engine (overlay on basic strategy)
 │       ├── card-generator.service.ts           random card + sequence generator
 │       ├── stats-store.ts                      parameterized stats container
 │       ├── stats-store.spec.ts                 10 stats tests
 │       ├── basic-strategy-stats.service.ts     Basic strategy StatsStore subclass
 │       ├── card-counting-stats.service.ts      Hi-Lo running count StatsStore subclass
-│       └── true-count-stats.service.ts         Hi-Lo true count StatsStore subclass
+│       ├── true-count-stats.service.ts         Hi-Lo true count StatsStore subclass
+│       └── deviation-stats.service.ts          Deviations StatsStore subclass
 ├── data/
 │   ├── h17-basic-strategy.ts                   BJA H17 chart (PDF linked)
 │   ├── s17-basic-strategy.ts                   BJA S17 chart (PDF linked)
-│   └── counting-systems.ts                     HI_LO + system registry
+│   ├── counting-systems.ts                     HI_LO + system registry
+│   ├── h17-deviations.ts                       BJA H17 deviation chart (PDF linked)
+│   └── s17-deviations.ts                       BJA S17 deviation chart (PDF linked)
 ├── features/
 │   ├── basic-strategy/
 │   │   ├── basic-strategy-page.component.ts    thin orchestrator
@@ -135,12 +236,16 @@ src/app/
 │   │   ├── blackjack-table.component.ts        dealer / player layout
 │   │   ├── action-buttons.component.ts         6 action buttons
 │   │   └── feedback-panel.component.ts         result + rationale
-│   └── card-counting/
-│       ├── card-counting-page.component.ts     state machine orchestrator
-│       ├── counting-settings.component.ts      cards / ms inputs + errors
-│       ├── card-stream.component.ts            current card + progress
-│       ├── count-answer-form.component.ts      integer input + submit
-│       └── count-feedback-panel.component.ts   verdict + breakdown
+│   ├── card-counting/
+│   │   ├── card-counting-page.component.ts     state machine orchestrator
+│   │   ├── counting-settings.component.ts      cards / ms inputs + errors
+│   │   ├── card-stream.component.ts            current card + progress
+│   │   ├── count-answer-form.component.ts      integer input + submit
+│   │   └── count-feedback-panel.component.ts   verdict + breakdown
+│   └── deviations/
+│       ├── deviations-page.component.ts        orchestrator (hand + TC + action eval)
+│       ├── deviation-settings.component.ts     H17/S17 + DAS + LS toggles
+│       └── deviation-feedback-panel.component.ts  result + deviation rationale
 └── shared/
     ├── card-image.component.ts                 face-up/face-down card
     └── stats-panel.component.ts                stats + reset
@@ -248,6 +353,7 @@ dedicated `localStorage` key via a `StatsStore` base class:
 | Basic Strategy | `blackjack-basic-strategy-stats` |
 | Hi-Lo Running Count | `blackjack-card-counting-stats` |
 | Hi-Lo True Count | `blackjack-true-count-stats` |
+| Deviations | `blackjack-deviation-stats` |
 
 The stats panel on the card counting page reflects the currently selected
 mode, and the **Reset** button only resets the active mode's stats —
@@ -268,14 +374,30 @@ which packages Chris Aguilar's
 `public/cards/COPYING.txt`, `COPYING.LESSER.txt`, `AUTHORS.txt`). The
 LGPL files are committed alongside the SVGs to preserve attribution.
 
-## Roadmap (not yet implemented)
+## Roadmap
+
+### Completed
+
+- **Basic Strategy Trainer (v1)** — H17/S17 charts, DAS / LS toggles,
+  insurance.
+- **Hi-Lo Running Count Trainer (v2)** — card-stream drills, configurable
+  length and speed.
+- **Hi-Lo True Count Trainer (v3)** — decks-remaining presets, truncation
+  toward zero.
+- **Deviations Trainer (v4)** — BJA H17/S17 Hi-Lo deviation overlay on
+  basic strategy, with insurance evaluated at TC ≥ +3.
+
+### Future (not yet implemented)
 
 The codebase is organized to make these additions straightforward later.
 None of the items in this list ship in the current build.
 
-- **Deviations trainer** — drills against H17/S17 deviation charts
-  (Illustrious 18, Fab 4, etc.). **Not implemented yet** — the current
-  basic strategy trainer is count-unaware.
+- **Manual true-count override for deviations** — let the user pick the
+  true count instead of (or in addition to) a random draw, for targeted
+  drilling of specific deviation thresholds.
+- **Deviation-only mode** — re-roll random scenarios until one with a
+  matching deviation rule appears, so the user practices the chart cells
+  themselves instead of mostly basic-strategy hands.
 - **Additional counting systems later** — KO, Omega II, Wong Halves
   (data-only addition; the engine already accepts arbitrary
   `CountingSystem` values).
@@ -284,3 +406,6 @@ None of the items in this list ship in the current build.
   a preset before each drill.
 - **Showdowns later** — multi-hand / dealer-resolution scenarios after
   the count drill ends.
+- **Shared blackjack UI component refactor** — extract the table /
+  action buttons / feedback shell shared between v1 and v4, if the
+  duplication starts to hurt.
