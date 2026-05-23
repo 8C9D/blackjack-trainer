@@ -59,9 +59,8 @@ export class DeviationFeedbackPanelComponent {
     return ACTION_LABELS[action];
   }
 
-  // Reuse the shared true-count formatter (also used by the evaluator service
-  // and the deviations page) so the display rule lives in one place. Exposed
-  // as a field so the template and formatThreshold can call it.
+  // Exposed as a field (not a method) so the template can bind the shared
+  // formatter imported above instead of re-implementing it locally.
   protected readonly formatTrueCount = formatTrueCount;
 
   protected formatThreshold(rule: DeviationRule): string {
