@@ -17,8 +17,10 @@ export const ALL_SUITS: readonly Suit[] = [
   'spades', 'hearts', 'diamonds', 'clubs',
 ] as const;
 
+export const TEN_VALUE_RANKS: readonly Rank[] = ['10', 'J', 'Q', 'K'] as const;
+
 export function isTenValue(card: Card): boolean {
-  return card.rank === '10' || card.rank === 'J' || card.rank === 'Q' || card.rank === 'K';
+  return TEN_VALUE_RANKS.includes(card.rank);
 }
 
 export function isAce(card: Card): boolean {
