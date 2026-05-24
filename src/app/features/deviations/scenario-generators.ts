@@ -13,6 +13,7 @@ import {
   TEN_VALUE_RANKS,
   type Card,
   type Rank,
+  type Scenario,
   type Suit,
 } from '../../core/models/card.model';
 import type { DeviationRule } from '../../core/models/deviation.model';
@@ -87,15 +88,10 @@ export function pickTrueCountForDeviationRule(
   return clampTc(rule.index, minTc, maxTc);
 }
 
-export interface GeneratedScenario {
-  readonly player: readonly [Card, Card];
-  readonly dealerUpcard: Card;
-}
-
 export function generateScenarioForDeviationRule(args: {
   rule: DeviationRule;
   random: () => number;
-}): GeneratedScenario {
+}): Scenario {
   return {
     player: makePlayerCardsForDeviationRule(args.rule, args.random),
     dealerUpcard: makeDealerUpcardCard(args.rule.dealerUpcard, args.random),
