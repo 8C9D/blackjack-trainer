@@ -8,9 +8,12 @@ import type {
 } from '../../core/models/strategy.model';
 import {
   DeviationsPageComponent,
+  MAX_RANDOM_TRUE_COUNT,
+  MIN_RANDOM_TRUE_COUNT,
   type DeviationScenario,
 } from './deviations-page.component';
 import type { DeviationTrainerResult } from './deviation-feedback-panel.component';
+import type { TrueCountSource } from './deviation-settings.component';
 
 const card = (rank: Rank, suit: Suit = 'spades'): Card => ({ rank, suit });
 
@@ -35,6 +38,10 @@ type Internals = {
   options: { (): EngineOptions; set(v: EngineOptions): void };
   scenario: { (): DeviationScenario; set(v: DeviationScenario): void };
   result: { (): DeviationTrainerResult | null; set(v: DeviationTrainerResult | null): void };
+  trueCountSource: { (): TrueCountSource; set(v: TrueCountSource): void };
+  manualTrueCount: { (): number | null; set(v: number | null): void };
+  canDealNextHand: () => boolean;
+  setTrueCountSource(source: TrueCountSource): void;
   answer(action: 'H' | 'S' | 'D' | 'P' | 'SUR' | 'INS'): void;
   nextHand(): void;
   statsService: StatsLike;
@@ -271,6 +278,164 @@ describe('DeviationsPageComponent', () => {
       expect(c.result()).not.toBeNull();
       c.nextHand();
       expect(c.result()).toBeNull();
+    });
+  });
+
+  describe('true count display', () => {
+    it('uses a clearer "Practice true count" label, not just "True count"', () => {
+      const { fixture } = createPage();
+      const label = (fixture.nativeElement as HTMLElement).querySelector(
+        '.true-count__label',
+      );
+      expect(label?.textContent?.trim()).toBe('Practice true count');
+    });
+  });
+
+  describe('true count source (default: random)', () => {
+    it('defaults to random source', () => {
+      const { c } = createPage();
+      expect(c.trueCountSource()).toBe('random');
+    });
+
+    it('generates true counts within the random range on each nextHand', () => {
+      const { c } = createPage();
+      const seen = new Set<number>();
+      for (let i = 0; i < 200; i++) {
+        c.nextHand();
+        const tc = c.scenario().trueCount;
+        expect(tc).toBeGreaterThanOrEqual(MIN_RANDOM_TRUE_COUNT);
+        expect(tc).toBeLessThanOrEqual(MAX_RANDOM_TRUE_COUNT);
+        seen.add(tc);
+      }
+      // Over 200 draws we expect at least a couple of distinct values; this
+      // guards against a degenerate generator that always returns the same
+      // number.
+      expect(seen.size).toBeGreaterThan(1);
+    });
+  });
+
+  describe('true count source: manual', () => {
+    it('generated scenarios use the manual true count', () => {
+      const { c } = createPage();
+      c.setTrueCountSource('manual');
+      c.manualTrueCount.set(7);
+      c.nextHand();
+      expect(c.scenario().trueCount).toBe(7);
+    });
+
+    it('keeps the same manual true count across consecutive nextHand calls', () => {
+      const { c } = createPage();
+      c.setTrueCountSource('manual');
+      c.manualTrueCount.set(-3);
+      for (let i = 0; i < 25; i++) {
+        c.nextHand();
+        expect(c.scenario().trueCount).toBe(-3);
+      }
+    });
+
+    it('uses the manual true count for evaluation (16 v 10 deviation at TC 0)', () => {
+      const { c } = createPage();
+      c.setTrueCountSource('manual');
+      c.manualTrueCount.set(0);
+      c.scenario.set(scenarioOf('10', '6', '10', 0));
+      c.answer('S');
+      const r = c.result()!;
+      expect(r.correct).toBe(true);
+      expect(r.expectedAction).toBe('S');
+      expect(r.deviationApplied).toBe(true);
+    });
+
+    it('insurance at dealer Ace and TC +3 still works in manual mode', () => {
+      const { c } = createPage();
+      c.setTrueCountSource('manual');
+      c.manualTrueCount.set(3);
+      c.scenario.set(scenarioOf('10', '6', 'A', 3));
+      c.answer('INS');
+      const r = c.result()!;
+      expect(r.correct).toBe(true);
+      expect(r.source).toBe('insurance');
+    });
+
+    it('renders the manual-source value in the display', () => {
+      const { fixture, c } = createPage();
+      c.setTrueCountSource('manual');
+      c.manualTrueCount.set(4);
+      c.nextHand();
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('.true-count__value')?.textContent?.trim()).toBe('+4');
+    });
+
+    it('switching to manual with a null value resets it to 0', () => {
+      const { c } = createPage();
+      c.manualTrueCount.set(null);
+      c.setTrueCountSource('manual');
+      expect(c.manualTrueCount()).toBe(0);
+    });
+
+    it('switching to manual preserves a previously valid value', () => {
+      const { c } = createPage();
+      c.manualTrueCount.set(6);
+      c.setTrueCountSource('manual');
+      expect(c.manualTrueCount()).toBe(6);
+    });
+
+    it('switching back to random resumes random TC generation', () => {
+      const { c } = createPage();
+      c.setTrueCountSource('manual');
+      c.manualTrueCount.set(8);
+      c.nextHand();
+      expect(c.scenario().trueCount).toBe(8);
+
+      c.setTrueCountSource('random');
+      // Over many draws under random mode, at least one TC should differ
+      // from the previously fixed manual value of 8.
+      let sawDifferent = false;
+      for (let i = 0; i < 200; i++) {
+        c.nextHand();
+        const tc = c.scenario().trueCount;
+        expect(tc).toBeGreaterThanOrEqual(MIN_RANDOM_TRUE_COUNT);
+        expect(tc).toBeLessThanOrEqual(MAX_RANDOM_TRUE_COUNT);
+        if (tc !== 8) sawDifferent = true;
+      }
+      expect(sawDifferent).toBe(true);
+    });
+  });
+
+  describe('manual-mode invalid value gating', () => {
+    it('blocks nextHand while manual TC is null', () => {
+      const { c } = createPage();
+      c.setTrueCountSource('manual');
+      c.manualTrueCount.set(2);
+      c.nextHand();
+      const blocked = c.scenario();
+
+      c.manualTrueCount.set(null);
+      expect(c.canDealNextHand()).toBe(false);
+      c.nextHand();
+      // Scenario is unchanged because nextHand short-circuited.
+      expect(c.scenario()).toBe(blocked);
+    });
+
+    it('disables the feedback panel "Deal next hand" button when manual TC is null', () => {
+      const { fixture, c } = createPage();
+      c.setTrueCountSource('manual');
+      c.manualTrueCount.set(0);
+      c.scenario.set(scenarioOf('3', '4', '6', 0));
+      c.answer('H');
+      c.manualTrueCount.set(null);
+      fixture.detectChanges();
+      const btn = (fixture.nativeElement as HTMLElement).querySelector(
+        '.feedback__next',
+      ) as HTMLButtonElement;
+      expect(btn.disabled).toBe(true);
+    });
+
+    it('canDealNextHand is true in random mode regardless of manual TC value', () => {
+      const { c } = createPage();
+      c.manualTrueCount.set(null);
+      expect(c.trueCountSource()).toBe('random');
+      expect(c.canDealNextHand()).toBe(true);
     });
   });
 });
