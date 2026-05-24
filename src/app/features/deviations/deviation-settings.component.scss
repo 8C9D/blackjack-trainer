@@ -61,4 +61,11 @@
     color: rgba(244, 67, 54, 0.95);
     font-size: 0.8rem;
   }
+
+  &__help {
+    margin: 0.35rem 0 0;
+    font-size: 0.75rem;
+    opacity: 0.75;
+    max-width: 18rem;
+  }
 }

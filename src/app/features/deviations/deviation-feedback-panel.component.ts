@@ -16,6 +16,10 @@ export interface DeviationTrainerResult {
   readonly source: DeviationEvalSource;
   readonly correct: boolean;
   readonly explanation: string;
+  // True when this hand was generated to match an encoded deviation rule
+  // (deviation-only practice mode). The panel renders a small badge in
+  // that case so the user knows the hand was chosen as a deviation drill.
+  readonly isDeviationCandidate?: boolean;
 }
 
 @Component({
@@ -31,6 +35,9 @@ export interface DeviationTrainerResult {
         <p class="feedback__verdict">
           {{ r.correct ? 'Correct.' : 'Incorrect.' }}
         </p>
+        @if (r.isDeviationCandidate) {
+          <p class="feedback__candidate">Deviation candidate hand.</p>
+        }
         <dl class="feedback__details">
           <dt>Hand</dt>
           <dd>{{ r.handDescription }}</dd>

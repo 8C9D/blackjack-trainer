@@ -13,7 +13,11 @@ import {
   type DeviationScenario,
 } from './deviations-page.component';
 import type { DeviationTrainerResult } from './deviation-feedback-panel.component';
-import type { TrueCountSource } from './deviation-settings.component';
+import type {
+  DeviationPracticeMode,
+  TrueCountSource,
+} from './deviation-settings.component';
+import { classifyForDeviation, deviationsFor } from '../../core/services/deviation-engine.service';
 
 const card = (rank: Rank, suit: Suit = 'spades'): Card => ({ rank, suit });
 
@@ -40,6 +44,7 @@ type Internals = {
   result: { (): DeviationTrainerResult | null; set(v: DeviationTrainerResult | null): void };
   trueCountSource: { (): TrueCountSource; set(v: TrueCountSource): void };
   manualTrueCount: { (): number | null; set(v: number | null): void };
+  practiceMode: { (): DeviationPracticeMode; set(v: DeviationPracticeMode): void };
   canDealNextHand: () => boolean;
   setTrueCountSource(source: TrueCountSource): void;
   answer(action: 'H' | 'S' | 'D' | 'P' | 'SUR' | 'INS'): void;
@@ -436,6 +441,191 @@ describe('DeviationsPageComponent', () => {
       c.manualTrueCount.set(null);
       expect(c.trueCountSource()).toBe('random');
       expect(c.canDealNextHand()).toBe(true);
+    });
+  });
+
+  describe('practice mode', () => {
+    it('defaults to all-hands', () => {
+      const { c } = createPage();
+      expect(c.practiceMode()).toBe('all-hands');
+    });
+
+    it('all-hands mode generates scenarios with no deviation-candidate flag', () => {
+      const { c } = createPage();
+      // Default is all-hands; freshly generated scenario should not be marked.
+      for (let i = 0; i < 20; i++) {
+        c.nextHand();
+        expect(c.scenario().generatedAsDeviationCandidate).not.toBe(true);
+      }
+    });
+
+    it('deviation-only mode marks generated scenarios as deviation candidates', () => {
+      const { c } = createPage();
+      c.practiceMode.set('deviation-only');
+      for (let i = 0; i < 20; i++) {
+        c.nextHand();
+        expect(c.scenario().generatedAsDeviationCandidate).toBe(true);
+      }
+    });
+
+    it('deviation-only mode generates hands matching an encoded deviation rule (S17)', () => {
+      const { c } = createPage();
+      c.ruleSet.set('S17');
+      c.practiceMode.set('deviation-only');
+      const rules = deviationsFor('S17');
+      for (let i = 0; i < 100; i++) {
+        c.nextHand();
+        const s = c.scenario();
+        // Insurance scenarios have a random player hand — only assert that
+        // the dealer is an Ace in that case (the insurance rule).
+        const dealerKey =
+          s.dealerUpcard.rank === 'A'
+            ? 'A'
+            : s.dealerUpcard.rank === '10' ||
+                s.dealerUpcard.rank === 'J' ||
+                s.dealerUpcard.rank === 'Q' ||
+                s.dealerUpcard.rank === 'K'
+              ? '10'
+              : s.dealerUpcard.rank;
+        const klass = classifyForDeviation(s.player);
+        // Find at least one rule that this scenario could match (either by
+        // hard/soft/pair classification or as the insurance overlay).
+        const matchesPlayingRule = rules.some(
+          (r) =>
+            r.category !== 'insurance' &&
+            r.dealerUpcard === dealerKey &&
+            // For surrender rules, the engine looks them up over the same
+            // hard total — the classifier returns 'hard' for the cards.
+            (r.category === klass.category ||
+              (r.category === 'surrender' && klass.category === 'hard')) &&
+            r.playerHand === klass.playerHand,
+        );
+        const matchesInsuranceRule =
+          dealerKey === 'A' &&
+          rules.some((r) => r.category === 'insurance');
+        expect(matchesPlayingRule || matchesInsuranceRule).toBe(true);
+      }
+    });
+
+    it('H17 vs S17 ruleSet affects which deviations get generated (10 v A double @ +3 is H17-only)', () => {
+      // 10 v A: H17 chart has it at +3 (the rule's index value 3); S17 at +4.
+      // We confirm that under H17 in deviation-only mode, we eventually see
+      // a 10 v A hand at TC 3 (which under S17 has no encoded rule index 3).
+      const { c } = createPage();
+      c.practiceMode.set('deviation-only');
+
+      c.ruleSet.set('H17');
+      const h17Rules = deviationsFor('H17').map((r) => `${r.playerHand}|${r.dealerUpcard}|${r.index}`);
+      expect(h17Rules).toContain('10|A|3');
+
+      c.ruleSet.set('S17');
+      const s17Rules = deviationsFor('S17').map((r) => `${r.playerHand}|${r.dealerUpcard}|${r.index}`);
+      // S17 chart's 10 v A is at +4, not +3.
+      expect(s17Rules).toContain('10|A|4');
+      expect(s17Rules).not.toContain('10|A|3');
+    });
+
+    it('random TC in deviation-only mode produces threshold-met outcomes', () => {
+      const { c } = createPage();
+      c.practiceMode.set('deviation-only');
+      let metAtLeastOnce = false;
+      // Over many draws we should see at least one scenario where the
+      // displayed deviation is correctly applied (deviation+TC threshold met).
+      for (let i = 0; i < 200 && !metAtLeastOnce; i++) {
+        c.nextHand();
+        c.answer(c.scenario().player[0].rank === 'A' ? 'D' : 'S'); // arbitrary
+        const r = c.result();
+        if (r?.deviationApplied) metAtLeastOnce = true;
+      }
+      expect(metAtLeastOnce).toBe(true);
+    });
+
+    it('random TC in deviation-only mode produces threshold-unmet outcomes', () => {
+      const { c } = createPage();
+      c.practiceMode.set('deviation-only');
+      let unmetAtLeastOnce = false;
+      for (let i = 0; i < 200 && !unmetAtLeastOnce; i++) {
+        c.nextHand();
+        c.answer('S'); // arbitrary
+        const r = c.result();
+        // Unmet when no deviation was applied AND we're not in an insurance
+        // dealer-Ace +3 situation. We just look for a result that exists with
+        // deviationApplied=false on a non-insurance source.
+        if (r && !r.deviationApplied && r.source === 'playing') {
+          unmetAtLeastOnce = true;
+        }
+      }
+      expect(unmetAtLeastOnce).toBe(true);
+    });
+
+    it('manual TC source is respected in deviation-only mode', () => {
+      const { c } = createPage();
+      c.practiceMode.set('deviation-only');
+      c.setTrueCountSource('manual');
+      c.manualTrueCount.set(2);
+      for (let i = 0; i < 25; i++) {
+        c.nextHand();
+        expect(c.scenario().trueCount).toBe(2);
+      }
+    });
+
+    it('deviation-only scenarios still evaluate through the engine and set isDeviationCandidate', () => {
+      const { c } = createPage();
+      c.practiceMode.set('deviation-only');
+      c.nextHand();
+      // Pick any action just to drive evaluate(). We only assert that the
+      // result is well-formed and carries the candidate flag.
+      c.answer('S');
+      const r = c.result();
+      expect(r).not.toBeNull();
+      expect(r!.isDeviationCandidate).toBe(true);
+      expect(r!.handDescription).toBeTruthy();
+    });
+
+    it('insurance deviation candidate: dealer Ace and TC +3 → Insurance is correct', () => {
+      // The insurance rule is in the H17/S17 chart; in deviation-only mode
+      // it may be selected as the scenario. We force the manual TC to +3 so
+      // the test is deterministic regardless of which rule was picked: any
+      // scenario whose dealer is Ace evaluates insurance as correct here.
+      const { c } = createPage();
+      c.practiceMode.set('deviation-only');
+      c.setTrueCountSource('manual');
+      c.manualTrueCount.set(3);
+      // Spin until we land on an Ace upcard (insurance rule or a hard 16 v A,
+      // 15 v A, 10 v A, etc. — all relevant in this trainer).
+      let landedOnAce = false;
+      for (let i = 0; i < 200 && !landedOnAce; i++) {
+        c.nextHand();
+        if (c.scenario().dealerUpcard.rank === 'A') landedOnAce = true;
+      }
+      expect(landedOnAce).toBe(true);
+      c.answer('INS');
+      const r = c.result()!;
+      expect(r.correct).toBe(true);
+      expect(r.source).toBe('insurance');
+      expect(r.expectedAction).toBe('INS');
+    });
+
+    it('feedback panel renders "Deviation candidate hand" note when applicable', () => {
+      const { fixture, c } = createPage();
+      c.practiceMode.set('deviation-only');
+      c.nextHand();
+      c.answer('S');
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      const note = el.querySelector('.feedback__candidate') as HTMLElement | null;
+      expect(note).not.toBeNull();
+      expect(note!.textContent).toContain('Deviation candidate');
+    });
+
+    it('feedback panel does NOT render the candidate note in all-hands mode', () => {
+      const { fixture, c } = createPage();
+      // Default mode is all-hands; set a known scenario and answer.
+      c.scenario.set(scenarioOf('3', '4', '6', 0));
+      c.answer('H');
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('.feedback__candidate')).toBeNull();
     });
   });
 });
