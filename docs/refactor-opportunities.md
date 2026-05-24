@@ -87,7 +87,7 @@ rather than structural problems. There are no large rewrites worth doing.
 - **Suggested validation:** `npm test` (scenario-generators + deviations-page specs),
   `npm run build` (template type-check).
 - **Dependency ordering:** Independent.
-- **Autopilot status:** Planned
+- **Autopilot status:** Implemented
 
 ### Opportunity E — Extract a `softNonAceValue` helper for the soft-hand decomposition
 
