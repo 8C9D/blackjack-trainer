@@ -35,6 +35,13 @@ export function cardHighValue(card: Card): number {
   return Number(card.rank);
 }
 
+// The non-ace card's high value (2..10) for a soft two-card hand — a hand
+// with exactly one ace. Both engines key their soft-total lookups off this.
+export function softNonAceValue(player: readonly [Card, Card]): number {
+  const nonAce = isAce(player[0]) ? player[1] : player[0];
+  return cardHighValue(nonAce);
+}
+
 // Initial two-card deal: the player's two cards plus the dealer's upcard.
 // Shared by the trainers' scenario generators.
 export interface Scenario {

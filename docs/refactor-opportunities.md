@@ -110,7 +110,7 @@ rather than structural problems. There are no large rewrites worth doing.
 - **Suggested validation:** `npm test` (basic-strategy-engine, deviation-engine, and
   classifyForDeviation specs all exercise soft hands), `npm run build`.
 - **Dependency ordering:** Independent.
-- **Autopilot status:** Planned
+- **Autopilot status:** Implemented
 
 ## 4. Quick Wins
 
