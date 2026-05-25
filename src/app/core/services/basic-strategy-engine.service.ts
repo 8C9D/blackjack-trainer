@@ -6,6 +6,7 @@ import {
   cardHighValue,
   isAce,
   isTenValue,
+  softNonAceValue,
   type Card,
 } from '../models/card.model';
 import {
@@ -133,8 +134,7 @@ export class BasicStrategyEngineService {
     dealerKey: DealerUpcard,
     chart: StrategyChart,
   ): StrategyDecision {
-    const nonAce = isAce(player[0]) ? player[1] : player[0];
-    const nonAceValue = cardHighValue(nonAce); // 2..10
+    const nonAceValue = softNonAceValue(player); // 2..10
 
     if (nonAceValue === 10) {
       return {
