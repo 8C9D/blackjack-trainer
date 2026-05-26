@@ -12,16 +12,16 @@ import {
 import { BasicStrategyEngineService } from '../../core/services/basic-strategy-engine.service';
 import { BasicStrategyStatsService } from '../../core/services/basic-strategy-stats.service';
 import { CardGeneratorService } from '../../core/services/card-generator.service';
+import { RuleControlsComponent } from '../../shared/rule-controls.component';
 import { StatsPanelComponent } from '../../shared/stats-panel.component';
 import { ActionButtonsComponent } from './action-buttons.component';
 import { BlackjackTableComponent } from './blackjack-table.component';
 import { FeedbackPanelComponent } from './feedback-panel.component';
-import { RuleSelectorComponent } from './rule-selector.component';
 
 @Component({
   selector: 'app-basic-strategy-page',
   imports: [
-    RuleSelectorComponent,
+    RuleControlsComponent,
     BlackjackTableComponent,
     ActionButtonsComponent,
     FeedbackPanelComponent,
@@ -34,12 +34,14 @@ import { RuleSelectorComponent } from './rule-selector.component';
         <p class="page__subtitle">Practice initial two-card hands.</p>
       </header>
 
-      <app-rule-selector
-        [ruleSet]="ruleSet()"
-        [options]="options()"
-        (ruleSetChange)="ruleSet.set($event)"
-        (optionsChange)="options.set($event)"
-      />
+      <section class="page__rule-controls" aria-label="Rule controls">
+        <app-rule-controls
+          [ruleSet]="ruleSet()"
+          [options]="options()"
+          (ruleSetChange)="ruleSet.set($event)"
+          (optionsChange)="options.set($event)"
+        />
+      </section>
 
       <app-blackjack-table
         [player]="scenario().player"
