@@ -1,26 +1,22 @@
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 
 import { actionForKey, shouldIgnoreKeyboardEvent } from '../../core/keyboard';
-import { isAce } from '../../core/models/card.model';
 import type {
-  DeviationDecision,
   DeviationRule,
   DeviationScenario,
   DeviationTrainerResult,
 } from '../../core/models/deviation.model';
 import {
-  ACTION_LABELS,
   DEFAULT_ENGINE_OPTIONS,
   type Action,
   type EngineOptions,
   type RuleSet,
 } from '../../core/models/strategy.model';
-import {
-  BasicStrategyEngineService,
-  type EngineInput,
-} from '../../core/services/basic-strategy-engine.service';
 import { CardGeneratorService } from '../../core/services/card-generator.service';
-import { DeviationEngineService } from '../../core/services/deviation-engine.service';
+import {
+  DeviationEvaluatorService,
+  formatTrueCount,
+} from '../../core/services/deviation-evaluator.service';
 import { DeviationStatsService } from '../../core/services/deviation-stats.service';
 import { StatsPanelComponent } from '../../shared/stats-panel.component';
 import { ActionButtonsComponent } from '../basic-strategy/action-buttons.component';
@@ -103,8 +99,7 @@ export const MAX_RANDOM_TRUE_COUNT = 8;
   styleUrl: './deviations-page.component.scss',
 })
 export class DeviationsPageComponent {
-  private readonly basicStrategy = inject(BasicStrategyEngineService);
-  private readonly deviationEngine = inject(DeviationEngineService);
+  private readonly evaluator = inject(DeviationEvaluatorService);
   private readonly cardGenerator = inject(CardGeneratorService);
   protected readonly statsService = inject(DeviationStatsService);
 
@@ -118,10 +113,9 @@ export class DeviationsPageComponent {
   protected readonly scenario = signal<DeviationScenario>(this.generateScenario());
   protected readonly result = signal<DeviationTrainerResult | null>(null);
 
-  protected readonly formattedTrueCount = computed(() => {
-    const tc = this.scenario().trueCount;
-    return tc > 0 ? `+${tc}` : String(tc);
-  });
+  protected readonly formattedTrueCount = computed(() =>
+    formatTrueCount(this.scenario().trueCount),
+  );
 
   protected readonly canDealNextHand = computed(() => {
     if (this.trueCountSource() === 'random') return true;
@@ -140,8 +134,12 @@ export class DeviationsPageComponent {
 
   protected answer(action: Action): void {
     if (this.result() !== null) return;
-    const s = this.scenario();
-    const evaluation = this.evaluate(s, action);
+    const evaluation = this.evaluator.evaluate(
+      this.scenario(),
+      action,
+      this.ruleSet(),
+      this.options(),
+    );
     this.result.set(evaluation);
     this.statsService.recordAttempt(evaluation.correct);
   }
@@ -150,74 +148,6 @@ export class DeviationsPageComponent {
     if (!this.canDealNextHand()) return;
     this.scenario.set(this.generateScenario());
     this.result.set(null);
-  }
-
-  private evaluate(
-    scenario: DeviationScenario,
-    userAction: Action,
-  ): DeviationTrainerResult {
-    const engineInput: EngineInput = {
-      player: scenario.player,
-      dealerUpcard: scenario.dealerUpcard,
-      ruleSet: this.ruleSet(),
-      options: this.options(),
-    };
-    const playing = this.deviationEngine.resolveDeviationDecision(
-      engineInput,
-      scenario.trueCount,
-    );
-    const handDescription = this.basicStrategy.decide(engineInput).handDescription;
-    const dealerAce = isAce(scenario.dealerUpcard);
-    // Only consult the insurance overlay when the dealer shows an Ace. For
-    // non-Ace upcards there is no insurance offer.
-    const insurance: DeviationDecision | null = dealerAce
-      ? this.deviationEngine.resolveInsuranceDecision(scenario.trueCount, this.ruleSet())
-      : null;
-    const isDeviationCandidate = scenario.generatedAsDeviationCandidate === true;
-
-    if (insurance && insurance.deviationApplied) {
-      // Insurance is offered before the playing decision and dominates when
-      // the threshold is met. Expected action is INS regardless of the hand.
-      const matchedRule = insurance.matchedRule;
-      const expectedAction: Action = 'INS';
-      const correct = userAction === expectedAction;
-      return {
-        userAction,
-        expectedAction,
-        basicAction: playing.basicAction,
-        trueCount: scenario.trueCount,
-        handDescription,
-        deviationApplied: true,
-        matchedRule,
-        source: 'insurance',
-        correct,
-        isDeviationCandidate,
-        explanation: correct
-          ? `Take insurance: dealer shows an Ace and the true count is ${formatTC(scenario.trueCount)} (≥ +3 makes insurance +EV).`
-          : `Take insurance: dealer shows an Ace and the true count is ${formatTC(scenario.trueCount)} (≥ +3 makes insurance +EV). You picked ${ACTION_LABELS[userAction]}.`,
-      };
-    }
-
-    const expectedAction = playing.finalAction;
-    const correct = userAction === expectedAction;
-    return {
-      userAction,
-      expectedAction,
-      basicAction: playing.basicAction,
-      trueCount: scenario.trueCount,
-      handDescription,
-      deviationApplied: playing.deviationApplied,
-      matchedRule: playing.matchedRule,
-      source: 'playing',
-      correct,
-      isDeviationCandidate,
-      explanation: explainPlaying({
-        dealerAce,
-        userAction,
-        playing,
-        trueCount: scenario.trueCount,
-      }),
-    };
   }
 
   // Generates the next scenario. In 'all-hands' mode the player hand and
@@ -288,39 +218,4 @@ export class DeviationsPageComponent {
       this.answer(action);
     }
   }
-}
-
-function formatTC(tc: number): string {
-  return tc > 0 ? `+${tc}` : String(tc);
-}
-
-function explainPlaying(args: {
-  dealerAce: boolean;
-  userAction: Action;
-  playing: DeviationDecision;
-  trueCount: number;
-}): string {
-  const { dealerAce, userAction, playing, trueCount } = args;
-  const tcLabel = formatTC(trueCount);
-
-  // Distinguish a misplaced Insurance click — the user reached for INS but
-  // the insurance overlay didn't fire (either dealer isn't showing an Ace, or
-  // dealer Ace but TC below +3).
-  if (userAction === 'INS') {
-    if (!dealerAce) {
-      return `Insurance is only offered when the dealer shows an Ace. Play the hand: ${ACTION_LABELS[playing.finalAction]}.`;
-    }
-    return `Decline insurance — true count ${tcLabel} is below the +3 threshold. Play the hand: ${ACTION_LABELS[playing.finalAction]}.`;
-  }
-
-  if (playing.deviationApplied && playing.matchedRule) {
-    return `Hi-Lo deviation: ${playing.matchedRule.source}. At TC ${tcLabel}, play ${ACTION_LABELS[playing.finalAction]} instead of basic ${ACTION_LABELS[playing.basicAction]}.`;
-  }
-
-  if (playing.matchedRule) {
-    // Rule exists but threshold not met — surface it as a learning hint.
-    return `No deviation at TC ${tcLabel}; basic strategy plays ${ACTION_LABELS[playing.finalAction]}. (A deviation for this hand exists but only fires at a different count.)`;
-  }
-
-  return `No deviation for this hand; basic strategy plays ${ACTION_LABELS[playing.finalAction]}.`;
 }
