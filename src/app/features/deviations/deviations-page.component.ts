@@ -1,9 +1,11 @@
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 
-import { isAce, type Card } from '../../core/models/card.model';
+import { isAce } from '../../core/models/card.model';
 import type {
   DeviationDecision,
   DeviationRule,
+  DeviationScenario,
+  DeviationTrainerResult,
 } from '../../core/models/deviation.model';
 import {
   ACTION_LABELS,
@@ -16,19 +18,13 @@ import {
   BasicStrategyEngineService,
   type EngineInput,
 } from '../../core/services/basic-strategy-engine.service';
-import {
-  CardGeneratorService,
-  type Scenario,
-} from '../../core/services/card-generator.service';
+import { CardGeneratorService } from '../../core/services/card-generator.service';
 import { DeviationEngineService } from '../../core/services/deviation-engine.service';
 import { DeviationStatsService } from '../../core/services/deviation-stats.service';
 import { StatsPanelComponent } from '../../shared/stats-panel.component';
 import { ActionButtonsComponent } from '../basic-strategy/action-buttons.component';
 import { BlackjackTableComponent } from '../basic-strategy/blackjack-table.component';
-import {
-  DeviationFeedbackPanelComponent,
-  type DeviationTrainerResult,
-} from './deviation-feedback-panel.component';
+import { DeviationFeedbackPanelComponent } from './deviation-feedback-panel.component';
 import {
   DeviationSettingsComponent,
   type DeviationPracticeMode,
@@ -53,14 +49,6 @@ const KEYBOARD_BINDINGS: Readonly<Record<string, Action>> = {
   r: 'SUR',
   i: 'INS',
 };
-
-export interface DeviationScenario extends Scenario {
-  readonly trueCount: number;
-  // True when this scenario was generated to match an encoded deviation
-  // rule (deviation-only practice mode). The feedback panel surfaces a
-  // small "Deviation candidate hand" note when this is set.
-  readonly generatedAsDeviationCandidate?: boolean;
-}
 
 @Component({
   selector: 'app-deviations-page',

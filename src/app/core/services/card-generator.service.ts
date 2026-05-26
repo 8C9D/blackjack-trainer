@@ -3,12 +3,8 @@ import {
   ALL_RANKS,
   ALL_SUITS,
   type Card,
+  type Scenario,
 } from '../models/card.model';
-
-export interface Scenario {
-  readonly player: readonly [Card, Card];
-  readonly dealerUpcard: Card;
-}
 
 // Generates random initial-deal scenarios. Cards are drawn independently with
 // replacement — duplicates are allowed by design (this is a strategy trainer,

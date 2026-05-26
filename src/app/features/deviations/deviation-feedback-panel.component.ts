@@ -1,26 +1,10 @@
 import { Component, input, output } from '@angular/core';
 
-import type { DeviationRule } from '../../core/models/deviation.model';
+import type {
+  DeviationRule,
+  DeviationTrainerResult,
+} from '../../core/models/deviation.model';
 import { ACTION_LABELS, type Action } from '../../core/models/strategy.model';
-
-export type DeviationEvalSource = 'insurance' | 'playing';
-
-export interface DeviationTrainerResult {
-  readonly userAction: Action;
-  readonly expectedAction: Action;
-  readonly basicAction: Action;
-  readonly trueCount: number;
-  readonly handDescription: string;
-  readonly deviationApplied: boolean;
-  readonly matchedRule?: DeviationRule;
-  readonly source: DeviationEvalSource;
-  readonly correct: boolean;
-  readonly explanation: string;
-  // True when this hand was generated to match an encoded deviation rule
-  // (deviation-only practice mode). The panel renders a small badge in
-  // that case so the user knows the hand was chosen as a deviation drill.
-  readonly isDeviationCandidate?: boolean;
-}
 
 @Component({
   selector: 'app-deviation-feedback-panel',

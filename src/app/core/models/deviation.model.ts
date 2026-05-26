@@ -1,3 +1,4 @@
+import type { Scenario } from './card.model';
 import type { Action, DealerUpcard, RuleSet } from './strategy.model';
 
 // How a deviation rule compares its index against the current true count.
@@ -63,4 +64,35 @@ export interface DeviationDecision {
   readonly deviationApplied: boolean;
   readonly matchedRule?: DeviationRule;
   readonly trueCount: number;
+}
+
+// A trainer scenario for the Deviations page — Scenario plus the practice
+// true count and a flag indicating whether the scenario was deliberately
+// generated to match an encoded deviation rule.
+export interface DeviationScenario extends Scenario {
+  readonly trueCount: number;
+  readonly generatedAsDeviationCandidate?: boolean;
+}
+
+// Whether a deviation trainer evaluation came from the insurance overlay or
+// the playing-decision path.
+export type DeviationEvalSource = 'insurance' | 'playing';
+
+// Result returned by the Deviations trainer after evaluating a single hand.
+// Consumed by the feedback panel.
+export interface DeviationTrainerResult {
+  readonly userAction: Action;
+  readonly expectedAction: Action;
+  readonly basicAction: Action;
+  readonly trueCount: number;
+  readonly handDescription: string;
+  readonly deviationApplied: boolean;
+  readonly matchedRule?: DeviationRule;
+  readonly source: DeviationEvalSource;
+  readonly correct: boolean;
+  readonly explanation: string;
+  // True when this hand was generated to match an encoded deviation rule
+  // (deviation-only practice mode). The panel renders a small badge in
+  // that case so the user knows the hand was chosen as a deviation drill.
+  readonly isDeviationCandidate?: boolean;
 }
