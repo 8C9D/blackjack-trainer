@@ -18,6 +18,11 @@ export interface EngineOptions {
   lateSurrender: boolean;
 }
 
+export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
+  doubleAfterSplit: false,
+  lateSurrender: false,
+};
+
 // Dealer upcard keys for the chart tables. Face cards normalize to '10'
 // before lookup.
 export type DealerUpcard =
