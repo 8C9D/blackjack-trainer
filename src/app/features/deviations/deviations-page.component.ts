@@ -1,5 +1,6 @@
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 
+import { actionForKey, shouldIgnoreKeyboardEvent } from '../../core/keyboard';
 import { isAce } from '../../core/models/card.model';
 import type {
   DeviationDecision,
@@ -40,15 +41,6 @@ import {
 // exercise both negative- and positive-side deviations from the BJA chart.
 export const MIN_RANDOM_TRUE_COUNT = -5;
 export const MAX_RANDOM_TRUE_COUNT = 8;
-
-const KEYBOARD_BINDINGS: Readonly<Record<string, Action>> = {
-  h: 'H',
-  s: 'S',
-  d: 'D',
-  p: 'P',
-  r: 'SUR',
-  i: 'INS',
-};
 
 @Component({
   selector: 'app-deviations-page',
@@ -282,11 +274,7 @@ export class DeviationsPageComponent {
 
   @HostListener('window:keydown', ['$event'])
   protected onKeyDown(event: KeyboardEvent): void {
-    if (event.ctrlKey || event.metaKey || event.altKey) return;
-    const target = event.target as HTMLElement | null;
-    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-      return;
-    }
+    if (shouldIgnoreKeyboardEvent(event)) return;
     if (event.key === 'Enter') {
       if (this.result() !== null && this.canDealNextHand()) {
         event.preventDefault();
@@ -294,7 +282,7 @@ export class DeviationsPageComponent {
       }
       return;
     }
-    const action = KEYBOARD_BINDINGS[event.key.toLowerCase()];
+    const action = actionForKey(event.key);
     if (action) {
       event.preventDefault();
       this.answer(action);
