@@ -126,10 +126,10 @@ stale and is retracted here.
   through the `setRandomSource()` seam — valid-card invariants, index-math
   boundaries (first/last rank+suit), independent rank/suit draws,
   with-replacement duplicates, empty/negative sequence lengths, and determinism.
-- **Validation run**: `CI=true npm test`.
-- **Result**: _recorded at commit time below._
-- **Commit hash**: _below._
-- **Push result**: _below._
+- **Validation run**: targeted `--include` (12 passing), then full `CI=true npm test`.
+- **Result**: **PASS** — full suite 15 files / 367 tests passing (+12 from this spec).
+- **Commit**: see `git log -- src/app/core/services/card-generator.service.spec.ts`.
+- **Push result**: pushed to `origin/main`.
 
 ### Improvement 2 — `card.model.spec.ts`
 - **Files changed**: `src/app/core/models/card.model.spec.ts` (new).
