@@ -188,4 +188,5 @@ succeeds; no unused locals/params.**
 | # | Cleanup | Files changed | Validation | Commit | Push | Notes |
 |---|---------|---------------|------------|--------|------|-------|
 | 0 | Add refactor-opportunities report | docs/refactor-opportunities.md | n/a (docs) | e1253d3 | pushed | Report committed first. |
-| 1 | Opportunity A: dedup `formatTrueCount` | deviation-feedback-panel.component.ts | 355 tests pass; build ok | _this commit_ | pushed | Reuses exported `formatTrueCount`; no behavior change. |
+| 1 | Opportunity A: dedup `formatTrueCount` | deviation-feedback-panel.component.ts | 355 tests pass; build ok | 2865a7d | pushed | Reuses exported `formatTrueCount`; no behavior change. |
+| 2 | Opportunity B: `TEN_VALUE_RANKS` const | scenario-generators.ts | 355 tests pass; build ok | _this commit_ | pushed | Extracted const + delegated `cardOfValue` 10-branch to `tenValueCard`; `random()` call order preserved. |
