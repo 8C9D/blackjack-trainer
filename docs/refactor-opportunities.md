@@ -187,4 +187,5 @@ succeeds; no unused locals/params.**
 
 | # | Cleanup | Files changed | Validation | Commit | Push | Notes |
 |---|---------|---------------|------------|--------|------|-------|
-| 0 | Add refactor-opportunities report | docs/refactor-opportunities.md | n/a (docs) | _pending_ | _pending_ | Report committed first. |
+| 0 | Add refactor-opportunities report | docs/refactor-opportunities.md | n/a (docs) | e1253d3 | pushed | Report committed first. |
+| 1 | Opportunity A: dedup `formatTrueCount` | deviation-feedback-panel.component.ts | 355 tests pass; build ok | _this commit_ | pushed | Reuses exported `formatTrueCount`; no behavior change. |
