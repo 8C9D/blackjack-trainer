@@ -144,8 +144,10 @@ stale and is retracted here.
 - **Files changed**: `src/app/data/basic-strategy-charts.spec.ts` (new).
 - **Behavior covered**: structural integrity of `H17_CHART` and `S17_CHART`
   (key sets, dealer columns, legal cell symbols, `ruleSet`).
-- **Validation run**: `CI=true npm test`.
-- **Result / commit / push**: _below._
+- **Validation run**: targeted `--include` (8 passing), then full `CI=true npm test`.
+- **Result**: **PASS** — full suite 17 files / 388 tests passing (+8 from this spec).
+- **Commit**: see `git log -- src/app/data/basic-strategy-charts.spec.ts`.
+- **Push result**: pushed to `origin/main`.
 
 ## 6. Skipped Opportunities
 
