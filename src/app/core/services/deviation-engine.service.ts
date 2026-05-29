@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 
 import { H17_DEVIATIONS } from '../../data/h17-deviations';
 import { S17_DEVIATIONS } from '../../data/s17-deviations';
-import { cardHighValue, isAce, type Card } from '../models/card.model';
+import { cardHighValue, softNonAceValue, type Card } from '../models/card.model';
 import type {
   DeviationCategory,
   DeviationDecision,
@@ -174,9 +174,7 @@ export function classifyForDeviation(
     return { category: 'pair', playerHand: pairKey };
   }
   if (isSoftHand(player)) {
-    const nonAce = isAce(player[0]) ? player[1] : player[0];
-    const nonAceValue = cardHighValue(nonAce); // 2..10
-    const softTotal = 11 + nonAceValue;
+    const softTotal = 11 + softNonAceValue(player);
     return { category: 'soft', playerHand: String(softTotal) };
   }
   const total = cardHighValue(player[0]) + cardHighValue(player[1]);
