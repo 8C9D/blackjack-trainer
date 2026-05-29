@@ -765,6 +765,42 @@ describe('deviation data', () => {
     }
   });
 
+  it('uses INS only on the single insurance rule the engine looks up', () => {
+    // resolveInsuranceDecision() looks up exactly
+    //   { category: 'insurance', playerHand: 'insurance', dealerUpcard: 'A' }.
+    // The INS action must therefore stay exclusive to that one rule: if it
+    // leaked onto a playing-decision rule the trainer would tell the user to
+    // take insurance on an ordinary hand, and if the insurance rule were keyed
+    // differently the overlay lookup would silently miss it.
+    for (const ruleSet of ['H17', 'S17'] as const) {
+      const insRules = deviationsFor(ruleSet).filter(
+        (r) => r.deviationAction === 'INS',
+      );
+      expect(insRules.length, `${ruleSet} INS rule count`).toBe(1);
+      expect(insRules[0].category).toBe('insurance');
+      expect(insRules[0].playerHand).toBe('insurance');
+      expect(insRules[0].dealerUpcard).toBe('A');
+    }
+  });
+
+  it('has no duplicate (category, playerHand, dealerUpcard) lookup keys', () => {
+    // findDeviationRule() resolves a cell with Array.prototype.find, which
+    // returns the FIRST match. A duplicated lookup triple would silently
+    // shadow the later rule — its threshold/action would never apply — so a
+    // copy/paste slip between these two hand-transcribed charts could go
+    // unnoticed. Guard the structural invariant the engine relies on.
+    for (const ruleSet of ['H17', 'S17'] as const) {
+      const seen = new Set<string>();
+      const duplicates: string[] = [];
+      for (const r of deviationsFor(ruleSet)) {
+        const key = `${r.category}|${r.playerHand}|${r.dealerUpcard}`;
+        if (seen.has(key)) duplicates.push(key);
+        seen.add(key);
+      }
+      expect(duplicates, `${ruleSet} duplicate lookup keys`).toEqual([]);
+    }
+  });
+
   // Guards against the previous (uncommitted) encoding that included rules
   // from Schlesinger's wider Illustrious 18 / Fab 4 which are not on the
   // BJA chart. If these reappear, the data is no longer chart-faithful.
