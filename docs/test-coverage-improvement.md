@@ -22,7 +22,9 @@ _Last updated by the test-coverage-improver skill on 2026-05-29._
   (`angular.json`).
 - **Validation command**: `npm test` → `ng test`. In a non-TTY shell it does a
   single run; `CI=true npm test` forces that explicitly.
-- **Baseline**: 14 spec files, **355 tests passing** (verified this run).
+- **Baseline**: the earlier green baseline before any skill work was 14 spec
+  files / 355 tests; the three prior additions brought it to **17 spec files /
+  388 tests**, which is where this pass began. After this pass: **390 tests**.
 - **Test layout**: co-located `*.spec.ts` next to the unit under test.
 
 ### Verified source-vs-spec inventory
@@ -104,11 +106,40 @@ stale and is retracted here.
   assert specific actions (that would duplicate the engine specs and be brittle).
 - **Suggested validation**: `CI=true npm test`.
 
-### Gap 4 — Untested feature/shared UI components — Risk: Medium — Status: Deferred
+### Gap 4 — Deviation-chart structural integrity (lookup well-formedness) — Risk: Low — Status: **Implemented**
+- **Location**: `src/app/data/h17-deviations.ts`, `src/app/data/s17-deviations.ts`
+  (guarded from `src/app/core/services/deviation-engine.service.spec.ts`).
+- **Why it matters**: like the basic-strategy charts (Gap 3), both deviation
+  charts are hand-transcribed from BJA PDFs. They are flat `DeviationRule[]`
+  arrays, and `DeviationEngineService.findDeviationRule()` resolves a cell with
+  `Array.prototype.find` — it returns the **first** match. A duplicated
+  `(category, playerHand, dealerUpcard)` triple (an easy copy/paste slip
+  between two near-identical files) would silently shadow the later rule: its
+  threshold/action would never apply, and nothing in the type system or the
+  existing specs would catch it. Separately, the insurance overlay
+  (`resolveInsuranceDecision`) hard-codes a lookup of
+  `{ category:'insurance', playerHand:'insurance', dealerUpcard:'A' }`, so the
+  `INS` action leaking onto a playing rule — or the insurance rule being keyed
+  differently — would be a silent, user-visible bug.
+- **Existing tests**: the `describe('deviation data')` block already asserted
+  `ruleSet` tagging, the *presence* of an insurance rule (A / +3 / INS), and
+  several rule-set-specific present/absent cells — but **not** triple
+  uniqueness, and **not** that `INS` is exclusive to the engine's hard-coded
+  insurance key.
+- **Missing cases (added)**: no duplicate `(category, playerHand, dealerUpcard)`
+  lookup keys per rule set; `INS` appears on exactly one rule per chart, keyed
+  exactly as `resolveInsuranceDecision` looks it up.
+- **Deliberately not asserted**: per-field union membership
+  (`category` / `direction` / `dealerUpcard` / `Action`), which TypeScript
+  already enforces at the literal, and specific thresholds/actions, which the
+  engine specs already cover. The guard is structural only.
+- **Suggested validation**: `CI=true npm test`.
+
+### Gap 5 — Untested feature/shared UI components — Risk: Medium — Status: Deferred
 - **Location**: `features/basic-strategy/*`, `shared/*`, `card-stream`,
   `deviation-feedback-panel`.
 - **Why it matters**: user-visible rendering/interaction.
-- Higher effort (TestBed/DOM) and lower marginal value than Gaps 1–3; deferred.
+- Higher effort (TestBed/DOM) and lower marginal value than Gaps 1–4; deferred.
 
 ## 4. Test Improvement Plan
 
@@ -149,21 +180,43 @@ stale and is retracted here.
 - **Commit**: see `git log -- src/app/data/basic-strategy-charts.spec.ts`.
 - **Push result**: pushed to `origin/main`.
 
+### Improvement 4 — deviation-chart structural integrity (Gap 4)
+- **Files changed**: `src/app/core/services/deviation-engine.service.spec.ts`
+  (extended the existing `describe('deviation data')` block — kept the
+  deviation-data guards co-located rather than fragmenting them into a new
+  file).
+- **Behavior covered**: the two structural invariants the deviation engine's
+  `find`-based lookups depend on but nothing tested — (1) no duplicate
+  `(category, playerHand, dealerUpcard)` triple per rule set (a duplicate would
+  silently shadow the later rule), and (2) `INS` is used by exactly one rule
+  per chart, keyed exactly as `resolveInsuranceDecision` looks it up
+  (`insurance` / `insurance` / `A`).
+- **New test cases**: 2 (`uses INS only on the single insurance rule…`,
+  `has no duplicate (category, playerHand, dealerUpcard) lookup keys`).
+- **Validation run**: targeted `--include` deviation-engine spec (76 passing,
+  +2), then full `CI=true npm test`.
+- **Result**: **PASS** — full suite 17 files / 390 tests passing (+2).
+- **Commit**: see `git log -- src/app/core/services/deviation-engine.service.spec.ts`.
+- **Push result**: pushed to `origin/main`.
+
 ## 6. Skipped Opportunities
 
 - **`StatsStore` subclasses** — not skipped on merit; **already covered** by
   `stats-store.spec.ts`. The earlier report listed them only because it could
   not read the spec.
-- **Feature/shared UI components (Gap 4)** — deferred: TestBed/DOM effort
-  outweighs marginal value relative to Gaps 1–3.
+- **Feature/shared UI components (Gap 5)** — deferred: TestBed/DOM effort
+  outweighs marginal value relative to Gaps 1–4.
 - **`data/counting-systems.ts`** — low value; Hi-Lo per-rank values are already
   exercised through the counting-engine spec.
 
 ## 7. Final Notes
 
-This pass replaces a file-blind analysis with one grounded in the real source,
-and delivers three small, high-signal, production-code-free test additions
-covering the trainer's random-scenario generator, its shared card helpers, and
-the structural integrity of the hand-transcribed strategy charts. Remaining
-coverage gaps are the UI components (Gap 4), which are deferred as
-higher-effort, lower-value TestBed work.
+The analysis is grounded in the real source, and the four production-code-free
+additions delivered so far are small and high-signal: the random-scenario
+generator (Gap 1), the shared card helpers (Gap 2), the structural integrity of
+the hand-transcribed basic-strategy charts (Gap 3), and the structural
+integrity of the hand-transcribed deviation charts (Gap 4 — triple uniqueness
+and insurance-key exclusivity, the invariants the deviation engine's
+`find`-based lookups silently depend on). Each was validated against a green
+baseline, committed, and pushed one at a time. The remaining coverage gap is
+the UI components (Gap 5), deferred as higher-effort, lower-value TestBed work.
