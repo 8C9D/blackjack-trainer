@@ -10,6 +10,7 @@
 import {
   ALL_RANKS,
   ALL_SUITS,
+  TEN_VALUE_RANKS,
   type Card,
   type Rank,
   type Suit,
@@ -18,9 +19,9 @@ import type { DeviationRule } from '../../core/models/deviation.model';
 import type { DealerUpcard, RuleSet } from '../../core/models/strategy.model';
 import { deviationsFor } from '../../core/services/deviation-engine.service';
 
-// Thin wrapper around the engine's deviationsFor so the rule-set → table
-// mapping has a single source of truth. Kept as a named export because the
-// scenario generators (and their tests) reference it directly.
+// Named re-export of the core engine's deviationsFor (which owns the rule-set →
+// table mapping). Kept because the scenario generators and their tests
+// reference this name directly.
 export function deviationRulesFor(ruleSet: RuleSet): readonly DeviationRule[] {
   return deviationsFor(ruleSet);
 }
@@ -168,10 +169,6 @@ function randomAnyCard(random: () => number): Card {
     suit: randomSuit(random),
   };
 }
-
-// The four ten-value ranks. Used wherever a chart "10" cell must be expanded
-// into a concrete card so the table doesn't always show the same face.
-const TEN_VALUE_RANKS: readonly Rank[] = ['10', 'J', 'Q', 'K'];
 
 // value: 2..9 → that rank; 10 → random of '10' | 'J' | 'Q' | 'K'.
 // Callers (makeHardTotalCards, makeSoftTotalCards) only ever pass values in
