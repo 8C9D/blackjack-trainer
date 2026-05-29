@@ -135,8 +135,10 @@ stale and is retracted here.
 - **Files changed**: `src/app/core/models/card.model.spec.ts` (new).
 - **Behavior covered**: `isTenValue`, `isAce`, `cardHighValue`,
   `softNonAceValue` across all ranks/suits and edge inputs.
-- **Validation run**: `CI=true npm test`.
-- **Result / commit / push**: _below._
+- **Validation run**: targeted `--include` (13 passing), then full `CI=true npm test`.
+- **Result**: **PASS** — full suite 16 files / 380 tests passing (+13 from this spec).
+- **Commit**: see `git log -- src/app/core/models/card.model.spec.ts`.
+- **Push result**: pushed to `origin/main`.
 
 ### Improvement 3 — `basic-strategy-charts.spec.ts`
 - **Files changed**: `src/app/data/basic-strategy-charts.spec.ts` (new).
