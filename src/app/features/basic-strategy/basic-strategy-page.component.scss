@@ -40,5 +40,10 @@
     &__header h1 {
       font-size: 1.3rem;
     }
+
+    &__rule-controls {
+      flex-direction: column;
+      align-items: stretch;
+    }
   }
 }

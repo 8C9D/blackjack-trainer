@@ -1,0 +1,18 @@
+{
+  "name": "Blackjack Trainer",
+  "short_name": "Blackjack",
+  "description": "Practice blackjack basic strategy, Hi-Lo card counting, true count, and deviations.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a3a22",
+  "theme_color": "#0a3a22",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "48x48 32x32 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

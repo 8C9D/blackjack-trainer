@@ -58,3 +58,25 @@
     font-weight: 400;
   }
 }
+
+@media (max-width: 600px) {
+  .answer {
+    &__label input {
+      width: 100%;
+      max-width: 12rem;
+      min-height: 3rem;
+    }
+
+    &__submit {
+      width: 100%;
+      max-width: 12rem;
+      min-height: 3rem;
+      font-size: 1rem;
+    }
+
+    // The drill is touch-driven on phones; the [Enter] hint is desktop-only.
+    &__hint {
+      display: none;
+    }
+  }
+}
