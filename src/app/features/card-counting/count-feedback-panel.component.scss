@@ -121,3 +121,22 @@
     font-weight: 400;
   }
 }
+
+@media (max-width: 600px) {
+  .feedback {
+    &__toggle {
+      width: 100%;
+      min-height: 2.75rem;
+    }
+
+    &__next {
+      width: 100%;
+      min-height: 3rem;
+      font-size: 1rem;
+    }
+
+    &__hint {
+      display: none;
+    }
+  }
+}

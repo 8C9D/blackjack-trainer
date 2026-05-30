@@ -1,3 +1,9 @@
+:root {
+  // Height of the mobile bottom tab bar. Shared by the nav itself and the
+  // content area's bottom padding so trainer content always clears the bar.
+  --mobile-nav-height: 3.5rem;
+}
+
 html,
 body {
   margin: 0;
@@ -5,6 +11,16 @@ body {
   height: 100%;
   background: #0a3a22;
   color: #f4f4f4;
+  // Prevent iOS from auto-inflating text on orientation change, and drop the
+  // grey tap-flash so the components' own :active states read cleanly.
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  // Guard against accidental horizontal scroll on narrow screens; trainer
+  // layouts are designed to fit the viewport width.
+  overflow-x: hidden;
 }
 
 *,

@@ -31,3 +31,15 @@
     outline-offset: 2px;
   }
 }
+
+@media (max-width: 600px) {
+  .rule-controls__group {
+    // Each fieldset spans the full row when the controls stack on a phone.
+    width: 100%;
+
+    label {
+      // Taller rows make the radio/checkbox labels easier to tap.
+      min-height: 2.5rem;
+    }
+  }
+}

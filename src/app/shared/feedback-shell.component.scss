@@ -40,3 +40,15 @@
     }
   }
 }
+
+@media (max-width: 600px) {
+  .feedback {
+    padding: 0.85rem 1rem;
+
+    &__next {
+      width: 100%;
+      min-height: 3rem;
+      font-size: 1rem;
+    }
+  }
+}
