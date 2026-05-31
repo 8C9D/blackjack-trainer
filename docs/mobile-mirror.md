@@ -153,11 +153,59 @@ Run `npm start` and open DevTools device mode (e.g. iPhone SE 375×667, Pixel
 - [ ] No unexpected horizontal scrolling on any page.
 - [ ] Portrait and landscape both usable.
 
+## Post-implementation QA (v1 review)
+
+Reviewed commit `f2ee290` across all three routes (`/basic-strategy`,
+`/card-counting`, `/deviations`) at 320 / 375 / 390 / 414 / 430 / 768 px. The
+pass was done at the **responsive-CSS + DOM level** (each `max-width: 600px`
+block checked against its component's template) plus automated validation and a
+served-output asset check — not on-device pixel testing.
+
+**Verified**
+
+- **Dual nav** — only one nav is ever rendered: at ≤600px `.nav--top` is
+  `display: none` and the fixed `.nav--bottom` tab bar shows; above it, the
+  reverse. Active-tab styling (`--active`) and per-tab `aria-label`s are correct,
+  and both navs are generated from the one shared `links` array.
+- **Content clears the bar** — `.app-main`'s bottom padding
+  (`--mobile-nav-height` + `env(safe-area-inset-bottom)`) equals the bar's own
+  `min-height` + safe-area inset, so stats / Reset / "Deal next hand" are never
+  covered.
+- **No horizontal overflow (320–768px)** — card rows hold at most two 72px
+  cards, the action grid is `repeat(3, 1fr)`, settings/rule controls stack
+  full-width, and the count breakdown is `auto-fill minmax(110px, 1fr)` (two
+  columns even at 320px). `overflow-x: hidden` is the backstop.
+- **No iOS focus-zoom** — every focusable number input computes to ≥16px on
+  phones (counting fields `1rem`, count answer `1.4rem`, manual true count
+  bumped `0.95rem → 1rem` at the breakpoint); `inputmode="numeric"` preserved.
+- **Touch targets** 40–48px across actions, buttons, and stacked controls.
+- **Desktop unaffected** — every per-trainer change lives inside
+  `@media (max-width: 600px)`; the new `<main class="app-main">` and
+  `.nav--bottom` are `display: block` / `display: none` above the breakpoint.
+
+**Validation**
+
+- `CI=true npm test` → **393/393 passing** (17 files).
+- `npm run build` → clean; `manifest.webmanifest`, `favicon.ico`, and all 58
+  card SVGs emit under `dist/.../browser/` and serve with correct MIME types
+  (`application/manifest+json`, `image/x-icon`, `image/svg+xml`).
+
+**Known limitation (not changed in v1)**
+
+- In iOS **standalone** mode (Add to Home Screen),
+  `apple-mobile-web-app-status-bar-style: black-translucent` + `viewport-fit=cover`
+  let the web view fill the screen, but nothing applies `env(safe-area-inset-top)`,
+  so the page header can sit under the status bar / notch. Harmless in normal
+  Safari (the top inset is 0 there). Best folded into the "real PWA install" work
+  below rather than patched piecemeal.
+
 ## Future mobile improvements
 
 - **Real PWA install** — add maskable 192/512 PNG icons and, if offline use is
   wanted, a carefully scoped service worker (`@angular/service-worker`) with a
-  cache-first strategy for the static bundle + card SVGs.
+  cache-first strategy for the static bundle + card SVGs. Apply
+  `env(safe-area-inset-top)` padding at the same time so standalone-mode content
+  clears the translucent status bar (see the QA known limitation above).
 - **Tab-bar icons** — add small inline-SVG icons above each tab label.
 - **Larger / swipeable card stream** — bigger flashed card and optional
   swipe-between-trainers gesture.
@@ -166,4 +214,3 @@ Run `npm start` and open DevTools device mode (e.g. iPhone SE 375×667, Pixel
 - **`@media (hover: none)`** — drop hover-only affordances on touch devices.
 - **Landscape-specific tuning** — e.g. a side rail instead of the bottom bar in
   landscape on short viewports.
-```
