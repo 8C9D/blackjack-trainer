@@ -30,6 +30,9 @@ npm test         # vitest, single run in CI / watch in TTY
 npm run build    # production bundle in dist/blackjack-trainer/
 ```
 
+GitHub Actions runs `npm ci`, `CI=true npm test`, and `npm run build` on every
+push and pull request to `main` (`.github/workflows/ci.yml`).
+
 Navigate to `/basic-strategy`, `/card-counting`, or `/deviations` (top nav
 links).
 
