@@ -40,3 +40,26 @@
     opacity: 0.6;
   }
 }
+
+@media (max-width: 600px) {
+  .actions {
+    // Even 3-column grid keeps all six actions reachable without cramped
+    // wrapping; larger min-height gives comfortable touch targets.
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin: 1rem 0 1.25rem;
+
+    &__button {
+      min-height: 3rem;
+      padding: 0.7rem 0.4rem;
+      font-size: 1rem;
+    }
+
+    // Keyboard hints are noise on touch devices (the shortcuts still work if a
+    // hardware keyboard is attached) — hide them to give labels more room.
+    &__hint {
+      display: none;
+    }
+  }
+}
