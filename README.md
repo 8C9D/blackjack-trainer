@@ -26,9 +26,10 @@ required too. From the repo root:
 
 ```bash
 npm install
-npm start        # dev server at http://127.0.0.1:4200/
-npm test         # vitest, single run in CI / watch in TTY
-npm run build    # production bundle in dist/blackjack-trainer/
+npm start          # dev server at http://127.0.0.1:4200/
+npm test           # vitest, single run in CI / watch in TTY
+npm run typecheck  # tsc --noEmit on the app sources
+npm run build      # production bundle in dist/blackjack-trainer/
 ```
 
 GitHub Actions runs `npm ci`, `CI=true npm test`, and `npm run build` on every
