@@ -21,7 +21,8 @@ the same card model + cardsJS images.
 
 ## Quick start
 
-Requires Node 20+ and npm. From the repo root:
+Node 22 is recommended — run `nvm use` to match the bundled `.nvmrc`. npm is
+required too. From the repo root:
 
 ```bash
 npm install
