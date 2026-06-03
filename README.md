@@ -394,22 +394,24 @@ storage — they're not loaded by v2 or v3.
 
 ### App code
 
-The application code in this repository does **not** currently have an
-open-source license. **All rights are reserved** unless and until a top-level
-`LICENSE` file (and a corresponding `license` field in `package.json`) is
-added later. The package is marked `"private": true`, which guards against an
-accidental `npm publish` but is not itself a copyright license.
+The application code in this repository is licensed under the **MIT License** —
+see the top-level [`LICENSE`](LICENSE) file for the full text (copyright © 2026
+Arthur Zhang). MIT covers the application **source only**; it does **not** cover
+the bundled card art under `public/cards/`, which is licensed separately (see
+[Card art](#card-art)).
+
+The package is still marked `"private": true` in `package.json`, which guards
+against an accidental `npm publish`; that flag is independent of the MIT license
+on the source.
 
 For a point-in-time review of the repository's licensing and asset-attribution
 state, see
 [`docs/license-and-attribution-audit.md`](docs/license-and-attribution-audit.md).
-That audit documents the current situation so a deliberate licensing decision
-can be made later — it does not make that decision.
 
 ### Card art
 
 The card SVG assets are licensed and attributed **separately** from the app
-code and are **not** covered by the all-rights-reserved status above. The 52
+code and are **not** covered by the MIT license above. The 52
 card SVGs and `BLUE_BACK.svg` under `public/cards/` come from
 [richardschneider/cardsJS](https://github.com/richardschneider/cardsJS), which
 packages Chris Aguilar's
