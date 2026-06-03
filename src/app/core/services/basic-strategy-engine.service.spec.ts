@@ -1,7 +1,4 @@
-import {
-  BasicStrategyEngineService,
-  type EngineInput,
-} from './basic-strategy-engine.service';
+import { BasicStrategyEngineService, type EngineInput } from './basic-strategy-engine.service';
 import type { Card, Rank, Suit } from '../models/card.model';
 import type { EngineOptions, RuleSet } from '../models/strategy.model';
 
@@ -142,30 +139,48 @@ describe('BasicStrategyEngineService', () => {
   // ─── Late Surrender ───────────────────────────────────────────────────
   describe('Late Surrender toggle', () => {
     it('Hard 16 vs 10 in S17: SUR when LS enabled, H when disabled', () => {
-      expect(engine.decide(scenario('10', '6', '10', 'S17', { lateSurrender: true })).action).toBe('SUR');
-      expect(engine.decide(scenario('10', '6', '10', 'S17', { lateSurrender: false })).action).toBe('H');
+      expect(engine.decide(scenario('10', '6', '10', 'S17', { lateSurrender: true })).action).toBe(
+        'SUR',
+      );
+      expect(engine.decide(scenario('10', '6', '10', 'S17', { lateSurrender: false })).action).toBe(
+        'H',
+      );
     });
 
     it('Hard 15 vs 10 in S17: SUR when LS enabled, H when disabled', () => {
-      expect(engine.decide(scenario('10', '5', '10', 'S17', { lateSurrender: true })).action).toBe('SUR');
-      expect(engine.decide(scenario('10', '5', '10', 'S17', { lateSurrender: false })).action).toBe('H');
+      expect(engine.decide(scenario('10', '5', '10', 'S17', { lateSurrender: true })).action).toBe(
+        'SUR',
+      );
+      expect(engine.decide(scenario('10', '5', '10', 'S17', { lateSurrender: false })).action).toBe(
+        'H',
+      );
     });
 
     it('Hard 17 vs A in H17: SUR when LS enabled, S when disabled', () => {
-      expect(engine.decide(scenario('10', '7', 'A', 'H17', { lateSurrender: true })).action).toBe('SUR');
-      expect(engine.decide(scenario('10', '7', 'A', 'H17', { lateSurrender: false })).action).toBe('S');
+      expect(engine.decide(scenario('10', '7', 'A', 'H17', { lateSurrender: true })).action).toBe(
+        'SUR',
+      );
+      expect(engine.decide(scenario('10', '7', 'A', 'H17', { lateSurrender: false })).action).toBe(
+        'S',
+      );
     });
 
     it('Pair 8,8 vs A in H17: SUR when LS enabled, Split when disabled', () => {
-      expect(engine.decide(scenario('8', '8', 'A', 'H17', { lateSurrender: true })).action).toBe('SUR');
-      expect(engine.decide(scenario('8', '8', 'A', 'H17', { lateSurrender: false })).action).toBe('P');
+      expect(engine.decide(scenario('8', '8', 'A', 'H17', { lateSurrender: true })).action).toBe(
+        'SUR',
+      );
+      expect(engine.decide(scenario('8', '8', 'A', 'H17', { lateSurrender: false })).action).toBe(
+        'P',
+      );
     });
   });
 
   // ─── Double After Split ───────────────────────────────────────────────
   describe('Double After Split toggle (Y/N pair cells)', () => {
     it('2,2 vs 2 in S17 with DAS → Split', () => {
-      expect(engine.decide(scenario('2', '2', '2', 'S17', { doubleAfterSplit: true })).action).toBe('P');
+      expect(engine.decide(scenario('2', '2', '2', 'S17', { doubleAfterSplit: true })).action).toBe(
+        'P',
+      );
     });
 
     it('2,2 vs 2 in S17 without DAS → falls through to hard total (Hit)', () => {
@@ -175,13 +190,21 @@ describe('BasicStrategyEngineService', () => {
     });
 
     it('4,4 vs 5 with DAS → Split; without DAS → falls through to hard 8 (Hit)', () => {
-      expect(engine.decide(scenario('4', '4', '5', 'S17', { doubleAfterSplit: true })).action).toBe('P');
-      expect(engine.decide(scenario('4', '4', '5', 'S17', { doubleAfterSplit: false })).action).toBe('H');
+      expect(engine.decide(scenario('4', '4', '5', 'S17', { doubleAfterSplit: true })).action).toBe(
+        'P',
+      );
+      expect(
+        engine.decide(scenario('4', '4', '5', 'S17', { doubleAfterSplit: false })).action,
+      ).toBe('H');
     });
 
     it('6,6 vs 2 with DAS → Split; without DAS → hard 12 (Hit vs 2)', () => {
-      expect(engine.decide(scenario('6', '6', '2', 'S17', { doubleAfterSplit: true })).action).toBe('P');
-      expect(engine.decide(scenario('6', '6', '2', 'S17', { doubleAfterSplit: false })).action).toBe('H');
+      expect(engine.decide(scenario('6', '6', '2', 'S17', { doubleAfterSplit: true })).action).toBe(
+        'P',
+      );
+      expect(
+        engine.decide(scenario('6', '6', '2', 'S17', { doubleAfterSplit: false })).action,
+      ).toBe('H');
     });
   });
 
@@ -218,22 +241,38 @@ describe('BasicStrategyEngineService', () => {
     });
 
     it('Hard 15 vs A: SUR in H17 (with LS), H in S17', () => {
-      expect(engine.decide(scenario('10', '5', 'A', 'H17', { lateSurrender: true })).action).toBe('SUR');
-      expect(engine.decide(scenario('10', '5', 'A', 'S17', { lateSurrender: true })).action).toBe('H');
+      expect(engine.decide(scenario('10', '5', 'A', 'H17', { lateSurrender: true })).action).toBe(
+        'SUR',
+      );
+      expect(engine.decide(scenario('10', '5', 'A', 'S17', { lateSurrender: true })).action).toBe(
+        'H',
+      );
     });
 
     it('Hard 16 vs A: SUR in both rule sets when LS enabled; H when LS disabled', () => {
       // Per BJA 2024 S17/H17 charts, the LS overlay includes 16 v A in
       // both rule sets. Without LS, 16 v A reverts to Hit per the hard chart.
-      expect(engine.decide(scenario('10', '6', 'A', 'H17', { lateSurrender: true })).action).toBe('SUR');
-      expect(engine.decide(scenario('10', '6', 'A', 'S17', { lateSurrender: true })).action).toBe('SUR');
-      expect(engine.decide(scenario('10', '6', 'A', 'H17', { lateSurrender: false })).action).toBe('H');
-      expect(engine.decide(scenario('10', '6', 'A', 'S17', { lateSurrender: false })).action).toBe('H');
+      expect(engine.decide(scenario('10', '6', 'A', 'H17', { lateSurrender: true })).action).toBe(
+        'SUR',
+      );
+      expect(engine.decide(scenario('10', '6', 'A', 'S17', { lateSurrender: true })).action).toBe(
+        'SUR',
+      );
+      expect(engine.decide(scenario('10', '6', 'A', 'H17', { lateSurrender: false })).action).toBe(
+        'H',
+      );
+      expect(engine.decide(scenario('10', '6', 'A', 'S17', { lateSurrender: false })).action).toBe(
+        'H',
+      );
     });
 
     it('Hard 17 vs A: SUR_S in H17 (with LS), S in S17', () => {
-      expect(engine.decide(scenario('10', '7', 'A', 'H17', { lateSurrender: true })).action).toBe('SUR');
-      expect(engine.decide(scenario('10', '7', 'A', 'S17', { lateSurrender: true })).action).toBe('S');
+      expect(engine.decide(scenario('10', '7', 'A', 'H17', { lateSurrender: true })).action).toBe(
+        'SUR',
+      );
+      expect(engine.decide(scenario('10', '7', 'A', 'S17', { lateSurrender: true })).action).toBe(
+        'S',
+      );
     });
 
     it('Soft A,7 vs 2: Double in H17, Stand in S17', () => {
@@ -247,8 +286,12 @@ describe('BasicStrategyEngineService', () => {
     });
 
     it('Pair 8,8 vs A in H17 with LS: SUR; in S17: Split', () => {
-      expect(engine.decide(scenario('8', '8', 'A', 'H17', { lateSurrender: true })).action).toBe('SUR');
-      expect(engine.decide(scenario('8', '8', 'A', 'S17', { lateSurrender: true })).action).toBe('P');
+      expect(engine.decide(scenario('8', '8', 'A', 'H17', { lateSurrender: true })).action).toBe(
+        'SUR',
+      );
+      expect(engine.decide(scenario('8', '8', 'A', 'S17', { lateSurrender: true })).action).toBe(
+        'P',
+      );
     });
   });
 

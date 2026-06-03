@@ -15,18 +15,14 @@ function evaluation(overrides: Partial<EvaluationResult> = {}): EvaluationResult
   };
 }
 
-function createPanel(
-  result: EvaluationResult | null,
-): ComponentFixture<FeedbackPanelComponent> {
+function createPanel(result: EvaluationResult | null): ComponentFixture<FeedbackPanelComponent> {
   const fixture = TestBed.createComponent(FeedbackPanelComponent);
   fixture.componentRef.setInput('result', result);
   fixture.detectChanges();
   return fixture;
 }
 
-function feedbackSection(
-  fixture: ComponentFixture<FeedbackPanelComponent>,
-): HTMLElement | null {
+function feedbackSection(fixture: ComponentFixture<FeedbackPanelComponent>): HTMLElement | null {
   return fixture.nativeElement.querySelector('.feedback');
 }
 
@@ -53,17 +49,17 @@ describe('FeedbackPanelComponent', () => {
   it('shows the "Correct." verdict and correct styling for a correct answer', () => {
     const fixture = createPanel(evaluation({ correct: true }));
     expect(feedbackSection(fixture)!.classList.contains('feedback--correct')).toBe(true);
-    expect(
-      fixture.nativeElement.querySelector('.feedback__verdict')!.textContent,
-    ).toContain('Correct.');
+    expect(fixture.nativeElement.querySelector('.feedback__verdict')!.textContent).toContain(
+      'Correct.',
+    );
   });
 
   it('shows the "Incorrect." verdict and incorrect styling for a wrong answer', () => {
     const fixture = createPanel(evaluation({ correct: false }));
     expect(feedbackSection(fixture)!.classList.contains('feedback--incorrect')).toBe(true);
-    expect(
-      fixture.nativeElement.querySelector('.feedback__verdict')!.textContent,
-    ).toContain('Incorrect.');
+    expect(fixture.nativeElement.querySelector('.feedback__verdict')!.textContent).toContain(
+      'Incorrect.',
+    );
   });
 
   it('lists the hand, the correct action and the reason under stable term labels', () => {

@@ -26,10 +26,7 @@ function altsIn(root: Element): string[] {
   );
 }
 
-function section(
-  fixture: ComponentFixture<BlackjackTableComponent>,
-  label: string,
-): HTMLElement {
+function section(fixture: ComponentFixture<BlackjackTableComponent>, label: string): HTMLElement {
   return fixture.nativeElement.querySelector(`[aria-label="${label}"]`) as HTMLElement;
 }
 

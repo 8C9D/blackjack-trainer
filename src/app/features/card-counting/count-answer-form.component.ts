@@ -28,11 +28,9 @@ import { CountingEngineService } from '../../core/services/counting-engine.servi
           (input)="onInput($event)"
         />
       </label>
-      <button
-        type="submit"
-        class="answer__submit"
-        [disabled]="!canSubmit()"
-      >Submit <span class="answer__hint">[Enter]</span></button>
+      <button type="submit" class="answer__submit" [disabled]="!canSubmit()">
+        Submit <span class="answer__hint">[Enter]</span>
+      </button>
     </form>
   `,
   styleUrl: './count-answer-form.component.scss',

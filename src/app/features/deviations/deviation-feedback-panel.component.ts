@@ -1,10 +1,7 @@
 import { Component, input, output } from '@angular/core';
 
 import { FeedbackShellComponent } from '../../shared/feedback-shell.component';
-import type {
-  DeviationRule,
-  DeviationTrainerResult,
-} from '../../core/models/deviation.model';
+import type { DeviationRule, DeviationTrainerResult } from '../../core/models/deviation.model';
 import { ACTION_LABELS, type Action } from '../../core/models/strategy.model';
 import { formatTrueCount } from '../../core/services/deviation-evaluator.service';
 

@@ -9,9 +9,7 @@ const seq = (...ranks: Rank[]): Card[] => ranks.map(card);
 
 // Default settings shape used by validateSettings tests. Individual tests
 // override the fields they care about.
-const rcSettings = (
-  overrides: Partial<CountingDrillSettings> = {},
-): CountingDrillSettings => ({
+const rcSettings = (overrides: Partial<CountingDrillSettings> = {}): CountingDrillSettings => ({
   mode: 'running-count',
   numberOfCards: 20,
   millisecondsBetweenCards: 500,
@@ -19,9 +17,7 @@ const rcSettings = (
   ...overrides,
 });
 
-const tcSettings = (
-  overrides: Partial<CountingDrillSettings> = {},
-): CountingDrillSettings => ({
+const tcSettings = (overrides: Partial<CountingDrillSettings> = {}): CountingDrillSettings => ({
   mode: 'true-count',
   numberOfCards: 20,
   millisecondsBetweenCards: 500,
@@ -89,7 +85,7 @@ describe('CountingEngineService', () => {
 
     it('full 52-card deck sums to 0 (balanced property)', () => {
       // Construct a single deck: all 13 ranks × 4 suits.
-      const ranks: Rank[] = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+      const ranks: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
       const deck: Card[] = [];
       for (const r of ranks) {
         for (let i = 0; i < 4; i++) deck.push(card(r));
@@ -228,16 +224,12 @@ describe('CountingEngineService', () => {
     });
 
     it(`accepts the boundary maximum of exactly MAX_CARDS_PER_DRILL (${MAX_CARDS_PER_DRILL})`, () => {
-      const v = engine.validateSettings(
-        rcSettings({ numberOfCards: MAX_CARDS_PER_DRILL }),
-      );
+      const v = engine.validateSettings(rcSettings({ numberOfCards: MAX_CARDS_PER_DRILL }));
       expect(v.valid).toBe(true);
     });
 
     it('rejects card counts above MAX_CARDS_PER_DRILL', () => {
-      const v = engine.validateSettings(
-        rcSettings({ numberOfCards: MAX_CARDS_PER_DRILL + 1 }),
-      );
+      const v = engine.validateSettings(rcSettings({ numberOfCards: MAX_CARDS_PER_DRILL + 1 }));
       expect(v.valid).toBe(false);
       expect(v.errors.some((e) => e.includes(String(MAX_CARDS_PER_DRILL)))).toBe(true);
     });
@@ -296,9 +288,7 @@ describe('CountingEngineService', () => {
     });
 
     it('true-count mode rejects non-finite decksRemaining', () => {
-      const v = engine.validateSettings(
-        tcSettings({ decksRemaining: Number.POSITIVE_INFINITY }),
-      );
+      const v = engine.validateSettings(tcSettings({ decksRemaining: Number.POSITIVE_INFINITY }));
       expect(v.valid).toBe(false);
     });
   });

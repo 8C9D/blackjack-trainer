@@ -48,8 +48,8 @@ interface BreakdownEntry {
           <dd>{{ tc.decksRemaining }}</dd>
         </dl>
         <p class="feedback__formula">
-          Running count {{ tc.correctRunningCount }} ÷ {{ tc.decksRemaining }} decks =
-          true count {{ tc.correctTrueCount }}
+          Running count {{ tc.correctRunningCount }} ÷ {{ tc.decksRemaining }} decks = true count
+          {{ tc.correctTrueCount }}
         </p>
       }
 
@@ -74,11 +74,9 @@ interface BreakdownEntry {
         </ol>
       }
 
-      <button
-        type="button"
-        class="feedback__next"
-        (click)="next.emit()"
-      >Run again <span class="feedback__hint">[Enter]</span></button>
+      <button type="button" class="feedback__next" (click)="next.emit()">
+        Run again <span class="feedback__hint">[Enter]</span>
+      </button>
     </section>
   `,
   styleUrl: './count-feedback-panel.component.scss',

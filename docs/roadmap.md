@@ -7,11 +7,11 @@ A sequenced, vertical-slice plan for the work that remains. Each slice is a
 **Ordering principle:** infrastructure and quality first (Phase A), then user-
 facing features (Phase B). The rationale is that the feature slices touch the
 counting engine and chart data, and we want lint/format gates and value-level
-chart guards in place *before* we start editing that logic.
+chart guards in place _before_ we start editing that logic.
 
 ## How this roadmap is consumed
 
-This file is the source of truth for *what* each slice is. It is driven by the
+This file is the source of truth for _what_ each slice is. It is driven by the
 **`roadmap-slice-autopilot`** skill, which implements one slice per invocation,
 commits it, pushes it, and records the prompt for the following slice in
 [`roadmap-progress.md`](roadmap-progress.md) (the cursor / handoff file).
@@ -28,7 +28,7 @@ commits it, pushes it, and records the prompt for the following slice in
 - **Done** — implemented, validated, committed, pushed.
 - **Skipped** — deliberately not done (reason recorded in the progress log).
 - **Needs review** — autopilot paused here because the slice needs a human
-  decision it could not safely default (see each slice's *Decision* field).
+  decision it could not safely default (see each slice's _Decision_ field).
 
 ## Slice schema
 
@@ -61,7 +61,7 @@ Plus, once Slice 1 lands: `npm run lint`.
 ### Slice 1 — Lint & format tooling
 
 - **Phase:** A — Infra/Quality
-- **Status:** Planned
+- **Status:** Done
 - **Goal:** Make formatting and quality checks first-class and CI-enforced.
 - **Why here:** Prettier is already a dependency (`^3.8.1`) but nothing runs it;
   there is no `lint` script. Wiring this first means every later slice is held
@@ -123,7 +123,7 @@ Plus, once Slice 1 lands: `npm run lint`.
 - **Status:** Planned
 - **Goal:** Guard the transcribed chart **values** (not just their shape)
   against accidental edits.
-- **Why here:** Existing specs prove chart *structure*; the most plausible place
+- **Why here:** Existing specs prove chart _structure_; the most plausible place
   for a latent or future regression is a wrong cell value. The feature slices in
   Phase B will edit nearby data, so lock the charts down first.
 - **Scope:**
@@ -155,7 +155,7 @@ Plus, once Slice 1 lands: `npm run lint`.
 - **Why here:** Last quality item before features. Some shared pieces already
   exist (`shared/feedback-shell.component.ts`, `rule-controls.component.ts`,
   `stats-panel.component.ts`, `core/keyboard.ts`); this slice assesses what is
-  *still* duplicated and extracts it **without changing behavior**.
+  _still_ duplicated and extracts it **without changing behavior**.
 - **Scope:** Identify remaining duplication between `features/basic-strategy/`
   and `features/deviations/` (and their use of `core/keyboard.ts`), extract into
   shared components/utilities, and update both features to consume them.
@@ -169,7 +169,7 @@ Plus, once Slice 1 lands: `npm run lint`.
   - [ ] Build green; manual smoke of v1 and v4 looks identical.
 - **Validation:** baseline + manual smoke of both trainers.
 - **Commit:** `refactor: extract shared blackjack-UI scaffolding between v1 and v4`
-- **Decision:** **Required if non-mechanical.** The *shape* of the extraction is
+- **Decision:** **Required if non-mechanical.** The _shape_ of the extraction is
   a judgment call. If the duplication is small and mechanical, proceed. If it
   requires meaningful API/design choices, **pause**: write the proposed
   extraction plan into the progress log, mark the slice **Needs review**, and

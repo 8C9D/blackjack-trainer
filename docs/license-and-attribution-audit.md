@@ -17,20 +17,20 @@ upstream asset license and, if needed, legal counsel.
   `"private": true`, version `0.0.0`.
 - **Card image assets are licensed (LGPL 3.0)** and their notices are present,
   committed, and shipped in the production build.
-- Net effect today: the *bundled card art* is properly attributed, but the
-  *project's own code* is in an undeclared state ("all rights reserved" by
+- Net effect today: the _bundled card art_ is properly attributed, but the
+  _project's own code_ is in an undeclared state ("all rights reserved" by
   default under copyright law, but not explicitly documented).
 
 ---
 
 ## 1. App code license status
 
-| Question | Finding |
-|---|---|
-| Does the app code have a declared license? | **No.** No license is declared for the project's own source. |
-| Does `package.json` have a `license` field? | **No.** See `package.json` — keys are `name`, `version` (`0.0.0`), `scripts`, `private`, `packageManager`, `engines`, `dependencies`, `devDependencies`. No `license`. |
-| Is there a top-level `LICENSE` file? | **No.** No `LICENSE`, `LICENSE.md`, `COPYING`, `AUTHORS`, or `NOTICE` exists at the repo root (`git ls-files` shows license/attribution files only under `public/cards/`). |
-| Is the package private? | **Yes.** `"private": true` in `package.json` (prevents accidental `npm publish`; it is *not* a copyright license). |
+| Question                                    | Finding                                                                                                                                                                    |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Does the app code have a declared license?  | **No.** No license is declared for the project's own source.                                                                                                               |
+| Does `package.json` have a `license` field? | **No.** See `package.json` — keys are `name`, `version` (`0.0.0`), `scripts`, `private`, `packageManager`, `engines`, `dependencies`, `devDependencies`. No `license`.     |
+| Is there a top-level `LICENSE` file?        | **No.** No `LICENSE`, `LICENSE.md`, `COPYING`, `AUTHORS`, or `NOTICE` exists at the repo root (`git ls-files` shows license/attribution files only under `public/cards/`). |
+| Is the package private?                     | **Yes.** `"private": true` in `package.json` (prevents accidental `npm publish`; it is _not_ a copyright license).                                                         |
 
 **Interpretation:** With no explicit license, the project's first-party code
 defaults to standard copyright — i.e., effectively "all rights reserved" — but
@@ -41,7 +41,7 @@ should be made explicit if the repo is ever shared or open-sourced.
 > "License and attribution" section that makes the app-code status explicit:
 > **no open-source license** and **all rights reserved** unless a top-level
 > `LICENSE` is added later, with the card-art notices called out as separately
-> licensed. This documents the *current* state only; it does **not** decide the
+> licensed. This documents the _current_ state only; it does **not** decide the
 > future licensing question, which remains open (see §5).
 
 ---
@@ -104,16 +104,16 @@ not just the source tree.
 - **Give notice that the work is used and is LGPL-covered.** Covered by the
   README attribution section and the embedded `dc:rights` SVG metadata. ✓
 
-**Why bundling LGPL art does *not* force the app code to be LGPL:**
+**Why bundling LGPL art does _not_ force the app code to be LGPL:**
 
 - The SVGs are used **verbatim and unmodified**, served as standalone static
   files, and are **not** compiled, inlined, or transformed into the app's JS
   bundle. The artwork (the "Library") stays separate and replaceable.
-- The LGPL is specifically designed so that an "Application" that merely *uses*
+- The LGPL is specifically designed so that an "Application" that merely _uses_
   the Library can be conveyed under terms of the project's choice, provided the
   notices ship and a user could substitute a modified version of the Library.
   Serving the SVGs as discrete files preserves that substitutability.
-- **Consequence:** the project's own code can be proprietary *or* permissively
+- **Consequence:** the project's own code can be proprietary _or_ permissively
   licensed (e.g. MIT) **without** the LGPL "infecting" it — as long as the card
   asset notices remain in place.
 
@@ -152,7 +152,7 @@ not just the source tree.
   deviation charts to
   [Blackjack Apprenticeship](https://www.blackjackapprenticeship.com/). These
   are transcribed as static data, not scraped at runtime. Whether such chart
-  *data* is copyrightable (facts/strategy tables often are not) is a **separate
+  _data_ is copyrightable (facts/strategy tables often are not) is a **separate
   question** from the card-art license and is **not resolved here** — flagged so
   it isn't overlooked in any public-release decision.
 - **Provenance of `public/favicon.ico` and `public/manifest.webmanifest`
@@ -175,7 +175,7 @@ intentionally does **not** pick one.
 2. **Add an open-source license for the app code (e.g. MIT) while preserving
    the card asset notices.**
    Add a top-level `LICENSE` and a `package.json` `license` field covering the
-   project's *own* code, and clarify that the bundled card art under
+   project's _own_ code, and clarify that the bundled card art under
    `public/cards/` is **not** covered by that license but remains **LGPL 3.0**
    (notices retained). Make the scope split explicit so the two licenses don't
    get conflated.
@@ -211,5 +211,5 @@ intentionally does **not** pick one.
 - `angular.json` — `public/` is the served asset root (notices ship in `dist/`).
 - `docs/security-sanity-check.md` — no substantive licensing content (one
   incidental mention of license-text false positives in scanning).
-</content>
-</invoke>
+  </content>
+  </invoke>

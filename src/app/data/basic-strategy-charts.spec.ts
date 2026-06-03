@@ -10,8 +10,22 @@ import { S17_CHART } from './s17-basic-strategy';
 const DEALER_UPCARDS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'];
 
 const HARD_ROW_KEYS = [
-  '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17',
-  '18', '19', '20',
+  '5',
+  '6',
+  '7',
+  '8',
+  '9',
+  '10',
+  '11',
+  '12',
+  '13',
+  '14',
+  '15',
+  '16',
+  '17',
+  '18',
+  '19',
+  '20',
 ];
 const SOFT_ROW_KEYS = ['2', '3', '4', '5', '6', '7', '8', '9'];
 const PAIR_ROW_KEYS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'];
@@ -31,9 +45,7 @@ function expectTable(
 ): void {
   expect(sorted(Object.keys(table))).toEqual(sorted(expectedRowKeys));
   for (const [rowKey, row] of Object.entries(table)) {
-    expect(sorted(Object.keys(row)), `row ${rowKey} columns`).toEqual(
-      sorted(DEALER_UPCARDS),
-    );
+    expect(sorted(Object.keys(row)), `row ${rowKey} columns`).toEqual(sorted(DEALER_UPCARDS));
     for (const [upcard, cell] of Object.entries(row)) {
       expect(legalCells, `row ${rowKey} vs ${upcard}`).toContain(cell);
     }

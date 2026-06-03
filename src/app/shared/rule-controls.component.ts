@@ -1,9 +1,6 @@
 import { Component, input, output } from '@angular/core';
 
-import type {
-  EngineOptions,
-  RuleSet,
-} from '../core/models/strategy.model';
+import type { EngineOptions, RuleSet } from '../core/models/strategy.model';
 
 // Shared dealer-rule and table-options controls reused by both the Basic
 // Strategy and Deviations trainers. The host element is `display: contents`

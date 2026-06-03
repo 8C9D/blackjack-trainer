@@ -7,7 +7,10 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "npm run typecheck && npm run format:check"
   },
   "private": true,
   "packageManager": "npm@11.12.1",

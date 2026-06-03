@@ -1,10 +1,7 @@
 import { Component, input, output } from '@angular/core';
 
 import { ACTION_KEY_HINTS } from '../../core/keyboard';
-import {
-  ACTION_LABELS,
-  type Action,
-} from '../../core/models/strategy.model';
+import { ACTION_LABELS, type Action } from '../../core/models/strategy.model';
 
 @Component({
   selector: 'app-action-buttons',

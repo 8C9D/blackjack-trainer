@@ -51,9 +51,7 @@ export const MAX_RANDOM_TRUE_COUNT = 8;
     <div class="page">
       <header class="page__header">
         <h1>Blackjack Deviations Trainer</h1>
-        <p class="page__subtitle">
-          Practice Hi-Lo deviations on top of basic strategy.
-        </p>
+        <p class="page__subtitle">Practice Hi-Lo deviations on top of basic strategy.</p>
       </header>
 
       <app-deviation-settings
@@ -69,20 +67,14 @@ export const MAX_RANDOM_TRUE_COUNT = 8;
         (practiceModeChange)="practiceMode.set($event)"
       />
 
-      <app-blackjack-table
-        [player]="scenario().player"
-        [dealerUpcard]="scenario().dealerUpcard"
-      />
+      <app-blackjack-table [player]="scenario().player" [dealerUpcard]="scenario().dealerUpcard" />
 
       <section class="true-count" aria-label="Practice true count">
         <span class="true-count__label">Practice true count</span>
         <span class="true-count__value">{{ formattedTrueCount() }}</span>
       </section>
 
-      <app-action-buttons
-        [disabled]="result() !== null"
-        (action)="answer($event)"
-      />
+      <app-action-buttons [disabled]="result() !== null" (action)="answer($event)" />
 
       <app-deviation-feedback-panel
         [result]="result()"
@@ -90,10 +82,7 @@ export const MAX_RANDOM_TRUE_COUNT = 8;
         (next)="nextHand()"
       />
 
-      <app-stats-panel
-        [stats]="statsService.stats()"
-        (reset)="statsService.reset()"
-      />
+      <app-stats-panel [stats]="statsService.stats()" (reset)="statsService.reset()" />
     </div>
   `,
   styleUrl: './deviations-page.component.scss',

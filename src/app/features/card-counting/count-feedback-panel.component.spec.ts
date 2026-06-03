@@ -25,9 +25,7 @@ function makeRunningCountResult(
   };
 }
 
-function makeTrueCountResult(
-  overrides: Partial<TrueCountDrillResult> = {},
-): TrueCountDrillResult {
+function makeTrueCountResult(overrides: Partial<TrueCountDrillResult> = {}): TrueCountDrillResult {
   return {
     mode: 'true-count',
     cards: seq('2', '3', '4', '5', '6'),
@@ -40,9 +38,7 @@ function makeTrueCountResult(
   };
 }
 
-function createPanel(
-  result: CountingDrillResult,
-): ComponentFixture<CountFeedbackPanelComponent> {
+function createPanel(result: CountingDrillResult): ComponentFixture<CountFeedbackPanelComponent> {
   const fixture = TestBed.createComponent(CountFeedbackPanelComponent);
   fixture.componentRef.setInput('result', result);
   fixture.componentRef.setInput('system', HI_LO);
@@ -82,9 +78,7 @@ describe('CountFeedbackPanelComponent', () => {
 
     it('renders the card-by-card breakdown when toggled open', () => {
       const fixture = createPanel(makeRunningCountResult());
-      const toggle = fixture.nativeElement.querySelector(
-        '.feedback__toggle',
-      ) as HTMLButtonElement;
+      const toggle = fixture.nativeElement.querySelector('.feedback__toggle') as HTMLButtonElement;
       toggle.click();
       fixture.detectChanges();
       const cells = fixture.nativeElement.querySelectorAll('.feedback__cell');
@@ -137,20 +131,16 @@ describe('CountFeedbackPanelComponent', () => {
 
     it('does not render the running-count "Your count" label', () => {
       const fixture = createPanel(makeTrueCountResult());
-      const dts = Array.from(
-        fixture.nativeElement.querySelectorAll('.feedback__details dt'),
-      ).map((el) => (el as HTMLElement).textContent?.trim());
+      const dts = Array.from(fixture.nativeElement.querySelectorAll('.feedback__details dt')).map(
+        (el) => (el as HTMLElement).textContent?.trim(),
+      );
       expect(dts).not.toContain('Your count');
       expect(dts).not.toContain('Correct count');
     });
 
     it('renders the card-by-card breakdown when toggled open', () => {
-      const fixture = createPanel(
-        makeTrueCountResult({ cards: seq('A', 'K', 'Q') }),
-      );
-      const toggle = fixture.nativeElement.querySelector(
-        '.feedback__toggle',
-      ) as HTMLButtonElement;
+      const fixture = createPanel(makeTrueCountResult({ cards: seq('A', 'K', 'Q') }));
+      const toggle = fixture.nativeElement.querySelector('.feedback__toggle') as HTMLButtonElement;
       toggle.click();
       fixture.detectChanges();
       const cells = fixture.nativeElement.querySelectorAll('.feedback__cell');

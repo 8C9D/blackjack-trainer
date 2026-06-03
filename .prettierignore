@@ -1,0 +1,18 @@
+# Build output
+dist/
+.angular/
+
+# Dependencies
+node_modules/
+
+# Test coverage
+coverage/
+
+# Lockfile (managed by npm)
+package-lock.json
+
+# Vendored card SVGs — do not reformat
+public/cards/
+
+# Intentionally-untracked scratch file — never reformat or commit
+docs/repo-current-state.md

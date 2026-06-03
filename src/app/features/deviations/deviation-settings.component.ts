@@ -1,10 +1,7 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 
 import { RuleControlsComponent } from '../../shared/rule-controls.component';
-import type {
-  EngineOptions,
-  RuleSet,
-} from '../../core/models/strategy.model';
+import type { EngineOptions, RuleSet } from '../../core/models/strategy.model';
 
 export type TrueCountSource = 'random' | 'manual';
 
@@ -54,12 +51,9 @@ export const MAX_MANUAL_TRUE_COUNT = 20;
           />
           Deviation-only
         </label>
-        <p
-          id="deviation-practice-mode-help"
-          class="deviation-settings__help"
-        >
-          Deviation-only generates hands that have an encoded deviation rule.
-          The true count may or may not trigger the deviation.
+        <p id="deviation-practice-mode-help" class="deviation-settings__help">
+          Deviation-only generates hands that have an encoded deviation rule. The true count may or
+          may not trigger the deviation.
         </p>
       </fieldset>
 
@@ -103,11 +97,7 @@ export const MAX_MANUAL_TRUE_COUNT = 20;
             />
           </label>
           @if (manualTrueCount() === null) {
-            <p
-              id="deviation-manual-tc-help"
-              class="deviation-settings__error"
-              role="alert"
-            >
+            <p id="deviation-manual-tc-help" class="deviation-settings__error" role="alert">
               Enter an integer between {{ MIN }} and {{ MAX }}.
             </p>
           }

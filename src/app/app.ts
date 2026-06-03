@@ -15,11 +15,9 @@ interface NavLink {
   template: `
     <nav class="nav nav--top" aria-label="Primary">
       @for (link of links; track link.path) {
-        <a
-          class="nav__link"
-          [routerLink]="link.path"
-          routerLinkActive="nav__link--active"
-        >{{ link.long }}</a>
+        <a class="nav__link" [routerLink]="link.path" routerLinkActive="nav__link--active">{{
+          link.long
+        }}</a>
       }
     </nav>
 
@@ -34,7 +32,8 @@ interface NavLink {
           [routerLink]="link.path"
           routerLinkActive="nav__tab--active"
           [attr.aria-label]="link.long"
-        >{{ link.short }}</a>
+          >{{ link.short }}</a
+        >
       }
     </nav>
   `,

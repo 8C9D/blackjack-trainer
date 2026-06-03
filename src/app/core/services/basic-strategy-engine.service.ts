@@ -2,13 +2,7 @@ import { Injectable } from '@angular/core';
 
 import { H17_CHART } from '../../data/h17-basic-strategy';
 import { S17_CHART } from '../../data/s17-basic-strategy';
-import {
-  cardHighValue,
-  isAce,
-  isTenValue,
-  softNonAceValue,
-  type Card,
-} from '../models/card.model';
+import { cardHighValue, isAce, isTenValue, softNonAceValue, type Card } from '../models/card.model';
 import {
   ACTION_LABELS,
   type Action,
@@ -153,14 +147,29 @@ export class BasicStrategyEngineService {
 
     switch (cell) {
       case 'H':
-        return { action: 'H', source: 'soft', handDescription: description, reason: `${prefix}: hit.` };
+        return {
+          action: 'H',
+          source: 'soft',
+          handDescription: description,
+          reason: `${prefix}: hit.`,
+        };
       case 'S':
-        return { action: 'S', source: 'soft', handDescription: description, reason: `${prefix}: stand.` };
+        return {
+          action: 'S',
+          source: 'soft',
+          handDescription: description,
+          reason: `${prefix}: stand.`,
+        };
       case 'D':
       case 'Ds':
         // Initial two-card hand → doubling is always permitted, so 'Ds'
         // collapses to Double here.
-        return { action: 'D', source: 'soft', handDescription: description, reason: `${prefix}: double.` };
+        return {
+          action: 'D',
+          source: 'soft',
+          handDescription: description,
+          reason: `${prefix}: double.`,
+        };
     }
   }
 
@@ -180,21 +189,56 @@ export class BasicStrategyEngineService {
 
     switch (cell) {
       case 'H':
-        return { action: 'H', source: 'hard', handDescription: description, reason: `${prefix}: hit.` };
+        return {
+          action: 'H',
+          source: 'hard',
+          handDescription: description,
+          reason: `${prefix}: hit.`,
+        };
       case 'S':
-        return { action: 'S', source: 'hard', handDescription: description, reason: `${prefix}: stand.` };
+        return {
+          action: 'S',
+          source: 'hard',
+          handDescription: description,
+          reason: `${prefix}: stand.`,
+        };
       case 'D':
-        return { action: 'D', source: 'hard', handDescription: description, reason: `${prefix}: double.` };
+        return {
+          action: 'D',
+          source: 'hard',
+          handDescription: description,
+          reason: `${prefix}: double.`,
+        };
       case 'SUR_H':
         if (options.lateSurrender) {
-          return { action: 'SUR', source: 'surrender', handDescription: description, reason: `${prefix}: surrender.` };
+          return {
+            action: 'SUR',
+            source: 'surrender',
+            handDescription: description,
+            reason: `${prefix}: surrender.`,
+          };
         }
-        return { action: 'H', source: 'hard', handDescription: description, reason: `${prefix}: hit (Late Surrender unavailable).` };
+        return {
+          action: 'H',
+          source: 'hard',
+          handDescription: description,
+          reason: `${prefix}: hit (Late Surrender unavailable).`,
+        };
       case 'SUR_S':
         if (options.lateSurrender) {
-          return { action: 'SUR', source: 'surrender', handDescription: description, reason: `${prefix}: surrender.` };
+          return {
+            action: 'SUR',
+            source: 'surrender',
+            handDescription: description,
+            reason: `${prefix}: surrender.`,
+          };
         }
-        return { action: 'S', source: 'hard', handDescription: description, reason: `${prefix}: stand (Late Surrender unavailable).` };
+        return {
+          action: 'S',
+          source: 'hard',
+          handDescription: description,
+          reason: `${prefix}: stand (Late Surrender unavailable).`,
+        };
     }
   }
 }
