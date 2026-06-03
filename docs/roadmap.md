@@ -120,7 +120,7 @@ Plus, once Slice 1 lands: `npm run lint`.
 ### Slice 3 — Chart correctness golden-file guards
 
 - **Phase:** A — Infra/Quality
-- **Status:** Planned
+- **Status:** Done
 - **Goal:** Guard the transcribed chart **values** (not just their shape)
   against accidental edits.
 - **Why here:** Existing specs prove chart _structure_; the most plausible place
