@@ -228,7 +228,7 @@ Plus, once Slice 1 lands: `npm run lint`.
 ### Slice 6 — Widen CountValue + Omega II counting system
 
 - **Phase:** B — Feature
-- **Status:** Planned
+- **Status:** Done
 - **Goal:** Support multi-level systems and add Omega II.
 - **Why here:** First system that needs a wider value type. Doing the widening
   here (rather than as a bare refactor) keeps it a vertical slice with a visible
