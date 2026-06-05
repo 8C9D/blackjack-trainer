@@ -1,6 +1,6 @@
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 
-import { actionForKey, shouldIgnoreKeyboardEvent } from '../../core/keyboard';
+import { handleTrainerKeydown } from '../../core/keyboard';
 import type {
   DeviationRule,
   DeviationScenario,
@@ -18,9 +18,9 @@ import {
   formatTrueCount,
 } from '../../core/services/deviation-evaluator.service';
 import { DeviationStatsService } from '../../core/services/deviation-stats.service';
+import { ActionButtonsComponent } from '../../shared/action-buttons.component';
+import { BlackjackTableComponent } from '../../shared/blackjack-table.component';
 import { StatsPanelComponent } from '../../shared/stats-panel.component';
-import { ActionButtonsComponent } from '../basic-strategy/action-buttons.component';
-import { BlackjackTableComponent } from '../basic-strategy/blackjack-table.component';
 import { DeviationFeedbackPanelComponent } from './deviation-feedback-panel.component';
 import {
   DeviationSettingsComponent,
@@ -193,18 +193,10 @@ export class DeviationsPageComponent {
 
   @HostListener('window:keydown', ['$event'])
   protected onKeyDown(event: KeyboardEvent): void {
-    if (shouldIgnoreKeyboardEvent(event)) return;
-    if (event.key === 'Enter') {
-      if (this.result() !== null && this.canDealNextHand()) {
-        event.preventDefault();
-        this.nextHand();
-      }
-      return;
-    }
-    const action = actionForKey(event.key);
-    if (action) {
-      event.preventDefault();
-      this.answer(action);
-    }
+    handleTrainerKeydown(event, {
+      canNext: () => this.result() !== null && this.canDealNextHand(),
+      onNext: () => this.nextHand(),
+      onAction: (action) => this.answer(action),
+    });
   }
 }

@@ -5,77 +5,89 @@ source of truth for what runs next. Manual edits are fine if you keep the
 format._
 
 **Roadmap:** [docs/roadmap.md](roadmap.md)
-**Next slice:** 4
+**Next slice:** 5
 
-## Prompt for next slice (slice 4)
+## Prompt for next slice (slice 5)
 
-Implement **Slice 4 — Shared blackjack-UI / keyboard refactor** from
-`docs/roadmap.md`. One slice only. **Read the Decision gate below before writing
-any feature code** — Slice 4 may need to pause for human review.
+Implement **Slice 5 — KO (Knock-Out) counting system** from `docs/roadmap.md`.
+One slice only. This slice has a **safe default**, so proceed (no pause): KO is
+**running-count-only**; true-count conversion stays Hi-Lo-only for now. Record
+that assumption in the log and surface it in the report.
 
-**Goal:** remove remaining duplication in the table / action-buttons / feedback
-shell and keyboard handling shared between the basic-strategy trainer (v1) and
-the deviations trainer (v4), **without changing behavior**.
+**Goal:** add KO as a selectable second counting system in the card-counting
+(running-count) trainer, with correct counting math and Hi-Lo behavior unchanged.
 
-**Decision gate (Required if non-mechanical):** First, assess how much real
-duplication is left and what extracting it would cost.
+**Counting data (KO):** `2,3,4,5,6,7 → +1`, `8,9 → 0`, `10,J,Q,K,A → −1`. KO
+differs from Hi-Lo only by counting the **7** as +1. KO is **unbalanced**
+(`balanced: false`): a full 52-card deck sums to **+4** (Hi-Lo sums to 0).
 
-- If the duplication is **small and mechanical** (e.g. a clearly shared template
-  fragment or a tiny utility, with no meaningful API/design choices): proceed and
-  implement the extraction.
-- If extracting it requires **meaningful API/design choices** (component inputs/
-  outputs, how state/keyboard wiring is shared, a non-obvious shape): **do not
-  implement feature code.** Instead:
-  1. Write the proposed extraction plan (options, recommendation, open questions)
-     into this file under the slice.
-  2. Set Slice 4's **Status** in `docs/roadmap.md` to **Needs review**.
-  3. Make **one** `docs:` commit with just the two doc updates and push it.
-  4. Stop and report that the slice needs a human decision. Do **not** advance
-     **Next slice** past 4.
+**Before writing code, read these to learn the real shapes (do not assume):**
 
-**Scope (only if proceeding):** identify the remaining duplication between
-`src/app/features/basic-strategy/` and `src/app/features/deviations/` (and their
-use of `src/app/core/keyboard.ts`), extract it into shared components/utilities,
-and update both features to consume them. Some shared pieces already exist — at
-startup, check `src/app/shared/` (e.g. `feedback-shell.component.ts`,
-`rule-controls.component.ts`, `stats-panel.component.ts`) and `core/keyboard.ts`
-so you extract only what is **still** duplicated. Verify the actual feature
-directory names first (`features/deviations/` is the v4 trainer per the roadmap).
+- `src/app/core/models/counting-system.model.ts` — the `CountingSystem`
+  interface and the `CountValue` type (currently locked to `-1 | 0 | 1`; KO fits,
+  so do **not** widen it here — that is Slice 6). Check whether the interface
+  already carries a `balanced` flag; if not, see the Decision note.
+- `src/app/data/counting-systems.ts` — how Hi-Lo is described and how
+  `COUNTING_SYSTEMS` registers systems (the registry the UI discovers from).
+- `src/app/core/services/counting-engine.service.ts` — how running count and true
+  count are computed; verify how an unbalanced system is / should be handled.
+- `src/app/features/card-counting/*` — how the trainer selects a system and where
+  a system selector lives (or must be added), plus the running- vs true-count
+  modes.
 
-**Files:** `src/app/shared/*`, `src/app/features/basic-strategy/*`,
-`src/app/features/deviations/*`, `src/app/core/keyboard.ts` (+ co-located specs).
+**Scope:**
 
-**Out of scope:** any behavior change, restyle, or new feature.
+- Add the KO descriptor to `data/counting-systems.ts` and register it in
+  `COUNTING_SYSTEMS` so the UI discovers it.
+- Ensure the running-count trainer lets the user pick the counting system.
+- Handle the unbalanced case in the true-count path per the default: restrict KO
+  to running-count mode with a clear in-UI note. Do **not** implement KO
+  IRC/key-count true-count math (that can be a later slice).
+- Tests: KO per-rank values, the +4 full-deck sum, trainer/selector wiring, and
+  that Hi-Lo is unaffected.
 
-**Acceptance criteria (proceed case):**
+**Files:** `src/app/data/counting-systems.ts`,
+`src/app/core/services/counting-engine.service.ts` (verify/adjust unbalanced
+handling), `src/app/features/card-counting/*` (system selector), + co-located
+specs.
 
-- No behavior change: existing tests pass unmodified, or are updated only to
-  follow moved code (not to change assertions).
-- The targeted duplication is gone.
-- Build green; manual smoke of v1 and v4 looks identical to before.
+**Out of scope:** Omega II / Wong Halves (Slices 6–7); widening `CountValue`.
+
+**Acceptance criteria:**
+
+- KO is selectable in the running-count trainer.
+- Counting math is correct for KO; Hi-Lo behavior is unchanged.
+- Tests green.
 
 **Validation:** full baseline — `npm run lint`, `CI=true npm test`,
-`npm run build` — plus a manual smoke of both trainers.
+`npm run build`.
 
-**Commit (proceed case):**
-`refactor: extract shared blackjack-UI scaffolding between v1 and v4`
+**Commit:** `feat: add KO (Knock-Out) counting system`
 
-**Assumption carried forward (Slice 3):** value-level golden guards now exist in
-`src/app/data/chart-values.golden.spec.ts` for all four charts (H17/S17 basic
-strategy + H17/S17 deviations). They guard chart **data**, which Slice 4 must not
-touch, so the refactor is safe from that angle. No new decisions from Slice 3
-affect Slice 4. (Slice 2 carry-forward: app code is MIT; `package.json`
-`license`/`private` left as-is — not relevant here.)
+**Decision (safe default — proceed):** unbalanced true-count handling →
+**running-count-only for KO**, documented in the UI and the log. A full
+key-count/IRC true-count model for unbalanced systems can be its own later slice.
+If the `CountingSystem` interface lacks a `balanced` field, prefer adding the
+minimal field needed to express "unbalanced / running-count-only" rather than
+hard-coding KO by name; keep the change tight and behavior-preserving for Hi-Lo.
 
-One-slice contract: implement only Slice 4 (or pause per the Decision gate), make
-exactly one commit, push to `origin main`, then record the prompt for **Slice 5 —
-KO (Knock-Out) counting system** (Slice 5 default: KO is running-count-only; true-
-count conversion stays Hi-Lo-only). Do not start Slice 5.
+**Assumptions carried forward (Slice 4):** the shared trainer keyboard
+orchestration now lives in `src/app/core/keyboard.ts` as `handleTrainerKeydown`
+(the card-counting page still imports `shouldIgnoreKeyboardEvent` from the same
+module — unchanged). `BlackjackTableComponent` and `ActionButtonsComponent` were
+moved from `features/basic-strategy/` to `src/app/shared/`. None of this affects
+the card-counting counting logic Slice 5 touches.
+
+One-slice contract: implement only Slice 5, make exactly one commit, push to
+`origin main`, then record the prompt for **Slice 6 — Widen CountValue + Omega II
+counting system** (Slice 6 widens `CountValue` per the model's own comment; no
+pause). Do not start Slice 6.
 
 ## Execution log
 
-| Slice | Title                                | Status | Commit  | Validated                              | Date       | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| ----: | ------------------------------------ | ------ | ------- | -------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|     1 | Lint & format tooling                | Done   | b6bd53c | typecheck+test+build+lint+format:check | 2026-06-03 | Added `format`/`format:check`/`lint` scripts + `.prettierignore`. Replaced the standalone CI `typecheck` step with `lint` (= typecheck + format:check, so typecheck still runs). Ran one repo-wide `prettier --write .` pass — reformatted many existing files. Ignored the untracked `docs/repo-current-state.md` scratch file in `.prettierignore`. ESLint deferred.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|     2 | LICENSE + license clarification      | Done   | afc3fda | lint+typecheck+test+build              | 2026-06-03 | Chose **MIT** (recorded default), copyright © 2026 Arthur Zhang (git author name; GitHub owner is `8C9D` — used the personal name per the recorded prompt). Added canonical MIT `LICENSE` at repo root (extensionless, so Prettier does not check it). Rewrote the README "App code" section to state MIT and carve out `public/cards/`; changed the card-art note from "all-rights-reserved" to "MIT license above". Left `package.json` (`license` field + `private: true`) unchanged — only `LICENSE` + `README.md` were in scope. Card attribution files untouched.                                                                                                                                                                                                                                                                                                                                              |
-|     3 | Chart correctness golden-file guards | Done   | pending | lint+typecheck+test+build              | 2026-06-03 | Added `src/app/data/chart-values.golden.spec.ts` (+10 tests → 491 total). Chose **inline** golden literals (simplest; matches existing style). Basic-strategy charts serialized as rowKey → space-joined cells across upcards 2..A; deviations serialized one line per rule capturing ruleSet/category/hand/upcard/index/direction and basic→deviation action (`playerHandLabel` + `source` excluded as documentation, not the decision matrix). Guards **regressions only**, not original transcription errors (re-verifying vs the BJA PDFs stays a human task). Bootstrapped the golden via a throwaway Node type-strip script (not committed) to avoid transcription error. Verified the "any single cell flip fails" intent by flipping H17 hard 16 v9 (SUR_H→S) and the H17 insurance index (3→2): both turned the golden spec red (and the existing engine specs), then reverted. Chart data files unchanged. |
+| Slice | Title                                   | Status | Commit  | Validated                              | Date       | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ----: | --------------------------------------- | ------ | ------- | -------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     1 | Lint & format tooling                   | Done   | b6bd53c | typecheck+test+build+lint+format:check | 2026-06-03 | Added `format`/`format:check`/`lint` scripts + `.prettierignore`. Replaced the standalone CI `typecheck` step with `lint` (= typecheck + format:check, so typecheck still runs). Ran one repo-wide `prettier --write .` pass — reformatted many existing files. Ignored the untracked `docs/repo-current-state.md` scratch file in `.prettierignore`. ESLint deferred.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+|     2 | LICENSE + license clarification         | Done   | afc3fda | lint+typecheck+test+build              | 2026-06-03 | Chose **MIT** (recorded default), copyright © 2026 Arthur Zhang (git author name; GitHub owner is `8C9D` — used the personal name per the recorded prompt). Added canonical MIT `LICENSE` at repo root (extensionless, so Prettier does not check it). Rewrote the README "App code" section to state MIT and carve out `public/cards/`; changed the card-art note from "all-rights-reserved" to "MIT license above". Left `package.json` (`license` field + `private: true`) unchanged — only `LICENSE` + `README.md` were in scope. Card attribution files untouched.                                                                                                                                                                                                                                                                                                                                                       |
+|     3 | Chart correctness golden-file guards    | Done   | f896c22 | lint+typecheck+test+build              | 2026-06-03 | Added `src/app/data/chart-values.golden.spec.ts` (+10 tests → 491 total). Chose **inline** golden literals (simplest; matches existing style). Basic-strategy charts serialized as rowKey → space-joined cells across upcards 2..A; deviations serialized one line per rule capturing ruleSet/category/hand/upcard/index/direction and basic→deviation action (`playerHandLabel` + `source` excluded as documentation, not the decision matrix). Guards **regressions only**, not original transcription errors (re-verifying vs the BJA PDFs stays a human task). Bootstrapped the golden via a throwaway Node type-strip script (not committed) to avoid transcription error. Verified the "any single cell flip fails" intent by flipping H17 hard 16 v9 (SUR_H→S) and the H17 insurance index (3→2): both turned the golden spec red (and the existing engine specs), then reverted. Chart data files unchanged.          |
+|     4 | Shared blackjack-UI / keyboard refactor | Done   | pending | lint+typecheck+test+build              | 2026-06-05 | Mechanical path (no pause): assessed remaining duplication first. Moved `BlackjackTableComponent` and `ActionButtonsComponent` from `features/basic-strategy/` to `src/app/shared/` (they were already shared via a cross-feature import from the deviations page) and repointed both pages' imports — removes the `features/deviations → features/basic-strategy` dependency. Extracted the duplicated trainer keydown body into `handleTrainerKeydown(event, { canNext, onNext, onAction })` in `core/keyboard.ts`; both pages delegate from their own `@HostListener` (behavior identical: basic-strategy gates Enter on a graded hand, deviations also on a valid next-hand). Added 6 helper unit tests (491→497). Feedback panels already share `feedback-shell` via content projection, and `rule-controls`/`stats-panel` were already shared — left as-is. `card-counting` keyboard handling untouched (out of scope). |

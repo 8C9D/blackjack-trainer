@@ -2,8 +2,11 @@ import {
   ACTION_KEY_BINDINGS,
   ACTION_KEY_HINTS,
   actionForKey,
+  handleTrainerKeydown,
   shouldIgnoreKeyboardEvent,
+  type TrainerKeydownHandlers,
 } from './keyboard';
+import type { Action } from './models/strategy.model';
 
 function event(init: {
   key?: string;
@@ -92,6 +95,86 @@ describe('keyboard helpers', () => {
 
     it('does not ignore keystrokes with no target', () => {
       expect(shouldIgnoreKeyboardEvent(event({ key: 'h', target: null }))).toBe(false);
+    });
+  });
+
+  describe('handleTrainerKeydown', () => {
+    interface Calls {
+      actions: Action[];
+      next: number;
+    }
+
+    function handlers(calls: Calls, canNext: boolean): TrainerKeydownHandlers {
+      return {
+        canNext: () => canNext,
+        onNext: () => {
+          calls.next += 1;
+        },
+        onAction: (action) => {
+          calls.actions.push(action);
+        },
+      };
+    }
+
+    // Cancelable so `defaultPrevented` reflects whether the handler called
+    // preventDefault (default KeyboardEvents are not cancelable).
+    function keydown(key: string, init: { ctrlKey?: boolean } = {}): KeyboardEvent {
+      return new KeyboardEvent('keydown', {
+        key,
+        cancelable: true,
+        ctrlKey: init.ctrlKey ?? false,
+      });
+    }
+
+    it('answers with the bound action and prevents default for an action key', () => {
+      const calls: Calls = { actions: [], next: 0 };
+      const ev = keydown('h');
+      handleTrainerKeydown(ev, handlers(calls, false));
+      expect(calls.actions).toEqual(['H']);
+      expect(calls.next).toBe(0);
+      expect(ev.defaultPrevented).toBe(true);
+    });
+
+    it('ignores unbound keys without preventing default', () => {
+      const calls: Calls = { actions: [], next: 0 };
+      const ev = keydown('x');
+      handleTrainerKeydown(ev, handlers(calls, true));
+      expect(calls.actions).toEqual([]);
+      expect(calls.next).toBe(0);
+      expect(ev.defaultPrevented).toBe(false);
+    });
+
+    it('deals the next hand on Enter when canNext is true', () => {
+      const calls: Calls = { actions: [], next: 0 };
+      const ev = keydown('Enter');
+      handleTrainerKeydown(ev, handlers(calls, true));
+      expect(calls.next).toBe(1);
+      expect(calls.actions).toEqual([]);
+      expect(ev.defaultPrevented).toBe(true);
+    });
+
+    it('does nothing on Enter when canNext is false', () => {
+      const calls: Calls = { actions: [], next: 0 };
+      const ev = keydown('Enter');
+      handleTrainerKeydown(ev, handlers(calls, false));
+      expect(calls.next).toBe(0);
+      expect(calls.actions).toEqual([]);
+      expect(ev.defaultPrevented).toBe(false);
+    });
+
+    it('never treats Enter as an action key (returns after the Enter branch)', () => {
+      const calls: Calls = { actions: [], next: 0 };
+      handleTrainerKeydown(keydown('Enter'), handlers(calls, false));
+      expect(calls.actions).toEqual([]);
+    });
+
+    it('is a no-op for ignored events such as a modifier-held keystroke', () => {
+      const calls: Calls = { actions: [], next: 0 };
+      const ev = keydown('h', { ctrlKey: true });
+      handleTrainerKeydown(ev, handlers(calls, true));
+      expect(calls.actions).toEqual([]);
+      expect(calls.next).toBe(0);
+      expect(ev.defaultPrevented).toBe(false);
     });
   });
 });
