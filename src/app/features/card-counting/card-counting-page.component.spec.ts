@@ -5,6 +5,7 @@ import type {
   CountingDrillResult,
   CountingDrillSettings,
 } from '../../core/models/card-counting.model';
+import type { CountingSystem } from '../../core/models/counting-system.model';
 import { CardCountingPageComponent } from './card-counting-page.component';
 
 // The page component exposes its signals and methods as `protected` for
@@ -21,6 +22,10 @@ type Internals = {
   cards(): readonly unknown[];
   currentIndex(): number;
   result(): CountingDrillResult | null;
+  system(): CountingSystem;
+  systems: readonly CountingSystem[];
+  trueCountAvailable(): boolean;
+  onSystemChange(id: string): void;
   isValid(): boolean;
   isDrillActive(): boolean;
   statsService: StatsLike;
@@ -303,6 +308,61 @@ describe('CardCountingPageComponent', () => {
       const { c } = createPage();
       c.updateSetting('decksRemaining', 2);
       expect(c.settings().decksRemaining).toBe(2);
+    });
+  });
+
+  describe('counting system selection', () => {
+    it('defaults to Hi-Lo with true count available', () => {
+      const { c } = createPage();
+      expect(c.system().id).toBe('hi-lo');
+      expect(c.trueCountAvailable()).toBe(true);
+    });
+
+    it('exposes Hi-Lo and KO as the selectable systems', () => {
+      const { c } = createPage();
+      expect(c.systems.map((s) => s.id)).toEqual(['hi-lo', 'ko']);
+    });
+
+    it('onSystemChange switches the active system', () => {
+      const { c } = createPage();
+      c.onSystemChange('ko');
+      expect(c.system().id).toBe('ko');
+      expect(c.system().name).toBe('KO');
+    });
+
+    it('ignores an unknown system id', () => {
+      const { c } = createPage();
+      c.onSystemChange('does-not-exist');
+      expect(c.system().id).toBe('hi-lo');
+    });
+
+    it('true count is unavailable for the unbalanced KO system', () => {
+      const { c } = createPage();
+      c.onSystemChange('ko');
+      expect(c.trueCountAvailable()).toBe(false);
+    });
+
+    it('coerces true-count mode back to running-count when KO is selected', () => {
+      const { c } = createPage();
+      c.updateSetting('mode', 'true-count');
+      expect(c.settings().mode).toBe('true-count');
+      c.onSystemChange('ko');
+      expect(c.settings().mode).toBe('running-count');
+    });
+
+    it('leaves running-count mode alone when KO is selected', () => {
+      const { c } = createPage();
+      expect(c.settings().mode).toBe('running-count');
+      c.onSystemChange('ko');
+      expect(c.settings().mode).toBe('running-count');
+    });
+
+    it('switching back to Hi-Lo restores true-count availability', () => {
+      const { c } = createPage();
+      c.onSystemChange('ko');
+      expect(c.trueCountAvailable()).toBe(false);
+      c.onSystemChange('hi-lo');
+      expect(c.trueCountAvailable()).toBe(true);
     });
   });
 
