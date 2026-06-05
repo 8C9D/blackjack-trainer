@@ -78,7 +78,11 @@ type DrillState = 'idle' | 'streaming' | 'answering' | 'feedback';
       }
 
       @if (state() === 'answering') {
-        <app-count-answer-form [mode]="settings().mode" (answer)="onAnswer($event)" />
+        <app-count-answer-form
+          [mode]="settings().mode"
+          [allowFractions]="fractionalAnswers()"
+          (answer)="onAnswer($event)"
+        />
       }
 
       @if (state() === 'feedback' && result(); as r) {
@@ -107,6 +111,13 @@ export class CardCountingPageComponent {
   // Hi-Lo-style running ÷ decks conversion holds. Unbalanced systems (KO) are
   // running-count-only; the selector hides true count for them.
   protected readonly trueCountAvailable = computed(() => this.system().balanced);
+
+  // Fractional systems (Wong Halves) produce half-point running counts, so the
+  // answer form must accept decimal input. True counts are always whole numbers
+  // (Math.trunc), so this only applies in running-count mode.
+  protected readonly fractionalAnswers = computed(
+    () => this.settings().mode === 'running-count' && this.engine.isFractionalSystem(this.system()),
+  );
 
   protected readonly state = signal<DrillState>('idle');
   protected readonly settings = signal<CountingDrillSettings>({
