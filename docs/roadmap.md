@@ -286,7 +286,7 @@ Plus, once Slice 1 lands: `npm run lint`.
 ### Slice 8 — Finite-shoe live deck estimation
 
 - **Phase:** B — Feature
-- **Status:** Planned
+- **Status:** Needs review
 - **Goal:** Play through a real finite shoe and estimate decks remaining from
   observed cards, instead of picking a decks-remaining preset before each drill.
 - **Why here:** Larger feature that builds on a solid, well-guarded counting
