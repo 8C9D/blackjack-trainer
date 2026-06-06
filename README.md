@@ -237,13 +237,13 @@ src/app/
 │   │   └── deviation.model.ts                  DeviationRule / DeviationDecision types
 │   └── services/
 │       ├── basic-strategy-engine.service.ts    pure-TS strategy logic
-│       ├── basic-strategy-engine.service.spec.ts  40 engine tests
+│       ├── basic-strategy-engine.service.spec.ts  39 engine tests
 │       ├── counting-engine.service.ts          pure-TS Hi-Lo engine
-│       ├── counting-engine.service.spec.ts     30 engine tests
+│       ├── counting-engine.service.spec.ts     48 engine tests
 │       ├── deviation-engine.service.ts         pure-TS Hi-Lo deviation engine (overlay on basic strategy)
 │       ├── card-generator.service.ts           random card + sequence generator
 │       ├── stats-store.ts                      parameterized stats container
-│       ├── stats-store.spec.ts                 10 stats tests
+│       ├── stats-store.spec.ts                 16 stats tests
 │       ├── basic-strategy-stats.service.ts     Basic strategy StatsStore subclass
 │       ├── card-counting-stats.service.ts      Hi-Lo running count StatsStore subclass
 │       ├── true-count-stats.service.ts         Hi-Lo true count StatsStore subclass
