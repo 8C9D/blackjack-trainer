@@ -1,11 +1,14 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
+import type { Card } from '../../core/models/card.model';
 import type {
   CountingDrillResult,
   CountingDrillSettings,
 } from '../../core/models/card-counting.model';
 import type { CountingSystem } from '../../core/models/counting-system.model';
+import { HI_LO } from '../../data/counting-systems';
+import { CountingEngineService } from '../../core/services/counting-engine.service';
 import { CardCountingPageComponent } from './card-counting-page.component';
 
 // The page component exposes its signals and methods as `protected` for
@@ -17,28 +20,36 @@ type StatsLike = {
 };
 
 type Internals = {
-  state(): 'idle' | 'streaming' | 'answering' | 'feedback';
+  state(): 'idle' | 'streaming' | 'estimating' | 'answering' | 'feedback';
   settings(): CountingDrillSettings;
-  cards(): readonly unknown[];
+  cards(): readonly Card[];
   currentIndex(): number;
   result(): CountingDrillResult | null;
   system(): CountingSystem;
   systems: readonly CountingSystem[];
   trueCountAvailable(): boolean;
   fractionalAnswers(): boolean;
+  liveShoeTrueCount(): boolean;
   onSystemChange(id: string): void;
   isValid(): boolean;
   isDrillActive(): boolean;
   statsService: StatsLike;
   trueCountStatsService: StatsLike;
+  deckEstimationStatsService: StatsLike;
   activeStats(): { attempts: number; correct: number; streak: number; longestStreak: number };
   start(): void;
+  onEstimate(n: number): void;
   onAnswer(n: number): void;
   updateSetting<K extends keyof CountingDrillSettings>(
     key: K,
     value: CountingDrillSettings[K],
   ): void;
   resetActiveStats(): void;
+  shoeRunningCount(): number;
+  actualDecksRemaining(): number;
+  deckEstimate(): number | null;
+  liveDecksRemaining(): number;
+  reshuffleNotice(): boolean;
   timeoutId: ReturnType<typeof setTimeout> | null;
 };
 
@@ -437,6 +448,7 @@ describe('CardCountingPageComponent', () => {
     it('true-count mode evaluates as a true-count result', () => {
       const { c } = createPage();
       c.updateSetting('mode', 'true-count');
+      c.updateSetting('trueCountSource', 'classic');
       c.updateSetting('decksRemaining', 2);
       c.updateSetting('numberOfCards', 2);
       c.updateSetting('millisecondsBetweenCards', 100);
@@ -467,6 +479,7 @@ describe('CardCountingPageComponent', () => {
     it('records true-count attempts on TrueCountStatsService only', () => {
       const { c } = createPage();
       c.updateSetting('mode', 'true-count');
+      c.updateSetting('trueCountSource', 'classic');
       c.updateSetting('decksRemaining', 2);
       c.updateSetting('numberOfCards', 1);
       c.updateSetting('millisecondsBetweenCards', 100);
@@ -504,6 +517,7 @@ describe('CardCountingPageComponent', () => {
       c.onAnswer(0);
       // Record one TC attempt.
       c.updateSetting('mode', 'true-count');
+      c.updateSetting('trueCountSource', 'classic');
       c.updateSetting('decksRemaining', 2);
       c.start();
       vi.advanceTimersByTime(100);
@@ -526,6 +540,7 @@ describe('CardCountingPageComponent', () => {
       vi.advanceTimersByTime(100);
       c.onAnswer(0);
       c.updateSetting('mode', 'true-count');
+      c.updateSetting('trueCountSource', 'classic');
       c.updateSetting('decksRemaining', 2);
       c.start();
       vi.advanceTimersByTime(100);
@@ -536,12 +551,242 @@ describe('CardCountingPageComponent', () => {
       expect(c.statsService.stats().attempts).toBe(1);
     });
 
-    it('does not start when true-count settings are invalid (decksRemaining=0)', () => {
+    it('does not start when classic true-count settings are invalid (decksRemaining=0)', () => {
       const { c } = createPage();
       c.updateSetting('mode', 'true-count');
+      c.updateSetting('trueCountSource', 'classic');
       c.updateSetting('decksRemaining', 0);
       c.start();
       expect(c.state()).toBe('idle');
+    });
+  });
+
+  describe('live-shoe true-count drills', () => {
+    // Configure a live-shoe true-count drill (Hi-Lo, balanced).
+    function configureLiveShoe(
+      c: Internals,
+      opts: { numberOfCards?: number; numberOfDecks?: number; penetration?: number } = {},
+    ): void {
+      c.updateSetting('mode', 'true-count');
+      c.updateSetting('trueCountSource', 'live-shoe');
+      c.updateSetting('numberOfDecks', opts.numberOfDecks ?? 6);
+      c.updateSetting('penetration', opts.penetration ?? 0.75);
+      c.updateSetting('numberOfCards', opts.numberOfCards ?? 10);
+      c.updateSetting('millisecondsBetweenCards', 100);
+    }
+
+    // Advance the stream past its last card so the drill leaves 'streaming'.
+    function streamToEnd(c: Internals): void {
+      vi.advanceTimersByTime(c.cards().length * 100);
+    }
+
+    const keyOf = (card: Card): string => `${card.rank}-${card.suit}`;
+
+    it('is recognized as a live-shoe true-count drill for a balanced system', () => {
+      const { c } = createPage();
+      configureLiveShoe(c);
+      expect(c.liveShoeTrueCount()).toBe(true);
+    });
+
+    it('is not a live-shoe drill in classic source mode', () => {
+      const { c } = createPage();
+      c.updateSetting('mode', 'true-count');
+      c.updateSetting('trueCountSource', 'classic');
+      expect(c.liveShoeTrueCount()).toBe(false);
+    });
+
+    it('deals the round from a finite shoe and depletes the decks remaining', () => {
+      const { c } = createPage();
+      configureLiveShoe(c, { numberOfDecks: 6, numberOfCards: 10 });
+      c.start();
+      expect(c.cards().length).toBe(10);
+      streamToEnd(c);
+      // 312 - 10 = 302 cards remaining => 302 / 52 decks.
+      expect(c.actualDecksRemaining()).toBeCloseTo(302 / 52, 6);
+    });
+
+    it('runs streaming → estimating → answering → feedback', () => {
+      const { c } = createPage();
+      configureLiveShoe(c, { numberOfCards: 3 });
+      c.start();
+      expect(c.state()).toBe('streaming');
+      streamToEnd(c);
+      expect(c.state()).toBe('estimating');
+      c.onEstimate(5.5);
+      expect(c.state()).toBe('answering');
+      expect(c.deckEstimate()).toBe(5.5);
+      c.onAnswer(0);
+      expect(c.state()).toBe('feedback');
+    });
+
+    it('grades the true count against the shoe actual decks remaining', () => {
+      const { c } = createPage();
+      const engine = new CountingEngineService();
+      configureLiveShoe(c, { numberOfCards: 10 });
+      c.start();
+      const round = [...c.cards()];
+      const decks = c.actualDecksRemaining();
+      streamToEnd(c);
+      c.onEstimate(decks);
+      const expectedTrue = engine.trueCount(engine.runningCount(round, HI_LO), decks);
+      c.onAnswer(expectedTrue);
+      const r = c.result();
+      expect(r).not.toBeNull();
+      if (r && r.mode === 'true-count') {
+        expect(r.isCorrect).toBe(true);
+        expect(r.decksRemaining).toBe(decks);
+        expect(r.priorRunningCount).toBe(0);
+      }
+    });
+
+    it('scores an exact deck estimate as within the ±0.5 band', () => {
+      const { c } = createPage();
+      configureLiveShoe(c);
+      c.start();
+      const decks = c.actualDecksRemaining();
+      streamToEnd(c);
+      c.onEstimate(decks);
+      c.onAnswer(0);
+      const r = c.result();
+      if (r && r.mode === 'true-count') {
+        expect(r.deckEstimate).toBe(decks);
+        expect(r.deckEstimateWithinBand).toBe(true);
+      }
+      expect(c.deckEstimationStatsService.stats().attempts).toBe(1);
+      expect(c.deckEstimationStatsService.stats().correct).toBe(1);
+    });
+
+    it('scores a deck estimate one deck off as a miss', () => {
+      const { c } = createPage();
+      configureLiveShoe(c);
+      c.start();
+      const decks = c.actualDecksRemaining();
+      streamToEnd(c);
+      c.onEstimate(decks + 1);
+      c.onAnswer(0);
+      const r = c.result();
+      if (r && r.mode === 'true-count') {
+        expect(r.deckEstimateWithinBand).toBe(false);
+      }
+      expect(c.deckEstimationStatsService.stats().attempts).toBe(1);
+      expect(c.deckEstimationStatsService.stats().correct).toBe(0);
+    });
+
+    it('records the true count and the deck estimate on their separate stores', () => {
+      const { c } = createPage();
+      configureLiveShoe(c);
+      c.start();
+      const decks = c.actualDecksRemaining();
+      streamToEnd(c);
+      c.onEstimate(decks);
+      c.onAnswer(0);
+      expect(c.trueCountStatsService.stats().attempts).toBe(1);
+      expect(c.deckEstimationStatsService.stats().attempts).toBe(1);
+      // The running-count store is untouched by true-count drills.
+      expect(c.statsService.stats().attempts).toBe(0);
+    });
+
+    it('carries the running count across rounds of the same shoe', () => {
+      const { c } = createPage();
+      const engine = new CountingEngineService();
+      configureLiveShoe(c, { numberOfDecks: 6, penetration: 0.75, numberOfCards: 10 });
+
+      // Round 1.
+      c.start();
+      const round1 = [...c.cards()];
+      streamToEnd(c);
+      c.onEstimate(c.actualDecksRemaining());
+      c.onAnswer(0);
+      const rc1 = engine.runningCount(round1, HI_LO);
+      expect(c.shoeRunningCount()).toBe(rc1);
+      expect(c.reshuffleNotice()).toBe(false);
+
+      // Round 2 carries rc1 as the prior running count.
+      c.start();
+      const round2 = [...c.cards()];
+      streamToEnd(c);
+      c.onEstimate(c.actualDecksRemaining());
+      c.onAnswer(0);
+      const r = c.result();
+      if (r && r.mode === 'true-count') {
+        expect(r.priorRunningCount).toBe(rc1);
+        expect(r.correctRunningCount).toBe(rc1 + engine.runningCount(round2, HI_LO));
+      }
+    });
+
+    it('deals without replacement across rounds of the same shoe', () => {
+      const { c } = createPage();
+      configureLiveShoe(c, { numberOfDecks: 1, penetration: 0.9, numberOfCards: 20 });
+      c.start();
+      const round1 = [...c.cards()];
+      streamToEnd(c);
+      c.onEstimate(c.actualDecksRemaining());
+      c.onAnswer(0);
+      c.start();
+      const round2 = [...c.cards()];
+      // 40 cards dealt from one 52-card shoe with no reshuffle => all distinct.
+      const keys = [...round1, ...round2].map(keyOf);
+      expect(new Set(keys).size).toBe(keys.length);
+    });
+
+    it('auto-reshuffles at the cut card, resetting the running count with a notice', () => {
+      const { c } = createPage();
+      // 1-deck shoe, cut at floor(52*0.5)=26. A 30-card round crosses the cut.
+      configureLiveShoe(c, { numberOfDecks: 1, penetration: 0.5, numberOfCards: 30 });
+
+      // Round 1 begins with a fresh shoe (no reshuffle notice) and crosses the cut.
+      c.start();
+      streamToEnd(c);
+      c.onEstimate(c.actualDecksRemaining());
+      c.onAnswer(0);
+      expect(c.reshuffleNotice()).toBe(false);
+
+      // Round 2 must reshuffle before dealing.
+      c.start();
+      expect(c.reshuffleNotice()).toBe(true);
+      expect(c.shoeRunningCount()).toBe(0);
+      // Fresh full deck: 52 - 30 = 22 cards remaining after dealing.
+      expect(c.actualDecksRemaining()).toBeCloseTo(22 / 52, 6);
+      streamToEnd(c);
+      c.onEstimate(c.actualDecksRemaining());
+      c.onAnswer(0);
+      const r = c.result();
+      if (r && r.mode === 'true-count') {
+        expect(r.priorRunningCount).toBe(0);
+      }
+    });
+
+    it('changing the deck count invalidates the shoe and resets the live readout', () => {
+      const { c } = createPage();
+      configureLiveShoe(c, { numberOfDecks: 6, numberOfCards: 10 });
+      c.start();
+      streamToEnd(c);
+      c.onEstimate(c.actualDecksRemaining());
+      c.onAnswer(0);
+      expect(c.shoeRunningCount()).toBeDefined();
+      // Switch to a 1-deck shoe: carried count clears and the readout shows 1.
+      c.updateSetting('numberOfDecks', 1);
+      expect(c.shoeRunningCount()).toBe(0);
+      expect(c.liveDecksRemaining()).toBe(1);
+    });
+
+    it('switching the counting system invalidates the shoe carry-over', () => {
+      const { c } = createPage();
+      configureLiveShoe(c, { numberOfCards: 10 });
+      c.start();
+      streamToEnd(c);
+      c.onEstimate(c.actualDecksRemaining());
+      c.onAnswer(0);
+      c.onSystemChange('omega-ii');
+      expect(c.shoeRunningCount()).toBe(0);
+      expect(c.reshuffleNotice()).toBe(false);
+    });
+
+    it('an unbalanced system (KO) is never a live-shoe true-count drill', () => {
+      const { c } = createPage();
+      configureLiveShoe(c);
+      c.onSystemChange('ko'); // unbalanced => coerced to running-count
+      expect(c.liveShoeTrueCount()).toBe(false);
     });
   });
 });

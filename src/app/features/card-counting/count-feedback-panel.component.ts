@@ -45,11 +45,17 @@ interface BreakdownEntry {
           <dt>Running count</dt>
           <dd>{{ tc.correctRunningCount }}</dd>
           <dt>Decks remaining</dt>
-          <dd>{{ tc.decksRemaining }}</dd>
+          <dd>{{ formatDecks(tc.decksRemaining) }}</dd>
+          @if (tc.deckEstimate !== undefined) {
+            <dt>Your decks estimate</dt>
+            <dd>{{ formatDecks(tc.deckEstimate) }}</dd>
+            <dt>Estimate within ±0.5</dt>
+            <dd>{{ tc.deckEstimateWithinBand ? 'Yes' : 'No' }}</dd>
+          }
         </dl>
         <p class="feedback__formula">
-          Running count {{ tc.correctRunningCount }} ÷ {{ tc.decksRemaining }} decks = true count
-          {{ tc.correctTrueCount }}
+          Running count {{ tc.correctRunningCount }} ÷ {{ formatDecks(tc.decksRemaining) }} decks =
+          true count {{ tc.correctTrueCount }}
         </p>
       }
 
@@ -102,8 +108,12 @@ export class CountFeedbackPanelComponent {
 
   protected readonly breakdown = computed<readonly BreakdownEntry[]>(() => {
     const sys = this.system();
-    let running = 0;
-    return this.result().cards.map((card, index) => {
+    const r = this.result();
+    // Live-shoe rounds carry a running count from earlier rounds; start the
+    // running total from that offset so it ends at correctRunningCount. Classic
+    // and running-count results have no prior, so this is 0.
+    let running = r.mode === 'true-count' ? (r.priorRunningCount ?? 0) : 0;
+    return r.cards.map((card, index) => {
       const delta = sys.values[card.rank];
       running += delta;
       return {
@@ -117,5 +127,12 @@ export class CountFeedbackPanelComponent {
 
   protected toggleBreakdown(): void {
     this.showBreakdown.update((v) => !v);
+  }
+
+  // Whole decks render as "5"; fractional decks as up to two decimals with
+  // trailing zeros trimmed (e.g. 5.6153… → "5.62", 2.5 → "2.5").
+  protected formatDecks(value: number): string {
+    if (Number.isInteger(value)) return String(value);
+    return value.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
   }
 }

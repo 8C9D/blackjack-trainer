@@ -57,6 +57,34 @@
     opacity: 0.6;
     font-weight: 400;
   }
+
+  &__reshuffle {
+    margin: 0 0 1rem;
+    padding: 0.5rem 0.85rem;
+    text-align: center;
+    font-size: 0.85rem;
+    border: 1px solid rgba(255, 235, 160, 0.5);
+    border-radius: 6px;
+    background: rgba(255, 235, 160, 0.12);
+  }
+
+  &__stats-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+
+    > * {
+      flex: 1 1 16rem;
+    }
+  }
+
+  &__stats-heading {
+    margin: 0 0 0.4rem;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.75;
+  }
 }
 
 @media (max-width: 600px) {

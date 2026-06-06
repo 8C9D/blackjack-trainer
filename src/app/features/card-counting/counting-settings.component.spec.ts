@@ -1,6 +1,11 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 
-import { DECKS_REMAINING_PRESETS, type DrillMode } from '../../core/models/card-counting.model';
+import {
+  DECKS_REMAINING_PRESETS,
+  type DrillMode,
+  type TrueCountSource,
+} from '../../core/models/card-counting.model';
+import { PENETRATION_PRESETS, SHOE_DECK_OPTIONS } from '../../core/models/shoe.model';
 import { COUNTING_SYSTEMS } from '../../data/counting-systems';
 import { CountingSettingsComponent } from './counting-settings.component';
 
@@ -12,6 +17,10 @@ function createSettings(
     numberOfCards: number;
     millisecondsBetweenCards: number;
     decksRemaining: number;
+    trueCountSource: TrueCountSource;
+    numberOfDecks: number;
+    penetration: number;
+    liveDecksRemaining: number;
     errors: readonly string[];
     disabled: boolean;
   }> = {},
@@ -27,6 +36,12 @@ function createSettings(
   ref.setInput('millisecondsBetweenCards', overrides.millisecondsBetweenCards ?? 500);
   ref.setInput('decksRemaining', overrides.decksRemaining ?? 1);
   ref.setInput('decksRemainingPresets', DECKS_REMAINING_PRESETS);
+  ref.setInput('trueCountSource', overrides.trueCountSource ?? 'live-shoe');
+  ref.setInput('numberOfDecks', overrides.numberOfDecks ?? 6);
+  ref.setInput('penetration', overrides.penetration ?? 0.75);
+  ref.setInput('deckOptions', SHOE_DECK_OPTIONS);
+  ref.setInput('penetrationPresets', PENETRATION_PRESETS);
+  ref.setInput('liveDecksRemaining', overrides.liveDecksRemaining ?? 6);
   if (overrides.errors !== undefined) ref.setInput('errors', overrides.errors);
   if (overrides.disabled !== undefined) ref.setInput('disabled', overrides.disabled);
   fixture.detectChanges();
@@ -128,8 +143,8 @@ describe('CountingSettingsComponent', () => {
     expect(fixture.nativeElement.querySelector('.settings__decks-remaining')).toBeNull();
   });
 
-  it('shows the decks-remaining select in true-count mode', () => {
-    const fixture = createSettings({ mode: 'true-count' });
+  it('shows the decks-remaining select in classic true-count mode', () => {
+    const fixture = createSettings({ mode: 'true-count', trueCountSource: 'classic' });
     const select = fixture.nativeElement.querySelector(
       '.settings__decks-remaining',
     ) as HTMLSelectElement | null;
@@ -137,7 +152,7 @@ describe('CountingSettingsComponent', () => {
   });
 
   it('populates the decks-remaining select from DECKS_REMAINING_PRESETS', () => {
-    const fixture = createSettings({ mode: 'true-count' });
+    const fixture = createSettings({ mode: 'true-count', trueCountSource: 'classic' });
     const options = fixture.nativeElement.querySelectorAll('.settings__decks-remaining option');
     expect(options.length).toBe(DECKS_REMAINING_PRESETS.length);
     const values = Array.from(options).map((o) => Number((o as HTMLOptionElement).value));
@@ -145,7 +160,11 @@ describe('CountingSettingsComponent', () => {
   });
 
   it('marks the current decksRemaining option as selected', () => {
-    const fixture = createSettings({ mode: 'true-count', decksRemaining: 2 });
+    const fixture = createSettings({
+      mode: 'true-count',
+      trueCountSource: 'classic',
+      decksRemaining: 2,
+    });
     const select = fixture.nativeElement.querySelector(
       '.settings__decks-remaining',
     ) as HTMLSelectElement;
@@ -153,7 +172,11 @@ describe('CountingSettingsComponent', () => {
   });
 
   it('emits decksRemainingChange as a number when the select changes', () => {
-    const fixture = createSettings({ mode: 'true-count', decksRemaining: 1 });
+    const fixture = createSettings({
+      mode: 'true-count',
+      trueCountSource: 'classic',
+      decksRemaining: 1,
+    });
     let received: number | undefined;
     fixture.componentInstance.decksRemainingChange.subscribe((n) => {
       received = n;
@@ -164,6 +187,101 @@ describe('CountingSettingsComponent', () => {
     select.value = '2.5';
     select.dispatchEvent(new Event('change'));
     expect(received).toBe(2.5);
+  });
+
+  describe('live-shoe true-count controls', () => {
+    it('hides the source toggle in running-count mode', () => {
+      const fixture = createSettings({ mode: 'running-count' });
+      expect(fixture.nativeElement.querySelector('.settings__source')).toBeNull();
+    });
+
+    it('shows the live-shoe / classic source toggle in true-count mode', () => {
+      const fixture = createSettings({ mode: 'true-count' });
+      const radios = fixture.nativeElement.querySelectorAll('input[type=radio][name=tc-source]');
+      expect(radios.length).toBe(2);
+      const values = Array.from(radios).map((r) => (r as HTMLInputElement).value);
+      expect(values).toEqual(['live-shoe', 'classic']);
+    });
+
+    it('emits trueCountSourceChange when a source radio is selected', () => {
+      const fixture = createSettings({ mode: 'true-count', trueCountSource: 'live-shoe' });
+      let received: TrueCountSource | undefined;
+      fixture.componentInstance.trueCountSourceChange.subscribe((s) => {
+        received = s;
+      });
+      const classic = fixture.nativeElement.querySelector(
+        'input[type=radio][value="classic"]',
+      ) as HTMLInputElement;
+      classic.checked = true;
+      classic.dispatchEvent(new Event('change'));
+      expect(received).toBe('classic');
+    });
+
+    it('shows decks and penetration selects in live-shoe mode', () => {
+      const fixture = createSettings({ mode: 'true-count', trueCountSource: 'live-shoe' });
+      expect(fixture.nativeElement.querySelector('.settings__decks')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.settings__penetration')).not.toBeNull();
+      // The classic preset select is hidden in live-shoe mode.
+      expect(fixture.nativeElement.querySelector('.settings__decks-remaining')).toBeNull();
+    });
+
+    it('populates the decks select from SHOE_DECK_OPTIONS', () => {
+      const fixture = createSettings({ mode: 'true-count', trueCountSource: 'live-shoe' });
+      const options = fixture.nativeElement.querySelectorAll('.settings__decks option');
+      const values = Array.from(options).map((o) => Number((o as HTMLOptionElement).value));
+      expect(values).toEqual([...SHOE_DECK_OPTIONS]);
+    });
+
+    it('emits numberOfDecksChange as a number when the decks select changes', () => {
+      const fixture = createSettings({ mode: 'true-count', numberOfDecks: 6 });
+      let received: number | undefined;
+      fixture.componentInstance.numberOfDecksChange.subscribe((n) => {
+        received = n;
+      });
+      const select = fixture.nativeElement.querySelector('.settings__decks') as HTMLSelectElement;
+      select.value = '8';
+      select.dispatchEvent(new Event('change'));
+      expect(received).toBe(8);
+    });
+
+    it('renders penetration options as percentages', () => {
+      const fixture = createSettings({ mode: 'true-count', trueCountSource: 'live-shoe' });
+      const options = Array.from(
+        fixture.nativeElement.querySelectorAll('.settings__penetration option'),
+      ) as HTMLOptionElement[];
+      expect(options.length).toBe(PENETRATION_PRESETS.length);
+      expect(options.map((o) => o.textContent?.trim())).toContain('75%');
+    });
+
+    it('emits penetrationChange as a fraction when the penetration select changes', () => {
+      const fixture = createSettings({ mode: 'true-count', penetration: 0.75 });
+      let received: number | undefined;
+      fixture.componentInstance.penetrationChange.subscribe((n) => {
+        received = n;
+      });
+      const select = fixture.nativeElement.querySelector(
+        '.settings__penetration',
+      ) as HTMLSelectElement;
+      select.value = '0.8';
+      select.dispatchEvent(new Event('change'));
+      expect(received).toBe(0.8);
+    });
+
+    it('shows the live decks-remaining readout in live-shoe mode', () => {
+      const fixture = createSettings({
+        mode: 'true-count',
+        trueCountSource: 'live-shoe',
+        liveDecksRemaining: 5.5,
+      });
+      const readout = fixture.nativeElement.querySelector('.settings__readout');
+      expect(readout).not.toBeNull();
+      expect(readout!.textContent).toContain('5.5');
+    });
+
+    it('hides the live readout in classic mode', () => {
+      const fixture = createSettings({ mode: 'true-count', trueCountSource: 'classic' });
+      expect(fixture.nativeElement.querySelector('.settings__readout')).toBeNull();
+    });
   });
 
   it('renders validation errors when provided', () => {
