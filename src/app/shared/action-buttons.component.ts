@@ -7,7 +7,7 @@ import { ACTION_LABELS, type Action } from '../core/models/strategy.model';
   selector: 'app-action-buttons',
   template: `
     <section class="actions" aria-label="Player actions">
-      @for (a of order; track a) {
+      @for (a of actions(); track a) {
         <button
           type="button"
           class="actions__button"
@@ -24,9 +24,10 @@ import { ACTION_LABELS, type Action } from '../core/models/strategy.model';
 })
 export class ActionButtonsComponent {
   readonly disabled = input(false);
+  // Which actions to render, in order. Defaults to the full set; the showdown
+  // trainer passes a hit/stand-only subset.
+  readonly actions = input<readonly Action[]>(['H', 'S', 'D', 'P', 'SUR', 'INS']);
   readonly action = output<Action>();
-
-  protected readonly order: readonly Action[] = ['H', 'S', 'D', 'P', 'SUR', 'INS'];
 
   protected labelFor(a: Action): string {
     return ACTION_LABELS[a];

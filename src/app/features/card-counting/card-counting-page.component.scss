@@ -68,6 +68,32 @@
     background: rgba(255, 235, 160, 0.12);
   }
 
+  &__showdown-cta {
+    display: flex;
+    justify-content: center;
+    margin: 0 0 1.5rem;
+  }
+
+  &__showdown-button {
+    background: transparent;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 6px;
+    padding: 0.55rem 1.3rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &:focus-visible {
+      outline: 2px solid rgba(255, 255, 255, 0.95);
+      outline-offset: 2px;
+    }
+  }
+
   &__stats-group {
     display: flex;
     flex-wrap: wrap;

@@ -314,7 +314,7 @@ Plus, once Slice 1 lands: `npm run lint`.
 ### Slice 9 — Multi-hand showdowns
 
 - **Phase:** B — Feature
-- **Status:** Planned
+- **Status:** Done (single-hand Option A; see commit note below)
 - **Goal:** After the count drill ends, resolve multi-hand / dealer scenarios
   (showdowns).
 - **Why here:** Largest feature; depends on everything above.
