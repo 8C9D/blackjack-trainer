@@ -314,7 +314,7 @@ Plus, once Slice 1 lands: `npm run lint`.
 ### Slice 9 — Multi-hand showdowns
 
 - **Phase:** B — Feature
-- **Status:** Planned
+- **Status:** Needs review
 - **Goal:** After the count drill ends, resolve multi-hand / dealer scenarios
   (showdowns).
 - **Why here:** Largest feature; depends on everything above.
@@ -330,7 +330,10 @@ Plus, once Slice 1 lands: `npm run lint`.
 - **Commit:** `feat: add post-count multi-hand showdowns`
 - **Decision:** **Required — scope/rules/UX.** No safe default. Same protocol as
   Slice 8: write a design sub-plan, mark **Needs review**, and stop without
-  implementing until approved.
+  implementing until approved. **Sub-plan written 2026-06-06** — see the
+  "Slice 9 — design sub-plan" section in
+  [`roadmap-progress.md`](roadmap-progress.md); awaiting owner answers to its six
+  open questions before implementation.
 
 ---
 
