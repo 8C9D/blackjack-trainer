@@ -46,8 +46,9 @@ struct StrategyChart: Decodable {
     }
 }
 
-/// Top-level shape of `charts.json`. (Deviation tables are also present and are
-/// decoded in Slice 1.5.)
+/// Top-level shape of `charts.json`: basic-strategy charts plus the Hi-Lo
+/// deviation tables, both keyed by rule set ("H17" / "S17").
 struct ChartsFile: Decodable {
     let basicStrategy: [String: StrategyChart]
+    let deviations: [String: [DeviationRule]]
 }

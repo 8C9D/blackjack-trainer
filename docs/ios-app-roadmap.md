@@ -361,7 +361,11 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 ### Slice 1.5 — Deviation engine + evaluator
 
 - **Phase:** 1 — Engines
-- **Status:** Planned
+- **Status:** Done — `DeviationEngine` + `DeviationEvaluator` reproduce all
+  62,560 `deviation-vectors` (expected action, basic action, deviationApplied,
+  matched-rule source, eval source), incl. the insurance overlay and surrender
+  precedence. `ChartsFile` now also decodes the deviation tables. Feedback
+  explanation strings deferred to the Deviations screen (3.5).
 - **Goal:** Port `deviation-engine.service.ts` + `deviation-evaluator.service.ts`:
   the BJA Hi-Lo overlay on basic strategy, **surrender-precedence** ordering,
   and the **insurance overlay** (Ace upcard only, correct at TC ≥ +3).
@@ -372,9 +376,10 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
   precedence and the `0+`/`0-` inclusive-boundary convention.
 - **Out of scope:** UI.
 - **Acceptance criteria:**
-  - [ ] Every deviation vector passes, including insurance and surrender
-        precedence.
-- **Validation:** baseline + full vector pass.
+  - [x] Every deviation vector passes, including insurance and surrender
+        precedence — all 62,560 vectors green.
+- **Validation:** baseline + full vector pass — `xcodebuild test` ✓ (24 tests
+  incl. the 62,560-vector sweep), `swiftformat` ✓, `swiftlint` ✓.
 - **Commit:** `feat(ios): port deviation engine and evaluator (parity-verified)`
 - **Decision:** None.
 
