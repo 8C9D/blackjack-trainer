@@ -37,6 +37,13 @@ defaults to standard copyright — i.e., effectively "all rights reserved" — b
 this is implicit and undocumented. That is fine for a private project, but it
 should be made explicit if the repo is ever shared or open-sourced.
 
+> **Post-audit update:** Following this audit, `README.md` gained a
+> "License and attribution" section that makes the app-code status explicit:
+> **no open-source license** and **all rights reserved** unless a top-level
+> `LICENSE` is added later, with the card-art notices called out as separately
+> licensed. This documents the *current* state only; it does **not** decide the
+> future licensing question, which remains open (see §5).
+
 ---
 
 ## 2. Card asset attribution status
@@ -53,7 +60,7 @@ should be made explicit if the repo is ever shared or open-sourced.
 
 ### Provenance chain
 
-Per `README.md` ("Card asset attribution" section) and the upstream files, the
+Per `README.md` ("License and attribution" section) and the upstream files, the
 chain is:
 
 > **Chris Aguilar — Vector Playing Card Library 1.3** (LGPL)
@@ -192,7 +199,9 @@ intentionally does **not** pick one.
 ## Appendix — files inspected
 
 - `package.json` — no `license` field; `private: true`.
-- `README.md` — "Card asset attribution" section documents the LGPL chain.
+- `README.md` — "License and attribution" section documents the LGPL chain and
+  now explicitly states the app code has no open-source license (all rights
+  reserved unless a top-level license is added later).
 - `.gitignore` — no licensing relevance (ignores build output, `node_modules`,
   IDE/local files, `.claude/`).
 - `public/` — `favicon.ico`, `manifest.webmanifest`, `cards/`.
