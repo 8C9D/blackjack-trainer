@@ -1283,6 +1283,154 @@ const COLOR_SYSTEMS: readonly CountingSystem[] = [
   },
 ];
 
+// --- Novelty / computer-only systems (Blackjack Review comparison; tags in
+// reference-systems.md). Two kinds, both balanced (deck sum 0): computer-only
+// counts with extreme or impractically high weights (Griffin Ultimate, Thorp
+// Ultimate, Graham 7, Griffin 7) and inverted "opposite of traditional" counts
+// (Tek's, Wilson APC) whose running count runs opposite in sign to a normal
+// system. Representable and engine-compatible, but unsuitable for real training;
+// each description says why. Added under --include-novelty. ---
+const NOVELTY_SYSTEMS: readonly CountingSystem[] = [
+  {
+    id: 'griffin-ultimate',
+    name: 'Griffin Ultimate',
+    // A=-60, 2=37, 3=45, 4=52, 5=70, 6=46, 7=27, 8=0, 9=-17, tens=-50. Balanced (deck sum 0). Computer-only.
+    description:
+      'Balanced computer-only system (Griffin Ultimate). Extreme per-rank weights (aces −60 up to fives +70, tens −50) optimized by computer — far too complex to play by hand, included only for completeness.',
+    balanced: true,
+    values: {
+      '2': 37,
+      '3': 45,
+      '4': 52,
+      '5': 70,
+      '6': 46,
+      '7': 27,
+      '8': 0,
+      '9': -17,
+      '10': -50,
+      J: -50,
+      Q: -50,
+      K: -50,
+      A: -60,
+    },
+  },
+  {
+    id: 'thorp-ultimate',
+    name: 'Thorp Ultimate',
+    // A=-9, 2=5, 3=6, 4=8, 5=11, 6=6, 7=4, 8=0, 9=-3, tens=-7. Balanced (deck sum 0). Computer-only.
+    description:
+      'Balanced computer-only system (Thorp Ultimate). High-resolution weights (5 = +11, 4 = +8, aces = −9, tens = −7, …; 8 neutral) optimized by computer — impractical for human play, included only for completeness.',
+    balanced: true,
+    values: {
+      '2': 5,
+      '3': 6,
+      '4': 8,
+      '5': 11,
+      '6': 6,
+      '7': 4,
+      '8': 0,
+      '9': -3,
+      '10': -7,
+      J: -7,
+      Q: -7,
+      K: -7,
+      A: -9,
+    },
+  },
+  {
+    id: 'graham-7',
+    name: 'Graham 7',
+    // A=-6, 2=4, 3=4, 4=5, 5=7, 6=4, 7=3, 8=0, 9=-1, tens=-5. Balanced (deck sum 0). Impractically high level.
+    description:
+      'Balanced level-7 system (Graham 7). 2/3/6 = +4, 4 = +5, 5 = +7, 7 = +3, 9 = −1, tens = −5, aces = −6; 8 neutral. An impractically high level for human play, included for completeness.',
+    balanced: true,
+    values: {
+      '2': 4,
+      '3': 4,
+      '4': 5,
+      '5': 7,
+      '6': 4,
+      '7': 3,
+      '8': 0,
+      '9': -1,
+      '10': -5,
+      J: -5,
+      Q: -5,
+      K: -5,
+      A: -6,
+    },
+  },
+  {
+    id: 'griffin-7',
+    name: 'Griffin 7',
+    // A=-6, 2=4, 3=4, 4=5, 5=7, 6=5, 7=3, 8=0, 9=-2, tens=-5. Balanced (deck sum 0). Impractically high level.
+    description:
+      'Balanced level-7 system (Griffin 7). 2/3 = +4, 4 = +5, 5 = +7, 6 = +5, 7 = +3, 9 = −2, tens = −5, aces = −6; 8 neutral. An impractically high level for human play, included for completeness.',
+    balanced: true,
+    values: {
+      '2': 4,
+      '3': 4,
+      '4': 5,
+      '5': 7,
+      '6': 5,
+      '7': 3,
+      '8': 0,
+      '9': -2,
+      '10': -5,
+      J: -5,
+      Q: -5,
+      K: -5,
+      A: -6,
+    },
+  },
+  {
+    id: 'teks',
+    name: "Tek's",
+    // A=1, 2-7=-1, 8=0, 9=1, tens=1. Balanced (deck sum 0). Inverted ("opposite of traditional").
+    description:
+      "Balanced inverted level-1 system (Tek's). The mirror image of a normal count: low cards 2–7 = −1, while 9, tens and aces = +1 and 8 is neutral, so the running count runs opposite in sign to Hi-Lo. A curiosity, not a practical advantage system.",
+    balanced: true,
+    values: {
+      '2': -1,
+      '3': -1,
+      '4': -1,
+      '5': -1,
+      '6': -1,
+      '7': -1,
+      '8': 0,
+      '9': 1,
+      '10': 1,
+      J: 1,
+      Q: 1,
+      K: 1,
+      A: 1,
+    },
+  },
+  {
+    id: 'wilson-apc',
+    name: 'Wilson APC',
+    // A=4, 2-9=-1, tens=1. Balanced (deck sum 0). Inverted ("opposite of traditional").
+    description:
+      'Balanced inverted system (Wilson APC). Another mirror-image count: 2–9 = −1, tens = +1, aces = +4, running opposite in sign to a normal system. A curiosity, not recommended for play.',
+    balanced: true,
+    values: {
+      '2': -1,
+      '3': -1,
+      '4': -1,
+      '5': -1,
+      '6': -1,
+      '7': -1,
+      '8': -1,
+      '9': -1,
+      '10': 1,
+      J: 1,
+      Q: 1,
+      K: 1,
+      A: 4,
+    },
+  },
+];
+
 // Registry of available systems. The original four keep their exported consts
 // (the card-counting page imports HI_LO as the default); additional systems are
 // discovered purely via this array and verified by id in counting-systems.spec.ts.
@@ -1293,4 +1441,5 @@ export const COUNTING_SYSTEMS: readonly CountingSystem[] = [
   WONG_HALVES,
   ...STANDARD_SYSTEMS,
   ...COLOR_SYSTEMS,
+  ...NOVELTY_SYSTEMS,
 ] as const;

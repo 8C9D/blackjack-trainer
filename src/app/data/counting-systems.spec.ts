@@ -58,9 +58,9 @@ interface ExpectedSystem {
 // Golden table transcribed independently from
 // .claude/skills/add-counting-systems/reference-systems.md. `values` holds each
 // per-rank tag (for color systems, the (red+black)/2 average the reference
-// shows); `colorValues` carries the true per-color split. CAC2 (no data), the
-// computer-only / inverted novelty counts, and systems whose real per-card rule
-// could not be reconciled (Red Zen, KISS 1) are intentionally absent.
+// shows); `colorValues` carries the true per-color split. CAC2 (no data) and
+// systems whose real per-card rule could not be reconciled (Red Zen, KISS 1) are
+// intentionally absent.
 const EXPECTED: Record<string, ExpectedSystem> = {
   // Original four (unchanged).
   'hi-lo': { deckSum: 0, values: row(-1, 1, 1, 1, 1, 1, 0, 0, 0, -1) },
@@ -129,6 +129,13 @@ const EXPECTED: Record<string, ExpectedSystem> = {
     colorValues: { '2': { red: 0, black: 1 } },
     values: row(-1, 0.5, 1, 1, 1, 1, 1, 0, 0, -1),
   },
+  // Novelty batch (computer-only + inverted; all balanced).
+  'griffin-ultimate': { deckSum: 0, values: row(-60, 37, 45, 52, 70, 46, 27, 0, -17, -50) },
+  'thorp-ultimate': { deckSum: 0, values: row(-9, 5, 6, 8, 11, 6, 4, 0, -3, -7) },
+  'graham-7': { deckSum: 0, values: row(-6, 4, 4, 5, 7, 4, 3, 0, -1, -5) },
+  'griffin-7': { deckSum: 0, values: row(-6, 4, 4, 5, 7, 5, 3, 0, -2, -5) },
+  teks: { deckSum: 0, values: row(1, -1, -1, -1, -1, -1, -1, 0, 1, 1) },
+  'wilson-apc': { deckSum: 0, values: row(4, -1, -1, -1, -1, -1, -1, -1, -1, 1) },
 };
 
 describe('counting systems registry (data-driven golden)', () => {
