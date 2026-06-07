@@ -24,10 +24,12 @@
 		8F6FD9EB91B2EBBFAE4EC568 /* StrategyChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78DC33D28D09EB8697F6D833 /* StrategyChart.swift */; };
 		98D26850C6A96B642A438808 /* BasicStrategyParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 825AB70D2C6317662368AC83 /* BasicStrategyParityTests.swift */; };
 		BA5DE4E164B9DD95D3D4D36A /* BasicStrategyEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 412EEBB6BE3B2274CC4757FB /* BasicStrategyEngine.swift */; };
+		CA4D608DD9DB115BD8BEDD6B /* CountingParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */; };
 		DAA0754AABD5AAFC8003BF86 /* Strategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 577C951192BCC781DBE8EBDD /* Strategy.swift */; };
 		DBE51B6B16BCDF2D61562892 /* counting-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = A039C5E6271C7F1C7AFECA72 /* counting-vectors.json */; };
 		DDEAA480768F763AC0404C2B /* BlackjackTrainerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C359E507A88490DEB624D413 /* BlackjackTrainerApp.swift */; };
 		ED40B991FC2DEDC8BA58ADD7 /* Card.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC3A18A1400C61F3B32D13F1 /* Card.swift */; };
+		F6C919CA4ED0021197E1F128 /* CountingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF4D671AA4A053AF40395078 /* CountingEngine.swift */; };
 		FCC977E6B3D658140C018C91 /* Fixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C557C64B5EC75385C98395 /* Fixtures.swift */; };
 		FECDA79A9CA43DFD1CAC1855 /* Hand.swift in Sources */ = {isa = PBXBuildFile; fileRef = E94C977CD3606FA31236F02A /* Hand.swift */; };
 /* End PBXBuildFile section */
@@ -62,7 +64,9 @@
 		BA0B879E8B1D853622E0CC86 /* DataLayerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataLayerTests.swift; sourceTree = "<group>"; };
 		C359E507A88490DEB624D413 /* BlackjackTrainerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlackjackTrainerApp.swift; sourceTree = "<group>"; };
 		CA392F4E4A34C3BC514E68A8 /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
+		CF4D671AA4A053AF40395078 /* CountingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingEngine.swift; sourceTree = "<group>"; };
 		D52EF9B7479E51758C09565B /* basic-strategy-vectors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "basic-strategy-vectors.json"; sourceTree = "<group>"; };
+		D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingParityTests.swift; sourceTree = "<group>"; };
 		D9BB02017204C216ACEDAB62 /* counting-systems.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "counting-systems.json"; sourceTree = "<group>"; };
 		E94C977CD3606FA31236F02A /* Hand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hand.swift; sourceTree = "<group>"; };
 		E96987FAD78F068E0FF56D55 /* showdown-vectors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "showdown-vectors.json"; sourceTree = "<group>"; };
@@ -107,6 +111,7 @@
 				D3C3454DE9F5E547D2DEC0BA /* Support */,
 				825AB70D2C6317662368AC83 /* BasicStrategyParityTests.swift */,
 				22F61940A575094590E7A1D7 /* CardHandTests.swift */,
+				D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */,
 				BA0B879E8B1D853622E0CC86 /* DataLayerTests.swift */,
 				0CDF8C0414B1B8AF850B0DF5 /* SmokeTests.swift */,
 			);
@@ -118,6 +123,7 @@
 			children = (
 				412EEBB6BE3B2274CC4757FB /* BasicStrategyEngine.swift */,
 				AC3A18A1400C61F3B32D13F1 /* Card.swift */,
+				CF4D671AA4A053AF40395078 /* CountingEngine.swift */,
 				12BE32AD13FB36B33BAA1B8A /* CountingSystem.swift */,
 				2E31BAB1CB5F4A5CE16EFDD5 /* GameData.swift */,
 				E94C977CD3606FA31236F02A /* Hand.swift */,
@@ -258,6 +264,7 @@
 				BA5DE4E164B9DD95D3D4D36A /* BasicStrategyEngine.swift in Sources */,
 				DDEAA480768F763AC0404C2B /* BlackjackTrainerApp.swift in Sources */,
 				ED40B991FC2DEDC8BA58ADD7 /* Card.swift in Sources */,
+				F6C919CA4ED0021197E1F128 /* CountingEngine.swift in Sources */,
 				5DB30E135B7A136CDC249DC4 /* CountingSystem.swift in Sources */,
 				320D2B7B79708BB8EA3EA3D5 /* GameData.swift in Sources */,
 				FECDA79A9CA43DFD1CAC1855 /* Hand.swift in Sources */,
@@ -273,6 +280,7 @@
 			files = (
 				98D26850C6A96B642A438808 /* BasicStrategyParityTests.swift in Sources */,
 				55C4A5D71E0995E7E51A7E45 /* CardHandTests.swift in Sources */,
+				CA4D608DD9DB115BD8BEDD6B /* CountingParityTests.swift in Sources */,
 				6513222E1254F0172453951E /* DataLayerTests.swift in Sources */,
 				03F7F5ECA52EBC1FAE906F90 /* FixtureModels.swift in Sources */,
 				FCC977E6B3D658140C018C91 /* Fixtures.swift in Sources */,

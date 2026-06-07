@@ -26,3 +26,32 @@ struct BasicStrategyVector: Decodable {
         TwoCardHand(card(hand[0]), card(hand[1]))
     }
 }
+
+// MARK: counting-vectors.json
+
+struct CountingVectorsFile: Decodable {
+    let systems: [CountingVectorSystem]
+    let deckEstimateCases: [DeckEstimateCase]
+}
+
+struct CountingVectorSystem: Decodable {
+    let systemId: String
+    let balanced: Bool
+    let isFractional: Bool
+    let sequences: [CountingSequenceCase]
+}
+
+struct CountingSequenceCase: Decodable {
+    let label: String
+    let decksRemaining: Double
+    let cards: [Card]
+    let runningCount: Double
+    let trueCount: Int
+}
+
+struct DeckEstimateCase: Decodable {
+    let estimate: Double
+    let actual: Double
+    let tolerance: Double?
+    let withinBand: Bool
+}

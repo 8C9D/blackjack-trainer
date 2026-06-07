@@ -335,7 +335,11 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 ### Slice 1.4 — Counting engine
 
 - **Phase:** 1 — Engines
-- **Status:** Planned
+- **Status:** Done — `CountingEngine` reproduces all `counting-vectors`
+  (58 systems × sequences: running + truncated true count, fractional Wong
+  Halves, color Red Seven/KISS) and the `scoreDeckEstimate` boundaries; answer
+  validators + `isFractionalSystem` ported. `validateSettings` / drill-result
+  builders deferred to the Count screen (3.3) where the settings types live.
 - **Goal:** Port `counting-engine.service.ts`: `runningCount`, `trueCount`
   (`Math.trunc` truncation toward zero), `scoreDeckEstimate` (±0.5),
   fractional-system handling (Wong Halves), color-aware tags (Red Seven / KISS),
@@ -346,9 +350,11 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
   fractional, color, and deck-estimate boundary cases.
 - **Out of scope:** Shoe/showdown (Slice 1.6), UI.
 - **Acceptance criteria:**
-  - [ ] Every counting vector passes; truncation matches (`-5/2 → -2`); KO is
-        running-count-only.
-- **Validation:** baseline + full vector pass.
+  - [x] Every counting vector passes; truncation matches (`-5/2 → -2`); KO is
+        unbalanced (drives the Count screen's running-count-only restriction in
+        3.3 — the engine math is system-agnostic, as in the web).
+- **Validation:** baseline + full vector pass — `xcodebuild test` ✓ (21 tests),
+  `swiftformat` ✓, `swiftlint` ✓.
 - **Commit:** `feat(ios): port counting engine with truncation, fractional, and color parity`
 - **Decision:** None.
 
