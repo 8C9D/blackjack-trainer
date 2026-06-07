@@ -106,3 +106,42 @@ struct DeviationVectorRow: Decodable {
         TwoCardHand(card(handCard1), card(handCard2))
     }
 }
+
+// MARK: showdown-vectors.json
+
+struct ShowdownVectorsFile: Decodable {
+    let dealerShouldHitCases: [DealerShouldHitCase]
+    let playCases: [PlayCase]
+    let settleCases: [SettleCase]
+}
+
+struct DealerShouldHitCase: Decodable {
+    let hand: [String]
+    let kind: String
+    let total: Int
+    let ruleSet: String
+    let shouldHit: Bool
+}
+
+struct PlayCase: Decodable {
+    let label: String
+    let initial: [String]
+    let ruleSet: String
+    let draws: [String]
+    let finalHand: [String]
+}
+
+struct SettleCase: Decodable {
+    let label: String
+    let player: [String]
+    let dealer: [String]
+    let outcome: String
+    let playerBlackjack: Bool
+    let dealerBlackjack: Bool
+}
+
+/// Builds cards from fixture rank strings (suits are arbitrary for the
+/// suit-independent showdown vectors).
+func cards(_ ranks: [String]) -> [Card] {
+    ranks.map { card($0) }
+}
