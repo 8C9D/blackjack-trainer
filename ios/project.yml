@@ -43,6 +43,10 @@ targets:
     platform: iOS
     sources:
       - path: BlackjackTrainerTests
+      # Bundle the exported parity fixtures (flattened into the bundle root) so
+      # the parity tests can load them as resources.
+      - path: Fixtures
+        buildPhase: resources
     dependencies:
       - target: BlackjackTrainer
     settings:
