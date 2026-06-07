@@ -1,44 +1,92 @@
 import SwiftUI
 
-/// Root tab scaffold mirroring the web app's routes: the three trainers
-/// (Basic Strategy, Card Counting — which will host the running/true-count
-/// modes, and Deviations) plus an About tab that carries the LGPL
-/// acknowledgements (Slice 2.3). Every tab is a placeholder until Phase 3.
-struct RootTabView: View {
-    var body: some View {
-        TabView {
-            PlaceholderTab(title: "Basic Strategy", systemImage: "rectangle.on.rectangle")
-                .tabItem { Label("Strategy", systemImage: "rectangle.on.rectangle") }
+/// The app's four tabs, mirroring the web routes (the two counting modes live
+/// inside the Count tab) plus an About tab for the LGPL acknowledgements (2.3).
+enum AppTab: String, CaseIterable, Identifiable {
+    case strategy
+    case count
+    case deviations
+    case about
 
-            PlaceholderTab(title: "Card Counting", systemImage: "number")
-                .tabItem { Label("Count", systemImage: "number") }
+    var id: String {
+        rawValue
+    }
 
-            PlaceholderTab(title: "Deviations", systemImage: "arrow.triangle.branch")
-                .tabItem { Label("Deviations", systemImage: "arrow.triangle.branch") }
+    var label: String {
+        switch self {
+        case .strategy: "Strategy"
+        case .count: "Count"
+        case .deviations: "Deviations"
+        case .about: "About"
+        }
+    }
 
-            PlaceholderTab(title: "About", systemImage: "info.circle")
-                .tabItem { Label("About", systemImage: "info.circle") }
+    var title: String {
+        switch self {
+        case .strategy: "Basic Strategy"
+        case .count: "Card Counting"
+        case .deviations: "Deviations"
+        case .about: "About"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .strategy: "rectangle.on.rectangle"
+        case .count: "number"
+        case .deviations: "arrow.triangle.branch"
+        case .about: "info.circle"
         }
     }
 }
 
-/// Temporary empty screen used for every tab in the Phase 0 skeleton.
+/// Root tab shell. Each tab's content is keyed on a per-tab visit counter, so
+/// re-entering a tab rebuilds it — in-memory drill state resets while the
+/// persisted stats (owned by `AppModel`) survive, matching the web's behavior.
+/// Tabs are placeholders until Phase 3.
+struct RootTabView: View {
+    @State private var selection: AppTab = .strategy
+    @State private var visits: [AppTab: Int] = [:]
+
+    var body: some View {
+        TabView(selection: $selection) {
+            ForEach(AppTab.allCases) { tab in
+                PlaceholderTab(title: tab.title, systemImage: tab.icon)
+                    .id(visits[tab, default: 0]) // re-entry → fresh in-memory state
+                    .tabItem { Label(tab.label, systemImage: tab.icon) }
+                    .tag(tab)
+            }
+        }
+        .tint(Theme.accent)
+        .onChange(of: selection, initial: true) { _, newValue in
+            visits[newValue, default: 0] += 1
+        }
+    }
+}
+
+/// Temporary screen used for every tab until Phase 3. The tap counter is
+/// in-memory "drill" state that demonstrates the reset-on-re-entry behavior.
 private struct PlaceholderTab: View {
     let title: String
     let systemImage: String
+    @State private var taps = 0
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 12) {
+            VStack(spacing: 16) {
                 Image(systemName: systemImage)
                     .font(.largeTitle)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.secondaryText)
                 Text(title)
                     .font(.title2.weight(.semibold))
+                    .foregroundStyle(Theme.primaryText)
                 Text("Coming soon")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.secondaryText)
+                Button("Taps this visit: \(taps)") { taps += 1 }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Theme.accent)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .appBackground()
             .navigationTitle(title)
         }
     }
