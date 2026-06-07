@@ -24,6 +24,12 @@ targets:
     platform: iOS
     sources:
       - path: BlackjackTrainer
+      # The app loads these two data files at runtime (the exported source of
+      # truth per D2). The large vector fixtures are test-only.
+      - path: Fixtures/charts.json
+        buildPhase: resources
+      - path: Fixtures/counting-systems.json
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.blackjacktrainer.app
