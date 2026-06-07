@@ -5,7 +5,7 @@ A frontend-only Angular app for practicing four blackjack skills:
 1. **Basic Strategy Trainer** — initial two-card hands against H17/S17 charts
    from [Blackjack Apprenticeship](https://www.blackjackapprenticeship.com/).
 2. **Running Count Trainer** — running-count drills on random card streams of
-   configurable length and speed, across 49 counting systems (Hi-Lo, KO,
+   configurable length and speed, across 52 counting systems (Hi-Lo, KO,
    Omega II, Wong Halves, plus the Blackjack Review comparison set).
 3. **True Count Trainer** — same card streams, but the user answers the true
    count (`runningCount / decksRemaining`, truncated toward zero). Decks
@@ -73,7 +73,7 @@ User submits the true count, computed as
 
 #### Counting systems
 
-The running-count trainer offers **49 counting systems**, discovered from a
+The running-count trainer offers **52 counting systems**, discovered from a
 registry in `data/counting-systems.ts` (the engine reads values straight off the
 descriptor, so adding a system is data-only). The four below are the defaults,
 shown first in the picker; the rest are the
@@ -94,6 +94,11 @@ families, and more) — see the in-app picker for the full list:
 - **Wong Halves uses fractional values.** In running-count mode the answer
   input accepts decimals (step 0.5); true counts are still whole numbers
   (`Math.trunc`).
+- **A few systems are color-dependent.** Red Seven (red 7 = +1, black 7 = 0)
+  and KISS 2 / 3 (black 2 = +1, red 2 = 0) tag a rank by the card's color; the
+  engine resolves the per-color value via each system's `colorValues` override.
+  The averaged value the picker shows (e.g. 7 = +0.5) is only the deck-sum
+  average — the actual per-card tags are integers, so these stay integer-input.
 
 #### Shared mechanics
 
@@ -413,8 +418,10 @@ without engine changes. API:
 - `isValidIntegerAnswer(raw)` / `isValidDecimalAnswer(raw)` — drive the answer
   form's Submit button. Integer systems use the integer validator; fractional
   systems (Wong Halves, in running-count mode) use the decimal one.
-- `isFractionalSystem(system)` — true when any per-rank value is non-integer
-  (Wong Halves), used to decide which validator and input step to use.
+- `isFractionalSystem(system)` — true when any per-card value is non-integer
+  (e.g. Wong Halves), used to pick the validator and input step. It reads the
+  per-color tags of color systems, so Red Seven / KISS — whose averaged scalar
+  is 0.5 but whose real per-card tags are integers — stay integer-input.
 
 Counting systems are defined in `data/counting-systems.ts`, each with a comment
 listing its per-rank tags, balance, and source. The classic decks-remaining presets are in
@@ -542,6 +549,10 @@ and the cursor/handoff log in
   decks remaining (scored within ±0.5), instead of a fixed preset.
 - **Post-count showdown** — single hand vs the dealer off the live shoe
   (hit/stand, H17/S17 dealer, 3:2 naturals, win/lose/push tally).
+- **Blackjack Review counting systems** — the comparison-table set added as pure
+  data (Hi-Opt I/II, Zen, Revere Point Count, Mentor, the Griffin / Uston / EBJ
+  families, and the color-dependent Red Seven and KISS 2/3), on a color-aware
+  counting model — 52 systems in all.
 
 ### Future (not yet implemented)
 
