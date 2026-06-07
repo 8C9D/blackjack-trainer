@@ -45,6 +45,7 @@ enum AppTab: String, CaseIterable, Identifiable {
 /// persisted stats (owned by `AppModel`) survive, matching the web's behavior.
 /// Tabs are placeholders until Phase 3.
 struct RootTabView: View {
+    @Environment(AppModel.self) private var model
     @State private var selection: AppTab = .strategy
     @State private var visits: [AppTab: Int] = [:]
     @State private var keyboardMonitor = HardwareKeyboardMonitor()
@@ -65,11 +66,13 @@ struct RootTabView: View {
         }
     }
 
-    /// The About tab carries the acknowledgements (Slice 2.3); the trainer tabs
-    /// stay placeholders until Phase 3.
+    /// The About tab carries the acknowledgements (Slice 2.3); trainer tabs are
+    /// filled in across Phase 3 (the Strategy tab landed in 3.2).
     @ViewBuilder
     private func content(for tab: AppTab) -> some View {
         switch tab {
+        case .strategy:
+            BasicStrategyView(app: model)
         case .about:
             AboutView()
         default:
@@ -108,5 +111,6 @@ private struct PlaceholderTab: View {
 
 #Preview {
     RootTabView()
+        .environment(AppModel())
         .preferredColorScheme(.dark)
 }
