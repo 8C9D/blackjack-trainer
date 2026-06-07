@@ -1,0 +1,17 @@
+# SwiftLint config — lint gate for the iOS app.
+included:
+  - BlackjackTrainer
+  - BlackjackTrainerTests
+
+excluded:
+  - BlackjackTrainer.xcodeproj
+  - Fixtures
+  - build
+
+disabled_rules:
+  - todo
+
+line_length:
+  warning: 120
+  error: 160
+  ignores_comments: true

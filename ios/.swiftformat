@@ -1,0 +1,10 @@
+# SwiftFormat config — the Swift analogue of the web repo's prettier gate.
+--swiftversion 5.9
+--indent 4
+--maxwidth 100
+--commas inline
+--self remove
+--importgrouping testable-bottom
+
+# Generated project & exported fixtures must not be reformatted.
+--exclude BlackjackTrainer.xcodeproj,Fixtures
