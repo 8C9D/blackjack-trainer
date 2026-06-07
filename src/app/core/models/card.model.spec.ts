@@ -6,6 +6,7 @@ import {
   isAce,
   isTenValue,
   softNonAceValue,
+  suitColor,
   type Card,
   type Rank,
   type Suit,
@@ -90,6 +91,24 @@ describe('card.model helpers', () => {
       // softNonAceValue assumes exactly one ace; both engines route pairs
       // elsewhere first. With two aces it picks the second card (also an ace).
       expect(softNonAceValue([card('A'), card('A')])).toBe(11);
+    });
+  });
+
+  describe('suitColor', () => {
+    it('maps hearts and diamonds to red', () => {
+      expect(suitColor('hearts')).toBe('red');
+      expect(suitColor('diamonds')).toBe('red');
+    });
+
+    it('maps spades and clubs to black', () => {
+      expect(suitColor('spades')).toBe('black');
+      expect(suitColor('clubs')).toBe('black');
+    });
+
+    it('classifies every suit as exactly red or black', () => {
+      for (const s of ALL_SUITS) {
+        expect(['red', 'black']).toContain(suitColor(s));
+      }
     });
   });
 });

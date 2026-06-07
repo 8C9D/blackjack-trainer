@@ -5,7 +5,7 @@ import type {
   RunningCountDrillResult,
   TrueCountDrillResult,
 } from '../../core/models/card-counting.model';
-import type { CountingSystem } from '../../core/models/counting-system.model';
+import { cardCountValue, type CountingSystem } from '../../core/models/counting-system.model';
 import { CardImageComponent } from '../../shared/card-image.component';
 
 interface BreakdownEntry {
@@ -114,7 +114,7 @@ export class CountFeedbackPanelComponent {
     // and running-count results have no prior, so this is 0.
     let running = r.mode === 'true-count' ? (r.priorRunningCount ?? 0) : 0;
     return r.cards.map((card, index) => {
-      const delta = sys.values[card.rank];
+      const delta = cardCountValue(sys, card);
       running += delta;
       return {
         index,
