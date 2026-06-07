@@ -10,6 +10,10 @@ excluded:
 
 disabled_rules:
   - todo
+  # SwiftUI builder-style views (action closure + trailing @ViewBuilder content,
+  # e.g. FeedbackShellView(onNext:){ content }) idiomatically mix an inline and a
+  # trailing closure, exactly as Apple's Button(action:label:) does.
+  - multiple_closures_with_trailing_closure
 
 # The engines use short, math-y identifiers (card values a/b, rank r, etc.),
 # mirroring the TypeScript source. Allow them while keeping the rest of the rule.

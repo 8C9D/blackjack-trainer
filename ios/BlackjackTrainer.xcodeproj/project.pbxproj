@@ -7,20 +7,25 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		02C134286C4B417D1AF060DF /* ActionButtonsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A64DE6664C81E82AA4D8054 /* ActionButtonsView.swift */; };
 		03F7F5ECA52EBC1FAE906F90 /* FixtureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EDEA06AB0AD95400DD8619E /* FixtureModels.swift */; };
 		0C9DCB1AD32F6624AB2541F4 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E938F0CC74CC666924D7E3E /* AboutView.swift */; };
 		11723EBF74A70F6A5257E0CD /* showdown-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = E96987FAD78F068E0FF56D55 /* showdown-vectors.json */; };
 		15D8DA3209658F589B896F3D /* Shoe.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEF70F593374993ECA4C38A4 /* Shoe.swift */; };
+		1725C1780292E9BEAB8D9C6B /* StatsPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE80FB44276C2813F39EC18F /* StatsPanelView.swift */; };
 		1D678812320D7F3EB2147C24 /* AppModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E38CEB24905B810A63FC4E4 /* AppModelTests.swift */; };
 		284AFBB818EAAC119ACBFDFC /* counting-systems.json in Resources */ = {isa = PBXBuildFile; fileRef = D9BB02017204C216ACEDAB62 /* counting-systems.json */; };
 		2C2BD8A7B0B54F9C5D1A3704 /* charts.json in Resources */ = {isa = PBXBuildFile; fileRef = A6556669B8FAFE12C55367F9 /* charts.json */; };
 		305BF7C658768E40E98B280B /* charts.json in Resources */ = {isa = PBXBuildFile; fileRef = A6556669B8FAFE12C55367F9 /* charts.json */; };
+		30715FEEF950524036747DC0 /* SharedComponentsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 645F62DA06D6384BB1E98209 /* SharedComponentsTests.swift */; };
 		320D2B7B79708BB8EA3EA3D5 /* GameData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E31BAB1CB5F4A5CE16EFDD5 /* GameData.swift */; };
 		386E32FE6EC444B9D31E527A /* basic-strategy-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = D52EF9B7479E51758C09565B /* basic-strategy-vectors.json */; };
 		3D06500A85C04C83F3E882BD /* StatsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A3B7FB8E53D8E1DEAAEE93B /* StatsModels.swift */; };
+		3FD4BF64CAFAE561BCADE811 /* FeedbackShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A06878A6AE71D6BE3C20EB17 /* FeedbackShellView.swift */; };
 		45BA9B9281DD3E44F7D4BBEE /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA392F4E4A34C3BC514E68A8 /* RootTabView.swift */; };
 		488D636848CD51976F413918 /* AUTHORS.txt in Resources */ = {isa = PBXBuildFile; fileRef = 25A35DC18D354F2C90FF460B /* AUTHORS.txt */; };
 		4DC171F2E11923E6F13DE2DF /* CardImageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7D35732C70EB138CD4848D4 /* CardImageTests.swift */; };
+		5486C1B108D1CEE024BC8BE8 /* RuleControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4278214D3A2C4A4D26D871E /* RuleControlsView.swift */; };
 		55C4A5D71E0995E7E51A7E45 /* CardHandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22F61940A575094590E7A1D7 /* CardHandTests.swift */; };
 		5ACE6A73BE71B4664EF7B2BD /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CDF8C0414B1B8AF850B0DF5 /* SmokeTests.swift */; };
 		5AF9B9674E93ACAEF2C9D226 /* Deviation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0896F4168F59A3A9EBFF7CDE /* Deviation.swift */; };
@@ -36,13 +41,16 @@
 		98D26850C6A96B642A438808 /* BasicStrategyParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 825AB70D2C6317662368AC83 /* BasicStrategyParityTests.swift */; };
 		9D8B454F0AC4F6A999B78902 /* CHANGELOG.txt in Resources */ = {isa = PBXBuildFile; fileRef = C9A9A50BB9ED98356FA418FB /* CHANGELOG.txt */; };
 		A0FAF8E256C05D8BE1293316 /* StatsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92869AF24C67B01CE515A238 /* StatsStore.swift */; };
+		A92CDBEB90E70B6B983D8C5D /* Keyboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9F3808F8AC15DEF1BE4DE1B /* Keyboard.swift */; };
 		AD5CA329F1BC4A32BF660060 /* DeviationParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18C6C68585013F882B690DA5 /* DeviationParityTests.swift */; };
 		AE6F2FE0E95A40C9E21207A8 /* CardImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DAE402AA61CF04300B0AF9 /* CardImage.swift */; };
 		BA5DE4E164B9DD95D3D4D36A /* BasicStrategyEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 412EEBB6BE3B2274CC4757FB /* BasicStrategyEngine.swift */; };
 		CA4D608DD9DB115BD8BEDD6B /* CountingParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */; };
+		CCF53B5EC96C4C0EF2F84921 /* HardwareKeyboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56D03F7A78236CB3E5505245 /* HardwareKeyboard.swift */; };
 		CD5DF8C13DB099C1784832CB /* Showdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = B174892CC11A60C0F530B406 /* Showdown.swift */; };
 		D64887099FD3A74A49D1E6DB /* COPYING.txt in Resources */ = {isa = PBXBuildFile; fileRef = D646C0CD8526C8E211E25C42 /* COPYING.txt */; };
 		DAA0754AABD5AAFC8003BF86 /* Strategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 577C951192BCC781DBE8EBDD /* Strategy.swift */; };
+		DB3622622CA10DC9E1416CE4 /* BlackjackTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A15361EC27E9DF33A89716E /* BlackjackTableView.swift */; };
 		DBE51B6B16BCDF2D61562892 /* counting-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = A039C5E6271C7F1C7AFECA72 /* counting-vectors.json */; };
 		DDEAA480768F763AC0404C2B /* BlackjackTrainerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C359E507A88490DEB624D413 /* BlackjackTrainerApp.swift */; };
 		ED40B991FC2DEDC8BA58ADD7 /* Card.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC3A18A1400C61F3B32D13F1 /* Card.swift */; };
@@ -80,8 +88,12 @@
 		412EEBB6BE3B2274CC4757FB /* BasicStrategyEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicStrategyEngine.swift; sourceTree = "<group>"; };
 		45B95CDB1F240EEC3FC88326 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		4C391C226F94DEFB8E908E8A /* COPYING.LESSER.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = COPYING.LESSER.txt; sourceTree = "<group>"; };
+		56D03F7A78236CB3E5505245 /* HardwareKeyboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareKeyboard.swift; sourceTree = "<group>"; };
 		577C951192BCC781DBE8EBDD /* Strategy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Strategy.swift; sourceTree = "<group>"; };
 		5A74F8324193BA0A96DB8B29 /* BlackjackTrainerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = BlackjackTrainerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		645F62DA06D6384BB1E98209 /* SharedComponentsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponentsTests.swift; sourceTree = "<group>"; };
+		6A15361EC27E9DF33A89716E /* BlackjackTableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlackjackTableView.swift; sourceTree = "<group>"; };
+		6A64DE6664C81E82AA4D8054 /* ActionButtonsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionButtonsView.swift; sourceTree = "<group>"; };
 		6E38CEB24905B810A63FC4E4 /* AppModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelTests.swift; sourceTree = "<group>"; };
 		6EDEA06AB0AD95400DD8619E /* FixtureModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureModels.swift; sourceTree = "<group>"; };
 		70F62C66DE7F2F32BDF25DEE /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -91,12 +103,15 @@
 		92869AF24C67B01CE515A238 /* StatsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsStore.swift; sourceTree = "<group>"; };
 		98AC306A85F2BCC5BE60F1E3 /* BlackjackTrainer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = BlackjackTrainer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A039C5E6271C7F1C7AFECA72 /* counting-vectors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "counting-vectors.json"; sourceTree = "<group>"; };
+		A06878A6AE71D6BE3C20EB17 /* FeedbackShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackShellView.swift; sourceTree = "<group>"; };
 		A6556669B8FAFE12C55367F9 /* charts.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = charts.json; sourceTree = "<group>"; };
 		AC3A18A1400C61F3B32D13F1 /* Card.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Card.swift; sourceTree = "<group>"; };
 		B174892CC11A60C0F530B406 /* Showdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showdown.swift; sourceTree = "<group>"; };
+		B9F3808F8AC15DEF1BE4DE1B /* Keyboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keyboard.swift; sourceTree = "<group>"; };
 		BA0B879E8B1D853622E0CC86 /* DataLayerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataLayerTests.swift; sourceTree = "<group>"; };
 		BD423D666F3BBEA240356B18 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C359E507A88490DEB624D413 /* BlackjackTrainerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlackjackTrainerApp.swift; sourceTree = "<group>"; };
+		C4278214D3A2C4A4D26D871E /* RuleControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleControlsView.swift; sourceTree = "<group>"; };
 		C7D35732C70EB138CD4848D4 /* CardImageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardImageTests.swift; sourceTree = "<group>"; };
 		C9A9A50BB9ED98356FA418FB /* CHANGELOG.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CHANGELOG.txt; sourceTree = "<group>"; };
 		CA392F4E4A34C3BC514E68A8 /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
@@ -106,6 +121,7 @@
 		D646C0CD8526C8E211E25C42 /* COPYING.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = COPYING.txt; sourceTree = "<group>"; };
 		D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingParityTests.swift; sourceTree = "<group>"; };
 		D9BB02017204C216ACEDAB62 /* counting-systems.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "counting-systems.json"; sourceTree = "<group>"; };
+		DE80FB44276C2813F39EC18F /* StatsPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsPanelView.swift; sourceTree = "<group>"; };
 		E94C977CD3606FA31236F02A /* Hand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hand.swift; sourceTree = "<group>"; };
 		E96987FAD78F068E0FF56D55 /* showdown-vectors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "showdown-vectors.json"; sourceTree = "<group>"; };
 		EEF70F593374993ECA4C38A4 /* Shoe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shoe.swift; sourceTree = "<group>"; };
@@ -154,9 +170,23 @@
 			);
 			sourceTree = "<group>";
 		};
+		4AD3FC17EC94E310D5FEC089 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				6A64DE6664C81E82AA4D8054 /* ActionButtonsView.swift */,
+				6A15361EC27E9DF33A89716E /* BlackjackTableView.swift */,
+				A06878A6AE71D6BE3C20EB17 /* FeedbackShellView.swift */,
+				56D03F7A78236CB3E5505245 /* HardwareKeyboard.swift */,
+				C4278214D3A2C4A4D26D871E /* RuleControlsView.swift */,
+				DE80FB44276C2813F39EC18F /* StatsPanelView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
 		4E0173E3FDCF8F52331926BF /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				4AD3FC17EC94E310D5FEC089 /* Components */,
 				0E938F0CC74CC666924D7E3E /* AboutView.swift */,
 				D0DAE402AA61CF04300B0AF9 /* CardImage.swift */,
 			);
@@ -174,6 +204,7 @@
 				D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */,
 				BA0B879E8B1D853622E0CC86 /* DataLayerTests.swift */,
 				18C6C68585013F882B690DA5 /* DeviationParityTests.swift */,
+				645F62DA06D6384BB1E98209 /* SharedComponentsTests.swift */,
 				786E4951CEEAFF7A09457F30 /* ShowdownParityTests.swift */,
 				0CDF8C0414B1B8AF850B0DF5 /* SmokeTests.swift */,
 				40DA33CFF9EA9742E7504A05 /* StatsStoreTests.swift */,
@@ -201,6 +232,7 @@
 				F423E49F3EE23CE7C3E35ABB /* DeviationEngine.swift */,
 				2E31BAB1CB5F4A5CE16EFDD5 /* GameData.swift */,
 				E94C977CD3606FA31236F02A /* Hand.swift */,
+				B9F3808F8AC15DEF1BE4DE1B /* Keyboard.swift */,
 				EEF70F593374993ECA4C38A4 /* Shoe.swift */,
 				B174892CC11A60C0F530B406 /* Showdown.swift */,
 				577C951192BCC781DBE8EBDD /* Strategy.swift */,
@@ -367,8 +399,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				0C9DCB1AD32F6624AB2541F4 /* AboutView.swift in Sources */,
+				02C134286C4B417D1AF060DF /* ActionButtonsView.swift in Sources */,
 				94843E9634E49F20DAD75618 /* AppModel.swift in Sources */,
 				BA5DE4E164B9DD95D3D4D36A /* BasicStrategyEngine.swift in Sources */,
+				DB3622622CA10DC9E1416CE4 /* BlackjackTableView.swift in Sources */,
 				DDEAA480768F763AC0404C2B /* BlackjackTrainerApp.swift in Sources */,
 				ED40B991FC2DEDC8BA58ADD7 /* Card.swift in Sources */,
 				AE6F2FE0E95A40C9E21207A8 /* CardImage.swift in Sources */,
@@ -376,12 +410,17 @@
 				5DB30E135B7A136CDC249DC4 /* CountingSystem.swift in Sources */,
 				5AF9B9674E93ACAEF2C9D226 /* Deviation.swift in Sources */,
 				6E1A2AA4CC616FC93B1C6DBD /* DeviationEngine.swift in Sources */,
+				3FD4BF64CAFAE561BCADE811 /* FeedbackShellView.swift in Sources */,
 				320D2B7B79708BB8EA3EA3D5 /* GameData.swift in Sources */,
 				FECDA79A9CA43DFD1CAC1855 /* Hand.swift in Sources */,
+				CCF53B5EC96C4C0EF2F84921 /* HardwareKeyboard.swift in Sources */,
+				A92CDBEB90E70B6B983D8C5D /* Keyboard.swift in Sources */,
 				45BA9B9281DD3E44F7D4BBEE /* RootTabView.swift in Sources */,
+				5486C1B108D1CEE024BC8BE8 /* RuleControlsView.swift in Sources */,
 				15D8DA3209658F589B896F3D /* Shoe.swift in Sources */,
 				CD5DF8C13DB099C1784832CB /* Showdown.swift in Sources */,
 				3D06500A85C04C83F3E882BD /* StatsModels.swift in Sources */,
+				1725C1780292E9BEAB8D9C6B /* StatsPanelView.swift in Sources */,
 				A0FAF8E256C05D8BE1293316 /* StatsStore.swift in Sources */,
 				DAA0754AABD5AAFC8003BF86 /* Strategy.swift in Sources */,
 				8F6FD9EB91B2EBBFAE4EC568 /* StrategyChart.swift in Sources */,
@@ -402,6 +441,7 @@
 				AD5CA329F1BC4A32BF660060 /* DeviationParityTests.swift in Sources */,
 				03F7F5ECA52EBC1FAE906F90 /* FixtureModels.swift in Sources */,
 				FCC977E6B3D658140C018C91 /* Fixtures.swift in Sources */,
+				30715FEEF950524036747DC0 /* SharedComponentsTests.swift in Sources */,
 				EE1BBDF8E6F169D9A24CDA81 /* ShowdownParityTests.swift in Sources */,
 				5ACE6A73BE71B4664EF7B2BD /* SmokeTests.swift in Sources */,
 				EEAEAB42B68664042D826147 /* StatsStoreTests.swift in Sources */,
