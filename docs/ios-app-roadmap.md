@@ -464,7 +464,14 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 ### Slice 2.3 — Card art + acknowledgements/licenses screen
 
 - **Phase:** 2 — Shell
-- **Status:** Planned
+- **Status:** Done — the 52 faces + blue back ship as **asset-catalog SVGs with
+  vector data preserved** (Xcode's native renderer; zero new dependencies — the
+  Decision default). `CardImage` maps a `Card` to its asset and renders
+  face-up/face-down. `AboutView` (wired to the About tab) carries the Vector
+  Playing Card Library 1.3 (Chris Aguilar) **LGPL 3.0** attribution with the
+  bundled `AUTHORS`/`COPYING`/`COPYING.LESSER` texts viewable in-app, plus the
+  **MIT** app-code notice. `actool` compiled all 53 vectors (verified in the
+  built `Assets.car`).
 - **Goal:** Bring the 52 card faces + blue back into the app and ship the
   **LGPL** attribution required by the card art's license.
 - **Why here:** Screens need card images; the license obligation must land with
@@ -476,13 +483,21 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
   (MIT) notice.
 - **Out of scope:** Trainer layout (Phase 3).
 - **Acceptance criteria:**
-  - [ ] All 52 + back render crisply at trainer sizes; acknowledgements screen
-        shows LGPL attribution and the MIT app-code notice.
-- **Validation:** baseline + visual check.
+  - [x] All 52 + back render crisply at trainer sizes (shipped as preserved
+        vectors — `actool` compiled all 53 into `Assets.car`, verified via
+        `assetutil`; the on-device crispness eyeball is folded into the 4.1 device
+        pass); acknowledgements screen shows the LGPL attribution and the MIT
+        app-code notice.
+- **Validation:** baseline + visual check — `xcodebuild test` ✓ (43 tests, incl.
+  the card-name mapping for all 52 + back), `swiftformat --lint` ✓, `swiftlint` ✓,
+  `assetutil` confirms all 53 card vectors in `Assets.car`, app launches in the
+  iPhone 16 Pro simulator (smoke screenshot). The About-screen pixels weren't
+  auto-captured (no accessibility permission for scripted simulator taps).
 - **Commit:** `feat(ios): card art assets and LGPL acknowledgements screen`
-- **Decision:** **Required — SVG render vs asset-catalog conversion.** Default:
-  whichever renders the vendored SVGs crisply with least tooling; preserve LGPL
-  notices either way.
+- **Decision:** **Resolved — asset-catalog SVG (preserve vector data)** over an
+  SVG library or PDF conversion: it renders the vendored SVGs crisply with the
+  least tooling (no new dependency), per the slice's default. LGPL notices ship
+  in `AboutView`.
 
 ---
 

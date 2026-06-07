@@ -10,5 +10,6 @@
 # SwiftFormat and SwiftLint's opening_brace rule agree.
 --disable wrapMultilineStatementBraces
 
-# Generated project & exported fixtures must not be reformatted.
---exclude BlackjackTrainer.xcodeproj,Fixtures
+# Generated project, exported fixtures & build output must not be reformatted
+# (actool emits GeneratedAssetSymbols.swift into build/ for the card catalog).
+--exclude BlackjackTrainer.xcodeproj,Fixtures,build
