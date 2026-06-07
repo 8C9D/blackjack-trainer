@@ -390,15 +390,36 @@ Note: v2 dropped the v1 key (`blackjack-trainer:stats:v1`). If you were
 running v1 locally, your previous basic-strategy stats are orphaned in
 storage — they're not loaded by v2 or v3.
 
-## Card asset attribution
+## License and attribution
 
-The 52 card SVGs and `BLUE_BACK.svg` under `public/cards/` come from
-[richardschneider/cardsJS](https://github.com/richardschneider/cardsJS),
-which packages Chris Aguilar's
+### App code
+
+The application code in this repository does **not** currently have an
+open-source license. **All rights are reserved** unless and until a top-level
+`LICENSE` file (and a corresponding `license` field in `package.json`) is
+added later. The package is marked `"private": true`, which guards against an
+accidental `npm publish` but is not itself a copyright license.
+
+For a point-in-time review of the repository's licensing and asset-attribution
+state, see
+[`docs/license-and-attribution-audit.md`](docs/license-and-attribution-audit.md).
+That audit documents the current situation so a deliberate licensing decision
+can be made later — it does not make that decision.
+
+### Card art
+
+The card SVG assets are licensed and attributed **separately** from the app
+code and are **not** covered by the all-rights-reserved status above. The 52
+card SVGs and `BLUE_BACK.svg` under `public/cards/` come from
+[richardschneider/cardsJS](https://github.com/richardschneider/cardsJS), which
+packages Chris Aguilar's
 [Vector Playing Card Library](https://code.google.com/archive/p/vectorized-playing-cards/)
-1.3. The library is licensed under **LGPL** (see
-`public/cards/COPYING.txt`, `COPYING.LESSER.txt`, `AUTHORS.txt`). The
-LGPL files are committed alongside the SVGs to preserve attribution.
+1.3, licensed under **LGPL 3.0**. The upstream notices are committed alongside
+the SVGs and ship in the production build to preserve attribution:
+
+- [`public/cards/AUTHORS.txt`](public/cards/AUTHORS.txt) — author and copyright notice.
+- [`public/cards/COPYING.txt`](public/cards/COPYING.txt) — GNU GPL v3 license text.
+- [`public/cards/COPYING.LESSER.txt`](public/cards/COPYING.LESSER.txt) — GNU LGPL v3 license text.
 
 ## Roadmap
 
