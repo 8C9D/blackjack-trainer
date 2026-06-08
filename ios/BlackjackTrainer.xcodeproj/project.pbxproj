@@ -8,13 +8,16 @@
 
 /* Begin PBXBuildFile section */
 		02C134286C4B417D1AF060DF /* ActionButtonsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A64DE6664C81E82AA4D8054 /* ActionButtonsView.swift */; };
+		039F744E1918FABE31519289 /* DeviationFeedbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80916791F08727E4F1F41C6E /* DeviationFeedbackTests.swift */; };
 		03F7F5ECA52EBC1FAE906F90 /* FixtureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EDEA06AB0AD95400DD8619E /* FixtureModels.swift */; };
+		05A5C0884C0EF2BC7798201C /* DeviationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D4FC18F08DE6A54FB21E10 /* DeviationsView.swift */; };
 		0672F0196E2D44640C38AE91 /* ShoeFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1686420A2590C6534E31F3E2 /* ShoeFactory.swift */; };
 		0C9DCB1AD32F6624AB2541F4 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E938F0CC74CC666924D7E3E /* AboutView.swift */; };
 		11723EBF74A70F6A5257E0CD /* showdown-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = E96987FAD78F068E0FF56D55 /* showdown-vectors.json */; };
 		15D8DA3209658F589B896F3D /* Shoe.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEF70F593374993ECA4C38A4 /* Shoe.swift */; };
 		1725C1780292E9BEAB8D9C6B /* StatsPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE80FB44276C2813F39EC18F /* StatsPanelView.swift */; };
 		1D678812320D7F3EB2147C24 /* AppModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E38CEB24905B810A63FC4E4 /* AppModelTests.swift */; };
+		26F2A7EFD436472155454735 /* DeviationScenarioGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AACC2CA555089684205FE973 /* DeviationScenarioGenerator.swift */; };
 		284AFBB818EAAC119ACBFDFC /* counting-systems.json in Resources */ = {isa = PBXBuildFile; fileRef = D9BB02017204C216ACEDAB62 /* counting-systems.json */; };
 		2C2BD8A7B0B54F9C5D1A3704 /* charts.json in Resources */ = {isa = PBXBuildFile; fileRef = A6556669B8FAFE12C55367F9 /* charts.json */; };
 		2D528424128E711BB0F538BD /* CountAnswerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 232402DABC1D385D19FC8B05 /* CountAnswerView.swift */; };
@@ -29,6 +32,7 @@
 		3FD4BF64CAFAE561BCADE811 /* FeedbackShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A06878A6AE71D6BE3C20EB17 /* FeedbackShellView.swift */; };
 		45BA9B9281DD3E44F7D4BBEE /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA392F4E4A34C3BC514E68A8 /* RootTabView.swift */; };
 		488D636848CD51976F413918 /* AUTHORS.txt in Resources */ = {isa = PBXBuildFile; fileRef = 25A35DC18D354F2C90FF460B /* AUTHORS.txt */; };
+		4C357F27214321B492EA280F /* DeviationTrainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C64CBE362221FD3923975DBF /* DeviationTrainer.swift */; };
 		4DC171F2E11923E6F13DE2DF /* CardImageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7D35732C70EB138CD4848D4 /* CardImageTests.swift */; };
 		53E0D784E52D67FE0E0D7D30 /* CardGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2705BBD8AAF017C2486055AE /* CardGenerator.swift */; };
 		5426F4C307C738A4E0CDD151 /* CountingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69A95A626303D8499464CCC /* CountingView.swift */; };
@@ -43,6 +47,7 @@
 		7208BDF07124A909B973F40D /* counting-systems.json in Resources */ = {isa = PBXBuildFile; fileRef = D9BB02017204C216ACEDAB62 /* counting-systems.json */; };
 		737978C330F4F9CB41FDC9FF /* COPYING.LESSER.txt in Resources */ = {isa = PBXBuildFile; fileRef = 4C391C226F94DEFB8E908E8A /* COPYING.LESSER.txt */; };
 		751F87683B0C43F746AE71BE /* CardGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07A16802F2169B099AE3D66 /* CardGeneratorTests.swift */; };
+		8124C2BFD8BA1EE68E269E3C /* DeviationScenarioGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCFA223B9420BDC9AD027B73 /* DeviationScenarioGeneratorTests.swift */; };
 		846B2EEF3BB562DEE492DE65 /* CountFeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F0F142E7986FA01C30FBDC9 /* CountFeedbackView.swift */; };
 		8A5FCA013C37B817EE6309EA /* ShowdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 165C075DFEF13830088AC4E9 /* ShowdownView.swift */; };
 		8BF8225B5B5683063C0901C3 /* deviation-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = 15F33EF1E2388D4C0EE28E6B /* deviation-vectors.json */; };
@@ -65,6 +70,7 @@
 		CD5DF8C13DB099C1784832CB /* Showdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = B174892CC11A60C0F530B406 /* Showdown.swift */; };
 		D2AB7ED7BE3625300AACE48F /* ShowdownModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A14FE863E2084BF0AC794D /* ShowdownModelTests.swift */; };
 		D64887099FD3A74A49D1E6DB /* COPYING.txt in Resources */ = {isa = PBXBuildFile; fileRef = D646C0CD8526C8E211E25C42 /* COPYING.txt */; };
+		D83606F3A43703FD227F6FCA /* DeviationsModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 867510EEE90AB06BAEA53ECE /* DeviationsModelTests.swift */; };
 		DAA0754AABD5AAFC8003BF86 /* Strategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 577C951192BCC781DBE8EBDD /* Strategy.swift */; };
 		DB3622622CA10DC9E1416CE4 /* BlackjackTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A15361EC27E9DF33A89716E /* BlackjackTableView.swift */; };
 		DBE51B6B16BCDF2D61562892 /* counting-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = A039C5E6271C7F1C7AFECA72 /* counting-vectors.json */; };
@@ -91,6 +97,7 @@
 /* Begin PBXFileReference section */
 		01B4AFDADA3CF8230C9FA589 /* CountingModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingModelTests.swift; sourceTree = "<group>"; };
 		0896F4168F59A3A9EBFF7CDE /* Deviation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Deviation.swift; sourceTree = "<group>"; };
+		08D4FC18F08DE6A54FB21E10 /* DeviationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationsView.swift; sourceTree = "<group>"; };
 		09C557C64B5EC75385C98395 /* Fixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fixtures.swift; sourceTree = "<group>"; };
 		0CDF8C0414B1B8AF850B0DF5 /* SmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeTests.swift; sourceTree = "<group>"; };
 		0E938F0CC74CC666924D7E3E /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
@@ -127,12 +134,15 @@
 		786E4951CEEAFF7A09457F30 /* ShowdownParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownParityTests.swift; sourceTree = "<group>"; };
 		78DC33D28D09EB8697F6D833 /* StrategyChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrategyChart.swift; sourceTree = "<group>"; };
 		7B1046B13D6373233EEA1F35 /* CardCounting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardCounting.swift; sourceTree = "<group>"; };
+		80916791F08727E4F1F41C6E /* DeviationFeedbackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationFeedbackTests.swift; sourceTree = "<group>"; };
 		825AB70D2C6317662368AC83 /* BasicStrategyParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicStrategyParityTests.swift; sourceTree = "<group>"; };
+		867510EEE90AB06BAEA53ECE /* DeviationsModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationsModelTests.swift; sourceTree = "<group>"; };
 		92869AF24C67B01CE515A238 /* StatsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsStore.swift; sourceTree = "<group>"; };
 		98AC306A85F2BCC5BE60F1E3 /* BlackjackTrainer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = BlackjackTrainer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A039C5E6271C7F1C7AFECA72 /* counting-vectors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "counting-vectors.json"; sourceTree = "<group>"; };
 		A06878A6AE71D6BE3C20EB17 /* FeedbackShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackShellView.swift; sourceTree = "<group>"; };
 		A6556669B8FAFE12C55367F9 /* charts.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = charts.json; sourceTree = "<group>"; };
+		AACC2CA555089684205FE973 /* DeviationScenarioGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationScenarioGenerator.swift; sourceTree = "<group>"; };
 		AC3A18A1400C61F3B32D13F1 /* Card.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Card.swift; sourceTree = "<group>"; };
 		B174892CC11A60C0F530B406 /* Showdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showdown.swift; sourceTree = "<group>"; };
 		B1A14FE863E2084BF0AC794D /* ShowdownModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownModelTests.swift; sourceTree = "<group>"; };
@@ -141,9 +151,11 @@
 		BD423D666F3BBEA240356B18 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C359E507A88490DEB624D413 /* BlackjackTrainerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlackjackTrainerApp.swift; sourceTree = "<group>"; };
 		C4278214D3A2C4A4D26D871E /* RuleControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleControlsView.swift; sourceTree = "<group>"; };
+		C64CBE362221FD3923975DBF /* DeviationTrainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationTrainer.swift; sourceTree = "<group>"; };
 		C7D35732C70EB138CD4848D4 /* CardImageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardImageTests.swift; sourceTree = "<group>"; };
 		C9A9A50BB9ED98356FA418FB /* CHANGELOG.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CHANGELOG.txt; sourceTree = "<group>"; };
 		CA392F4E4A34C3BC514E68A8 /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
+		CCFA223B9420BDC9AD027B73 /* DeviationScenarioGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationScenarioGeneratorTests.swift; sourceTree = "<group>"; };
 		CF4D671AA4A053AF40395078 /* CountingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingEngine.swift; sourceTree = "<group>"; };
 		D07A16802F2169B099AE3D66 /* CardGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardGeneratorTests.swift; sourceTree = "<group>"; };
 		D0DAE402AA61CF04300B0AF9 /* CardImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardImage.swift; sourceTree = "<group>"; };
@@ -235,6 +247,7 @@
 				58E087668BAE429A0E764D17 /* CountingModel.swift */,
 				E69A95A626303D8499464CCC /* CountingView.swift */,
 				501FF9BB16087E1BE634AD19 /* DeckEstimateView.swift */,
+				08D4FC18F08DE6A54FB21E10 /* DeviationsView.swift */,
 				165C075DFEF13830088AC4E9 /* ShowdownView.swift */,
 			);
 			path = Screens;
@@ -254,7 +267,10 @@
 				01B4AFDADA3CF8230C9FA589 /* CountingModelTests.swift */,
 				D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */,
 				BA0B879E8B1D853622E0CC86 /* DataLayerTests.swift */,
+				80916791F08727E4F1F41C6E /* DeviationFeedbackTests.swift */,
 				18C6C68585013F882B690DA5 /* DeviationParityTests.swift */,
+				CCFA223B9420BDC9AD027B73 /* DeviationScenarioGeneratorTests.swift */,
+				867510EEE90AB06BAEA53ECE /* DeviationsModelTests.swift */,
 				645F62DA06D6384BB1E98209 /* SharedComponentsTests.swift */,
 				3D44944317BBDF4871E4996D /* ShoeFactoryTests.swift */,
 				B1A14FE863E2084BF0AC794D /* ShowdownModelTests.swift */,
@@ -285,6 +301,8 @@
 				12BE32AD13FB36B33BAA1B8A /* CountingSystem.swift */,
 				0896F4168F59A3A9EBFF7CDE /* Deviation.swift */,
 				F423E49F3EE23CE7C3E35ABB /* DeviationEngine.swift */,
+				AACC2CA555089684205FE973 /* DeviationScenarioGenerator.swift */,
+				C64CBE362221FD3923975DBF /* DeviationTrainer.swift */,
 				2E31BAB1CB5F4A5CE16EFDD5 /* GameData.swift */,
 				E94C977CD3606FA31236F02A /* Hand.swift */,
 				B9F3808F8AC15DEF1BE4DE1B /* Keyboard.swift */,
@@ -474,6 +492,9 @@
 				2DE5D31F660953706B611AC6 /* DeckEstimateView.swift in Sources */,
 				5AF9B9674E93ACAEF2C9D226 /* Deviation.swift in Sources */,
 				6E1A2AA4CC616FC93B1C6DBD /* DeviationEngine.swift in Sources */,
+				26F2A7EFD436472155454735 /* DeviationScenarioGenerator.swift in Sources */,
+				4C357F27214321B492EA280F /* DeviationTrainer.swift in Sources */,
+				05A5C0884C0EF2BC7798201C /* DeviationsView.swift in Sources */,
 				3FD4BF64CAFAE561BCADE811 /* FeedbackShellView.swift in Sources */,
 				320D2B7B79708BB8EA3EA3D5 /* GameData.swift in Sources */,
 				FECDA79A9CA43DFD1CAC1855 /* Hand.swift in Sources */,
@@ -508,7 +529,10 @@
 				BD6E7BF5AA767DA6D790CF8D /* CountingModelTests.swift in Sources */,
 				CA4D608DD9DB115BD8BEDD6B /* CountingParityTests.swift in Sources */,
 				6513222E1254F0172453951E /* DataLayerTests.swift in Sources */,
+				039F744E1918FABE31519289 /* DeviationFeedbackTests.swift in Sources */,
 				AD5CA329F1BC4A32BF660060 /* DeviationParityTests.swift in Sources */,
+				8124C2BFD8BA1EE68E269E3C /* DeviationScenarioGeneratorTests.swift in Sources */,
+				D83606F3A43703FD227F6FCA /* DeviationsModelTests.swift in Sources */,
 				03F7F5ECA52EBC1FAE906F90 /* FixtureModels.swift in Sources */,
 				FCC977E6B3D658140C018C91 /* Fixtures.swift in Sources */,
 				30715FEEF950524036747DC0 /* SharedComponentsTests.swift in Sources */,
