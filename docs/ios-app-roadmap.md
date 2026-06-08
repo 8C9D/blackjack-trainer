@@ -598,7 +598,13 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 ### Slice 3.4 — Live shoe + deck estimation + showdown
 
 - **Phase:** 3 — Screens
-- **Status:** Planned
+- **Status:** Done — extends `CountingModel` with the live-shoe true-count source
+  (decks 1/2/6/8 + penetration; `ShoeFactory` builds + Fisher–Yates-shuffles the
+  shoe via the RNG seam), the `estimating` step (`DeckEstimateView`, scored ±0.5),
+  the carried running count + cut-card reshuffle notice across rounds, the split
+  stats panels (True count + Deck estimation), and the post-count `ShowdownView`
+  (its own `@MainActor ShowdownModel`: hit/stand, dealer auto-play H17/S17, 3:2
+  naturals, win/lose/push tally) dealing off the same persistent shoe.
 - **Goal:** Live-shoe true count (configure decks 1/2/6/8 + penetration; "how
   many decks remain?" ±0.5 step; grade TC vs actual; carry across rounds;
   reshuffle notice) and the post-count **showdown** (hit/stand vs dealer, H17/S17
@@ -608,9 +614,15 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
   count + Deck estimation) + showdown UI and its own tally store.
 - **Out of scope:** Multi-hand / bankroll (deferred, as in the web app).
 - **Acceptance criteria:**
-  - [ ] Live shoe depletes/reshuffles correctly; deck estimate scored ±0.5;
-        showdown settles per the rules; both stat panels + showdown tally persist.
-- **Validation:** baseline + manual smoke.
+  - [x] Live shoe depletes/reshuffles correctly (carries position + running count
+        across rounds, reshuffles at the cut card); deck estimate scored ±0.5;
+        showdown settles per the rules; both stat panels + showdown tally persist
+        — covered by `ShoeFactoryTests`, `ShowdownModelTests`, and the live-shoe
+        round in `CountingModelTests` (the shoe/settlement math itself is the 1.6
+        parity sweep).
+- **Validation:** baseline + manual smoke — `xcodebuild test` ✓ (72 tests),
+  `swiftformat --lint` ✓, `swiftlint` ✓ (0 violations), app launches cleanly with
+  the live-shoe Count model wired. (Split `CountingModel` into its own file.)
 - **Commit:** `feat(ios): live-shoe deck estimation and post-count showdown`
 - **Decision:** None.
 
