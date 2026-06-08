@@ -32,6 +32,10 @@ struct CountingView: View {
             .appBackground()
             .navigationTitle("Card Counting")
         }
+        .sensoryFeedback(trigger: trainer.result) { _, new in
+            guard let new else { return nil }
+            return new.isCorrect ? .success : .error
+        }
         .onDisappear { trainer.cancel() }
     }
 

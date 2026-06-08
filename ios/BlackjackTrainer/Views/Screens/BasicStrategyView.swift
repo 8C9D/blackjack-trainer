@@ -96,6 +96,11 @@ struct BasicStrategyView: View {
             .appBackground()
             .navigationTitle("Basic Strategy")
         }
+        .sensoryFeedback(trigger: trainer.result) { _, new in
+            guard let new else { return nil }
+            return new.correct ? .success : .error
+        }
+        .sensoryFeedback(.selection, trigger: trainer.scenario)
     }
 
     private func feedback(_ result: EvaluationResult) -> some View {
