@@ -82,7 +82,7 @@ The codebase is in **good health**, with one concrete regression in the lint gat
 - **Suggested validation:** `npm run lint` (must exit 0).
 - **Dependency ordering:** Independent. Do first — restores the gate the later
   cleanup is validated against.
-- **Autopilot status:** Planned
+- **Autopilot status:** Implemented
 
 ### Opportunity G — Dedupe the repeated insurance-explanation literal
 
@@ -193,9 +193,10 @@ Opportunity F fixes).**
 
 ## 11. Autopilot Execution Log
 
-| #   | Cleanup                           | Files changed                  | Validation | Commit  | Push    | Notes                                                   |
-| --- | --------------------------------- | ------------------------------ | ---------- | ------- | ------- | ------------------------------------------------------- |
-| 0   | Regenerate refactor-opportunities | docs/refactor-opportunities.md | n/a (docs) | pending | pending | Report regenerated for the dual TS+iOS state on `main`. |
+| #   | Cleanup                                | Files changed                                                             | Validation             | Commit  | Push    | Notes                                                                                                                         |
+| --- | -------------------------------------- | ------------------------------------------------------------------------- | ---------------------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 0   | Regenerate refactor-opportunities      | docs/refactor-opportunities.md                                            | n/a (docs)             | bb526d6 | pushed  | Report regenerated for the dual TS+iOS state on `main`.                                                                       |
+| 1   | Opportunity F: Prettier-clean two docs | docs/ios-app-roadmap.md, docs/ios-app-roadmap-progress.md (+ this report) | `npm run lint` exits 0 | pending | pending | `prettier --write` on exactly the two flagged docs (inline-code continuation + table padding). Restores the red lint/CI gate. |
 
 ### Run summary
 
