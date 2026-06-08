@@ -265,7 +265,10 @@ yet have — not "untested units":
   user flows (deal → answer → feedback → next; route switch resetting in-memory
   drill state while persisted stats survive) are only covered indirectly by
   unit/component specs. A small E2E pass would catch wiring/routing regressions
-  the component specs can't. **Open.**
+  the component specs can't. A docs-only plan for this layer now exists in
+  [`docs/e2e-testing-plan.md`](e2e-testing-plan.md) (recommends Playwright, a
+  Chromium-only smoke suite, and a separate CI job); no E2E tooling or tests are
+  added yet. **Open (planned).**
 - **Enforced coverage thresholds** — neither Vitest nor the CI workflow gates on
   a coverage percentage; coverage is asserted by hand-picked specs, not a
   threshold. Adding coverage reporting and a minimum gate would prevent silent
