@@ -91,7 +91,7 @@ Plus, once Slice 1 lands: `npm run lint`.
 ### Slice 2 — Top-level LICENSE + license clarification
 
 - **Phase:** A — Infra/Quality
-- **Status:** Planned
+- **Status:** Done
 - **Goal:** State the reuse terms for the application code, distinct from the
   bundled card art.
 - **Why here:** Open question in `docs/repo-current-state.md`: card assets carry
