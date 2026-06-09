@@ -1,10 +1,5 @@
 import { Injectable } from '@angular/core';
-import {
-  ALL_RANKS,
-  ALL_SUITS,
-  type Card,
-  type Scenario,
-} from '../models/card.model';
+import { ALL_RANKS, ALL_SUITS, type Card, type Scenario } from '../models/card.model';
 
 // Generates random initial-deal scenarios. Cards are drawn independently with
 // replacement — duplicates are allowed by design (this is a strategy trainer,

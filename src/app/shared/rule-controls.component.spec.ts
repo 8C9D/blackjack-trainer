@@ -9,24 +9,17 @@ function createControls(
   const fixture = TestBed.createComponent(RuleControlsComponent);
   const ref = fixture.componentRef;
   ref.setInput('ruleSet', overrides.ruleSet ?? 'S17');
-  ref.setInput(
-    'options',
-    overrides.options ?? { doubleAfterSplit: false, lateSurrender: false },
-  );
+  ref.setInput('options', overrides.options ?? { doubleAfterSplit: false, lateSurrender: false });
   if (overrides.name !== undefined) ref.setInput('name', overrides.name);
   fixture.detectChanges();
   return fixture;
 }
 
-function radios(
-  fixture: ComponentFixture<RuleControlsComponent>,
-): HTMLInputElement[] {
+function radios(fixture: ComponentFixture<RuleControlsComponent>): HTMLInputElement[] {
   return Array.from(fixture.nativeElement.querySelectorAll('input[type=radio]'));
 }
 
-function checkboxes(
-  fixture: ComponentFixture<RuleControlsComponent>,
-): HTMLInputElement[] {
+function checkboxes(fixture: ComponentFixture<RuleControlsComponent>): HTMLInputElement[] {
   return Array.from(fixture.nativeElement.querySelectorAll('input[type=checkbox]'));
 }
 
@@ -45,9 +38,9 @@ describe('RuleControlsComponent', () => {
 
   it('groups controls under labelled fieldsets and wraps each input in a text label', () => {
     const fixture = createControls();
-    const legends = Array.from(
-      fixture.nativeElement.querySelectorAll('legend'),
-    ).map((l) => (l as HTMLElement).textContent?.trim());
+    const legends = Array.from(fixture.nativeElement.querySelectorAll('legend')).map((l) =>
+      (l as HTMLElement).textContent?.trim(),
+    );
     expect(legends).toEqual(['Dealer rule', 'Table options']);
 
     for (const control of [...radios(fixture), ...checkboxes(fixture)]) {

@@ -1,9 +1,6 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 
-import type {
-  EngineOptions,
-  RuleSet,
-} from '../../core/models/strategy.model';
+import type { EngineOptions, RuleSet } from '../../core/models/strategy.model';
 import {
   DeviationSettingsComponent,
   MAX_MANUAL_TRUE_COUNT,
@@ -25,10 +22,7 @@ function createSettings(
   const fixture = TestBed.createComponent(DeviationSettingsComponent);
   const ref = fixture.componentRef;
   ref.setInput('ruleSet', overrides.ruleSet ?? 'S17');
-  ref.setInput(
-    'options',
-    overrides.options ?? { doubleAfterSplit: false, lateSurrender: false },
-  );
+  ref.setInput('options', overrides.options ?? { doubleAfterSplit: false, lateSurrender: false });
   ref.setInput('trueCountSource', overrides.trueCountSource ?? 'random');
   ref.setInput(
     'manualTrueCount',
@@ -62,9 +56,7 @@ describe('DeviationSettingsComponent', () => {
         received = r;
       });
       const h17 = Array.from(
-        fixture.nativeElement.querySelectorAll(
-          'input[type=radio][name=deviation-ruleSet]',
-        ),
+        fixture.nativeElement.querySelectorAll('input[type=radio][name=deviation-ruleSet]'),
       ).find((r) => !(r as HTMLInputElement).checked) as HTMLInputElement;
       h17.checked = true;
       h17.dispatchEvent(new Event('change'));
@@ -126,9 +118,7 @@ describe('DeviationSettingsComponent', () => {
   describe('manual true count input', () => {
     it('does not render the manual input in random mode', () => {
       const fixture = createSettings({ trueCountSource: 'random' });
-      expect(
-        fixture.nativeElement.querySelector('.deviation-settings__manual-input'),
-      ).toBeNull();
+      expect(fixture.nativeElement.querySelector('.deviation-settings__manual-input')).toBeNull();
     });
 
     it('renders the manual input in manual mode', () => {
@@ -298,12 +288,8 @@ describe('DeviationSettingsComponent', () => {
       expect(parseManualTrueCount('5')).toBe(5);
       expect(parseManualTrueCount('-3')).toBe(-3);
       expect(parseManualTrueCount(' 7 ')).toBe(7);
-      expect(parseManualTrueCount(String(MIN_MANUAL_TRUE_COUNT))).toBe(
-        MIN_MANUAL_TRUE_COUNT,
-      );
-      expect(parseManualTrueCount(String(MAX_MANUAL_TRUE_COUNT))).toBe(
-        MAX_MANUAL_TRUE_COUNT,
-      );
+      expect(parseManualTrueCount(String(MIN_MANUAL_TRUE_COUNT))).toBe(MIN_MANUAL_TRUE_COUNT);
+      expect(parseManualTrueCount(String(MAX_MANUAL_TRUE_COUNT))).toBe(MAX_MANUAL_TRUE_COUNT);
     });
 
     it('returns null for invalid input', () => {

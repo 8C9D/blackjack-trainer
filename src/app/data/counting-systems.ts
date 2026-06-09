@@ -15,7 +15,8 @@ import type { CountingSystem } from '../core/models/counting-system.model';
 export const HI_LO: CountingSystem = {
   id: 'hi-lo',
   name: 'Hi-Lo',
-  description: 'Balanced level-1 system. Low cards (2–6) count as +1, neutrals (7–9) as 0, tens and aces as −1.',
+  description:
+    'Balanced level-1 system. Low cards (2–6) count as +1, neutrals (7–9) as 0, tens and aces as −1.',
   balanced: true,
   values: {
     '2': 1,
@@ -27,10 +28,10 @@ export const HI_LO: CountingSystem = {
     '8': 0,
     '9': 0,
     '10': -1,
-    'J': -1,
-    'Q': -1,
-    'K': -1,
-    'A': -1,
+    J: -1,
+    Q: -1,
+    K: -1,
+    A: -1,
   },
 };
 

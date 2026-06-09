@@ -1,7 +1,7 @@
 # Mobile Mirror (v1)
 
 A mobile-first, phone-friendly presentation of the **existing** Blackjack
-Trainer. This is a *mirror*, not a fork: same app, same routes, same trainers,
+Trainer. This is a _mirror_, not a fork: same app, same routes, same trainers,
 same decision/counting/deviation engines, and the same `localStorage` stats.
 The only changes are layout, navigation, and PWA-ready metadata — implemented
 with responsive CSS, **no duplicated trainer logic**.
@@ -65,11 +65,11 @@ with responsive CSS, **no duplicated trainer logic**.
 
 All existing routes are mirrored — **routes are unchanged**:
 
-| Route | Trainer(s) | Mobile coverage |
-|---|---|---|
-| `/basic-strategy` | Basic Strategy | hand/dealer table, action grid, rule toggles, feedback, stats |
-| `/card-counting` | Hi-Lo Running Count + Hi-Lo True Count | mode selector, settings, card stream, numeric answer, feedback + breakdown, stats |
-| `/deviations` | Hi-Lo Deviations | settings (rule set, DAS/LS, practice mode, TC source), scenario table, true-count display, action grid, feedback, stats |
+| Route             | Trainer(s)                             | Mobile coverage                                                                                                         |
+| ----------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `/basic-strategy` | Basic Strategy                         | hand/dealer table, action grid, rule toggles, feedback, stats                                                           |
+| `/card-counting`  | Hi-Lo Running Count + Hi-Lo True Count | mode selector, settings, card stream, numeric answer, feedback + breakdown, stats                                       |
+| `/deviations`     | Hi-Lo Deviations                       | settings (rule set, DAS/LS, practice mode, TC source), scenario table, true-count display, action grid, feedback, stats |
 
 ## Mobile UX decisions
 
@@ -119,6 +119,7 @@ Run `npm start` and open DevTools device mode (e.g. iPhone SE 375×667, Pixel
 360×800) or a real phone. Verify:
 
 **Navigation**
+
 - [ ] At ≤600px the top nav is hidden and a bottom tab bar is shown.
 - [ ] At >600px the original top nav is shown and the bottom bar is hidden.
 - [ ] Tapping `Strategy` / `Count` / `Deviations` routes correctly and the
@@ -128,12 +129,14 @@ Run `npm start` and open DevTools device mode (e.g. iPhone SE 375×667, Pixel
 - [ ] On a notched device, the bar sits above the home indicator (safe area).
 
 **Basic Strategy (`/basic-strategy`)**
+
 - [ ] Dealer up-card + face-down and the two player cards are clear.
 - [ ] The six action buttons form a 3×2 grid and are comfortably tappable.
 - [ ] Rule toggles (S17/H17, DAS, Late Surrender) stack and are easy to tap.
 - [ ] Feedback (verdict + hand/correct action/why) and stats are readable.
 
 **Card Counting (`/card-counting`)**
+
 - [ ] Running-count vs true-count mode selector is clear.
 - [ ] Settings fields stack full-width; focusing a number field does **not**
       zoom the page (iOS).
@@ -143,6 +146,7 @@ Run `npm start` and open DevTools device mode (e.g. iPhone SE 375×667, Pixel
 - [ ] "Show card-by-card breakdown" expands and the grid fits the width.
 
 **Deviations (`/deviations`)**
+
 - [ ] Settings (rule set, DAS/LS, practice mode, TC source) stack and are
       tappable; the "Manual true count" input does not zoom on focus.
 - [ ] Scenario table, "Practice true count" value, and the action grid work.
@@ -150,6 +154,7 @@ Run `npm start` and open DevTools device mode (e.g. iPhone SE 375×667, Pixel
       true-count evaluation behave exactly as on desktop.
 
 **General**
+
 - [ ] No unexpected horizontal scrolling on any page.
 - [ ] Portrait and landscape both usable.
 

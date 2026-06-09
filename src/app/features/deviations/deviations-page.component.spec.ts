@@ -2,33 +2,19 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import type { Card, Rank, Suit } from '../../core/models/card.model';
-import type {
-  DeviationScenario,
-  DeviationTrainerResult,
-} from '../../core/models/deviation.model';
-import type {
-  EngineOptions,
-  RuleSet,
-} from '../../core/models/strategy.model';
+import type { DeviationScenario, DeviationTrainerResult } from '../../core/models/deviation.model';
+import type { EngineOptions, RuleSet } from '../../core/models/strategy.model';
 import {
   DeviationsPageComponent,
   MAX_RANDOM_TRUE_COUNT,
   MIN_RANDOM_TRUE_COUNT,
 } from './deviations-page.component';
-import type {
-  DeviationPracticeMode,
-  TrueCountSource,
-} from './deviation-settings.component';
+import type { DeviationPracticeMode, TrueCountSource } from './deviation-settings.component';
 import { classifyForDeviation, deviationsFor } from '../../core/services/deviation-engine.service';
 
 const card = (rank: Rank, suit: Suit = 'spades'): Card => ({ rank, suit });
 
-const scenarioOf = (
-  c1: Rank,
-  c2: Rank,
-  up: Rank,
-  trueCount: number,
-): DeviationScenario => ({
+const scenarioOf = (c1: Rank, c2: Rank, up: Rank, trueCount: number): DeviationScenario => ({
   player: [card(c1), card(c2)],
   dealerUpcard: card(up),
   trueCount,
@@ -291,9 +277,7 @@ describe('DeviationsPageComponent', () => {
   describe('true count display', () => {
     it('uses a clearer "Practice true count" label, not just "True count"', () => {
       const { fixture } = createPage();
-      const label = (fixture.nativeElement as HTMLElement).querySelector(
-        '.true-count__label',
-      );
+      const label = (fixture.nativeElement as HTMLElement).querySelector('.true-count__label');
       expect(label?.textContent?.trim()).toBe('Practice true count');
     });
   });
@@ -503,8 +487,7 @@ describe('DeviationsPageComponent', () => {
             r.playerHand === klass.playerHand,
         );
         const matchesInsuranceRule =
-          dealerKey === 'A' &&
-          rules.some((r) => r.category === 'insurance');
+          dealerKey === 'A' && rules.some((r) => r.category === 'insurance');
         expect(matchesPlayingRule || matchesInsuranceRule).toBe(true);
       }
     });
@@ -517,11 +500,15 @@ describe('DeviationsPageComponent', () => {
       c.practiceMode.set('deviation-only');
 
       c.ruleSet.set('H17');
-      const h17Rules = deviationsFor('H17').map((r) => `${r.playerHand}|${r.dealerUpcard}|${r.index}`);
+      const h17Rules = deviationsFor('H17').map(
+        (r) => `${r.playerHand}|${r.dealerUpcard}|${r.index}`,
+      );
       expect(h17Rules).toContain('10|A|3');
 
       c.ruleSet.set('S17');
-      const s17Rules = deviationsFor('S17').map((r) => `${r.playerHand}|${r.dealerUpcard}|${r.index}`);
+      const s17Rules = deviationsFor('S17').map(
+        (r) => `${r.playerHand}|${r.dealerUpcard}|${r.index}`,
+      );
       // S17 chart's 10 v A is at +4, not +3.
       expect(s17Rules).toContain('10|A|4');
       expect(s17Rules).not.toContain('10|A|3');

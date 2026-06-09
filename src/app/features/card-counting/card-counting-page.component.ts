@@ -1,11 +1,4 @@
-import {
-  Component,
-  DestroyRef,
-  HostListener,
-  computed,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
 
 import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
 import type { Card } from '../../core/models/card.model';
@@ -64,7 +57,9 @@ type DrillState = 'idle' | 'streaming' | 'answering' | 'feedback';
             class="page__start-button"
             [disabled]="!isValid()"
             (click)="start()"
-          >Start drill <span class="page__hint">[Enter]</span></button>
+          >
+            Start drill <span class="page__hint">[Enter]</span>
+          </button>
         </div>
       }
 
@@ -78,24 +73,14 @@ type DrillState = 'idle' | 'streaming' | 'answering' | 'feedback';
       }
 
       @if (state() === 'answering') {
-        <app-count-answer-form
-          [mode]="settings().mode"
-          (answer)="onAnswer($event)"
-        />
+        <app-count-answer-form [mode]="settings().mode" (answer)="onAnswer($event)" />
       }
 
       @if (state() === 'feedback' && result(); as r) {
-        <app-count-feedback-panel
-          [result]="r"
-          [system]="system"
-          (next)="start()"
-        />
+        <app-count-feedback-panel [result]="r" [system]="system" (next)="start()" />
       }
 
-      <app-stats-panel
-        [stats]="activeStats()"
-        (reset)="resetActiveStats()"
-      />
+      <app-stats-panel [stats]="activeStats()" (reset)="resetActiveStats()" />
     </div>
   `,
   styleUrl: './card-counting-page.component.scss',
@@ -129,9 +114,7 @@ export class CardCountingPageComponent {
     return i >= 0 && i < list.length ? list[i] : null;
   });
 
-  protected readonly validation = computed(() =>
-    this.engine.validateSettings(this.settings()),
-  );
+  protected readonly validation = computed(() => this.engine.validateSettings(this.settings()));
   protected readonly validationErrors = computed(() => this.validation().errors);
   protected readonly isValid = computed(() => this.validation().valid);
   protected readonly isDrillActive = computed(

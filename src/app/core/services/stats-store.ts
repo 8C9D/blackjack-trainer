@@ -4,9 +4,7 @@ import { signal, type Signal } from '@angular/core';
 // cleanupLegacyStatsKeys() once to wipe them so they don't accumulate in
 // localStorage. Drop this list (and the helper below) once no installations
 // of those versions remain.
-const LEGACY_STATS_KEYS: readonly string[] = [
-  'blackjack-trainer:stats:v1',
-];
+const LEGACY_STATS_KEYS: readonly string[] = ['blackjack-trainer:stats:v1'];
 
 export function cleanupLegacyStatsKeys(): void {
   if (typeof localStorage === 'undefined') return;

@@ -43,25 +43,13 @@ import { FeedbackPanelComponent } from './feedback-panel.component';
         />
       </section>
 
-      <app-blackjack-table
-        [player]="scenario().player"
-        [dealerUpcard]="scenario().dealerUpcard"
-      />
+      <app-blackjack-table [player]="scenario().player" [dealerUpcard]="scenario().dealerUpcard" />
 
-      <app-action-buttons
-        [disabled]="result() !== null"
-        (action)="answer($event)"
-      />
+      <app-action-buttons [disabled]="result() !== null" (action)="answer($event)" />
 
-      <app-feedback-panel
-        [result]="result()"
-        (next)="nextHand()"
-      />
+      <app-feedback-panel [result]="result()" (next)="nextHand()" />
 
-      <app-stats-panel
-        [stats]="statsService.stats()"
-        (reset)="statsService.reset()"
-      />
+      <app-stats-panel [stats]="statsService.stats()" (reset)="statsService.reset()" />
     </div>
   `,
   styleUrl: './basic-strategy-page.component.scss',

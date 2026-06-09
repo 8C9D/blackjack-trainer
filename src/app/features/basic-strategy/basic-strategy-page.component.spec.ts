@@ -45,9 +45,9 @@ function actionButton(
   fixture: ComponentFixture<BasicStrategyPageComponent>,
   label: string,
 ): HTMLButtonElement {
-  const found = Array.from(
-    fixture.nativeElement.querySelectorAll('.actions__button'),
-  ).find((b) => ((b as HTMLElement).textContent ?? '').includes(label));
+  const found = Array.from(fixture.nativeElement.querySelectorAll('.actions__button')).find((b) =>
+    ((b as HTMLElement).textContent ?? '').includes(label),
+  );
   if (!found) throw new Error(`No action button labelled "${label}"`);
   return found as HTMLButtonElement;
 }

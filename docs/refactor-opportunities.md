@@ -179,11 +179,11 @@ succeeds; no unused locals/params.**
 
 ## 10. Autopilot Execution Log
 
-| # | Cleanup | Files changed | Validation | Commit | Push | Notes |
-|---|---------|---------------|------------|--------|------|-------|
-| 0 | Update refactor-opportunities report | docs/refactor-opportunities.md | n/a (docs) | eb59b57 | pushed | Report regenerated for the 2026-05-29 run on `main`. |
-| 1 | Opportunity D: reuse shared `Scenario` type | scenario-generators.ts | 355 tests pass; build ok; dead-code clean | b41cb34 | pushed | Dropped byte-identical `GeneratedScenario`; `generateScenarioForDeviationRule` now returns `Scenario`. Structural typing keeps call sites compatible. |
-| 2 | Opportunity E: extract `softNonAceValue` helper | card.model.ts, basic-strategy-engine.service.ts, deviation-engine.service.ts | 355 tests pass; build ok; dead-code clean | 53e6338 | pushed | Hoisted the soft-hand non-ace decomposition to one pure helper; both engines call it. `isAce` dropped from the deviation-engine import (now unused there). |
+| #   | Cleanup                                         | Files changed                                                                | Validation                                | Commit  | Push   | Notes                                                                                                                                                      |
+| --- | ----------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------- | ------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0   | Update refactor-opportunities report            | docs/refactor-opportunities.md                                               | n/a (docs)                                | eb59b57 | pushed | Report regenerated for the 2026-05-29 run on `main`.                                                                                                       |
+| 1   | Opportunity D: reuse shared `Scenario` type     | scenario-generators.ts                                                       | 355 tests pass; build ok; dead-code clean | b41cb34 | pushed | Dropped byte-identical `GeneratedScenario`; `generateScenarioForDeviationRule` now returns `Scenario`. Structural typing keeps call sites compatible.      |
+| 2   | Opportunity E: extract `softNonAceValue` helper | card.model.ts, basic-strategy-engine.service.ts, deviation-engine.service.ts | 355 tests pass; build ok; dead-code clean | 53e6338 | pushed | Hoisted the soft-hand non-ace decomposition to one pure helper; both engines call it. `isAce` dropped from the deviation-engine import (now unused there). |
 
 ### Run summary
 

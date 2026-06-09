@@ -27,10 +27,7 @@ export function deviationRulesFor(ruleSet: RuleSet): readonly DeviationRule[] {
   return deviationsFor(ruleSet);
 }
 
-export function pickDeviationRule(
-  ruleSet: RuleSet,
-  random: () => number,
-): DeviationRule {
+export function pickDeviationRule(ruleSet: RuleSet, random: () => number): DeviationRule {
   const rules = deviationRulesFor(ruleSet);
   return rules[Math.floor(random() * rules.length)];
 }
@@ -58,10 +55,7 @@ export function makePlayerCardsForDeviationRule(
 // Pick a dealer upcard card matching the rule's chart-key upcard. '10' is
 // expanded to any of the four ten-value ranks so the table doesn't always
 // show the same face.
-export function makeDealerUpcardCard(
-  upcard: DealerUpcard,
-  random: () => number,
-): Card {
+export function makeDealerUpcardCard(upcard: DealerUpcard, random: () => number): Card {
   if (upcard === 'A') return { rank: 'A', suit: randomSuit(random) };
   if (upcard === '10') return tenValueCard(random);
   return { rank: upcard as Rank, suit: randomSuit(random) };
@@ -105,10 +99,7 @@ export function generateScenarioForDeviationRule(args: {
 // miss the hard/surrender rule we're targeting. (None of the encoded hard
 // deviation totals require a same-rank fallback — 8, 9, 10, 11, 12, 13, 15, 16
 // all have a non-pair option.)
-function makeHardTotalCards(
-  total: number,
-  random: () => number,
-): readonly [Card, Card] {
+function makeHardTotalCards(total: number, random: () => number): readonly [Card, Card] {
   const options: Array<[number, number]> = [];
   for (let a = 2; a <= 10; a++) {
     for (let b = a + 1; b <= 10; b++) {
@@ -129,20 +120,14 @@ function makeHardTotalCards(
 
 // soft total = 11 + non-ace value → A + (total - 11). Soft 17 → A + 6,
 // Soft 19 → A + 8. The two cards are returned in a randomized order.
-function makeSoftTotalCards(
-  total: number,
-  random: () => number,
-): readonly [Card, Card] {
+function makeSoftTotalCards(total: number, random: () => number): readonly [Card, Card] {
   const nonAceValue = total - 11;
   const ace: Card = { rank: 'A', suit: randomSuit(random) };
   const other = cardOfValue(nonAceValue, random);
   return random() < 0.5 ? ([ace, other] as const) : ([other, ace] as const);
 }
 
-function makePairCards(
-  playerHand: string,
-  random: () => number,
-): readonly [Card, Card] {
+function makePairCards(playerHand: string, random: () => number): readonly [Card, Card] {
   if (playerHand === '10') {
     return [tenValueCard(random), tenValueCard(random)] as const;
   }

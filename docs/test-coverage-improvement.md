@@ -45,15 +45,15 @@ already covered in `stats-store.spec.ts`), `keyboard`, the `app` shell,
 Source modules that **lacked** a spec when this analysis began (candidate
 gaps), after reading each one — with current status:
 
-| File | Kind | Value | Notes |
-|------|------|-------|-------|
-| `core/services/card-generator.service.ts` | RNG card/sequence generator | **High** | Pure logic with a `setRandomSource()` seam — fully determinizable. Feeds every drill. **Resolved** (Gap 1, §5). |
-| `core/models/card.model.ts` | pure card helpers | **High** | `isTenValue` / `isAce` / `cardHighValue` / `softNonAceValue` — used by both engines; `softNonAceValue` was just extracted in a refactor. **Resolved** (Gap 2, §5). |
-| `data/h17-basic-strategy.ts`, `data/s17-basic-strategy.ts` | static charts | Medium | Hand-transcribed from PDFs; structural drift is easy to introduce. **Resolved** (Gap 3, §5; structural only — see §6). |
-| `data/counting-systems.ts` | Hi-Lo values + registry | Low | Per-rank values exercised indirectly by the counting-engine spec. |
-| `core/services/*-stats.service.ts` (4) | `StatsStore` subclasses | — | **Already covered** by `stats-store.spec.ts` (key isolation + independence). Not a gap. |
-| `features/basic-strategy/*.component.ts` (4), `shared/*.component.ts` (4), `card-stream`, `deviation-feedback-panel` | UI components | Medium | **Resolved 2026-06-02** — sibling specs added (§5, Improvement 5). No longer a gap. |
-| `app.config.ts`, `app.routes.ts`, `main.ts` | bootstrap/routing | Low | Deferred. |
+| File                                                                                                                 | Kind                        | Value    | Notes                                                                                                                                                              |
+| -------------------------------------------------------------------------------------------------------------------- | --------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `core/services/card-generator.service.ts`                                                                            | RNG card/sequence generator | **High** | Pure logic with a `setRandomSource()` seam — fully determinizable. Feeds every drill. **Resolved** (Gap 1, §5).                                                    |
+| `core/models/card.model.ts`                                                                                          | pure card helpers           | **High** | `isTenValue` / `isAce` / `cardHighValue` / `softNonAceValue` — used by both engines; `softNonAceValue` was just extracted in a refactor. **Resolved** (Gap 2, §5). |
+| `data/h17-basic-strategy.ts`, `data/s17-basic-strategy.ts`                                                           | static charts               | Medium   | Hand-transcribed from PDFs; structural drift is easy to introduce. **Resolved** (Gap 3, §5; structural only — see §6).                                             |
+| `data/counting-systems.ts`                                                                                           | Hi-Lo values + registry     | Low      | Per-rank values exercised indirectly by the counting-engine spec.                                                                                                  |
+| `core/services/*-stats.service.ts` (4)                                                                               | `StatsStore` subclasses     | —        | **Already covered** by `stats-store.spec.ts` (key isolation + independence). Not a gap.                                                                            |
+| `features/basic-strategy/*.component.ts` (4), `shared/*.component.ts` (4), `card-stream`, `deviation-feedback-panel` | UI components               | Medium   | **Resolved 2026-06-02** — sibling specs added (§5, Improvement 5). No longer a gap.                                                                                |
+| `app.config.ts`, `app.routes.ts`, `main.ts`                                                                          | bootstrap/routing           | Low      | Deferred.                                                                                                                                                          |
 
 ## 2. Current Coverage Quality Summary
 
@@ -82,6 +82,7 @@ Improvement 5). Every `*.component.ts` in the app now has a sibling spec.
 ## 3. Highest-Value Coverage Gaps
 
 ### Gap 1 — `card-generator.service.ts` has no tests — Risk: Low — Status: **Implemented**
+
 - **Location**: `src/app/core/services/card-generator.service.ts`
 - **Why it matters**: feeds every drill; index math (`floor(random()*len)`) is
   a classic off-by-one site, and the with-replacement contract is load-bearing.
@@ -94,6 +95,7 @@ Improvement 5). Every `*.component.ts` in the app now has a sibling spec.
 - **Suggested validation**: `CI=true npm test`.
 
 ### Gap 2 — `card.model.ts` pure helpers have no direct tests — Risk: Low — Status: **Implemented**
+
 - **Location**: `src/app/core/models/card.model.ts`
 - **Why it matters**: `isTenValue`, `isAce`, `cardHighValue`, `softNonAceValue`
   are shared by both strategy engines; a regression here silently corrupts every
@@ -106,6 +108,7 @@ Improvement 5). Every `*.component.ts` in the app now has a sibling spec.
 - **Suggested validation**: `CI=true npm test`.
 
 ### Gap 3 — Basic-strategy chart structural integrity — Risk: Low — Status: **Implemented**
+
 - **Location**: `src/app/data/h17-basic-strategy.ts`, `src/app/data/s17-basic-strategy.ts`
 - **Why it matters**: both charts are hand-transcribed from PDFs; a dropped row,
   missing dealer column, or typo'd cell (`'X'`) is easy to introduce and hard to
@@ -119,6 +122,7 @@ Improvement 5). Every `*.component.ts` in the app now has a sibling spec.
 - **Suggested validation**: `CI=true npm test`.
 
 ### Gap 4 — Deviation-chart structural integrity (lookup well-formedness) — Risk: Low — Status: **Implemented**
+
 - **Location**: `src/app/data/h17-deviations.ts`, `src/app/data/s17-deviations.ts`
   (guarded from `src/app/core/services/deviation-engine.service.spec.ts`).
 - **Why it matters**: like the basic-strategy charts (Gap 3), both deviation
@@ -134,7 +138,7 @@ Improvement 5). Every `*.component.ts` in the app now has a sibling spec.
   `INS` action leaking onto a playing rule — or the insurance rule being keyed
   differently — would be a silent, user-visible bug.
 - **Existing tests**: the `describe('deviation data')` block already asserted
-  `ruleSet` tagging, the *presence* of an insurance rule (A / +3 / INS), and
+  `ruleSet` tagging, the _presence_ of an insurance rule (A / +3 / INS), and
   several rule-set-specific present/absent cells — but **not** triple
   uniqueness, and **not** that `INS` is exclusive to the engine's hard-coded
   insurance key.
@@ -148,6 +152,7 @@ Improvement 5). Every `*.component.ts` in the app now has a sibling spec.
 - **Suggested validation**: `CI=true npm test`.
 
 ### Gap 5 — Untested feature/shared UI components — Risk: Medium — Status: **Implemented (2026-06-02)**
+
 - **Location**: `features/basic-strategy/*`, `shared/*`, `card-stream`,
   `deviation-feedback-panel`.
 - **Why it matters**: user-visible rendering/interaction.
@@ -171,6 +176,7 @@ Improvement 5). Every `*.component.ts` in the app now has a sibling spec.
 ## 5. Implemented Test Improvements
 
 ### Improvement 1 — `card-generator.service.spec.ts`
+
 - **Files changed**: `src/app/core/services/card-generator.service.spec.ts` (new).
 - **Behavior covered**: `generateCard`, `generate`, `generateSequence` driven
   through the `setRandomSource()` seam — valid-card invariants, index-math
@@ -182,6 +188,7 @@ Improvement 5). Every `*.component.ts` in the app now has a sibling spec.
 - **Push result**: pushed to `origin/main`.
 
 ### Improvement 2 — `card.model.spec.ts`
+
 - **Files changed**: `src/app/core/models/card.model.spec.ts` (new).
 - **Behavior covered**: `isTenValue`, `isAce`, `cardHighValue`,
   `softNonAceValue` across all ranks/suits and edge inputs.
@@ -191,6 +198,7 @@ Improvement 5). Every `*.component.ts` in the app now has a sibling spec.
 - **Push result**: pushed to `origin/main`.
 
 ### Improvement 3 — `basic-strategy-charts.spec.ts`
+
 - **Files changed**: `src/app/data/basic-strategy-charts.spec.ts` (new).
 - **Behavior covered**: structural integrity of `H17_CHART` and `S17_CHART`
   (key sets, dealer columns, legal cell symbols, `ruleSet`).
@@ -200,6 +208,7 @@ Improvement 5). Every `*.component.ts` in the app now has a sibling spec.
 - **Push result**: pushed to `origin/main`.
 
 ### Improvement 4 — deviation-chart structural integrity (Gap 4)
+
 - **Files changed**: `src/app/core/services/deviation-engine.service.spec.ts`
   (extended the existing `describe('deviation data')` block — kept the
   deviation-data guards co-located rather than fragmenting them into a new
@@ -219,6 +228,7 @@ Improvement 5). Every `*.component.ts` in the app now has a sibling spec.
 - **Push result**: pushed to `origin/main`.
 
 ### Improvement 5 — Feature/shared UI component specs (Gap 5)
+
 - **Files changed** (all new, test-only — no production code touched):
   - `shared/`: `card-image`, `feedback-shell`, `rule-controls`, `stats-panel`
     `.component.spec.ts` — commit `87a9b65` (28 tests).

@@ -44,14 +44,14 @@ small — see §6 (boundaries) and §9 (risks).
 
 **Recommendation: [Playwright](https://playwright.dev/) (`@playwright/test`).**
 
-| Factor | Why Playwright fits this repo |
-|---|---|
-| Runtime fit | Pure Node, no JVM/Selenium grid; runs on the pinned Node 22 (`.nvmrc`, CI `setup-node@v5`). |
+| Factor                | Why Playwright fits this repo                                                                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Runtime fit           | Pure Node, no JVM/Selenium grid; runs on the pinned Node 22 (`.nvmrc`, CI `setup-node@v5`).                                                                                                      |
 | Isolation from Vitest | Ships its own runner (`playwright test`). It does **not** reuse Vitest, so the two layers stay independent — important because the unit layer is `@angular/build:unit-test` + Vitest, not Karma. |
-| Auto-waiting | Web-first assertions (`expect(locator).toBeVisible()`) auto-retry, which suits this app's async card stream and signal-driven re-renders without hand-rolled sleeps. |
-| Viewport/emulation | First-class device/viewport control — directly needed for the phone-width bottom-nav scenario (§7). |
-| Tracing | Built-in trace viewer + screenshots/video on failure, ideal for debugging CI-only flakes. |
-| Maintenance | Single dependency pulls the runner, assertions, and browsers; no extra assertion/driver libraries to keep in sync. |
+| Auto-waiting          | Web-first assertions (`expect(locator).toBeVisible()`) auto-retry, which suits this app's async card stream and signal-driven re-renders without hand-rolled sleeps.                             |
+| Viewport/emulation    | First-class device/viewport control — directly needed for the phone-width bottom-nav scenario (§7).                                                                                              |
+| Tracing               | Built-in trace viewer + screenshots/video on failure, ideal for debugging CI-only flakes.                                                                                                        |
+| Maintenance           | Single dependency pulls the runner, assertions, and browsers; no extra assertion/driver libraries to keep in sync.                                                                               |
 
 **Why not the alternatives.** Cypress is viable but adds a heavier
 dependency/runner and is weaker at multi-tab/true-headless CI ergonomics;
@@ -106,10 +106,10 @@ To add **in Phase 0**, alongside the existing `start` / `build` / `test` /
 {
   "scripts": {
     "e2e": "playwright test",
-    "e2e:ui": "playwright test --ui",          // local interactive runner
-    "e2e:report": "playwright show-report",     // open last HTML report
-    "e2e:install": "playwright install --with-deps chromium"
-  }
+    "e2e:ui": "playwright test --ui", // local interactive runner
+    "e2e:report": "playwright show-report", // open last HTML report
+    "e2e:install": "playwright install --with-deps chromium",
+  },
 }
 ```
 
@@ -157,8 +157,8 @@ e2e:
     - uses: actions/setup-node@v5
       with: { node-version: 22, cache: npm }
     - run: npm ci
-    - run: npx playwright install --with-deps chromium   # cache this dir
-    - run: npm run e2e                                    # webServer boots ng serve
+    - run: npx playwright install --with-deps chromium # cache this dir
+    - run: npm run e2e # webServer boots ng serve
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with: { name: playwright-report, path: playwright-report/ }
@@ -245,17 +245,17 @@ v1.
 Read off the current templates — prefer these role/text/aria anchors over CSS
 classes:
 
-| Anchor | Source |
-|---|---|
-| Page titles `Basic Strategy Trainer` / `Card Counting Trainer` / `Deviations Trainer` | `app.routes.ts` `title` |
-| `nav[aria-label="Primary"]` (top) and `nav[aria-label="Primary mobile"]` (bottom) | `app.ts` |
-| Nav link/tab text — desktop `Basic Strategy`/`Card Counting`/`Deviations`, phone `Strategy`/`Count`/`Deviations` | `app.ts` |
-| `section[aria-label="Player actions"]` with `Hit/Stand/Double/Split/Surrender/Insurance` buttons | `action-buttons.component.ts` |
-| `section[aria-label="Session statistics"]` — `Attempts` / `Correct` / `Accuracy` / `Streak` / `Longest streak`, `Reset stats` button | `stats-panel.component.ts` |
+| Anchor                                                                                                                                         | Source                                    |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| Page titles `Basic Strategy Trainer` / `Card Counting Trainer` / `Deviations Trainer`                                                          | `app.routes.ts` `title`                   |
+| `nav[aria-label="Primary"]` (top) and `nav[aria-label="Primary mobile"]` (bottom)                                                              | `app.ts`                                  |
+| Nav link/tab text — desktop `Basic Strategy`/`Card Counting`/`Deviations`, phone `Strategy`/`Count`/`Deviations`                               | `app.ts`                                  |
+| `section[aria-label="Player actions"]` with `Hit/Stand/Double/Split/Surrender/Insurance` buttons                                               | `action-buttons.component.ts`             |
+| `section[aria-label="Session statistics"]` — `Attempts` / `Correct` / `Accuracy` / `Streak` / `Longest streak`, `Reset stats` button           | `stats-panel.component.ts`                |
 | Feedback verdict `Correct.` / `Incorrect.` (strategy + deviations); `Correct!` / `Incorrect` (counting); `Deal next hand` / `Run again` button | `feedback-shell` / `count-feedback-panel` |
-| `section[aria-label="Practice true count"]` value | `deviations-page.component.ts` |
-| `Start drill` button, `What is the running/true count?` label + number input, `Submit` | counting page / `count-answer-form` |
-| `section[aria-label="Card stream"]` + `Card N of M` progress | `card-stream.component.ts` |
+| `section[aria-label="Practice true count"]` value                                                                                              | `deviations-page.component.ts`            |
+| `Start drill` button, `What is the running/true count?` label + number input, `Submit`                                                         | counting page / `count-answer-form`       |
+| `section[aria-label="Card stream"]` + `Card N of M` progress                                                                                   | `card-stream.component.ts`                |
 
 > v1 should rely on these existing anchors. If any scenario proves too fragile,
 > the _only_ production change worth making is adding explicit `data-testid`

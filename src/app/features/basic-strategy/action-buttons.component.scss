@@ -13,7 +13,9 @@
     padding: 0.6rem 1.1rem;
     font-size: 0.95rem;
     cursor: pointer;
-    transition: background 0.15s ease, transform 0.05s ease;
+    transition:
+      background 0.15s ease,
+      transform 0.05s ease;
 
     &:hover:not(:disabled) {
       background: #292929;

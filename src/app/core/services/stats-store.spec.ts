@@ -2,19 +2,10 @@ import {
   BASIC_STRATEGY_STATS_KEY,
   BasicStrategyStatsService,
 } from './basic-strategy-stats.service';
-import {
-  CARD_COUNTING_STATS_KEY,
-  CardCountingStatsService,
-} from './card-counting-stats.service';
-import {
-  DEVIATION_STATS_KEY,
-  DeviationStatsService,
-} from './deviation-stats.service';
+import { CARD_COUNTING_STATS_KEY, CardCountingStatsService } from './card-counting-stats.service';
+import { DEVIATION_STATS_KEY, DeviationStatsService } from './deviation-stats.service';
 import { StatsStore, cleanupLegacyStatsKeys } from './stats-store';
-import {
-  TRUE_COUNT_STATS_KEY,
-  TrueCountStatsService,
-} from './true-count-stats.service';
+import { TRUE_COUNT_STATS_KEY, TrueCountStatsService } from './true-count-stats.service';
 
 const TEST_KEY = 'test-stats-store';
 
@@ -184,8 +175,14 @@ describe('cleanupLegacyStatsKeys', () => {
   });
 
   it('does not touch current-version keys', () => {
-    localStorage.setItem(BASIC_STRATEGY_STATS_KEY, '{"attempts":3,"correct":3,"streak":3,"longestStreak":3}');
-    localStorage.setItem(CARD_COUNTING_STATS_KEY, '{"attempts":2,"correct":1,"streak":0,"longestStreak":1}');
+    localStorage.setItem(
+      BASIC_STRATEGY_STATS_KEY,
+      '{"attempts":3,"correct":3,"streak":3,"longestStreak":3}',
+    );
+    localStorage.setItem(
+      CARD_COUNTING_STATS_KEY,
+      '{"attempts":2,"correct":1,"streak":0,"longestStreak":1}',
+    );
     cleanupLegacyStatsKeys();
     expect(localStorage.getItem(BASIC_STRATEGY_STATS_KEY)).not.toBeNull();
     expect(localStorage.getItem(CARD_COUNTING_STATS_KEY)).not.toBeNull();
