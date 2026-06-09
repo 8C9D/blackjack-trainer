@@ -773,9 +773,7 @@ describe('deviation data', () => {
     // take insurance on an ordinary hand, and if the insurance rule were keyed
     // differently the overlay lookup would silently miss it.
     for (const ruleSet of ['H17', 'S17'] as const) {
-      const insRules = deviationsFor(ruleSet).filter(
-        (r) => r.deviationAction === 'INS',
-      );
+      const insRules = deviationsFor(ruleSet).filter((r) => r.deviationAction === 'INS');
       expect(insRules.length, `${ruleSet} INS rule count`).toBe(1);
       expect(insRules[0].category).toBe('insurance');
       expect(insRules[0].playerHand).toBe('insurance');

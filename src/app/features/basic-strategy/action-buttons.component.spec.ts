@@ -8,18 +8,14 @@ import { ActionButtonsComponent } from './action-buttons.component';
 // it must emit without reaching into the component's protected `order`.
 const ORDER: readonly Action[] = ['H', 'S', 'D', 'P', 'SUR', 'INS'];
 
-function createButtons(
-  disabled?: boolean,
-): ComponentFixture<ActionButtonsComponent> {
+function createButtons(disabled?: boolean): ComponentFixture<ActionButtonsComponent> {
   const fixture = TestBed.createComponent(ActionButtonsComponent);
   if (disabled !== undefined) fixture.componentRef.setInput('disabled', disabled);
   fixture.detectChanges();
   return fixture;
 }
 
-function buttons(
-  fixture: ComponentFixture<ActionButtonsComponent>,
-): HTMLButtonElement[] {
+function buttons(fixture: ComponentFixture<ActionButtonsComponent>): HTMLButtonElement[] {
   return Array.from(fixture.nativeElement.querySelectorAll('.actions__button'));
 }
 

@@ -11,9 +11,7 @@ const stats = (overrides: Partial<SessionStats> = {}): SessionStats => ({
   ...overrides,
 });
 
-function createPanel(
-  value: SessionStats,
-): ComponentFixture<StatsPanelComponent> {
+function createPanel(value: SessionStats): ComponentFixture<StatsPanelComponent> {
   const fixture = TestBed.createComponent(StatsPanelComponent);
   fixture.componentRef.setInput('stats', value);
   fixture.detectChanges();
@@ -21,10 +19,7 @@ function createPanel(
 }
 
 // Returns the whitespace-normalized text of the stat cell containing `label`.
-function cellText(
-  fixture: ComponentFixture<StatsPanelComponent>,
-  label: string,
-): string {
+function cellText(fixture: ComponentFixture<StatsPanelComponent>, label: string): string {
   const cells = Array.from(
     fixture.nativeElement.querySelectorAll('.stats__cells div'),
   ) as HTMLElement[];
@@ -32,9 +27,7 @@ function cellText(
   return (match?.textContent ?? '').replace(/\s+/g, ' ').trim();
 }
 
-function resetButton(
-  fixture: ComponentFixture<StatsPanelComponent>,
-): HTMLButtonElement {
+function resetButton(fixture: ComponentFixture<StatsPanelComponent>): HTMLButtonElement {
   return fixture.nativeElement.querySelector('.stats__reset') as HTMLButtonElement;
 }
 
@@ -46,9 +39,7 @@ describe('StatsPanelComponent', () => {
   });
 
   it('renders attempts, correct, streak and longest-streak values from the input (smoke)', () => {
-    const fixture = createPanel(
-      stats({ attempts: 12, correct: 9, streak: 3, longestStreak: 5 }),
-    );
+    const fixture = createPanel(stats({ attempts: 12, correct: 9, streak: 3, longestStreak: 5 }));
     expect(cellText(fixture, 'Attempts')).toBe('Attempts: 12');
     expect(cellText(fixture, 'Correct')).toBe('Correct: 9');
     // "Streak" (capitalized) matches the streak cell, not "Longest streak".

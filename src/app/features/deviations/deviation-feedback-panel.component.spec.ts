@@ -1,19 +1,14 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 
 import { ACTION_LABELS } from '../../core/models/strategy.model';
-import type {
-  DeviationRule,
-  DeviationTrainerResult,
-} from '../../core/models/deviation.model';
+import type { DeviationRule, DeviationTrainerResult } from '../../core/models/deviation.model';
 import { DeviationFeedbackPanelComponent } from './deviation-feedback-panel.component';
 
 // Representative basic-strategy-fallback result: the common trainer outcome
 // where the true count does not reach any deviation index, so the expected
 // play is just basic strategy and no rule matched. Deviation-specific cases
 // (a matched rule, a candidate hand) override the relevant fields.
-function result(
-  overrides: Partial<DeviationTrainerResult> = {},
-): DeviationTrainerResult {
+function result(overrides: Partial<DeviationTrainerResult> = {}): DeviationTrainerResult {
   return {
     userAction: 'H',
     expectedAction: 'H',
@@ -80,13 +75,9 @@ function detailsMap(
   return map;
 }
 
-function termLabels(
-  fixture: ComponentFixture<DeviationFeedbackPanelComponent>,
-): string[] {
+function termLabels(fixture: ComponentFixture<DeviationFeedbackPanelComponent>): string[] {
   const dl = fixture.nativeElement.querySelector('.feedback__details') as HTMLElement;
-  return Array.from(dl.querySelectorAll('dt')).map((dt) =>
-    (dt as HTMLElement).textContent!.trim(),
-  );
+  return Array.from(dl.querySelectorAll('dt')).map((dt) => (dt as HTMLElement).textContent!.trim());
 }
 
 describe('DeviationFeedbackPanelComponent', () => {
@@ -113,17 +104,17 @@ describe('DeviationFeedbackPanelComponent', () => {
   it('shows the "Correct." verdict and correct styling for a correct answer', () => {
     const fixture = createPanel(result({ correct: true }));
     expect(feedbackSection(fixture)!.classList.contains('feedback--correct')).toBe(true);
-    expect(
-      fixture.nativeElement.querySelector('.feedback__verdict')!.textContent,
-    ).toContain('Correct.');
+    expect(fixture.nativeElement.querySelector('.feedback__verdict')!.textContent).toContain(
+      'Correct.',
+    );
   });
 
   it('shows the "Incorrect." verdict and incorrect styling for a wrong answer', () => {
     const fixture = createPanel(result({ correct: false }));
     expect(feedbackSection(fixture)!.classList.contains('feedback--incorrect')).toBe(true);
-    expect(
-      fixture.nativeElement.querySelector('.feedback__verdict')!.textContent,
-    ).toContain('Incorrect.');
+    expect(fixture.nativeElement.querySelector('.feedback__verdict')!.textContent).toContain(
+      'Incorrect.',
+    );
   });
 
   it('surfaces the shell verdict as a polite live region', () => {
@@ -157,9 +148,7 @@ describe('DeviationFeedbackPanelComponent', () => {
   });
 
   it('translates the chosen, correct and basic-strategy action codes to labels', () => {
-    const fixture = createPanel(
-      result({ userAction: 'H', expectedAction: 'S', basicAction: 'D' }),
-    );
+    const fixture = createPanel(result({ userAction: 'H', expectedAction: 'S', basicAction: 'D' }));
     const map = detailsMap(fixture);
     expect(map['Your action']).toBe(ACTION_LABELS['H']);
     expect(map['Correct action']).toBe(ACTION_LABELS['S']);
@@ -217,9 +206,7 @@ describe('DeviationFeedbackPanelComponent', () => {
 
   it('shows the candidate banner only when the hand is a deviation candidate', () => {
     const candidate = '.feedback__candidate';
-    expect(
-      createPanel(result()).nativeElement.querySelector(candidate),
-    ).toBeNull();
+    expect(createPanel(result()).nativeElement.querySelector(candidate)).toBeNull();
 
     const flagged = createPanel(result({ isDeviationCandidate: true }));
     const banner = flagged.nativeElement.querySelector(candidate) as HTMLElement;

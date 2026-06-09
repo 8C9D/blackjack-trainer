@@ -25,8 +25,7 @@ export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
 
 // Dealer upcard keys for the chart tables. Face cards normalize to '10'
 // before lookup.
-export type DealerUpcard =
-  | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'A';
+export type DealerUpcard = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'A';
 
 // Chart cell symbols.
 //   H, S, D     — hit / stand / double
@@ -50,15 +49,13 @@ export type PairRow = Record<DealerUpcard, PairCell>;
 // Hard totals 5..20 reachable from initial two-card hands. Hard 4 (from 2,2
 // falling through pair lookup) is clamped to 5 at lookup time — they play
 // identically (always hit).
-export type HardKey =
-  | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20;
+export type HardKey = 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20;
 
 // Soft totals are keyed on the non-ace card's value (A,2 → key 2, etc.).
 // Key 10 (soft 21 / blackjack) is handled in the engine without a chart row.
 export type SoftKey = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
-export type PairKey =
-  | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'A';
+export type PairKey = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'A';
 
 export interface StrategyChart {
   readonly ruleSet: RuleSet;
@@ -67,8 +64,7 @@ export interface StrategyChart {
   readonly pair: Readonly<Record<PairKey, PairRow>>;
 }
 
-export type DecisionSource =
-  | 'insurance' | 'surrender' | 'pair' | 'soft' | 'hard';
+export type DecisionSource = 'insurance' | 'surrender' | 'pair' | 'soft' | 'hard';
 
 export interface StrategyDecision {
   readonly action: Exclude<Action, 'INS'>;

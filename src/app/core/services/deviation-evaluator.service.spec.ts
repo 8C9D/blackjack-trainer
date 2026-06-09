@@ -2,11 +2,7 @@ import { TestBed } from '@angular/core/testing';
 
 import type { Card, Rank, Suit } from '../models/card.model';
 import type { DeviationScenario } from '../models/deviation.model';
-import {
-  DEFAULT_ENGINE_OPTIONS,
-  type EngineOptions,
-  type RuleSet,
-} from '../models/strategy.model';
+import { DEFAULT_ENGINE_OPTIONS, type EngineOptions, type RuleSet } from '../models/strategy.model';
 import {
   DeviationEvaluatorService,
   explainPlaying,

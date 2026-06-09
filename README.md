@@ -48,7 +48,7 @@ links).
 - **Insurance is always wrong** — clicking the Insurance button is flagged
   with an explanation that basic strategy never takes the side bet.
 - **Per-attempt feedback** with the canonical hand label (e.g. `Soft 18
-  (A, 7)`, `Hard 16`, `Pair of 8s`), the correct action, and a one-line
+(A, 7)`, `Hard 16`, `Pair of 8s`), the correct action, and a one-line
   rationale.
 - **Keyboard shortcuts** — `H` / `S` / `D` / `P` / `R` (surrender) /
   `I` (insurance) for actions, `Enter` to deal the next hand.
@@ -121,7 +121,7 @@ one of Hit / Stand / Double / Split / Surrender / Insurance.
     encoded deviation rule for the current rule set, so the user
     practices the chart cells where deviations actually matter. A
     "Deviation candidate hand" note appears in the feedback panel.
-    Deviation-only means the *hand* has an encoded rule — the true count
+    Deviation-only means the _hand_ has an encoded rule — the true count
     may or may not trigger the deviation, so the user still has to
     decide whether to apply it. Under Random true count, the count is
     biased toward each rule's threshold (50% met / 50% unmet). Under
@@ -340,16 +340,16 @@ presets are defined in `core/models/card-counting.model.ts` as
 Both BJA charts are encoded as static TypeScript literals in
 `src/app/data/`. Each cell uses one of:
 
-| Symbol | Meaning |
-|---|---|
-| `H`, `S` | Hit / Stand |
-| `D` | Double (hard chart; always allowed here since we only handle initial 2-card hands) |
-| `Ds` | Double if allowed, else stand (soft chart) — collapses to Double in this trainer |
-| `Y`, `N` | Split / do not split |
-| `YN` | Split only if Double After Split is enabled |
-| `SUR_H` | Surrender if Late Surrender is enabled, else Hit |
-| `SUR_S` | Surrender if Late Surrender is enabled, else Stand |
-| `SUR_Y` | Surrender if Late Surrender is enabled, else Split |
+| Symbol   | Meaning                                                                            |
+| -------- | ---------------------------------------------------------------------------------- |
+| `H`, `S` | Hit / Stand                                                                        |
+| `D`      | Double (hard chart; always allowed here since we only handle initial 2-card hands) |
+| `Ds`     | Double if allowed, else stand (soft chart) — collapses to Double in this trainer   |
+| `Y`, `N` | Split / do not split                                                               |
+| `YN`     | Split only if Double After Split is enabled                                        |
+| `SUR_H`  | Surrender if Late Surrender is enabled, else Hit                                   |
+| `SUR_S`  | Surrender if Late Surrender is enabled, else Stand                                 |
+| `SUR_Y`  | Surrender if Late Surrender is enabled, else Split                                 |
 
 The `SUR_*` variants are an internal extension. The published BJA charts
 indicate the no-surrender fallback via footnotes; encoding it inline lets
@@ -374,12 +374,12 @@ Other encoding choices:
 Each trainer (and each card-counting mode) persists its own stats under a
 dedicated `localStorage` key via a `StatsStore` base class:
 
-| Trainer / mode | Key |
-|---|---|
-| Basic Strategy | `blackjack-basic-strategy-stats` |
-| Hi-Lo Running Count | `blackjack-card-counting-stats` |
-| Hi-Lo True Count | `blackjack-true-count-stats` |
-| Deviations | `blackjack-deviation-stats` |
+| Trainer / mode      | Key                              |
+| ------------------- | -------------------------------- |
+| Basic Strategy      | `blackjack-basic-strategy-stats` |
+| Hi-Lo Running Count | `blackjack-card-counting-stats`  |
+| Hi-Lo True Count    | `blackjack-true-count-stats`     |
+| Deviations          | `blackjack-deviation-stats`      |
 
 The stats panel on the card counting page reflects the currently selected
 mode, and the **Reset** button only resets the active mode's stats —

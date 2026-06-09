@@ -37,9 +37,7 @@ function createShell(
   return fixture;
 }
 
-function nextButton(
-  fixture: ComponentFixture<FeedbackShellComponent>,
-): HTMLButtonElement {
+function nextButton(fixture: ComponentFixture<FeedbackShellComponent>): HTMLButtonElement {
   return fixture.nativeElement.querySelector('.feedback__next') as HTMLButtonElement;
 }
 

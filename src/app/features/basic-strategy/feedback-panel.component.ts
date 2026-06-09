@@ -1,10 +1,7 @@
 import { Component, input, output } from '@angular/core';
 
 import { FeedbackShellComponent } from '../../shared/feedback-shell.component';
-import {
-  ACTION_LABELS,
-  type EvaluationResult,
-} from '../../core/models/strategy.model';
+import { ACTION_LABELS, type EvaluationResult } from '../../core/models/strategy.model';
 
 @Component({
   selector: 'app-feedback-panel',

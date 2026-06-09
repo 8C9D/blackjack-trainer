@@ -11,23 +11,14 @@ import type { Action, DealerUpcard, RuleSet } from './strategy.model';
 // 'positive' and 'negative' ignore the `index` field; encode those entries
 // explicitly with direction rather than overloading at-or-above/below with
 // boundary trickery so the engine can be kept simple and unambiguous.
-export type DeviationDirection =
-  | 'at-or-above'
-  | 'at-or-below'
-  | 'positive'
-  | 'negative';
+export type DeviationDirection = 'at-or-above' | 'at-or-below' | 'positive' | 'negative';
 
 // Bucket a rule belongs to. The engine derives the category for a given hand
 // from the same pair/soft/hard classifier the basic strategy engine uses;
 // surrender and insurance are overlays that can match independently of
 // hard/soft/pair lookup (surrender lives over a hard hand; insurance has no
 // player hand at all).
-export type DeviationCategory =
-  | 'hard'
-  | 'soft'
-  | 'pair'
-  | 'surrender'
-  | 'insurance';
+export type DeviationCategory = 'hard' | 'soft' | 'pair' | 'surrender' | 'insurance';
 
 // String key identifying a hand within its category. Conventions:
 //   hard       — stringified total: '12', '15', '16'

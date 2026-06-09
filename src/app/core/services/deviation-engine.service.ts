@@ -166,9 +166,10 @@ export function deviationsFor(ruleSet: RuleSet): readonly DeviationRule[] {
 // the basic strategy engine's resolution order). 'surrender' is never
 // returned here — surrender rules are looked up explicitly as an overlay
 // using the same hard total.
-export function classifyForDeviation(
-  player: readonly [Card, Card],
-): { category: Exclude<DeviationCategory, 'surrender' | 'insurance'>; playerHand: DeviationHandKey } {
+export function classifyForDeviation(player: readonly [Card, Card]): {
+  category: Exclude<DeviationCategory, 'surrender' | 'insurance'>;
+  playerHand: DeviationHandKey;
+} {
   const pairKey = classifyAsPair(player);
   if (pairKey !== null) {
     return { category: 'pair', playerHand: pairKey };

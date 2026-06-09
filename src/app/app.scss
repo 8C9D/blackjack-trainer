@@ -6,7 +6,13 @@
   // Dynamic viewport unit avoids the mobile-browser "100vh is too tall under
   // the address bar" gap; falls back to 100vh where dvh is unsupported.
   min-height: 100dvh;
-  font-family: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Helvetica,
+    Arial,
+    sans-serif;
 }
 
 .app-main {
@@ -29,7 +35,9 @@
   font-size: 0.95rem;
   padding: 0.3rem 0.7rem;
   border-radius: 4px;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 
   &:hover {
     background: rgba(255, 255, 255, 0.08);
@@ -90,7 +98,9 @@
     font-weight: 600;
     letter-spacing: 0.01em;
     border-top: 2px solid transparent;
-    transition: color 0.15s ease, background 0.15s ease;
+    transition:
+      color 0.15s ease,
+      background 0.15s ease;
 
     &--active {
       color: #ffffff;

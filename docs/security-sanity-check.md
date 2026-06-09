@@ -51,6 +51,7 @@ run.
 ## 4. Findings
 
 ### Finding 1 — `.gitignore` `.env*` guard (previously fixed, now confirmed)
+
 - **Severity**: Low (resolved)
 - **Location**: `.gitignore`
 - **Evidence**: `.gitignore` now contains an "Environment variables / local
@@ -66,6 +67,7 @@ run.
 - **Confidence**: High.
 
 ### Finding 2 — No tracked secrets or sensitive files
+
 - **Severity**: Info
 - **Location**: whole repo (151 tracked files).
 - **Evidence**: No `.env*`, key, cert, keystore, dump, `.sqlite`/`.db`, or
@@ -83,6 +85,7 @@ run.
 - **Confidence**: High.
 
 ### Finding 3 — No unsafe DOM / HTML rendering (XSS surface)
+
 - **Severity**: Info
 - **Location**: `src/`
 - **Evidence**: Zero occurrences of `innerHTML`, `outerHTML`,
@@ -94,6 +97,7 @@ run.
 - **Confidence**: High.
 
 ### Finding 4 — `localStorage` parsing is type-guarded
+
 - **Severity**: Info
 - **Location**: `src/app/core/services/stats-store.ts`
 - **Evidence**: The store was refactored since the last check into a
@@ -112,10 +116,11 @@ run.
 - **Confidence**: High.
 
 ### Finding 5 — Dependencies report no known vulnerabilities
+
 - **Severity**: Info
 - **Location**: `package.json` / `package-lock.json`
 - **Evidence**: `npm audit --audit-level=moderate` → `found 0
-  vulnerabilities`. `package.json` scripts are plain Angular CLI wrappers
+vulnerabilities`. `package.json` scripts are plain Angular CLI wrappers
   (`ng`, `ng serve`, `ng build`, `ng test`) — no `postinstall`/`preinstall`/
   `prepare` or other lifecycle scripts that run arbitrary code on install.
 - **Auto-fix status**: N/A.
@@ -180,6 +185,7 @@ good security-hygiene shape; every check confirmed an existing safe state.
 Historical fix (from the 2026-05-28 run, now part of `main`):
 
 ### Fix 1 — Add `.env*` protection to `.gitignore` (commit `e27dbe5`)
+
 - **Files changed**: `.gitignore`
 - **What changed**: Added a section:
   ```gitignore
@@ -194,7 +200,7 @@ Historical fix (from the 2026-05-28 run, now part of `main`):
   The `!.env.example` negation preserves the ability to commit a documented
   example file later.
 - **Validation run (re-confirmed this run)**: `git check-ignore .env
-  .env.local .env.production` → all ignored; `git check-ignore .env.example`
+.env.local .env.production` → all ignored; `git check-ignore .env.example`
   → not ignored (still trackable). `git diff --check` → clean.
 - **Commit hash**: `e27dbe5` ("chore: improve security hygiene").
 - **Push result**: present on `origin/main`.
@@ -219,9 +225,9 @@ purely-defensive future considerations (only if scope changes):
 - `git grep -nI` for secret keyword patterns and token shapes (scoped to
   exclude `docs/`, `package-lock.json`, card SVGs)
 - `git grep -nI` for `innerHTML|outerHTML|insertAdjacentHTML|document.write|
-  eval|new Function|bypassSecurityTrust|DomSanitizer`
+eval|new Function|bypassSecurityTrust|DomSanitizer`
 - `git grep -nI` for `HttpClient|fetch|XMLHttpRequest|axios|WebSocket|
-  EventSource|sendBeacon`
+EventSource|sendBeacon`
 - `git grep -nI` for `process.env|import.meta.env`, `localStorage`,
   `JSON.parse`, and `package.json` lifecycle scripts
 - `git check-ignore .env .env.local .env.production .env.example .claude dist`

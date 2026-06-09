@@ -15,8 +15,7 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    const labels = Array.from(compiled.querySelectorAll('nav a'))
-      .map((a) => a.textContent?.trim());
+    const labels = Array.from(compiled.querySelectorAll('nav a')).map((a) => a.textContent?.trim());
     expect(labels).toContain('Basic Strategy');
     expect(labels).toContain('Card Counting');
     expect(labels).toContain('Deviations');
@@ -26,8 +25,7 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    const hrefs = Array.from(compiled.querySelectorAll('nav a'))
-      .map((a) => a.getAttribute('href'));
+    const hrefs = Array.from(compiled.querySelectorAll('nav a')).map((a) => a.getAttribute('href'));
     expect(hrefs).toContain('/deviations');
   });
 
@@ -51,11 +49,7 @@ describe('App', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     const tabs = Array.from(compiled.querySelectorAll('nav.nav--bottom a'));
-    expect(tabs.map((a) => a.textContent?.trim())).toEqual([
-      'Strategy',
-      'Count',
-      'Deviations',
-    ]);
+    expect(tabs.map((a) => a.textContent?.trim())).toEqual(['Strategy', 'Count', 'Deviations']);
     expect(tabs.map((a) => a.getAttribute('href'))).toEqual([
       '/basic-strategy',
       '/card-counting',
@@ -67,8 +61,9 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    const ariaLabels = Array.from(compiled.querySelectorAll('nav.nav--bottom a'))
-      .map((a) => a.getAttribute('aria-label'));
+    const ariaLabels = Array.from(compiled.querySelectorAll('nav.nav--bottom a')).map((a) =>
+      a.getAttribute('aria-label'),
+    );
     expect(ariaLabels).toEqual(['Basic Strategy', 'Card Counting', 'Deviations']);
   });
 });

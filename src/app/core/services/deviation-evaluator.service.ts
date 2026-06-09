@@ -12,10 +12,7 @@ import {
   type EngineOptions,
   type RuleSet,
 } from '../models/strategy.model';
-import {
-  BasicStrategyEngineService,
-  type EngineInput,
-} from './basic-strategy-engine.service';
+import { BasicStrategyEngineService, type EngineInput } from './basic-strategy-engine.service';
 import { DeviationEngineService } from './deviation-engine.service';
 
 // Formats a true count for display: positive values get a '+' prefix, zero
@@ -46,10 +43,7 @@ export class DeviationEvaluatorService {
       ruleSet,
       options,
     };
-    const playing = this.deviationEngine.resolveDeviationDecision(
-      engineInput,
-      scenario.trueCount,
-    );
+    const playing = this.deviationEngine.resolveDeviationDecision(engineInput, scenario.trueCount);
     const handDescription = this.basicStrategy.decide(engineInput).handDescription;
     const dealerAce = isAce(scenario.dealerUpcard);
     // Only consult the insurance overlay when the dealer shows an Ace. For
