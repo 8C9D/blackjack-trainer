@@ -1,6 +1,6 @@
 import type { Card, Rank } from '../models/card.model';
 import { MAX_CARDS_PER_DRILL, type CountingDrillSettings } from '../models/card-counting.model';
-import { HI_LO } from '../../data/counting-systems';
+import { HI_LO, KO } from '../../data/counting-systems';
 import { CardGeneratorService } from './card-generator.service';
 import { CountingEngineService } from './counting-engine.service';
 
@@ -91,6 +91,42 @@ describe('CountingEngineService', () => {
         for (let i = 0; i < 4; i++) deck.push(card(r));
       }
       expect(engine.runningCount(deck, HI_LO)).toBe(0);
+    });
+  });
+
+  describe('KO running count', () => {
+    it('counts 2 through 7 as +1 (7 differs from Hi-Lo)', () => {
+      for (const r of ['2', '3', '4', '5', '6', '7'] as const) {
+        expect(engine.runningCount([card(r)], KO)).toBe(1);
+      }
+    });
+
+    it('counts 8 and 9 as 0', () => {
+      for (const r of ['8', '9'] as const) {
+        expect(engine.runningCount([card(r)], KO)).toBe(0);
+      }
+    });
+
+    it('counts 10, J, Q, K, A as -1', () => {
+      for (const r of ['10', 'J', 'Q', 'K', 'A'] as const) {
+        expect(engine.runningCount([card(r)], KO)).toBe(-1);
+      }
+    });
+
+    it('[2, 3, K, A, 7] => 1 under KO (the 7 is +1, vs 0 under Hi-Lo)', () => {
+      const cards = seq('2', '3', 'K', 'A', '7');
+      expect(engine.runningCount(cards, KO)).toBe(1);
+      // Same sequence is 0 under Hi-Lo — confirms the systems diverge on the 7.
+      expect(engine.runningCount(cards, HI_LO)).toBe(0);
+    });
+
+    it('full 52-card deck sums to +4 (unbalanced)', () => {
+      const ranks: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+      const deck: Card[] = [];
+      for (const r of ranks) {
+        for (let i = 0; i < 4; i++) deck.push(card(r));
+      }
+      expect(engine.runningCount(deck, KO)).toBe(4);
     });
   });
 

@@ -7,7 +7,8 @@ import {
   type CountingDrillResult,
   type CountingDrillSettings,
 } from '../../core/models/card-counting.model';
-import { HI_LO } from '../../data/counting-systems';
+import type { CountingSystem } from '../../core/models/counting-system.model';
+import { COUNTING_SYSTEMS, HI_LO } from '../../data/counting-systems';
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
 import { CardGeneratorService } from '../../core/services/card-generator.service';
 import { CountingEngineService } from '../../core/services/counting-engine.service';
@@ -32,11 +33,14 @@ type DrillState = 'idle' | 'streaming' | 'answering' | 'feedback';
   template: `
     <div class="page">
       <header class="page__header">
-        <h1>Hi-Lo Card Counting Trainer</h1>
-        <p class="page__subtitle">{{ system.description }}</p>
+        <h1>{{ system().name }} Card Counting Trainer</h1>
+        <p class="page__subtitle">{{ system().description }}</p>
       </header>
 
       <app-counting-settings
+        [systems]="systems"
+        [systemId]="system().id"
+        [trueCountAvailable]="trueCountAvailable()"
         [mode]="settings().mode"
         [numberOfCards]="settings().numberOfCards"
         [millisecondsBetweenCards]="settings().millisecondsBetweenCards"
@@ -44,6 +48,7 @@ type DrillState = 'idle' | 'streaming' | 'answering' | 'feedback';
         [decksRemainingPresets]="decksRemainingPresets"
         [errors]="validationErrors()"
         [disabled]="isDrillActive()"
+        (systemChange)="onSystemChange($event)"
         (modeChange)="updateSetting('mode', $event)"
         (numberOfCardsChange)="updateSetting('numberOfCards', $event)"
         (millisecondsBetweenCardsChange)="updateSetting('millisecondsBetweenCards', $event)"
@@ -77,7 +82,7 @@ type DrillState = 'idle' | 'streaming' | 'answering' | 'feedback';
       }
 
       @if (state() === 'feedback' && result(); as r) {
-        <app-count-feedback-panel [result]="r" [system]="system" (next)="start()" />
+        <app-count-feedback-panel [result]="r" [system]="system()" (next)="start()" />
       }
 
       <app-stats-panel [stats]="activeStats()" (reset)="resetActiveStats()" />
@@ -94,8 +99,14 @@ export class CardCountingPageComponent {
   protected readonly statsService = inject(CardCountingStatsService);
   protected readonly trueCountStatsService = inject(TrueCountStatsService);
 
-  protected readonly system = HI_LO;
+  protected readonly systems = COUNTING_SYSTEMS;
+  protected readonly system = signal<CountingSystem>(HI_LO);
   protected readonly decksRemainingPresets = DECKS_REMAINING_PRESETS;
+
+  // True-count training is only meaningful for balanced systems, where the
+  // Hi-Lo-style running ÷ decks conversion holds. Unbalanced systems (KO) are
+  // running-count-only; the selector hides true count for them.
+  protected readonly trueCountAvailable = computed(() => this.system().balanced);
 
   protected readonly state = signal<DrillState>('idle');
   protected readonly settings = signal<CountingDrillSettings>({
@@ -156,16 +167,28 @@ export class CardCountingPageComponent {
         this.cards(),
         userCount,
         s.decksRemaining,
-        this.system,
+        this.system(),
       );
       this.result.set(evaluated);
       this.trueCountStatsService.recordAttempt(evaluated.isCorrect);
     } else {
-      const evaluated = this.engine.evaluate(this.cards(), userCount, this.system);
+      const evaluated = this.engine.evaluate(this.cards(), userCount, this.system());
       this.result.set(evaluated);
       this.statsService.recordAttempt(evaluated.isCorrect);
     }
     this.state.set('feedback');
+  }
+
+  // Switch the active counting system. Unbalanced systems (KO) are running-
+  // count-only, so if true count was selected we coerce back to running count —
+  // the settings UI also hides the true-count option for them.
+  protected onSystemChange(id: string): void {
+    const next = this.systems.find((s) => s.id === id);
+    if (!next) return;
+    this.system.set(next);
+    if (!next.balanced && this.settings().mode === 'true-count') {
+      this.updateSetting('mode', 'running-count');
+    }
   }
 
   protected updateSetting<K extends keyof CountingDrillSettings>(

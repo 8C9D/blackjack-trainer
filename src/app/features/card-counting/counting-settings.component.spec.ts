@@ -1,10 +1,13 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 
 import { DECKS_REMAINING_PRESETS, type DrillMode } from '../../core/models/card-counting.model';
+import { COUNTING_SYSTEMS } from '../../data/counting-systems';
 import { CountingSettingsComponent } from './counting-settings.component';
 
 function createSettings(
   overrides: Partial<{
+    systemId: string;
+    trueCountAvailable: boolean;
     mode: DrillMode;
     numberOfCards: number;
     millisecondsBetweenCards: number;
@@ -15,6 +18,10 @@ function createSettings(
 ): ComponentFixture<CountingSettingsComponent> {
   const fixture = TestBed.createComponent(CountingSettingsComponent);
   const ref = fixture.componentRef;
+  ref.setInput('systems', COUNTING_SYSTEMS);
+  ref.setInput('systemId', overrides.systemId ?? 'hi-lo');
+  if (overrides.trueCountAvailable !== undefined)
+    ref.setInput('trueCountAvailable', overrides.trueCountAvailable);
   ref.setInput('mode', overrides.mode ?? 'running-count');
   ref.setInput('numberOfCards', overrides.numberOfCards ?? 20);
   ref.setInput('millisecondsBetweenCards', overrides.millisecondsBetweenCards ?? 500);
@@ -31,6 +38,55 @@ describe('CountingSettingsComponent', () => {
     TestBed.configureTestingModule({
       imports: [CountingSettingsComponent],
     });
+  });
+
+  it('renders a system selector populated from the systems input', () => {
+    const fixture = createSettings();
+    const select = fixture.nativeElement.querySelector(
+      '.settings__system',
+    ) as HTMLSelectElement | null;
+    expect(select).not.toBeNull();
+    const options = Array.from(select!.querySelectorAll('option')) as HTMLOptionElement[];
+    expect(options.map((o) => o.value)).toEqual(COUNTING_SYSTEMS.map((s) => s.id));
+    expect(options.map((o) => o.textContent?.trim())).toEqual(COUNTING_SYSTEMS.map((s) => s.name));
+  });
+
+  it('marks the current systemId option as selected', () => {
+    const fixture = createSettings({ systemId: 'ko' });
+    const select = fixture.nativeElement.querySelector('.settings__system') as HTMLSelectElement;
+    expect(select.value).toBe('ko');
+  });
+
+  it('emits systemChange with the chosen id when the selector changes', () => {
+    const fixture = createSettings({ systemId: 'hi-lo' });
+    let received: string | undefined;
+    fixture.componentInstance.systemChange.subscribe((id) => {
+      received = id;
+    });
+    const select = fixture.nativeElement.querySelector('.settings__system') as HTMLSelectElement;
+    select.value = 'ko';
+    select.dispatchEvent(new Event('change'));
+    expect(received).toBe('ko');
+  });
+
+  it('enables the true-count radio and hides the note when true count is available', () => {
+    const fixture = createSettings({ trueCountAvailable: true });
+    const tc = fixture.nativeElement.querySelector(
+      'input[type=radio][value="true-count"]',
+    ) as HTMLInputElement;
+    expect(tc.disabled).toBe(false);
+    expect(fixture.nativeElement.querySelector('.settings__note')).toBeNull();
+  });
+
+  it('disables the true-count radio and shows a note when true count is unavailable', () => {
+    const fixture = createSettings({ trueCountAvailable: false });
+    const tc = fixture.nativeElement.querySelector(
+      'input[type=radio][value="true-count"]',
+    ) as HTMLInputElement;
+    expect(tc.disabled).toBe(true);
+    const note = fixture.nativeElement.querySelector('.settings__note');
+    expect(note).not.toBeNull();
+    expect(note!.textContent).toContain('running count');
   });
 
   it('renders both mode radios', () => {
