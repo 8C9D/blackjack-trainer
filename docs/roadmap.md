@@ -149,7 +149,7 @@ Plus, once Slice 1 lands: `npm run lint`.
 ### Slice 4 — Shared blackjack-UI / keyboard refactor
 
 - **Phase:** A — Infra/Quality
-- **Status:** Planned
+- **Status:** Done
 - **Goal:** Remove duplication in the table / action-buttons / feedback shell
   and keyboard handling shared between v1 (basic strategy) and v4 (deviations).
 - **Why here:** Last quality item before features. Some shared pieces already

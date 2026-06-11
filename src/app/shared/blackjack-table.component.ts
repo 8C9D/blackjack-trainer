@@ -1,7 +1,7 @@
 import { Component, input } from '@angular/core';
 
-import type { Card } from '../../core/models/card.model';
-import { CardImageComponent } from '../../shared/card-image.component';
+import type { Card } from '../core/models/card.model';
+import { CardImageComponent } from './card-image.component';
 
 @Component({
   selector: 'app-blackjack-table',
