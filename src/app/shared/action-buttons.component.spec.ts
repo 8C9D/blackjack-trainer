@@ -1,6 +1,6 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 
-import type { Action } from '../../core/models/strategy.model';
+import type { Action } from '../core/models/strategy.model';
 import { ActionButtonsComponent } from './action-buttons.component';
 
 // The order the component renders its buttons in. Declared here as the

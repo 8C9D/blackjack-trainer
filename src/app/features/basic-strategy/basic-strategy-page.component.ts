@@ -1,6 +1,6 @@
 import { Component, HostListener, inject, signal } from '@angular/core';
 
-import { actionForKey, shouldIgnoreKeyboardEvent } from '../../core/keyboard';
+import { handleTrainerKeydown } from '../../core/keyboard';
 import type { Scenario } from '../../core/models/card.model';
 import {
   DEFAULT_ENGINE_OPTIONS,
@@ -12,10 +12,10 @@ import {
 import { BasicStrategyEngineService } from '../../core/services/basic-strategy-engine.service';
 import { BasicStrategyStatsService } from '../../core/services/basic-strategy-stats.service';
 import { CardGeneratorService } from '../../core/services/card-generator.service';
+import { ActionButtonsComponent } from '../../shared/action-buttons.component';
+import { BlackjackTableComponent } from '../../shared/blackjack-table.component';
 import { RuleControlsComponent } from '../../shared/rule-controls.component';
 import { StatsPanelComponent } from '../../shared/stats-panel.component';
-import { ActionButtonsComponent } from './action-buttons.component';
-import { BlackjackTableComponent } from './blackjack-table.component';
 import { FeedbackPanelComponent } from './feedback-panel.component';
 
 @Component({
@@ -86,18 +86,10 @@ export class BasicStrategyPageComponent {
 
   @HostListener('window:keydown', ['$event'])
   protected onKeyDown(event: KeyboardEvent): void {
-    if (shouldIgnoreKeyboardEvent(event)) return;
-    if (event.key === 'Enter') {
-      if (this.result() !== null) {
-        event.preventDefault();
-        this.nextHand();
-      }
-      return;
-    }
-    const action = actionForKey(event.key);
-    if (action) {
-      event.preventDefault();
-      this.answer(action);
-    }
+    handleTrainerKeydown(event, {
+      canNext: () => this.result() !== null,
+      onNext: () => this.nextHand(),
+      onAction: (action) => this.answer(action),
+    });
   }
 }

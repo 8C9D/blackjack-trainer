@@ -1,6 +1,6 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 
-import type { Card, Rank, Suit } from '../../core/models/card.model';
+import type { Card, Rank, Suit } from '../core/models/card.model';
 import { BlackjackTableComponent } from './blackjack-table.component';
 
 const card = (rank: Rank, suit: Suit = 'spades'): Card => ({ rank, suit });

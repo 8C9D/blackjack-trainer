@@ -40,3 +40,38 @@ export function shouldIgnoreKeyboardEvent(event: KeyboardEvent): boolean {
   if (target.isContentEditable) return true;
   return false;
 }
+
+// Callbacks a trainer page supplies to `handleTrainerKeydown`.
+export interface TrainerKeydownHandlers {
+  // Whether dealing the next hand is currently allowed (e.g. the current hand
+  // has been graded and any page-specific gating is satisfied).
+  canNext: () => boolean;
+  // Deal the next hand. Only invoked when `canNext()` is true.
+  onNext: () => void;
+  // Answer the current hand with the given action.
+  onAction: (action: Action) => void;
+}
+
+// Shared global-keydown orchestration for the trainer pages (Basic Strategy and
+// Deviations), so the Enter-to-deal / letter-to-answer wiring lives in one
+// place. Each page keeps its own `@HostListener('window:keydown')` and delegates
+// the body here. Behavior:
+//   - ignored events (modifier held / form control focused) are a no-op;
+//   - Enter deals the next hand when `canNext()` is true, preventing the
+//     default only when a deal actually happens;
+//   - a bound action letter answers with that action.
+export function handleTrainerKeydown(event: KeyboardEvent, handlers: TrainerKeydownHandlers): void {
+  if (shouldIgnoreKeyboardEvent(event)) return;
+  if (event.key === 'Enter') {
+    if (handlers.canNext()) {
+      event.preventDefault();
+      handlers.onNext();
+    }
+    return;
+  }
+  const action = actionForKey(event.key);
+  if (action) {
+    event.preventDefault();
+    handlers.onAction(action);
+  }
+}
