@@ -191,7 +191,7 @@ Plus, once Slice 1 lands: `npm run lint`.
 ### Slice 5 — KO (Knock-Out) counting system
 
 - **Phase:** B — Feature
-- **Status:** Planned
+- **Status:** Done
 - **Goal:** Add KO as a selectable second counting system.
 - **Why here:** Gentlest feature: KO is level-1 and fits the existing
   `CountValue` range, so it exercises the "add a system + UI selector" path
