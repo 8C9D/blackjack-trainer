@@ -1,6 +1,6 @@
 import type { Card, Rank } from '../models/card.model';
 import { MAX_CARDS_PER_DRILL, type CountingDrillSettings } from '../models/card-counting.model';
-import { HI_LO, KO } from '../../data/counting-systems';
+import { HI_LO, KO, OMEGA_II } from '../../data/counting-systems';
 import { CardGeneratorService } from './card-generator.service';
 import { CountingEngineService } from './counting-engine.service';
 
@@ -130,6 +130,41 @@ describe('CountingEngineService', () => {
     });
   });
 
+  describe('Omega II running count (level-2)', () => {
+    it('sums multi-level (±2) per-rank values over a sequence', () => {
+      // 4(+2) 5(+2) 9(-1) 10(-2) 2(+1) => +2
+      expect(engine.runningCount(seq('4', '5', '9', '10', '2'), OMEGA_II)).toBe(2);
+    });
+
+    it('counts 4, 5, 6 as +2 (level-2; +1 under Hi-Lo)', () => {
+      for (const r of ['4', '5', '6'] as const) {
+        expect(engine.runningCount([card(r)], OMEGA_II)).toBe(2);
+      }
+    });
+
+    it('counts 10, J, Q, K as -2 and the ace as 0', () => {
+      for (const r of ['10', 'J', 'Q', 'K'] as const) {
+        expect(engine.runningCount([card(r)], OMEGA_II)).toBe(-2);
+      }
+      expect(engine.runningCount([card('A')], OMEGA_II)).toBe(0);
+    });
+
+    it('diverges from Hi-Lo on the level-2 ranks', () => {
+      const cards = seq('4', '5', '6'); // Omega II +6, Hi-Lo +3
+      expect(engine.runningCount(cards, OMEGA_II)).toBe(6);
+      expect(engine.runningCount(cards, HI_LO)).toBe(3);
+    });
+
+    it('full 52-card deck sums to 0 (balanced)', () => {
+      const ranks: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+      const deck: Card[] = [];
+      for (const r of ranks) {
+        for (let i = 0; i < 4; i++) deck.push(card(r));
+      }
+      expect(engine.runningCount(deck, OMEGA_II)).toBe(0);
+    });
+  });
+
   describe('evaluate()', () => {
     it('marks a correct positive answer as correct', () => {
       const cards = seq('2', '3', '4', '5', '6'); // +5
@@ -221,6 +256,15 @@ describe('CountingEngineService', () => {
       expect(result.correctTrueCount).toBe(2);
       expect(result.userTrueCount).toBe(3);
       expect(result.isCorrect).toBe(false);
+    });
+
+    it('derives the true count from a level-2 running count (Omega II, balanced)', () => {
+      // 4(+2) 5(+2) 6(+2) => running +6; over 2 decks => true count 3
+      const cards = seq('4', '5', '6');
+      const result = engine.evaluateTrueCount(cards, 3, 2, OMEGA_II);
+      expect(result.correctRunningCount).toBe(6);
+      expect(result.correctTrueCount).toBe(3);
+      expect(result.isCorrect).toBe(true);
     });
   });
 

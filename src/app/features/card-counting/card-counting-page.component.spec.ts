@@ -318,9 +318,9 @@ describe('CardCountingPageComponent', () => {
       expect(c.trueCountAvailable()).toBe(true);
     });
 
-    it('exposes Hi-Lo and KO as the selectable systems', () => {
+    it('exposes Hi-Lo, KO, and Omega II as the selectable systems', () => {
       const { c } = createPage();
-      expect(c.systems.map((s) => s.id)).toEqual(['hi-lo', 'ko']);
+      expect(c.systems.map((s) => s.id)).toEqual(['hi-lo', 'ko', 'omega-ii']);
     });
 
     it('onSystemChange switches the active system', () => {
@@ -362,6 +362,14 @@ describe('CardCountingPageComponent', () => {
       c.onSystemChange('ko');
       expect(c.trueCountAvailable()).toBe(false);
       c.onSystemChange('hi-lo');
+      expect(c.trueCountAvailable()).toBe(true);
+    });
+
+    it('selecting Omega II switches system and keeps true count available (balanced)', () => {
+      const { c } = createPage();
+      c.onSystemChange('omega-ii');
+      expect(c.system().id).toBe('omega-ii');
+      expect(c.system().name).toBe('Omega II');
       expect(c.trueCountAvailable()).toBe(true);
     });
   });
