@@ -818,7 +818,17 @@ test` ✓ (88 tests, no regressions), `swiftformat --lint` ✓, `swiftlint` ✓ 
 ### Slice 5.1 — App Store Connect metadata, privacy & ratings
 
 - **Phase:** 5 — Release
-- **Status:** Planned
+- **Status:** Needs review (automatable artifacts prepared; the App Store Connect
+  web entry, screenshots, and validation are human/Apple actions) — wrote
+  [`docs/app-store-submission.md`](app-store-submission.md)
+  (name/subtitle/description/keywords/promo, Data-Not-Collected privacy answers,
+  the honest age-rating answers expecting ~17+, review notes, licensing note, and
+  the human submission checklist) and wired the **export-compliance flag**
+  `ITSAppUsesNonExemptEncryption = false` into the app Info.plist
+  (`INFOPLIST_KEY_ITSAppUsesNonExemptEncryption` in `ios/project.yml`; verified in
+  the built plist). D7 applied (educational, no-wager positioning). Creating the
+  ASC record, hosting the privacy/support URLs, capturing screenshots from a
+  near-final build, and ASC validation remain pending human actions.
 - **Goal:** Everything App Review needs besides the binary.
 - **Why here:** Can be prepared in parallel with Phase 4 but gated by a
   near-final build for screenshots.
@@ -831,12 +841,14 @@ test` ✓ (88 tests, no regressions), `swiftformat --lint` ✓, `swiftlint` ✓ 
   [App Store specifics](#app-store-specifics--review-risk).
 - **Out of scope:** Code changes (unless review demands them).
 - **Acceptance criteria:**
-  - [ ] App Store Connect record complete and passes validation; privacy + rating + export-compliance answers recorded.
-- **Validation:** App Store Connect validation.
+  - [ ] App Store Connect record complete and passes validation; privacy + rating + export-compliance answers recorded. — **artifacts prepared (`docs/app-store-submission.md`) and the export-compliance flag is in the build; the ASC web entry + validation are the pending human action.**
+- **Validation:** App Store Connect validation (human). Automatable check done:
+  `xcodebuild build` ✓ with `ITSAppUsesNonExemptEncryption=false` present in the
+  built Info.plist.
 - **Commit:** `chore(ios): App Store Connect metadata, privacy labels, and ratings`
-- **Decision:** **Required — D7 framing + final age rating.** Default:
-  educational, no-wager positioning; accept the rating the honest questionnaire
-  yields (commonly 17+ for simulated-gambling content).
+- **Decision:** **Required — D7 framing + final age rating. Resolved to the
+  default (applied):** educational, no-wager positioning; accept the rating the
+  honest questionnaire yields (commonly 17+ for simulated-gambling content).
 
 ### Slice 5.2 — TestFlight beta
 
