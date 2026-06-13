@@ -26,6 +26,11 @@ final class AppModel {
     /// iCloud capability is provisioned.
     @ObservationIgnored private let cloudSync: StatsCloudSync
 
+    /// Retained for the app's lifetime; writes the home-screen widget's stats
+    /// snapshot on each change and refreshes its timelines (4.3). Inert beyond a
+    /// local plist until the App Group is provisioned.
+    @ObservationIgnored private let widgetPublisher: WidgetSnapshotPublisher
+
     init() {
         cleanupLegacyStatsKeys()
         // The data is bundled and its integrity is verified by tests + CI; a
@@ -57,6 +62,16 @@ final class AppModel {
         cloudSync = StatsCloudSync(cloud: cloud, stores: [
             basicStrategyStats, runningCountStats, trueCountStats,
             deviationStats, deckEstimationStats, showdownStats
+        ])
+        // Built after cloud adoption so the seeded snapshot reflects any value
+        // pulled from iCloud at launch. The showdown tally has no accuracy/streak
+        // shape, so the widget surfaces the five session-stat trainers.
+        widgetPublisher = WidgetSnapshotPublisher(sources: [
+            .init(trainer: .basicStrategy, store: basicStrategyStats),
+            .init(trainer: .runningCount, store: runningCountStats),
+            .init(trainer: .trueCount, store: trueCountStats),
+            .init(trainer: .deviations, store: deviationStats),
+            .init(trainer: .deckEstimation, store: deckEstimationStats)
         ])
     }
 }
