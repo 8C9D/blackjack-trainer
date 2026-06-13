@@ -1,6 +1,6 @@
 import type { Card, Rank } from '../models/card.model';
 import { MAX_CARDS_PER_DRILL, type CountingDrillSettings } from '../models/card-counting.model';
-import { HI_LO, KO, OMEGA_II } from '../../data/counting-systems';
+import { HI_LO, KO, OMEGA_II, WONG_HALVES } from '../../data/counting-systems';
 import { CardGeneratorService } from './card-generator.service';
 import { CountingEngineService } from './counting-engine.service';
 
@@ -165,6 +165,45 @@ describe('CountingEngineService', () => {
     });
   });
 
+  describe('Wong Halves running count (fractional)', () => {
+    it('counts 2 and 7 as +0.5, 5 as +1.5, 9 as -0.5', () => {
+      expect(engine.runningCount([card('2')], WONG_HALVES)).toBe(0.5);
+      expect(engine.runningCount([card('7')], WONG_HALVES)).toBe(0.5);
+      expect(engine.runningCount([card('5')], WONG_HALVES)).toBe(1.5);
+      expect(engine.runningCount([card('9')], WONG_HALVES)).toBe(-0.5);
+    });
+
+    it('sums fractional per-rank values over a sequence', () => {
+      // 2(+0.5) 5(+1.5) 9(-0.5) 10(-1) => +0.5
+      expect(engine.runningCount(seq('2', '5', '9', '10'), WONG_HALVES)).toBe(0.5);
+    });
+
+    it('lands on a whole number when halves cancel', () => {
+      // 2(+0.5) 7(+0.5) => +1
+      expect(engine.runningCount(seq('2', '7'), WONG_HALVES)).toBe(1);
+    });
+
+    it('diverges from Hi-Lo on the fractional ranks', () => {
+      // The 5 is +1.5 under Wong Halves but +1 under Hi-Lo; the 2 is +0.5 vs +1.
+      const cards = seq('5', '2'); // Wong Halves +2.0, Hi-Lo +2 (they coincide here)
+      expect(engine.runningCount(cards, WONG_HALVES)).toBe(2);
+      // A single card makes the per-rank divergence explicit.
+      expect(engine.runningCount([card('5')], WONG_HALVES)).toBe(1.5);
+      expect(engine.runningCount([card('5')], HI_LO)).toBe(1);
+      expect(engine.runningCount([card('2')], WONG_HALVES)).toBe(0.5);
+      expect(engine.runningCount([card('2')], HI_LO)).toBe(1);
+    });
+
+    it('full 52-card deck sums to 0 (balanced)', () => {
+      const ranks: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+      const deck: Card[] = [];
+      for (const r of ranks) {
+        for (let i = 0; i < 4; i++) deck.push(card(r));
+      }
+      expect(engine.runningCount(deck, WONG_HALVES)).toBe(0);
+    });
+  });
+
   describe('evaluate()', () => {
     it('marks a correct positive answer as correct', () => {
       const cards = seq('2', '3', '4', '5', '6'); // +5
@@ -201,6 +240,21 @@ describe('CountingEngineService', () => {
     it('marks a wrong answer as incorrect (off by one)', () => {
       const cards = seq('5', '5', '6'); // +3
       const result = engine.evaluate(cards, 2, HI_LO);
+      expect(result.isCorrect).toBe(false);
+    });
+
+    it('marks a correct half-point running-count answer as correct (Wong Halves)', () => {
+      const cards = seq('2', '6'); // +0.5 + 1 = +1.5
+      const result = engine.evaluate(cards, 1.5, WONG_HALVES);
+      expect(result.correctRunningCount).toBe(1.5);
+      expect(result.userRunningCount).toBe(1.5);
+      expect(result.isCorrect).toBe(true);
+    });
+
+    it('rejects an integer answer when the true running count is fractional (Wong Halves)', () => {
+      const cards = seq('2', '6'); // +1.5
+      const result = engine.evaluate(cards, 2, WONG_HALVES);
+      expect(result.correctRunningCount).toBe(1.5);
       expect(result.isCorrect).toBe(false);
     });
   });
@@ -263,6 +317,24 @@ describe('CountingEngineService', () => {
       const cards = seq('4', '5', '6');
       const result = engine.evaluateTrueCount(cards, 3, 2, OMEGA_II);
       expect(result.correctRunningCount).toBe(6);
+      expect(result.correctTrueCount).toBe(3);
+      expect(result.isCorrect).toBe(true);
+    });
+
+    it('derives an integer true count from a fractional running count (Wong Halves)', () => {
+      // 5(+1.5) 5(+1.5) 4(+1) 3(+1) => running +5; over 2 decks => trunc(2.5) = 2
+      const cards = seq('5', '5', '4', '3');
+      const result = engine.evaluateTrueCount(cards, 2, 2, WONG_HALVES);
+      expect(result.correctRunningCount).toBe(5);
+      expect(result.correctTrueCount).toBe(2);
+      expect(result.isCorrect).toBe(true);
+    });
+
+    it('truncates a fractional running count toward zero for the true count (Wong Halves)', () => {
+      // 5(+1.5) 5(+1.5) 2(+0.5) => running +3.5; over 1 deck => trunc(3.5) = 3
+      const cards = seq('5', '5', '2');
+      const result = engine.evaluateTrueCount(cards, 3, 1, WONG_HALVES);
+      expect(result.correctRunningCount).toBe(3.5);
       expect(result.correctTrueCount).toBe(3);
       expect(result.isCorrect).toBe(true);
     });
@@ -388,6 +460,39 @@ describe('CountingEngineService', () => {
       expect(engine.isValidIntegerAnswer('+')).toBe(false);
       expect(engine.isValidIntegerAnswer('--3')).toBe(false);
       expect(engine.isValidIntegerAnswer('3.0')).toBe(false);
+    });
+  });
+
+  describe('isValidDecimalAnswer()', () => {
+    it('accepts integers and half-point decimals, signed or not', () => {
+      expect(engine.isValidDecimalAnswer('0')).toBe(true);
+      expect(engine.isValidDecimalAnswer('5')).toBe(true);
+      expect(engine.isValidDecimalAnswer('-5')).toBe(true);
+      expect(engine.isValidDecimalAnswer('2.5')).toBe(true);
+      expect(engine.isValidDecimalAnswer('-0.5')).toBe(true);
+      expect(engine.isValidDecimalAnswer('  1.5  ')).toBe(true);
+    });
+
+    it('rejects empty, non-numeric, and malformed input', () => {
+      expect(engine.isValidDecimalAnswer('')).toBe(false);
+      expect(engine.isValidDecimalAnswer('abc')).toBe(false);
+      expect(engine.isValidDecimalAnswer('+')).toBe(false);
+      expect(engine.isValidDecimalAnswer('--3')).toBe(false);
+      expect(engine.isValidDecimalAnswer('.5')).toBe(false);
+      expect(engine.isValidDecimalAnswer('2.')).toBe(false);
+      expect(engine.isValidDecimalAnswer('1.2.3')).toBe(false);
+    });
+  });
+
+  describe('isFractionalSystem()', () => {
+    it('is true for Wong Halves (half-point values)', () => {
+      expect(engine.isFractionalSystem(WONG_HALVES)).toBe(true);
+    });
+
+    it('is false for the integer systems (Hi-Lo, KO, Omega II)', () => {
+      expect(engine.isFractionalSystem(HI_LO)).toBe(false);
+      expect(engine.isFractionalSystem(KO)).toBe(false);
+      expect(engine.isFractionalSystem(OMEGA_II)).toBe(false);
     });
   });
 });

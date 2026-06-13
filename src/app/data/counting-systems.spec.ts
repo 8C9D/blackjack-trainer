@@ -1,6 +1,6 @@
 import { ALL_RANKS, ALL_SUITS, type Rank } from '../core/models/card.model';
 import type { CountingSystem } from '../core/models/counting-system.model';
-import { COUNTING_SYSTEMS, HI_LO, KO, OMEGA_II } from './counting-systems';
+import { COUNTING_SYSTEMS, HI_LO, KO, OMEGA_II, WONG_HALVES } from './counting-systems';
 
 // Sum of every card in a single 52-card deck for the given system: each rank
 // appears once per suit. A balanced system sums to 0; KO (unbalanced) to +4.
@@ -13,16 +13,17 @@ function fullDeckSum(system: CountingSystem): number {
 }
 
 describe('counting systems registry', () => {
-  it('registers Hi-Lo, KO, and Omega II (and nothing else), with unique ids', () => {
+  it('registers Hi-Lo, KO, Omega II, and Wong Halves (and nothing else), with unique ids', () => {
     const ids = COUNTING_SYSTEMS.map((s) => s.id);
-    expect(ids).toEqual(['hi-lo', 'ko', 'omega-ii']);
+    expect(ids).toEqual(['hi-lo', 'ko', 'omega-ii', 'wong-halves']);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('includes the HI_LO, KO, and OMEGA_II descriptors by reference', () => {
+  it('includes the HI_LO, KO, OMEGA_II, and WONG_HALVES descriptors by reference', () => {
     expect(COUNTING_SYSTEMS).toContain(HI_LO);
     expect(COUNTING_SYSTEMS).toContain(KO);
     expect(COUNTING_SYSTEMS).toContain(OMEGA_II);
+    expect(COUNTING_SYSTEMS).toContain(WONG_HALVES);
   });
 });
 
@@ -94,5 +95,38 @@ describe('Omega II descriptor', () => {
   it('is a level-2 system (uses ±2, unlike level-1 Hi-Lo/KO)', () => {
     const maxMagnitude = Math.max(...ALL_RANKS.map((r: Rank) => Math.abs(OMEGA_II.values[r])));
     expect(maxMagnitude).toBe(2);
+  });
+});
+
+describe('Wong Halves descriptor', () => {
+  it('is balanced and sums to 0 over a full deck', () => {
+    expect(WONG_HALVES.balanced).toBe(true);
+    expect(fullDeckSum(WONG_HALVES)).toBe(0);
+  });
+
+  it('counts 2 and 7 as +0.5', () => {
+    for (const r of ['2', '7'] as const) expect(WONG_HALVES.values[r]).toBe(0.5);
+  });
+
+  it('counts 3, 4, 6 as +1', () => {
+    for (const r of ['3', '4', '6'] as const) expect(WONG_HALVES.values[r]).toBe(1);
+  });
+
+  it('counts 5 as +1.5', () => {
+    expect(WONG_HALVES.values['5']).toBe(1.5);
+  });
+
+  it('counts 8 as 0 and 9 as -0.5', () => {
+    expect(WONG_HALVES.values['8']).toBe(0);
+    expect(WONG_HALVES.values['9']).toBe(-0.5);
+  });
+
+  it('counts 10, J, Q, K, A as -1', () => {
+    for (const r of ['10', 'J', 'Q', 'K', 'A'] as const) expect(WONG_HALVES.values[r]).toBe(-1);
+  });
+
+  it('uses fractional (half-point) values, unlike the integer systems', () => {
+    const hasFraction = ALL_RANKS.some((r: Rank) => !Number.isInteger(WONG_HALVES.values[r]));
+    expect(hasFraction).toBe(true);
   });
 });

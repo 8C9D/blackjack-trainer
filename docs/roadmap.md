@@ -259,7 +259,7 @@ Plus, once Slice 1 lands: `npm run lint`.
 ### Slice 7 — Wong Halves counting system
 
 - **Phase:** B — Feature
-- **Status:** Planned
+- **Status:** Done
 - **Goal:** Add the fractional level-3 Wong Halves system.
 - **Why here:** Depends on Slice 6's widened value type; adds the additional
   wrinkle of fractional values.

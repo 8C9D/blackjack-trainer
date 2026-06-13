@@ -113,6 +113,56 @@ export const OMEGA_II: CountingSystem = {
   },
 };
 
+// Wong Halves card counting system.
+//
+// Source: Stanford Wong, "Professional Blackjack"; summarized at Blackjack
+// Apprenticeship, "Advanced Card Counting Systems".
+//
+// Card values:
+//   2, 7           → +0.5
+//   3, 4, 6        → +1
+//   5              → +1.5
+//   8              →  0
+//   9              → -0.5
+//   10, J, Q, K, A → -1
+//
+// Wong Halves is a *balanced* level-3 system (`balanced: true`): a full 52-card
+// deck sums to 0 (per suit: 0.5 + 1 + 1 + 1.5 + 1 + 0.5 + 0 - 0.5 - 1 - 1 - 1 -
+// 1 - 1 = 0). Being balanced, it converts to a true count the Hi-Lo way. Its
+// half-point values (±0.5, ±1.5) are fractional, which is what required widening
+// `CountValue` from an integer union to a plain number. The trainer represents
+// the count with true fractional values: running counts land on halves (e.g.
+// 2.5, -0.5), so the running-count answer accepts fractional input. (Some
+// players instead "double" the values ×2 to keep arithmetic integer-only; this
+// app uses the natural fractional representation.)
+export const WONG_HALVES: CountingSystem = {
+  id: 'wong-halves',
+  name: 'Wong Halves',
+  description:
+    'Balanced level-3 system. 2 and 7 count as +0.5, 3/4/6 as +1, 5 as +1.5, 8 as 0, 9 as −0.5, tens and aces as −1. The running count uses fractional (half-point) values.',
+  balanced: true,
+  values: {
+    '2': 0.5,
+    '3': 1,
+    '4': 1,
+    '5': 1.5,
+    '6': 1,
+    '7': 0.5,
+    '8': 0,
+    '9': -0.5,
+    '10': -1,
+    J: -1,
+    Q: -1,
+    K: -1,
+    A: -1,
+  },
+};
+
 // Registry of available systems. Add new systems here when adding additional
 // counting modes — the UI will discover them via this list.
-export const COUNTING_SYSTEMS: readonly CountingSystem[] = [HI_LO, KO, OMEGA_II] as const;
+export const COUNTING_SYSTEMS: readonly CountingSystem[] = [
+  HI_LO,
+  KO,
+  OMEGA_II,
+  WONG_HALVES,
+] as const;

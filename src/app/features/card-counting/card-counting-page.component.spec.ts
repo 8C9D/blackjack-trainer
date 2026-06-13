@@ -25,6 +25,7 @@ type Internals = {
   system(): CountingSystem;
   systems: readonly CountingSystem[];
   trueCountAvailable(): boolean;
+  fractionalAnswers(): boolean;
   onSystemChange(id: string): void;
   isValid(): boolean;
   isDrillActive(): boolean;
@@ -318,9 +319,9 @@ describe('CardCountingPageComponent', () => {
       expect(c.trueCountAvailable()).toBe(true);
     });
 
-    it('exposes Hi-Lo, KO, and Omega II as the selectable systems', () => {
+    it('exposes Hi-Lo, KO, Omega II, and Wong Halves as the selectable systems', () => {
       const { c } = createPage();
-      expect(c.systems.map((s) => s.id)).toEqual(['hi-lo', 'ko', 'omega-ii']);
+      expect(c.systems.map((s) => s.id)).toEqual(['hi-lo', 'ko', 'omega-ii', 'wong-halves']);
     });
 
     it('onSystemChange switches the active system', () => {
@@ -371,6 +372,52 @@ describe('CardCountingPageComponent', () => {
       expect(c.system().id).toBe('omega-ii');
       expect(c.system().name).toBe('Omega II');
       expect(c.trueCountAvailable()).toBe(true);
+    });
+
+    it('selecting Wong Halves switches system and keeps true count available (balanced)', () => {
+      const { c } = createPage();
+      c.onSystemChange('wong-halves');
+      expect(c.system().id).toBe('wong-halves');
+      expect(c.system().name).toBe('Wong Halves');
+      expect(c.trueCountAvailable()).toBe(true);
+    });
+  });
+
+  describe('fractional answer wiring (Wong Halves)', () => {
+    it('does not allow fractional answers for an integer system (Hi-Lo)', () => {
+      const { c } = createPage();
+      expect(c.fractionalAnswers()).toBe(false);
+    });
+
+    it('allows fractional answers for Wong Halves in running-count mode', () => {
+      const { c } = createPage();
+      c.onSystemChange('wong-halves');
+      expect(c.settings().mode).toBe('running-count');
+      expect(c.fractionalAnswers()).toBe(true);
+    });
+
+    it('does not allow fractional answers for Wong Halves in true-count mode', () => {
+      const { c } = createPage();
+      c.onSystemChange('wong-halves');
+      c.updateSetting('mode', 'true-count');
+      expect(c.fractionalAnswers()).toBe(false);
+    });
+
+    it('evaluates a fractional running-count answer for Wong Halves', () => {
+      const { c } = createPage();
+      c.onSystemChange('wong-halves');
+      c.updateSetting('numberOfCards', 1);
+      c.updateSetting('millisecondsBetweenCards', 100);
+      c.start();
+      vi.advanceTimersByTime(100);
+      expect(c.state()).toBe('answering');
+      c.onAnswer(0.5);
+      const r = c.result();
+      expect(r).not.toBeNull();
+      expect(r!.mode).toBe('running-count');
+      if (r && r.mode === 'running-count') {
+        expect(r.userRunningCount).toBe(0.5);
+      }
     });
   });
 

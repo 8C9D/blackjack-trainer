@@ -103,4 +103,52 @@ describe('CountAnswerFormComponent', () => {
     submitForm(fixture);
     expect(received).toBeUndefined();
   });
+
+  describe('fractional answers (allowFractions)', () => {
+    it('enables Submit for a half-point decimal when fractions are allowed', () => {
+      const fixture = TestBed.createComponent(CountAnswerFormComponent);
+      fixture.componentRef.setInput('allowFractions', true);
+      fixture.detectChanges();
+      setInput(fixture, '2.5');
+      expect(getSubmit(fixture).disabled).toBe(false);
+    });
+
+    it('enables Submit for a negative half-point decimal when fractions are allowed', () => {
+      const fixture = TestBed.createComponent(CountAnswerFormComponent);
+      fixture.componentRef.setInput('allowFractions', true);
+      fixture.detectChanges();
+      setInput(fixture, '-0.5');
+      expect(getSubmit(fixture).disabled).toBe(false);
+    });
+
+    it('still rejects non-numeric input when fractions are allowed', () => {
+      const fixture = TestBed.createComponent(CountAnswerFormComponent);
+      fixture.componentRef.setInput('allowFractions', true);
+      fixture.detectChanges();
+      setInput(fixture, 'abc');
+      expect(getSubmit(fixture).disabled).toBe(true);
+    });
+
+    it('emits the parsed fractional number on submit', () => {
+      const fixture = TestBed.createComponent(CountAnswerFormComponent);
+      fixture.componentRef.setInput('allowFractions', true);
+      fixture.detectChanges();
+      let received: number | undefined;
+      fixture.componentInstance.answer.subscribe((n) => {
+        received = n;
+      });
+      setInput(fixture, '2.5');
+      submitForm(fixture);
+      expect(received).toBe(2.5);
+    });
+
+    it('shows the fractional-input note only when fractions are allowed', () => {
+      const fixture = TestBed.createComponent(CountAnswerFormComponent);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.answer__note')).toBeNull();
+      fixture.componentRef.setInput('allowFractions', true);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.answer__note')).not.toBeNull();
+    });
+  });
 });
