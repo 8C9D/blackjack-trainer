@@ -10,6 +10,7 @@ struct AboutView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     header
+                    section(title: "Practice", body: practiceLinks)
                     section(title: "Card artwork", body: cardArtwork)
                     section(title: "App code", body: appCode)
                     section(title: "License texts", body: licenseLinks)
@@ -59,6 +60,24 @@ struct AboutView: View {
         )
         .font(.subheadline)
         .foregroundStyle(Theme.primaryText)
+    }
+
+    private var practiceLinks: some View {
+        NavigationLink {
+            RemindersView()
+        } label: {
+            HStack {
+                Text("Practice reminders")
+                    .foregroundStyle(Theme.primaryText)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            .padding()
+        }
+        .background(Theme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     private var licenseLinks: some View {
