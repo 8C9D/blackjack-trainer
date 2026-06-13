@@ -108,4 +108,22 @@ export class CountingEngineService {
     const n = Number(raw);
     return Number.isFinite(n) && Number.isInteger(n);
   }
+
+  // Whether a string is a valid fractional answer for the running count. Used by
+  // the answer form for fractional systems (e.g. Wong Halves, whose running
+  // count lands on halves like 2.5 or -0.5). Accepts an optional leading sign,
+  // an integer part, and an optional decimal part; whole numbers are accepted
+  // too. Rejects empty, non-numeric, and malformed input.
+  isValidDecimalAnswer(raw: string): boolean {
+    if (!/^-?\d+(\.\d+)?$/.test(raw.trim())) return false;
+    return Number.isFinite(Number(raw));
+  }
+
+  // Whether a system assigns any fractional per-rank value (e.g. Wong Halves).
+  // Such systems produce fractional running counts, so the running-count answer
+  // form must accept decimal input. Integer-valued systems (Hi-Lo, KO, Omega II)
+  // return false and stay integer-only.
+  isFractionalSystem(system: CountingSystem): boolean {
+    return Object.values(system.values).some((v) => !Number.isInteger(v));
+  }
 }

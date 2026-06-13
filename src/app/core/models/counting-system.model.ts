@@ -1,10 +1,12 @@
 import type { Rank } from './card.model';
 
 // Per-rank value contribution to the running count. Level-1 systems (Hi-Lo, KO)
-// only use -1/0/+1; level-2 systems like Omega II also use ±2. The union is kept
-// to integer levels so validation stays cheap; a fractional system (Wong Halves)
-// would need a further widening.
-export type CountValue = -2 | -1 | 0 | 1 | 2;
+// use -1/0/+1; the level-2 system Omega II also uses ±2; the fractional level-3
+// system Wong Halves uses halves such as ±0.5 and ±1.5. To accommodate fractional
+// values, CountValue is a plain number — correctness is guarded by each system's
+// descriptor and its spec (per-rank values + balanced full-deck sum) rather than
+// by a narrow type union.
+export type CountValue = number;
 
 // Counting system descriptor. New systems (KO, Knock-Out, etc.) can be added
 // as additional entries in data/counting-systems.ts without touching the
