@@ -286,7 +286,7 @@ Plus, once Slice 1 lands: `npm run lint`.
 ### Slice 8 — Finite-shoe live deck estimation
 
 - **Phase:** B — Feature
-- **Status:** Needs review
+- **Status:** Planned
 - **Goal:** Play through a real finite shoe and estimate decks remaining from
   observed cards, instead of picking a decks-remaining preset before each drill.
 - **Why here:** Larger feature that builds on a solid, well-guarded counting
@@ -303,10 +303,13 @@ Plus, once Slice 1 lands: `npm run lint`.
   - [ ] Tests green.
 - **Validation:** baseline + manual smoke.
 - **Commit:** `feat: add finite-shoe live deck estimation`
-- **Decision:** **Required — UX/scoring design** (how estimation is prompted and
-  scored; penetration settings). No safe default. The autopilot should write a
-  design sub-plan into the progress log, mark the slice **Needs review**, and
-  stop without implementing until the design is approved.
+- **Decision:** **Resolved 2026-06-05.** The design pause is complete and the owner
+  has chosen: grade the true count vs **actual** decks remaining with a separate
+  ±0.5-deck estimation-accuracy stat; the shoe **persists** to the cut card;
+  **player-configurable** decks (1/2/6/8) + penetration (~75% default); and the
+  classic `DECKS_REMAINING_PRESETS` mode is **kept** alongside the live shoe. The
+  lower-impact points took the recommended defaults (see the Slice 8 sub-plan and
+  the recorded prompt in `roadmap-progress.md`). Ready to implement.
 
 ### Slice 9 — Multi-hand showdowns
 

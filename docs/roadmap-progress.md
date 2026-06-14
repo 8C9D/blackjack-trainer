@@ -9,73 +9,123 @@ format._
 
 ## Prompt for next slice (slice 8)
 
-> **Status: paused — Needs review.** The design sub-plan for Slice 8 has now been
-> written (see "Slice 8 — design sub-plan" below) and the roadmap Status is
-> **Needs review**. **Next slice stays 8.** Do not implement feature code until the
-> owner answers the open questions and selects the prompt/scoring + shoe options; a
-> future run then records the chosen options here and implements Slice 8 as one
-> feature commit. The original pause instructions are kept below for reference.
+> **Status: ready to implement.** The design pause is complete and the owner
+> answered the Slice 8 design questions on 2026-06-05 (all recommended options — see
+> "6. Decisions (resolved 2026-06-05)" in the sub-plan below). Implement Slice 8 now
+> as a single feature commit. **Next slice stays 8** until it lands.
 
-Address **Slice 8 — Finite-shoe live deck estimation** from `docs/roadmap.md`.
-One slice only.
+Implement **Slice 8 — Finite-shoe live deck estimation** from `docs/roadmap.md`.
+One slice only: one feature commit, push, then record the prompt for Slice 9.
 
-**STOP — this is a pause-for-decision slice. Do NOT implement feature code.**
-Slice 8 is marked **Decision: Required — UX/scoring design with no safe default**
-(how deck-remaining estimation is prompted and scored; penetration / cut-card
-settings). Per the autopilot's _Pause-for-decision protocol_, when a slice needs
-a human decision with no safe default you must NOT write feature code. Instead:
+**Goal:** Replace the decks-remaining _preset pick_ with a live estimate read off a
+real, finite, depleting shoe in true-count mode. After the card stream, prompt the
+player for decks remaining, grade the true count against the shoe's **actual** decks
+remaining, and track deck-estimation accuracy as a separate ±0.5-deck stat.
 
-1. Write a concise **design sub-plan** for Slice 8 into this file (under this
-   slice), covering: a finite-shoe model (N decks, depletion, penetration / cut
-   card), how it wires into the true-count trainer, and 2–3 concrete options for
-   **how the deck-remaining estimate is prompted and scored** (e.g. exact-decks
-   vs. nearest-half-deck tolerance; penalty vs. separate accuracy stat), with a
-   recommendation and the open questions for the owner.
-2. Set Slice 8's **Status** to **Needs review** in `docs/roadmap.md`.
-3. Make **one** `docs:` commit containing only the two doc updates
-   (`docs/roadmap.md` + `docs/roadmap-progress.md`), e.g.
-   `docs: add Slice 8 finite-shoe design sub-plan and mark needs review`.
-4. Push to `origin main`, report, and **stop**.
-5. Do **NOT** advance **Next slice** past 8 — leave it at 8 until the owner
-   approves a design. (Only after approval does a future run implement it.)
+**Decisions to apply (locked in 2026-06-05):**
 
-**Context carried forward (so the design sub-plan is grounded in the real code):**
+1. **Grading = Option 1:** grade the true count vs the shoe's **actual** decks
+   remaining (NOT the user's estimate); track deck-estimation accuracy as its own
+   stat. Do not fold the estimate into true-count correctness.
+2. **Shoe persists across rounds** to the cut card: decks-remaining and the running
+   count carry over and deplete as the player works down the shoe; reshuffle at the
+   cut card.
+3. **Player-configurable shoe:** expose number of decks (1 / 2 / 6 / 8) and
+   penetration (~50–90%, default ~75%) as settings (true-count mode).
+4. **Keep classic mode:** retain the `DECKS_REMAINING_PRESETS` picker as a
+   selectable fallback ("classic") true-count mode alongside the new live-shoe mode.
+   Default the live-shoe mode on; the preset path must keep working unchanged.
+5. **Defaulted (recommended) — apply as-is:** estimate granularity = half-deck
+   stepper with a **±0.5-deck "good" tolerance band**; at the cut card
+   **auto-reshuffle with a visible notice and reset the running count to 0**; the
+   finite shoe applies to **true-count mode only** (running-count drills keep the
+   i.i.d. `CardGeneratorService`); add a **separate persisted deck-estimation
+   accuracy store** (new localStorage key).
 
-- Counting engine `src/app/core/services/counting-engine.service.ts` is
-  system-agnostic and already pure: `runningCount(cards, system)` sums
-  `values[rank]`; `trueCount(running, decksRemaining) = Math.trunc(running /
-decksRemaining)`. Today decks-remaining is a **preset the user picks** before a
-  true-count drill (`DECKS_REMAINING_PRESETS = [0.5,1,1.5,2,2.5,3,4,5,6]` in
-  `src/app/core/models/card-counting.model.ts`); Slice 8 replaces that preset
-  with a live estimate from a real finite shoe.
-- The drill flow lives in
-  `src/app/features/card-counting/card-counting-page.component.ts` (state machine
-  `idle → streaming → answering → feedback`) and currently draws cards from
-  `CardGeneratorService` (`generateSequence(n)`) — an **infinite** i.i.d. source
-  with no depletion. A finite shoe is a new model/service under
-  `src/app/core/` (e.g. `shoe.model.ts` / a `ShoeService`) that deals without
-  replacement and tracks cards dealt / decks remaining.
-- Four counting systems now exist (`hi-lo`, `ko`, `omega-ii`, `wong-halves`).
-  KO is unbalanced (running-count only); the balanced three support true count.
-  Finite-shoe estimation is a true-count concern, so it applies to the balanced
-  systems.
+**Scope / concrete steps (grounded in the real code):**
 
-**Files (design phase only):** `docs/roadmap.md` (status → Needs review),
-`docs/roadmap-progress.md` (design sub-plan; keep Next slice = 8). No source
-changes in this slice.
+- New `src/app/core/models/shoe.model.ts` + `src/app/core/services/shoe.service.ts`
+  (or a `Shoe` class). Build `52 × N` cards from `ALL_RANKS × ALL_SUITS`
+  (`card.model.ts`); Fisher–Yates shuffle behind a `setRandomSource(fn)` seam
+  mirroring `CardGeneratorService` (deterministic specs). Deal **without
+  replacement**; expose `cardsDealt`, `cardsRemaining`,
+  `decksRemaining = cardsRemaining / 52` (measured to bottom-of-shoe), a cut card at
+  the configured penetration, and a `needsReshuffle` / reshuffle API.
+- `card-counting.model.ts`: add shoe config to settings (e.g. `numberOfDecks`,
+  `penetration`, and a true-count sub-mode flag distinguishing **live-shoe** vs
+  **classic preset**). Keep `DECKS_REMAINING_PRESETS` for classic mode. Carry the
+  actual decks remaining + the user's deck estimate + whether it was within ±0.5 on
+  the true-count result (extend `TrueCountDrillResult` or add fields).
+- `counting-engine.service.ts` stays pure: keep `trueCount` / `evaluateTrueCount`
+  graded against **actual** decks remaining; add a helper to score a deck estimate
+  against actual within a ±0.5 band (or do it in the page). Extend `validateSettings`
+  for shoe config (decks ∈ {1,2,6,8}; penetration in range) in live-shoe mode.
+- `card-counting-page.component.ts` state machine: in live-shoe true-count mode draw
+  the drill's `numberOfCards` from a persistent `ShoeService` instead of
+  `cardGenerator.generateSequence(...)`; carry the shoe + running count across rounds
+  until the cut, then auto-reshuffle (visible notice, reset running count). Add an
+  estimate-prompt step after `streaming` (ask decks remaining, then the true count —
+  or a combined form) without breaking the existing running-count and classic
+  true-count flows.
+- `counting-settings.component.ts`: add decks (1/2/6/8) + penetration controls and a
+  live-shoe vs classic toggle (true-count mode). Keep the existing "Decks remaining"
+  preset `<select>` for classic mode; add a live decks-remaining / penetration
+  readout.
+- Estimation prompt UI: extend `count-answer-form.component.ts` or add a small
+  deck-estimate form (half-deck stepper, `step=0.5`, `inputmode=decimal`).
+- New `src/app/core/services/deck-estimation-stats.service.ts` extending `StatsStore`
+  with a new key (pattern: `true-count-stats.service.ts`); surface it via the stats
+  panel in live-shoe mode.
+- Specs (co-located `*.spec.ts`) for: shoe model/service (deal-without-replacement,
+  depletion, `decksRemaining`, deterministic shuffle via the seam, cut-card /
+  reshuffle), estimate scoring (±0.5 band), page wiring (round persistence +
+  reshuffle, estimate prompt, true count graded vs actual), settings controls, the
+  new stats store, and **regression**: Hi-Lo / KO / Omega II / Wong Halves
+  running-count and the classic-preset true-count path unchanged.
 
-**Validation:** docs-only — no code to validate. (Do not advance to coding.)
+**Files (likely):** `src/app/core/models/shoe.model.ts` (new),
+`src/app/core/services/shoe.service.ts` (new),
+`src/app/core/services/deck-estimation-stats.service.ts` (new),
+`src/app/core/models/card-counting.model.ts`,
+`src/app/core/services/counting-engine.service.ts`,
+`src/app/features/card-counting/card-counting-page.component.ts`,
+`src/app/features/card-counting/counting-settings.component.ts`,
+`src/app/features/card-counting/count-answer-form.component.ts` (or a new
+deck-estimate form), plus all co-located specs.
 
-**Commit:** `docs: add Slice 8 finite-shoe design sub-plan and mark needs review`
+**Out of scope:** Showdowns (Slice 9); finite depletion for running-count drills;
+Option-2 "estimate drives the true count" grading (can be a later toggle).
 
-One-slice contract: this run does the design pause for Slice 8 only — one
-`docs:` commit, push, stop. Do not implement the shoe, and do not start Slice 9.
+**Acceptance criteria:**
+
+- [ ] A finite, persistent shoe drives a true-count drill end to end (dealt without
+      replacement; decks-remaining + running count carry across rounds to the cut
+      card; auto-reshuffle with notice + running-count reset at the cut).
+- [ ] After the stream the player is prompted for decks remaining; the estimate is
+      scored within a ±0.5-deck band and tracked in a separate persisted stat store.
+- [ ] True count is graded against the shoe's **actual** decks remaining.
+- [ ] Player can configure decks (1/2/6/8) and penetration (~75% default).
+- [ ] Classic `DECKS_REMAINING_PRESETS` true-count mode still works unchanged.
+- [ ] Running-count drills and Hi-Lo/KO/Omega II/Wong Halves behavior unchanged.
+- [ ] Tests green.
+
+**Validation:** `npm run lint`, `npm run typecheck`, `CI=true npm test`,
+`npm run build`, plus a manual smoke of a live-shoe true-count drill.
+
+**Commit:** `feat: add finite-shoe live deck estimation`
+
+**One-slice contract:** implement only Slice 8; make exactly **one** commit (feature
+code + this file's updates + `docs/roadmap.md` status → Done); push to `origin main`;
+then record a self-contained prompt for **Slice 9 (Multi-hand showdowns)**. Slice 9
+is itself a _pause-for-decision_ slice with **no safe default**, so its recorded
+prompt must instruct the next run to write a design sub-plan and mark Slice 9
+**Needs review** rather than implement. Do not start Slice 9 in this run.
 
 ## Slice 8 — design sub-plan (Needs review)
 
-_Written per the pause-for-decision protocol. Slice 8 has no safe default for how
-the deck-remaining estimate is prompted and scored, so no feature code is written
-until the owner picks the options below. Next slice stays 8._
+_Owner decisions recorded 2026-06-05 (see "6. Decisions (resolved 2026-06-05)"
+below) — Slice 8 is now ready to implement. The options below are kept for context.
+Next slice stays 8 until the feature lands._
 
 ### 1. Finite-shoe model (new, under `src/app/core/`)
 
@@ -169,9 +219,35 @@ Option 2's realistic error-propagation can be a later toggle.
 8. **Stats:** add a separate persisted deck-estimation accuracy store (new
    localStorage key, like the existing running/true-count stores)?
 
-Once the owner answers, a future run records the chosen options in the slice-8
-prompt above and implements Slice 8 as a single feature commit (shoe
-model/service + true-count wiring + estimation prompt/scoring + specs).
+The owner has now answered (2026-06-05); the chosen options are recorded in
+"6. Decisions" below and encoded in the slice-8 implementation prompt above. A
+future run implements Slice 8 as a single feature commit (shoe model/service +
+true-count wiring + estimation prompt/scoring + specs).
+
+### 6. Decisions (resolved 2026-06-05)
+
+The owner answered the four load-bearing questions via the autopilot (all
+recommended); the other four take the sub-plan's recommended defaults. By the
+"5. Open questions" numbering above:
+
+1. **Grading → Option 1 (owner):** grade the true count vs the shoe's **actual**
+   decks remaining; track deck-estimation accuracy as a separate ±0.5-deck stat.
+2. **Granularity & tolerance → default:** half-deck stepper, ±0.5-deck "good" band.
+3. **Shoe persistence → persist (owner):** the shoe persists across rounds to the
+   cut card (decks-remaining + running count carry over and deplete); reshuffle at
+   the cut.
+4. **Shoe config → configurable (owner):** expose decks (1/2/6/8) and penetration
+   (~50–90%, default ~75%).
+5. **Reshuffle UX → default:** auto-reshuffle at the cut with a visible notice and
+   reset the running count to 0.
+6. **Mode coverage → default:** finite shoe in true-count mode only; running-count
+   drills keep the i.i.d. `CardGeneratorService`.
+7. **Classic presets → keep (owner):** retain `DECKS_REMAINING_PRESETS` as a
+   selectable "classic" true-count mode alongside the live shoe.
+8. **Stats → default:** add a separate persisted deck-estimation accuracy store
+   (new localStorage key, like the running/true-count stores).
+
+These are encoded in the slice-8 implementation prompt above.
 
 ## Execution log
 
@@ -184,4 +260,5 @@ model/service + true-count wiring + estimation prompt/scoring + specs).
 |     5 | KO (Knock-Out) counting system          | Done         | 3b1e365 | lint+typecheck+test+build              | 2026-06-05 | Safe default (no pause): KO is **running-count-only**; true-count stays Hi-Lo-only. Gated true-count on the existing `balanced` flag (not KO-by-name): the page exposes `trueCountAvailable = system().balanced`; added a `Counting system` `<select>` to `CountingSettingsComponent` (`systems`/`systemId`/`trueCountAvailable` inputs, `systemChange` output) that disables the true-count radio and shows a note when unbalanced; `onSystemChange` coerces mode→running-count for unbalanced systems. Page `system` is now a signal (was a const). Engine untouched — already system-agnostic (sums `values[rank]`). KO descriptor: 2–7→+1, 8–9→0, 10–A→−1, `balanced:false`, full-deck sum **+4** (differs from Hi-Lo only on the 7). New `data/counting-systems.spec.ts`; +27 tests (497→524). KO IRC/key-count true-count math deferred. Hi-Lo unaffected.                                                                                                                                                                                                                                                                                                                                                  |
 |     6 | Widen CountValue + Omega II             | Done         | 0422a25 | lint+typecheck+test+build              | 2026-06-05 | Decision: None (proceeded). Widened `CountValue` from level-1 (−1/0/+1) to a level-2 integer union spanning −2…+2 — kept it an integer union (not `number`) to preserve cheap compile-time validation; fractional widening deferred to Slice 7. Engine untouched: `runningCount` already sums `values[rank]` so ±2 works, and `trueCount` is valid for the balanced Omega II. Added the `OMEGA_II` descriptor (2,3,7→+1; 4,5,6→+2; 8,A→0; 9→−1; 10,J,Q,K→−2; `balanced:true`, full-deck sum **0**) and appended it to `COUNTING_SYSTEMS`; the selector is data-driven, so no new UI wiring. Hi-Lo/KO values and outputs unchanged. Updated the page spec's selectable-systems assertion to include `omega-ii` and added a page test that Omega II keeps true count (balanced). `count-feedback-panel` `deltaLabel` already renders ±2. +14 tests (524→538).                                                                                                                                                                                                                                                                                                                                                       |
 |     7 | Wong Halves counting system             | Done         | a27525a | lint+typecheck+test+build              | 2026-06-05 | Decision: representation — chose **true fractional values** (recorded default); doubled-integer ×2 not used. Widened `CountValue` from the `-2..2` union to `number` (the model comment had anticipated this); existing systems' values/outputs unchanged. Added `WONG_HALVES` (2,7→+0.5; 3,4,6→+1; 5→+1.5; 8→0; 9→−0.5; 10–A→−1; `balanced:true`, full-deck sum **0**) and appended to `COUNTING_SYSTEMS` (selector is data-driven). Engine: added `isValidDecimalAnswer` (sign + int + optional `.frac`) and `isFractionalSystem` (any non-integer per-rank value); `isValidIntegerAnswer`/`runningCount`/`trueCount` untouched — halves are binary-exact so `===` and `trunc` stay correct. Answer form: new `allowFractions` input (default false → integer behavior identical); `canSubmit` branches to the decimal validator, `onSubmit` now uses `Number()` (was `parseInt`, which truncated 2.5→2), dynamic `step=0.5`/`inputmode=decimal`, plus a UI note documenting the half-point convention. Page gates `fractionalAnswers = running-count mode && isFractionalSystem` (true count is always whole via trunc). `count-feedback-panel` already renders fractional deltas/totals. +30 tests (538→568). |
-|     8 | Finite-shoe live deck estimation        | Needs review | pending | docs-only (design pause)               | 2026-06-05 | Pause-for-decision (no safe default): wrote the Slice 8 design sub-plan — finite-shoe model (`shoe.model.ts`/`ShoeService`, deals without replacement, tracks `decksRemaining`), how it wires into the true-count trainer (live shoe `decksRemaining` replaces the `DECKS_REMAINING_PRESETS` pick; shoe persists across rounds to the cut card), and **3 prompt/scoring options** with a recommendation + **8 open questions** — and set roadmap Status → **Needs review**. **No feature code.** Recommended Option 1: estimate-then-reveal, true count graded vs **actual** decks, separate ±0.5-deck estimation accuracy stat. Applies to balanced systems (hi-lo/omega-ii/wong-halves); KO unaffected. Next slice stays **8** until the owner decides. Also backfilled Slice 7's commit hash (pending → a27525a).                                                                                                                                                                                                                                                                                                                                                                                              |
+|     8 | Finite-shoe live deck estimation        | Needs review | 8a83325 | docs-only (design pause)               | 2026-06-05 | Pause-for-decision (no safe default): wrote the Slice 8 design sub-plan — finite-shoe model (`shoe.model.ts`/`ShoeService`, deals without replacement, tracks `decksRemaining`), how it wires into the true-count trainer (live shoe `decksRemaining` replaces the `DECKS_REMAINING_PRESETS` pick; shoe persists across rounds to the cut card), and **3 prompt/scoring options** with a recommendation + **8 open questions** — and set roadmap Status → **Needs review**. **No feature code.** Recommended Option 1: estimate-then-reveal, true count graded vs **actual** decks, separate ±0.5-deck estimation accuracy stat. Applies to balanced systems (hi-lo/omega-ii/wong-halves); KO unaffected. Next slice stays **8** until the owner decides. Also backfilled Slice 7's commit hash (pending → a27525a).                                                                                                                                                                                                                                                                                                                                                                                              |
+|     8 | Finite-shoe — design decisions recorded | Planned      | pending | docs-only (decisions recorded)         | 2026-06-05 | Owner answered the 4 load-bearing Slice 8 questions via the autopilot AskUserQuestion prompt (all recommended): grade true count vs **actual** decks + separate ±0.5-deck estimation stat; shoe **persists** to the cut card; **player-configurable** decks (1/2/6/8) + penetration (~75%); **keep** `DECKS_REMAINING_PRESETS` as a classic mode. Defaulted the other four (half-deck ±0.5 band; auto-reshuffle+notice+count-reset at the cut; finite shoe in true-count mode only; separate persisted estimation-accuracy store) — see §6. Rewrote the slice-8 prompt as a concrete implementation prompt and set roadmap Status Needs review → Planned. No feature code. Next slice stays 8 (now ready to build).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
