@@ -10,6 +10,12 @@ import {
   type TrueCountDrillResult,
 } from '../models/card-counting.model';
 import type { CountingSystem } from '../models/counting-system.model';
+import {
+  CARDS_PER_DECK,
+  MAX_PENETRATION,
+  MIN_PENETRATION,
+  SHOE_DECK_OPTIONS,
+} from '../models/shoe.model';
 
 @Injectable({ providedIn: 'root' })
 export class CountingEngineService {
@@ -49,13 +55,18 @@ export class CountingEngineService {
 
   // Compare the user's claimed true count against the truncated true count
   // derived from the sequence's running count and the given decks remaining.
+  // priorRunningCount carries the running count from earlier rounds of the same
+  // shoe (live-shoe mode); it defaults to 0, preserving classic single-round
+  // behavior, and is folded into correctRunningCount so the true count reflects
+  // every card seen since the last shuffle.
   evaluateTrueCount(
     cards: readonly Card[],
     userTrueCount: number,
     decksRemaining: number,
     system: CountingSystem,
+    priorRunningCount = 0,
   ): TrueCountDrillResult {
-    const correctRunningCount = this.runningCount(cards, system);
+    const correctRunningCount = priorRunningCount + this.runningCount(cards, system);
     const correctTrueCount = this.trueCount(correctRunningCount, decksRemaining);
     return {
       mode: 'true-count',
@@ -65,7 +76,15 @@ export class CountingEngineService {
       correctTrueCount,
       userTrueCount,
       isCorrect: userTrueCount === correctTrueCount,
+      priorRunningCount,
     };
+  }
+
+  // Whether a decks-remaining estimate falls within the "good" tolerance band of
+  // the actual decks remaining. The default band is ±0.5 deck; a small epsilon
+  // absorbs floating-point error from decksRemaining = cardsRemaining / 52.
+  scoreDeckEstimate(estimate: number, actual: number, tolerance = 0.5): boolean {
+    return Math.abs(estimate - actual) <= tolerance + 1e-9;
   }
 
   // Validates a drill settings object. Returns all errors at once so the UI
@@ -87,13 +106,41 @@ export class CountingEngineService {
       errors.push(`Time between cards must be at least ${MIN_MILLISECONDS_BETWEEN_CARDS}ms.`);
     }
 
-    // Decks remaining is only required when the user is being asked for a
-    // true count. In running-count mode it has no bearing on the drill.
+    // The decks-remaining configuration is only relevant when the user is being
+    // asked for a true count. In running-count mode it has no bearing on the
+    // drill, so it is not validated.
     if (settings.mode === 'true-count') {
-      if (!Number.isFinite(settings.decksRemaining)) {
-        errors.push('Decks remaining must be a number.');
-      } else if (settings.decksRemaining <= 0) {
-        errors.push('Decks remaining must be greater than 0.');
+      if (settings.trueCountSource === 'classic') {
+        // Classic mode: the user picks a fixed decks-remaining value.
+        if (!Number.isFinite(settings.decksRemaining)) {
+          errors.push('Decks remaining must be a number.');
+        } else if (settings.decksRemaining <= 0) {
+          errors.push('Decks remaining must be greater than 0.');
+        }
+      } else {
+        // Live-shoe mode: validate the shoe configuration instead.
+        const deckOptions = SHOE_DECK_OPTIONS as readonly number[];
+        if (!deckOptions.includes(settings.numberOfDecks)) {
+          errors.push('Number of decks must be 1, 2, 6, or 8.');
+        }
+        if (
+          !Number.isFinite(settings.penetration) ||
+          settings.penetration < MIN_PENETRATION ||
+          settings.penetration > MAX_PENETRATION
+        ) {
+          errors.push(
+            `Penetration must be between ${Math.round(MIN_PENETRATION * 100)}% and ${Math.round(
+              MAX_PENETRATION * 100,
+            )}%.`,
+          );
+        } else if (
+          Number.isInteger(settings.numberOfCards) &&
+          settings.numberOfCards >= 1 &&
+          deckOptions.includes(settings.numberOfDecks) &&
+          settings.numberOfCards > settings.numberOfDecks * CARDS_PER_DECK
+        ) {
+          errors.push('Number of cards must not exceed the shoe size (52 × decks).');
+        }
       }
     }
 

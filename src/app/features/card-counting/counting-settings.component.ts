@@ -1,6 +1,6 @@
 import { Component, input, output } from '@angular/core';
 
-import type { DrillMode } from '../../core/models/card-counting.model';
+import type { DrillMode, TrueCountSource } from '../../core/models/card-counting.model';
 import type { CountingSystem } from '../../core/models/counting-system.model';
 
 @Component({
@@ -68,7 +68,7 @@ import type { CountingSystem } from '../../core/models/counting-system.model';
             (input)="onMsInput($event)"
           />
         </label>
-        @if (mode() === 'true-count') {
+        @if (mode() === 'true-count' && trueCountSource() === 'classic') {
           <label class="settings__field">
             <span>Decks remaining</span>
             <select
@@ -84,7 +84,62 @@ import type { CountingSystem } from '../../core/models/counting-system.model';
             </select>
           </label>
         }
+        @if (mode() === 'true-count' && trueCountSource() === 'live-shoe') {
+          <label class="settings__field">
+            <span>Number of decks</span>
+            <select
+              class="settings__decks"
+              [value]="numberOfDecks()"
+              (change)="onDecksChange($event)"
+            >
+              @for (d of deckOptions(); track d) {
+                <option [value]="d" [selected]="d === numberOfDecks()">{{ d }}</option>
+              }
+            </select>
+          </label>
+          <label class="settings__field">
+            <span>Penetration</span>
+            <select
+              class="settings__penetration"
+              [value]="penetration()"
+              (change)="onPenetrationChange($event)"
+            >
+              @for (p of penetrationPresets(); track p) {
+                <option [value]="p" [selected]="p === penetration()">{{ formatPercent(p) }}</option>
+              }
+            </select>
+          </label>
+        }
       </div>
+      @if (mode() === 'true-count') {
+        <div class="settings__source" role="radiogroup" aria-label="True-count decks source">
+          <label class="settings__mode">
+            <input
+              type="radio"
+              name="tc-source"
+              value="live-shoe"
+              [checked]="trueCountSource() === 'live-shoe'"
+              (change)="onSourceChange('live-shoe')"
+            />
+            <span>Live shoe</span>
+          </label>
+          <label class="settings__mode">
+            <input
+              type="radio"
+              name="tc-source"
+              value="classic"
+              [checked]="trueCountSource() === 'classic'"
+              (change)="onSourceChange('classic')"
+            />
+            <span>Classic (preset decks)</span>
+          </label>
+        </div>
+        @if (trueCountSource() === 'live-shoe') {
+          <p class="settings__readout">
+            Decks remaining (live): <strong>{{ formatDecks(liveDecksRemaining()) }}</strong>
+          </p>
+        }
+      }
       @if (errors().length > 0) {
         <ul class="settings__errors" role="alert">
           @for (err of errors(); track err) {
@@ -105,6 +160,13 @@ export class CountingSettingsComponent {
   readonly millisecondsBetweenCards = input.required<number>();
   readonly decksRemaining = input.required<number>();
   readonly decksRemainingPresets = input.required<readonly number[]>();
+  // Live-shoe true-count configuration.
+  readonly trueCountSource = input<TrueCountSource>('live-shoe');
+  readonly numberOfDecks = input.required<number>();
+  readonly penetration = input.required<number>();
+  readonly deckOptions = input.required<readonly number[]>();
+  readonly penetrationPresets = input.required<readonly number[]>();
+  readonly liveDecksRemaining = input.required<number>();
   readonly errors = input<readonly string[]>([]);
   readonly disabled = input(false);
 
@@ -113,6 +175,9 @@ export class CountingSettingsComponent {
   readonly numberOfCardsChange = output<number>();
   readonly millisecondsBetweenCardsChange = output<number>();
   readonly decksRemainingChange = output<number>();
+  readonly trueCountSourceChange = output<TrueCountSource>();
+  readonly numberOfDecksChange = output<number>();
+  readonly penetrationChange = output<number>();
 
   protected onSystemChange(event: Event): void {
     this.systemChange.emit((event.target as HTMLSelectElement).value);
@@ -135,8 +200,32 @@ export class CountingSettingsComponent {
     this.decksRemainingChange.emit(Number(raw));
   }
 
+  protected onSourceChange(source: TrueCountSource): void {
+    this.trueCountSourceChange.emit(source);
+  }
+
+  protected onDecksChange(event: Event): void {
+    this.numberOfDecksChange.emit(Number((event.target as HTMLSelectElement).value));
+  }
+
+  protected onPenetrationChange(event: Event): void {
+    this.penetrationChange.emit(Number((event.target as HTMLSelectElement).value));
+  }
+
   // Half-deck presets render as e.g. "0.5"; whole decks render as e.g. "1".
   protected formatPreset(preset: number): string {
     return Number.isInteger(preset) ? String(preset) : preset.toFixed(1);
+  }
+
+  // Penetration fraction (0.75) → "75%".
+  protected formatPercent(fraction: number): string {
+    return `${Math.round(fraction * 100)}%`;
+  }
+
+  // Live decks-remaining readout: whole decks as "5", otherwise up to two
+  // decimals with trailing zeros trimmed (e.g. 5.6153… → "5.62", 2.5 → "2.5").
+  protected formatDecks(value: number): string {
+    if (Number.isInteger(value)) return String(value);
+    return value.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
   }
 }
