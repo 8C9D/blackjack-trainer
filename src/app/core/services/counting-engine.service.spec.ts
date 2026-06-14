@@ -14,14 +14,33 @@ const rcSettings = (overrides: Partial<CountingDrillSettings> = {}): CountingDri
   numberOfCards: 20,
   millisecondsBetweenCards: 500,
   decksRemaining: 1,
+  trueCountSource: 'classic',
+  numberOfDecks: 6,
+  penetration: 0.75,
   ...overrides,
 });
 
+// Classic preset true-count settings (the original behavior).
 const tcSettings = (overrides: Partial<CountingDrillSettings> = {}): CountingDrillSettings => ({
   mode: 'true-count',
   numberOfCards: 20,
   millisecondsBetweenCards: 500,
   decksRemaining: 2,
+  trueCountSource: 'classic',
+  numberOfDecks: 6,
+  penetration: 0.75,
+  ...overrides,
+});
+
+// Live-shoe true-count settings.
+const liveSettings = (overrides: Partial<CountingDrillSettings> = {}): CountingDrillSettings => ({
+  mode: 'true-count',
+  numberOfCards: 20,
+  millisecondsBetweenCards: 500,
+  decksRemaining: 2,
+  trueCountSource: 'live-shoe',
+  numberOfDecks: 6,
+  penetration: 0.75,
   ...overrides,
 });
 
@@ -338,6 +357,52 @@ describe('CountingEngineService', () => {
       expect(result.correctTrueCount).toBe(3);
       expect(result.isCorrect).toBe(true);
     });
+
+    it('defaults priorRunningCount to 0 (classic single-round behavior)', () => {
+      const cards = seq('2', '3', '4', '5', '6'); // +5
+      const result = engine.evaluateTrueCount(cards, 2, 2, HI_LO);
+      expect(result.priorRunningCount).toBe(0);
+      expect(result.correctRunningCount).toBe(5);
+    });
+
+    it('folds priorRunningCount into the running count for a persistent shoe', () => {
+      // Prior +4 carried over; this round 2(+1) 3(+1) => +2; total +6 over 2 decks => 3.
+      const cards = seq('2', '3');
+      const result = engine.evaluateTrueCount(cards, 3, 2, HI_LO, 4);
+      expect(result.priorRunningCount).toBe(4);
+      expect(result.correctRunningCount).toBe(6);
+      expect(result.correctTrueCount).toBe(3);
+      expect(result.isCorrect).toBe(true);
+    });
+  });
+
+  describe('scoreDeckEstimate()', () => {
+    it('accepts an exact match', () => {
+      expect(engine.scoreDeckEstimate(5, 5)).toBe(true);
+    });
+
+    it('accepts an estimate at the ±0.5 boundary', () => {
+      expect(engine.scoreDeckEstimate(5, 5.5)).toBe(true);
+      expect(engine.scoreDeckEstimate(6, 5.5)).toBe(true);
+    });
+
+    it('rejects an estimate outside the ±0.5 band', () => {
+      expect(engine.scoreDeckEstimate(5, 5.51)).toBe(false);
+      expect(engine.scoreDeckEstimate(4, 5)).toBe(false);
+    });
+
+    it('tolerates floating-point decks-remaining values (cards / 52)', () => {
+      const actual = 260 / 52; // exactly 5, but exercises the division path
+      expect(engine.scoreDeckEstimate(5, actual)).toBe(true);
+      const messy = 290 / 52; // ≈ 5.5769
+      expect(engine.scoreDeckEstimate(5.5, messy)).toBe(true);
+      expect(engine.scoreDeckEstimate(5, messy)).toBe(false);
+    });
+
+    it('honors a custom tolerance band', () => {
+      expect(engine.scoreDeckEstimate(5, 5.2, 0.25)).toBe(true);
+      expect(engine.scoreDeckEstimate(5, 5.4, 0.25)).toBe(false);
+    });
   });
 
   describe('validateSettings()', () => {
@@ -442,6 +507,63 @@ describe('CountingEngineService', () => {
     it('true-count mode rejects non-finite decksRemaining', () => {
       const v = engine.validateSettings(tcSettings({ decksRemaining: Number.POSITIVE_INFINITY }));
       expect(v.valid).toBe(false);
+    });
+
+    it('classic true-count mode ignores shoe config (bad decks/penetration are fine)', () => {
+      const v = engine.validateSettings(tcSettings({ numberOfDecks: 3, penetration: 2 }));
+      expect(v.valid).toBe(true);
+    });
+
+    it('accepts valid live-shoe settings', () => {
+      const v = engine.validateSettings(liveSettings());
+      expect(v.valid).toBe(true);
+      expect(v.errors).toEqual([]);
+    });
+
+    it('live-shoe mode ignores decksRemaining (the live shoe supplies it)', () => {
+      const v = engine.validateSettings(liveSettings({ decksRemaining: 0 }));
+      expect(v.valid).toBe(true);
+    });
+
+    it('live-shoe mode rejects a deck count outside 1/2/6/8', () => {
+      const v = engine.validateSettings(liveSettings({ numberOfDecks: 4 }));
+      expect(v.valid).toBe(false);
+      expect(v.errors.some((e) => e.includes('Number of decks'))).toBe(true);
+    });
+
+    it('live-shoe mode accepts each supported deck count', () => {
+      for (const decks of [1, 2, 6, 8]) {
+        const v = engine.validateSettings(liveSettings({ numberOfDecks: decks }));
+        expect(v.valid).toBe(true);
+      }
+    });
+
+    it('live-shoe mode rejects penetration below 50%', () => {
+      const v = engine.validateSettings(liveSettings({ penetration: 0.4 }));
+      expect(v.valid).toBe(false);
+      expect(v.errors.some((e) => e.includes('Penetration'))).toBe(true);
+    });
+
+    it('live-shoe mode rejects penetration above 90%', () => {
+      const v = engine.validateSettings(liveSettings({ penetration: 0.95 }));
+      expect(v.valid).toBe(false);
+    });
+
+    it('live-shoe mode accepts the 50% and 90% boundaries', () => {
+      expect(engine.validateSettings(liveSettings({ penetration: 0.5 })).valid).toBe(true);
+      expect(engine.validateSettings(liveSettings({ penetration: 0.9 })).valid).toBe(true);
+    });
+
+    it('live-shoe mode rejects a card count larger than the shoe', () => {
+      // 1-deck shoe holds 52 cards; asking for 60 cannot be dealt without replacement.
+      const v = engine.validateSettings(liveSettings({ numberOfDecks: 1, numberOfCards: 60 }));
+      expect(v.valid).toBe(false);
+      expect(v.errors.some((e) => e.includes('shoe size'))).toBe(true);
+    });
+
+    it('live-shoe mode accepts a card count up to exactly the shoe size', () => {
+      const v = engine.validateSettings(liveSettings({ numberOfDecks: 1, numberOfCards: 52 }));
+      expect(v.valid).toBe(true);
     });
   });
 
