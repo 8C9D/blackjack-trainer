@@ -15,6 +15,8 @@ import {
   SHOE_DECK_OPTIONS,
   type Shoe,
 } from '../../core/models/shoe.model';
+import { MIN_SHOWDOWN_CARDS } from '../../core/models/showdown.model';
+import type { RuleSet } from '../../core/models/strategy.model';
 import { COUNTING_SYSTEMS, HI_LO } from '../../data/counting-systems';
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
 import { CardGeneratorService } from '../../core/services/card-generator.service';
@@ -28,10 +30,12 @@ import { CountAnswerFormComponent } from './count-answer-form.component';
 import { CountFeedbackPanelComponent } from './count-feedback-panel.component';
 import { CountingSettingsComponent } from './counting-settings.component';
 import { DeckEstimateFormComponent } from './deck-estimate-form.component';
+import { ShowdownComponent } from './showdown.component';
 
 // 'estimating' is the live-shoe-only step where the player guesses the decks
-// remaining before giving the true count.
-type DrillState = 'idle' | 'streaming' | 'estimating' | 'answering' | 'feedback';
+// remaining before giving the true count. 'showdown' is the optional post-count
+// step where the player plays a hand vs the dealer off the same live shoe.
+type DrillState = 'idle' | 'streaming' | 'estimating' | 'answering' | 'feedback' | 'showdown';
 
 @Component({
   selector: 'app-card-counting-page',
@@ -42,6 +46,7 @@ type DrillState = 'idle' | 'streaming' | 'estimating' | 'answering' | 'feedback'
     CountAnswerFormComponent,
     CountFeedbackPanelComponent,
     StatsPanelComponent,
+    ShowdownComponent,
   ],
   template: `
     <div class="page">
@@ -66,7 +71,7 @@ type DrillState = 'idle' | 'streaming' | 'estimating' | 'answering' | 'feedback'
         [penetrationPresets]="penetrationPresets"
         [liveDecksRemaining]="liveDecksRemaining()"
         [errors]="validationErrors()"
-        [disabled]="isDrillActive()"
+        [disabled]="settingsLocked()"
         (systemChange)="onSystemChange($event)"
         (modeChange)="updateSetting('mode', $event)"
         (numberOfCardsChange)="updateSetting('numberOfCards', $event)"
@@ -119,6 +124,23 @@ type DrillState = 'idle' | 'streaming' | 'estimating' | 'answering' | 'feedback'
 
       @if (state() === 'feedback' && result(); as r) {
         <app-count-feedback-panel [result]="r" [system]="system()" (next)="start()" />
+      }
+
+      @if (state() === 'feedback' && liveShoeTrueCount() && showdownAvailable()) {
+        <div class="page__showdown-cta">
+          <button type="button" class="page__showdown-button" (click)="enterShowdown()">
+            Play a hand vs the dealer
+          </button>
+        </div>
+      }
+
+      @if (state() === 'showdown') {
+        <app-showdown
+          [shoe]="shoe!"
+          [ruleSet]="ruleSet()"
+          (ruleSetChange)="ruleSet.set($event)"
+          (exit)="exitShowdown()"
+        />
       }
 
       @if (liveShoeTrueCount()) {
@@ -185,6 +207,9 @@ export class CardCountingPageComponent {
   );
 
   protected readonly state = signal<DrillState>('idle');
+  // Dealer rule for the optional post-count showdown. Defaults to S17, matching
+  // the other trainers; the showdown UI lets the player toggle it.
+  protected readonly ruleSet = signal<RuleSet>('S17');
   protected readonly settings = signal<CountingDrillSettings>({
     mode: 'running-count',
     numberOfCards: 20,
@@ -199,8 +224,9 @@ export class CardCountingPageComponent {
   protected readonly result = signal<CountingDrillResult | null>(null);
 
   // Live-shoe state. `shoe` persists across rounds until the cut card; the
-  // running count and decks remaining carry over and deplete with it.
-  private shoe: Shoe | null = null;
+  // running count and decks remaining carry over and deplete with it. It is also
+  // the card source for the post-count showdown.
+  protected shoe: Shoe | null = null;
   // Running count accumulated over earlier rounds of the current shoe (reset to
   // 0 on each reshuffle). It is the prior added to the next round's cards.
   protected readonly shoeRunningCount = signal(0);
@@ -228,6 +254,12 @@ export class CardCountingPageComponent {
   protected readonly isDrillActive = computed(
     () =>
       this.state() === 'streaming' || this.state() === 'estimating' || this.state() === 'answering',
+  );
+
+  // Settings are locked while a drill is in flight and during a showdown, so the
+  // shoe the showdown is dealing from cannot be reconfigured mid-hand.
+  protected readonly settingsLocked = computed(
+    () => this.isDrillActive() || this.state() === 'showdown',
   );
 
   protected readonly activeStats = computed(() =>
@@ -363,6 +395,27 @@ export class CardCountingPageComponent {
     }
     // Carry the cumulative running count into the next round of this shoe.
     this.shoeRunningCount.set(evaluated.correctRunningCount);
+  }
+
+  // Whether a post-count showdown can be offered: a live shoe exists with enough
+  // cards to deal an opening hand. (`shoe` is mutated in place, so this is a
+  // method, re-read each change-detection pass rather than a memoized computed.)
+  protected showdownAvailable(): boolean {
+    return this.shoe !== null && this.shoe.cardsRemaining >= MIN_SHOWDOWN_CARDS;
+  }
+
+  // Enter the showdown off the persistent live shoe after a true-count round.
+  protected enterShowdown(): void {
+    if (this.state() !== 'feedback') return;
+    if (!this.liveShoeTrueCount() || !this.showdownAvailable()) return;
+    this.state.set('showdown');
+  }
+
+  // Return to the count-drill feedback; the shoe keeps whatever depletion the
+  // showdown caused, so the next round reshuffles if it has crossed the cut.
+  protected exitShowdown(): void {
+    if (this.state() !== 'showdown') return;
+    this.state.set('feedback');
   }
 
   // Switch the active counting system. Unbalanced systems (KO) are running-

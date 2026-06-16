@@ -7,6 +7,8 @@ import type {
   CountingDrillSettings,
 } from '../../core/models/card-counting.model';
 import type { CountingSystem } from '../../core/models/counting-system.model';
+import type { Shoe } from '../../core/models/shoe.model';
+import type { RuleSet } from '../../core/models/strategy.model';
 import { HI_LO } from '../../data/counting-systems';
 import { CountingEngineService } from '../../core/services/counting-engine.service';
 import { CardCountingPageComponent } from './card-counting-page.component';
@@ -20,7 +22,7 @@ type StatsLike = {
 };
 
 type Internals = {
-  state(): 'idle' | 'streaming' | 'estimating' | 'answering' | 'feedback';
+  state(): 'idle' | 'streaming' | 'estimating' | 'answering' | 'feedback' | 'showdown';
   settings(): CountingDrillSettings;
   cards(): readonly Card[];
   currentIndex(): number;
@@ -51,6 +53,11 @@ type Internals = {
   liveDecksRemaining(): number;
   reshuffleNotice(): boolean;
   timeoutId: ReturnType<typeof setTimeout> | null;
+  ruleSet(): RuleSet;
+  shoe: Shoe | null;
+  showdownAvailable(): boolean;
+  enterShowdown(): void;
+  exitShowdown(): void;
 };
 
 function asInternals(c: CardCountingPageComponent): Internals {
@@ -787,6 +794,83 @@ describe('CardCountingPageComponent', () => {
       configureLiveShoe(c);
       c.onSystemChange('ko'); // unbalanced => coerced to running-count
       expect(c.liveShoeTrueCount()).toBe(false);
+    });
+
+    // Drive a live-shoe true-count round all the way to its feedback state.
+    function toLiveShoeFeedback(c: Internals): void {
+      configureLiveShoe(c, { numberOfDecks: 6, numberOfCards: 10 });
+      c.start();
+      streamToEnd(c);
+      c.onEstimate(c.actualDecksRemaining());
+      c.onAnswer(0);
+    }
+
+    it('defaults the showdown dealer rule to S17', () => {
+      const { c } = createPage();
+      expect(c.ruleSet()).toBe('S17');
+    });
+
+    it('offers a showdown after a live-shoe true-count round', () => {
+      const { fixture, c } = createPage();
+      toLiveShoeFeedback(c);
+      expect(c.state()).toBe('feedback');
+      expect(c.showdownAvailable()).toBe(true);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.page__showdown-button')).not.toBeNull();
+    });
+
+    it('enters the showdown and deals from the same persistent shoe', () => {
+      const { fixture, c } = createPage();
+      toLiveShoeFeedback(c);
+      const before = c.shoe!.cardsRemaining;
+      c.enterShowdown();
+      expect(c.state()).toBe('showdown');
+      // Mounting app-showdown deals its opening hand from the page's shoe.
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('app-showdown')).not.toBeNull();
+      expect(c.shoe!.cardsRemaining).toBe(before - 4);
+    });
+
+    it('exitShowdown returns to the count feedback', () => {
+      const { c } = createPage();
+      toLiveShoeFeedback(c);
+      c.enterShowdown();
+      expect(c.state()).toBe('showdown');
+      c.exitShowdown();
+      expect(c.state()).toBe('feedback');
+    });
+
+    it('locks the settings fieldset during a showdown', () => {
+      const { fixture, c } = createPage();
+      toLiveShoeFeedback(c);
+      c.enterShowdown();
+      fixture.detectChanges();
+      const fieldset = fixture.nativeElement.querySelector(
+        'fieldset.settings',
+      ) as HTMLFieldSetElement;
+      expect(fieldset.disabled).toBe(true);
+    });
+
+    it('does not enter a showdown from a non-feedback state', () => {
+      const { c } = createPage();
+      configureLiveShoe(c, { numberOfCards: 10 });
+      c.start(); // streaming
+      c.enterShowdown();
+      expect(c.state()).toBe('streaming');
+    });
+
+    it('does not offer a showdown in classic preset true-count mode (no live shoe)', () => {
+      const { c } = createPage();
+      c.updateSetting('mode', 'true-count');
+      c.updateSetting('trueCountSource', 'classic');
+      c.updateSetting('decksRemaining', 2);
+      c.updateSetting('numberOfCards', 1);
+      c.updateSetting('millisecondsBetweenCards', 100);
+      c.start();
+      vi.advanceTimersByTime(100);
+      c.onAnswer(0);
+      expect(c.state()).toBe('feedback');
+      expect(c.showdownAvailable()).toBe(false);
     });
   });
 });

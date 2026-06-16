@@ -86,4 +86,24 @@ describe('ActionButtonsComponent', () => {
     buttons(fixture)[0].click();
     expect(emitted).toBe(0);
   });
+
+  it('renders only the provided action subset in order (hit/stand)', () => {
+    const fixture = TestBed.createComponent(ActionButtonsComponent);
+    fixture.componentRef.setInput('actions', ['H', 'S'] as Action[]);
+    fixture.detectChanges();
+    const rendered = buttons(fixture);
+    expect(rendered.length).toBe(2);
+    expect(rendered[0].textContent).toContain('Hit');
+    expect(rendered[1].textContent).toContain('Stand');
+  });
+
+  it('emits only the actions in the provided subset', () => {
+    const fixture = TestBed.createComponent(ActionButtonsComponent);
+    fixture.componentRef.setInput('actions', ['H', 'S'] as Action[]);
+    fixture.detectChanges();
+    const emitted: Action[] = [];
+    fixture.componentInstance.action.subscribe((a) => emitted.push(a));
+    for (const button of buttons(fixture)) button.click();
+    expect(emitted).toEqual(['H', 'S']);
+  });
 });
