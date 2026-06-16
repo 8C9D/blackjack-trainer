@@ -314,7 +314,7 @@ Plus, once Slice 1 lands: `npm run lint`.
 ### Slice 9 — Multi-hand showdowns
 
 - **Phase:** B — Feature
-- **Status:** Needs review
+- **Status:** Planned
 - **Goal:** After the count drill ends, resolve multi-hand / dealer scenarios
   (showdowns).
 - **Why here:** Largest feature; depends on everything above.
@@ -328,12 +328,15 @@ Plus, once Slice 1 lands: `npm run lint`.
   - [ ] Tests green.
 - **Validation:** baseline + manual smoke.
 - **Commit:** `feat: add post-count multi-hand showdowns`
-- **Decision:** **Required — scope/rules/UX.** No safe default. Same protocol as
-  Slice 8: write a design sub-plan, mark **Needs review**, and stop without
-  implementing until approved. **Sub-plan written 2026-06-06** — see the
-  "Slice 9 — design sub-plan" section in
-  [`roadmap-progress.md`](roadmap-progress.md); awaiting owner answers to its six
-  open questions before implementation.
+- **Decision:** **Resolved 2026-06-06.** Owner ratified the sub-plan's
+  recommendation in full (Option A): deal from the **finite shoe**; a **single**
+  player hand; **hit/stand only**; a **win/lose/push** tally (no bankroll/bets);
+  attach **after the card-counting drill** using the persistent live shoe; the
+  dealer plays the active **H17/S17** RuleSet (3:2 naturals). True multi-hand
+  (Option B) and bankroll/splits/doubles (Option C) are deferred follow-ons. See
+  "Slice 9 — decisions (locked)" and the implementation prompt in
+  [`roadmap-progress.md`](roadmap-progress.md). Implementation commit:
+  `feat: add post-count showdown vs dealer`.
 
 ---
 
