@@ -4,6 +4,13 @@ _Last updated 2026-06-02 to record the feature/shared UI-component coverage
 pass (Gap 5, now closed). The 2026-05-29 pass below (§5, Improvements 1–4) was
 run by the test-coverage-improver skill._
 
+> **Update (2026-06-06, docs sync):** The "current verified baseline" quoted
+> throughout (27 spec files / 481 tests) reflects 2026-06-02. Roadmap Slices 5–9
+> (KO / Omega II / Wong Halves counting systems, finite-shoe deck estimation, and
+> the post-count showdown) have since landed with their own specs. **Current
+> baseline: 37 spec files / 710 tests passing** (`CI=true npm test`). The gap
+> analysis below is still accurate; only the totals have grown.
+
 > **History.** An earlier version of this file (commit `3524480`) described a
 > Karma/Jasmine setup and `core/*.ts` modules that do not exist in this
 > repository; a follow-up (2026-05-28) retracted that fabricated analysis but
