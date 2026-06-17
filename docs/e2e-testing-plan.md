@@ -7,6 +7,12 @@ pass in the app as it actually exists today (Angular 21, routes
 persistence, 27 spec files / 481 unit + component tests passing). Selectors and
 flows below were read off the current source, not assumed._
 
+> **Update (2026-06-06, docs sync):** Still accurate that **no E2E layer exists**
+> (no Playwright/Cypress), so this plan is current. Two figures have drifted: the
+> unit baseline is now **37 spec files / 710 tests** (after roadmap Slices 5–9),
+> and CI's validate job now runs **`npm run lint`** (= typecheck + format:check),
+> not a bare `typecheck` step — see §5. The recommendations are unchanged.
+
 ## 1. Why E2E is still worth adding
 
 The suite already covers the pure decision logic and the component boundaries

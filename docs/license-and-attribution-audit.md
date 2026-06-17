@@ -8,6 +8,16 @@ any license, and it makes no final licensing choice.** It is an engineering
 assessment, not legal advice; confirm any distribution decision with the
 upstream asset license and, if needed, legal counsel.
 
+> **Update (2026-06-03):** The central finding below — that the app code has
+> **no declared license** and there is **no top-level `LICENSE` file** — is
+> **no longer current.** The day after this audit, a top-level **MIT** `LICENSE`
+> (© 2026 Arthur Zhang) was added (roadmap Slice 2, commit `afc3fda`), and the
+> README "License and attribution" section was rewritten to state MIT for the
+> app code while carving out the LGPL card art under `public/cards/`. This
+> resolved Option 2 from §5. The audit text below is preserved as the
+> point-in-time record that motivated that decision — read it as historical.
+> (`package.json` still has **no** `license` field and keeps `private: true`.)
+
 ---
 
 ## TL;DR
