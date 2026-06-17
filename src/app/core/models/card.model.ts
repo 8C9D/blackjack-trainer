@@ -1,5 +1,9 @@
 export type Suit = 'spades' | 'hearts' | 'diamonds' | 'clubs';
 
+// Suit color. Used by color-dependent counting systems (e.g. Red Seven, KISS),
+// which tag a rank differently by the card's color rather than by rank alone.
+export type CardColor = 'red' | 'black';
+
 export type Rank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
 
 export interface Card {
@@ -33,6 +37,11 @@ export function isTenValue(card: Card): boolean {
 
 export function isAce(card: Card): boolean {
   return card.rank === 'A';
+}
+
+// Hearts and diamonds are red; spades and clubs are black.
+export function suitColor(suit: Suit): CardColor {
+  return suit === 'hearts' || suit === 'diamonds' ? 'red' : 'black';
 }
 
 // Returns the card's blackjack value, treating aces as 11. Hand-total
