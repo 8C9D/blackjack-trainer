@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 
-import type { Card } from '../models/card.model';
+import { ALL_RANKS, type Card } from '../models/card.model';
 import {
   MAX_CARDS_PER_DRILL,
   MIN_MILLISECONDS_BETWEEN_CARDS,
@@ -9,7 +9,7 @@ import {
   type SettingsValidation,
   type TrueCountDrillResult,
 } from '../models/card-counting.model';
-import type { CountingSystem } from '../models/counting-system.model';
+import { cardCountValue, type CountingSystem } from '../models/counting-system.model';
 import {
   CARDS_PER_DECK,
   MAX_PENETRATION,
@@ -23,7 +23,7 @@ export class CountingEngineService {
   runningCount(cards: readonly Card[], system: CountingSystem): number {
     let total = 0;
     for (const card of cards) {
-      total += system.values[card.rank];
+      total += cardCountValue(system, card);
     }
     return total;
   }
@@ -166,11 +166,19 @@ export class CountingEngineService {
     return Number.isFinite(Number(raw));
   }
 
-  // Whether a system assigns any fractional per-rank value (e.g. Wong Halves).
+  // Whether a system assigns any fractional per-card value (e.g. Wong Halves).
   // Such systems produce fractional running counts, so the running-count answer
-  // form must accept decimal input. Integer-valued systems (Hi-Lo, KO, Omega II)
-  // return false and stay integer-only.
+  // form must accept decimal input. Judged by the tags actually counted: the
+  // red/black pair for any color-overridden rank, plus the scalar `values` of
+  // the remaining ranks. This keeps an integer color system (e.g. Red Seven,
+  // whose values['7'] = 0.5 is only the deck-sum average of red 1 / black 0)
+  // integer-input, while genuinely fractional systems stay decimal-input.
   isFractionalSystem(system: CountingSystem): boolean {
-    return Object.values(system.values).some((v) => !Number.isInteger(v));
+    const overridden = new Set(Object.keys(system.colorValues ?? {}));
+    const effective = [
+      ...ALL_RANKS.filter((r) => !overridden.has(r)).map((r) => system.values[r]),
+      ...Object.values(system.colorValues ?? {}).flatMap((c) => [c.red, c.black]),
+    ];
+    return effective.some((v) => !Number.isInteger(v));
   }
 }

@@ -1,5 +1,6 @@
-import type { Card, Rank } from '../models/card.model';
+import type { Card, Rank, Suit } from '../models/card.model';
 import { MAX_CARDS_PER_DRILL, type CountingDrillSettings } from '../models/card-counting.model';
+import type { CountingSystem } from '../models/counting-system.model';
 import { HI_LO, KO, OMEGA_II, WONG_HALVES } from '../../data/counting-systems';
 import { CardGeneratorService } from './card-generator.service';
 import { CountingEngineService } from './counting-engine.service';
@@ -603,6 +604,59 @@ describe('CountingEngineService', () => {
       expect(engine.isValidDecimalAnswer('.5')).toBe(false);
       expect(engine.isValidDecimalAnswer('2.')).toBe(false);
       expect(engine.isValidDecimalAnswer('1.2.3')).toBe(false);
+    });
+  });
+
+  describe('color-dependent systems (Phase 0)', () => {
+    // Red Seven shape: red 7 = +1, black 7 = 0. The scalar values['7'] = 0.5 is
+    // only the deck-sum average; the engine must read the per-color tag.
+    const RED_SEVEN: CountingSystem = {
+      id: 'test-red-seven',
+      name: 'Test Red Seven',
+      description: 'Synthetic Red Seven for color-aware engine tests.',
+      balanced: false,
+      values: {
+        '2': 1,
+        '3': 1,
+        '4': 1,
+        '5': 1,
+        '6': 1,
+        '7': 0.5,
+        '8': 0,
+        '9': 0,
+        '10': -1,
+        J: -1,
+        Q: -1,
+        K: -1,
+        A: -1,
+      },
+      colorValues: { '7': { red: 1, black: 0 } },
+    };
+    const c = (rank: Rank, suit: Suit): Card => ({ rank, suit });
+
+    it('runningCount uses the per-color tag for the overridden rank', () => {
+      // red 7 (+1), black 7 (0), red 7 (+1), black 7 (0) => 2
+      const cards = [c('7', 'hearts'), c('7', 'spades'), c('7', 'diamonds'), c('7', 'clubs')];
+      expect(engine.runningCount(cards, RED_SEVEN)).toBe(2);
+    });
+
+    it('runningCount mixes color-overridden and rank-only cards', () => {
+      // red 7 (+1) + 5 (+1) + black 7 (0) + A (-1) = 1
+      const cards = [c('7', 'hearts'), c('5', 'clubs'), c('7', 'spades'), c('A', 'hearts')];
+      expect(engine.runningCount(cards, RED_SEVEN)).toBe(1);
+    });
+
+    it('isFractionalSystem is false for an integer color system (Red Seven shape)', () => {
+      expect(engine.isFractionalSystem(RED_SEVEN)).toBe(false);
+    });
+
+    it('isFractionalSystem is true when a color tag itself is fractional', () => {
+      const fractionalColor: CountingSystem = {
+        ...RED_SEVEN,
+        values: { ...RED_SEVEN.values, '7': 0.5 },
+        colorValues: { '7': { red: 1.5, black: -0.5 } },
+      };
+      expect(engine.isFractionalSystem(fractionalColor)).toBe(true);
     });
   });
 
