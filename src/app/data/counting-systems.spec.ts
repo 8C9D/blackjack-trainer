@@ -1,9 +1,12 @@
 import { ALL_RANKS, ALL_SUITS, type Rank } from '../core/models/card.model';
 import type { CountingSystem } from '../core/models/counting-system.model';
-import { COUNTING_SYSTEMS, HI_LO, KO, OMEGA_II, WONG_HALVES } from './counting-systems';
+import { COUNTING_SYSTEMS } from './counting-systems';
 
 // Sum of every card in a single 52-card deck for the given system: each rank
 // appears once per suit. A balanced system sums to 0; KO (unbalanced) to +4.
+// Identical to reference-systems.md's "Deck Sum" column, so it doubles as the
+// balance gate. Reads `values`, which for color systems holds the (red+black)/2
+// average — keeping this correct (each rank is two red + two black per deck).
 function fullDeckSum(system: CountingSystem): number {
   let total = 0;
   for (const rank of ALL_RANKS) {
@@ -12,121 +15,147 @@ function fullDeckSum(system: CountingSystem): number {
   return total;
 }
 
-describe('counting systems registry', () => {
-  it('registers Hi-Lo, KO, Omega II, and Wong Halves (and nothing else), with unique ids', () => {
+// Expand a reference-systems.md row — given in card order A 2 3 4 5 6 7 8 9 10,
+// where the single "10" column applies to every ten-value rank — into a
+// rank-keyed values map. Transcribing each row this way (ten numbers, in the
+// reference's order) keeps EXPECTED independent of the descriptors in
+// counting-systems.ts, so a typo on either side fails the golden test below.
+function row(
+  a: number,
+  two: number,
+  three: number,
+  four: number,
+  five: number,
+  six: number,
+  seven: number,
+  eight: number,
+  nine: number,
+  ten: number,
+): Record<Rank, number> {
+  return {
+    '2': two,
+    '3': three,
+    '4': four,
+    '5': five,
+    '6': six,
+    '7': seven,
+    '8': eight,
+    '9': nine,
+    '10': ten,
+    J: ten,
+    Q: ten,
+    K: ten,
+    A: a,
+  };
+}
+
+interface ExpectedSystem {
+  values: Record<Rank, number>;
+  colorValues?: Partial<Record<Rank, { red: number; black: number }>>;
+  deckSum: number; // reference-systems.md "Deck Sum" column
+}
+
+// Golden table transcribed independently from
+// .claude/skills/add-counting-systems/reference-systems.md. `values` holds each
+// per-rank tag (for color systems, the (red+black)/2 average the reference
+// shows); `colorValues` carries the true per-color split. CAC2 (no data), the
+// computer-only / inverted novelty counts, and systems whose real per-card rule
+// could not be reconciled (Red Zen, KISS 1) are intentionally absent.
+const EXPECTED: Record<string, ExpectedSystem> = {
+  // Original four (unchanged).
+  'hi-lo': { deckSum: 0, values: row(-1, 1, 1, 1, 1, 1, 0, 0, 0, -1) },
+  ko: { deckSum: 4, values: row(-1, 1, 1, 1, 1, 1, 1, 0, 0, -1) },
+  'omega-ii': { deckSum: 0, values: row(0, 1, 1, 2, 2, 2, 1, 0, -1, -2) },
+  'wong-halves': { deckSum: 0, values: row(-1, 0.5, 1, 1, 1.5, 1, 0.5, 0, -0.5, -1) },
+  // Standard batch.
+  'ace-mt': { deckSum: -20, values: row(-1, 0, 0, 0, 0, 0, 0, 0, 0, -1) },
+  awk: { deckSum: 0, values: row(-2, 1, 1, 1, 2, 1, 0, 0, 0, -1) },
+  ambition: { deckSum: 0, values: row(-1, 1, 1, 1, 1, 1, 0.5, 0, -0.5, -1) },
+  'ambition-u': { deckSum: 2, values: row(-0.5, 1, 1, 1, 1, 1, 0, 0, 0, -1) },
+  andersen: { deckSum: 0, values: row(-2, 1, 1, 1, 2, 1, 1, 0, -1, -1) },
+  archer: { deckSum: 4, values: row(1, 1, 1, 1, 1, 1, 1, 1, 1, -2) },
+  'brh-0': { deckSum: 4, values: row(-2, 2, 2, 2, 2, 2, 1, 0, 0, -2) },
+  'brh-i': { deckSum: 4, values: row(-2, 1, 2, 2, 3, 2, 1, 0, 0, -2) },
+  'brh-ii': { deckSum: 4, values: row(0, 1, 1, 2, 2, 2, 1, 0, 0, -2) },
+  bushido: { deckSum: 8, values: row(-1, 2, 2, 2, 2, 2, 1, 0, 0, -2) },
+  'canfield-expert': { deckSum: 0, values: row(0, 0, 1, 1, 1, 1, 1, 0, -1, -1) },
+  'ck-precision': { deckSum: 0, values: row(-1, 1, 2, 2, 2, 2, 1, 0, -1, -2) },
+  'c-r': { deckSum: 0, values: row(-1, 0.5, 1, 1, 1, 1, 0.5, 0, 0, -1) },
+  dhm: { deckSum: 0, values: row(0, 1, 1, 1, 1, 0, 0, 0, 0, -1) },
+  dmpro: { deckSum: 0, values: row(-2, 1, 2, 2, 3, 2, 1, 0, -1, -2) },
+  'ebj-ii': { deckSum: 0, values: row(-2, 2, 2, 2, 2, 2, 1, 0, -1, -2) },
+  'ebj-ii-u': { deckSum: 4, values: row(-2, 2, 2, 2, 2, 2, 1, 0, 0, -2) },
+  'ebj-iii': { deckSum: 0, values: row(-2, 1, 2, 2, 3, 2, 1, 0, -1, -2) },
+  'ebj-iii-u': { deckSum: 4, values: row(-2, 2, 2, 2, 3, 2, 1, 0, -1, -2) },
+  'graham-2': { deckSum: 0, values: row(-2, 1, 1, 1, 1, 1, 1, 0, 0, -1) },
+  griffin: { deckSum: 0, values: row(0, 0, 0, 1, 1, 1, 1, 0, 0, -1) },
+  'griffin-3': { deckSum: 0, values: row(0, 1, 2, 2, 3, 2, 2, 1, -1, -3) },
+  'griffin-4': { deckSum: 0, values: row(0, 1, 2, 3, 4, 3, 3, 1, -1, -4) },
+  'griffin-5': { deckSum: 0, values: row(0, 2, 2, 4, 5, 4, 3, 1, -1, -5) },
+  'hi-opt-i': { deckSum: 0, values: row(0, 0, 1, 1, 1, 1, 0, 0, 0, -1) },
+  'hi-opt-ii': { deckSum: 0, values: row(0, 1, 1, 2, 2, 1, 1, 0, 0, -2) },
+  hnf: { deckSum: 4, values: row(1, 1, 1, 2, 2, 1, 1, 0, 0, -2) },
+  'j-noir': { deckSum: -8, values: row(-2, 1, 1, 1, 1, 1, 1, 1, 1, -2) },
+  lima: { deckSum: 16, values: row(-1, 0, 1, 1, 1, 1, 1, 0, 0, 0) },
+  mentor: { deckSum: 0, values: row(-1, 1, 2, 2, 2, 2, 1, 0, -1, -2) },
+  'olsen-trucount': { deckSum: 8, values: row(-1, 1, 1, 1, 2, 1, 0.5, 0, 0.5, -1) },
+  'revere-five-count': { deckSum: 4, values: row(0, 0, 0, 0, 1, 0, 0, 0, 0, 0) },
+  'revere-plus-minus': { deckSum: 0, values: row(0, 1, 1, 1, 1, 1, 0, 0, -1, -1) },
+  'revere-point-count': { deckSum: 0, values: row(-2, 1, 2, 2, 2, 2, 1, 0, 0, -2) },
+  'silver-fox': { deckSum: 0, values: row(-1, 1, 1, 1, 1, 1, 1, 0, -1, -1) },
+  't-hop-1': { deckSum: 4, values: row(0, 0, 1, 1, 1, 1, 1, 0, 0, -1) },
+  't-hop-2': { deckSum: 4, values: row(0, 1, 1, 2, 2, 2, 1, 0, 0, -2) },
+  'tri-level': { deckSum: 0, values: row(-2, 1, 1, 1, 2, 1, 1, 0, -1, -1) },
+  'ubz-ii': { deckSum: 4, values: row(-1, 1, 2, 2, 2, 2, 1, 0, 0, -2) },
+  'uston-ace-five': { deckSum: 0, values: row(-1, 0, 0, 0, 1, 0, 0, 0, 0, 0) },
+  'uston-adv-plus-minus': { deckSum: 0, values: row(-1, 0, 1, 1, 1, 1, 1, 0, 0, -1) },
+  'uston-apc': { deckSum: 0, values: row(0, 1, 2, 2, 3, 2, 2, 1, -1, -3) },
+  'uston-ss': { deckSum: 4, values: row(-2, 2, 2, 2, 3, 2, 1, 0, -1, -2) },
+  'victor-apc': { deckSum: 0, values: row(0, 2, 2, 2, 3, 2, 2, 0, -1, -3) },
+  zen: { deckSum: 0, values: row(-1, 1, 1, 2, 2, 2, 1, 0, 0, -2) },
+};
+
+describe('counting systems registry (data-driven golden)', () => {
+  it('registry ids exactly match the expected set, all unique', () => {
     const ids = COUNTING_SYSTEMS.map((s) => s.id);
-    expect(ids).toEqual(['hi-lo', 'ko', 'omega-ii', 'wong-halves']);
     expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.slice().sort()).toEqual(Object.keys(EXPECTED).sort());
   });
 
-  it('includes the HI_LO, KO, OMEGA_II, and WONG_HALVES descriptors by reference', () => {
-    expect(COUNTING_SYSTEMS).toContain(HI_LO);
-    expect(COUNTING_SYSTEMS).toContain(KO);
-    expect(COUNTING_SYSTEMS).toContain(OMEGA_II);
-    expect(COUNTING_SYSTEMS).toContain(WONG_HALVES);
-  });
-});
-
-describe('Hi-Lo descriptor (unchanged)', () => {
-  it('is balanced and sums to 0 over a full deck', () => {
-    expect(HI_LO.balanced).toBe(true);
-    expect(fullDeckSum(HI_LO)).toBe(0);
+  it('every system matches its golden tags, deck sum, and balance flag', () => {
+    for (const s of COUNTING_SYSTEMS) {
+      const exp = EXPECTED[s.id];
+      expect(exp, `no golden entry for ${s.id}`).toBeDefined();
+      for (const r of ALL_RANKS) {
+        expect(s.values[r], `${s.id} ${r}`).toBe(exp.values[r]);
+      }
+      expect(fullDeckSum(s), `${s.id} deck sum`).toBe(exp.deckSum);
+      expect(s.balanced, `${s.id} balanced`).toBe(exp.deckSum === 0);
+    }
   });
 
-  it('keeps the canonical per-rank values (7 is neutral)', () => {
-    for (const r of ['2', '3', '4', '5', '6'] as const) expect(HI_LO.values[r]).toBe(1);
-    for (const r of ['7', '8', '9'] as const) expect(HI_LO.values[r]).toBe(0);
-    for (const r of ['10', 'J', 'Q', 'K', 'A'] as const) expect(HI_LO.values[r]).toBe(-1);
-  });
-});
-
-describe('KO (Knock-Out) descriptor', () => {
-  it('is unbalanced and sums to +4 over a full deck', () => {
-    expect(KO.balanced).toBe(false);
-    expect(fullDeckSum(KO)).toBe(4);
-  });
-
-  it('counts 2 through 7 as +1', () => {
-    for (const r of ['2', '3', '4', '5', '6', '7'] as const) expect(KO.values[r]).toBe(1);
+  it('color systems honor their overrides and the (red+black)/2 invariant', () => {
+    for (const s of COUNTING_SYSTEMS) {
+      const exp = EXPECTED[s.id];
+      if (!exp.colorValues) {
+        expect(s.colorValues ?? {}, `${s.id} should have no colorValues`).toEqual({});
+        continue;
+      }
+      expect(s.colorValues, `${s.id} colorValues`).toEqual(exp.colorValues);
+      for (const [r, cv] of Object.entries(exp.colorValues)) {
+        expect(s.values[r as Rank], `${s.id} ${r} average`).toBe((cv.red + cv.black) / 2);
+      }
+    }
   });
 
-  it('counts 8 and 9 as 0', () => {
-    for (const r of ['8', '9'] as const) expect(KO.values[r]).toBe(0);
-  });
-
-  it('counts 10, J, Q, K, A as -1', () => {
-    for (const r of ['10', 'J', 'Q', 'K', 'A'] as const) expect(KO.values[r]).toBe(-1);
-  });
-
-  it('differs from Hi-Lo only by counting the 7 as +1', () => {
-    const differingRanks = ALL_RANKS.filter((r: Rank) => KO.values[r] !== HI_LO.values[r]);
-    expect(differingRanks).toEqual(['7']);
-    expect(KO.values['7']).toBe(1);
-    expect(HI_LO.values['7']).toBe(0);
-  });
-});
-
-describe('Omega II descriptor', () => {
-  it('is balanced and sums to 0 over a full deck', () => {
-    expect(OMEGA_II.balanced).toBe(true);
-    expect(fullDeckSum(OMEGA_II)).toBe(0);
-  });
-
-  it('counts 2, 3, 7 as +1', () => {
-    for (const r of ['2', '3', '7'] as const) expect(OMEGA_II.values[r]).toBe(1);
-  });
-
-  it('counts 4, 5, 6 as +2', () => {
-    for (const r of ['4', '5', '6'] as const) expect(OMEGA_II.values[r]).toBe(2);
-  });
-
-  it('counts 8 and A as 0', () => {
-    for (const r of ['8', 'A'] as const) expect(OMEGA_II.values[r]).toBe(0);
-  });
-
-  it('counts 9 as -1', () => {
-    expect(OMEGA_II.values['9']).toBe(-1);
-  });
-
-  it('counts 10, J, Q, K as -2', () => {
-    for (const r of ['10', 'J', 'Q', 'K'] as const) expect(OMEGA_II.values[r]).toBe(-2);
-  });
-
-  it('is a level-2 system (uses ±2, unlike level-1 Hi-Lo/KO)', () => {
-    const maxMagnitude = Math.max(...ALL_RANKS.map((r: Rank) => Math.abs(OMEGA_II.values[r])));
-    expect(maxMagnitude).toBe(2);
-  });
-});
-
-describe('Wong Halves descriptor', () => {
-  it('is balanced and sums to 0 over a full deck', () => {
-    expect(WONG_HALVES.balanced).toBe(true);
-    expect(fullDeckSum(WONG_HALVES)).toBe(0);
-  });
-
-  it('counts 2 and 7 as +0.5', () => {
-    for (const r of ['2', '7'] as const) expect(WONG_HALVES.values[r]).toBe(0.5);
-  });
-
-  it('counts 3, 4, 6 as +1', () => {
-    for (const r of ['3', '4', '6'] as const) expect(WONG_HALVES.values[r]).toBe(1);
-  });
-
-  it('counts 5 as +1.5', () => {
-    expect(WONG_HALVES.values['5']).toBe(1.5);
-  });
-
-  it('counts 8 as 0 and 9 as -0.5', () => {
-    expect(WONG_HALVES.values['8']).toBe(0);
-    expect(WONG_HALVES.values['9']).toBe(-0.5);
-  });
-
-  it('counts 10, J, Q, K, A as -1', () => {
-    for (const r of ['10', 'J', 'Q', 'K', 'A'] as const) expect(WONG_HALVES.values[r]).toBe(-1);
-  });
-
-  it('uses fractional (half-point) values, unlike the integer systems', () => {
-    const hasFraction = ALL_RANKS.some((r: Rank) => !Number.isInteger(WONG_HALVES.values[r]));
-    expect(hasFraction).toBe(true);
+  it('every descriptor is well-formed (non-empty id/name/description, numeric full rank map)', () => {
+    for (const s of COUNTING_SYSTEMS) {
+      expect(s.id.length, 'id').toBeGreaterThan(0);
+      expect(s.name.length, `${s.id} name`).toBeGreaterThan(0);
+      expect(s.description.length, `${s.id} description`).toBeGreaterThan(0);
+      for (const r of ALL_RANKS) {
+        expect(typeof s.values[r], `${s.id} ${r} type`).toBe('number');
+      }
+    }
   });
 });

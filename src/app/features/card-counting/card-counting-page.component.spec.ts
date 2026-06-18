@@ -9,7 +9,7 @@ import type {
 import type { CountingSystem } from '../../core/models/counting-system.model';
 import type { Shoe } from '../../core/models/shoe.model';
 import type { RuleSet } from '../../core/models/strategy.model';
-import { HI_LO } from '../../data/counting-systems';
+import { COUNTING_SYSTEMS, HI_LO } from '../../data/counting-systems';
 import { CountingEngineService } from '../../core/services/counting-engine.service';
 import { CardCountingPageComponent } from './card-counting-page.component';
 
@@ -337,9 +337,19 @@ describe('CardCountingPageComponent', () => {
       expect(c.trueCountAvailable()).toBe(true);
     });
 
-    it('exposes Hi-Lo, KO, Omega II, and Wong Halves as the selectable systems', () => {
+    it('exposes the full counting-system registry, led by the original four', () => {
       const { c } = createPage();
-      expect(c.systems.map((s) => s.id)).toEqual(['hi-lo', 'ko', 'omega-ii', 'wong-halves']);
+      // The page surfaces the entire registry (Hi-Lo, KO, Omega II, Wong Halves
+      // plus the Blackjack Review comparison systems), in registry order, so it
+      // tracks the registry rather than a hard-coded list.
+      expect(c.systems).toBe(COUNTING_SYSTEMS);
+      // Hi-Lo, KO, Omega II, Wong Halves remain the leading four (Hi-Lo default).
+      expect(c.systems.slice(0, 4).map((s) => s.id)).toEqual([
+        'hi-lo',
+        'ko',
+        'omega-ii',
+        'wong-halves',
+      ]);
     });
 
     it('onSystemChange switches the active system', () => {

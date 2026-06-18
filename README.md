@@ -5,8 +5,8 @@ A frontend-only Angular app for practicing four blackjack skills:
 1. **Basic Strategy Trainer** — initial two-card hands against H17/S17 charts
    from [Blackjack Apprenticeship](https://www.blackjackapprenticeship.com/).
 2. **Running Count Trainer** — running-count drills on random card streams of
-   configurable length and speed, across four counting systems (Hi-Lo, KO,
-   Omega II, Wong Halves).
+   configurable length and speed, across 49 counting systems (Hi-Lo, KO,
+   Omega II, Wong Halves, plus the Blackjack Review comparison set).
 3. **True Count Trainer** — same card streams, but the user answers the true
    count (`runningCount / decksRemaining`, truncated toward zero). Decks
    remaining can come from a fixed preset (classic mode) or be estimated live
@@ -73,9 +73,13 @@ User submits the true count, computed as
 
 #### Counting systems
 
-The running-count trainer offers four systems, discovered from a registry in
-`data/counting-systems.ts` (the engine reads values straight off the
-descriptor, so adding a system is data-only):
+The running-count trainer offers **49 counting systems**, discovered from a
+registry in `data/counting-systems.ts` (the engine reads values straight off the
+descriptor, so adding a system is data-only). The four below are the defaults,
+shown first in the picker; the rest are the
+[Blackjack Review comparison set](https://www.blackjackreview.com/wp/encyclopedia/card-counting-system-comparisons/)
+(Hi-Opt I/II, Zen, Revere Point Count, Mentor, the Griffin / Uston / EBJ
+families, and more) — see the in-app picker for the full list:
 
 | System             | Level | Balanced                 | Card values                                                  |
 | ------------------ | ----- | ------------------------ | ------------------------------------------------------------ |
@@ -320,7 +324,7 @@ src/app/
 ├── data/
 │   ├── h17-basic-strategy.ts                    BJA H17 chart (PDF linked)
 │   ├── s17-basic-strategy.ts                    BJA S17 chart (PDF linked)
-│   ├── counting-systems.ts                      Hi-Lo, KO, Omega II, Wong Halves + registry
+│   ├── counting-systems.ts                      Hi-Lo, KO, Omega II, Wong Halves + Blackjack Review set
 │   ├── h17-deviations.ts                        BJA H17 deviation chart (PDF linked)
 │   └── s17-deviations.ts                        BJA S17 deviation chart (PDF linked)
 ├── features/
@@ -378,9 +382,10 @@ Resolution order (matches the spec):
 
 ## Counting engine (Card Counting)
 
-Also pure TypeScript, generic over `CountingSystem`. The four shipped systems
-(Hi-Lo, KO, Omega II, Wong Halves) are all defined as data in
-`data/counting-systems.ts`; more can be added there without engine changes. API:
+Also pure TypeScript, generic over `CountingSystem`. All shipped systems — the
+original Hi-Lo, KO, Omega II, Wong Halves plus the Blackjack Review comparison
+set — are defined as data in `data/counting-systems.ts`; more can be added there
+without engine changes. API:
 
 - `runningCount(cards, system)` — sum of per-card values. Empty sequence
   returns 0. Constant time per card.
@@ -412,7 +417,7 @@ Also pure TypeScript, generic over `CountingSystem`. The four shipped systems
   (Wong Halves), used to decide which validator and input step to use.
 
 Counting systems are defined in `data/counting-systems.ts`, each with a comment
-linking to its reference. The classic decks-remaining presets are in
+listing its per-rank tags, balance, and source. The classic decks-remaining presets are in
 `core/models/card-counting.model.ts` as `DECKS_REMAINING_PRESETS`
 (`0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6`); the live shoe's deck options
 (`1, 2, 6, 8`) and penetration presets live in `core/models/shoe.model.ts`.
