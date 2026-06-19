@@ -5,7 +5,7 @@ A frontend-only Angular app for practicing four blackjack skills:
 1. **Basic Strategy Trainer** — initial two-card hands against H17/S17 charts
    from [Blackjack Apprenticeship](https://www.blackjackapprenticeship.com/).
 2. **Running Count Trainer** — running-count drills on random card streams of
-   configurable length and speed, across 52 counting systems (Hi-Lo, KO,
+   configurable length and speed, across 58 counting systems (Hi-Lo, KO,
    Omega II, Wong Halves, plus the Blackjack Review comparison set).
 3. **True Count Trainer** — same card streams, but the user answers the true
    count (`runningCount / decksRemaining`, truncated toward zero). Decks
@@ -73,7 +73,7 @@ User submits the true count, computed as
 
 #### Counting systems
 
-The running-count trainer offers **52 counting systems**, discovered from a
+The running-count trainer offers **58 counting systems**, discovered from a
 registry in `data/counting-systems.ts` (the engine reads values straight off the
 descriptor, so adding a system is data-only). The four below are the defaults,
 shown first in the picker; the rest are the
@@ -99,6 +99,12 @@ families, and more) — see the in-app picker for the full list:
   engine resolves the per-color value via each system's `colorValues` override.
   The averaged value the picker shows (e.g. 7 = +0.5) is only the deck-sum
   average — the actual per-card tags are integers, so these stay integer-input.
+- **A handful are novelties, not meant for real play.** The computer-only counts
+  (Griffin Ultimate, Thorp Ultimate, Graham 7, Griffin 7) use extreme or
+  impractically high weights, and the inverted "opposite of traditional" counts
+  (Tek's, Wilson APC) run opposite in sign to a normal system. They round out the
+  Blackjack Review set and appear in the picker, but are included for completeness
+  rather than training.
 
 #### Shared mechanics
 
@@ -551,8 +557,8 @@ and the cursor/handoff log in
   (hit/stand, H17/S17 dealer, 3:2 naturals, win/lose/push tally).
 - **Blackjack Review counting systems** — the comparison-table set added as pure
   data (Hi-Opt I/II, Zen, Revere Point Count, Mentor, the Griffin / Uston / EBJ
-  families, and the color-dependent Red Seven and KISS 2/3), on a color-aware
-  counting model — 52 systems in all.
+  families, the color-dependent Red Seven and KISS 2/3, and the computer-only /
+  inverted novelties), on a color-aware counting model — 58 systems in all.
 
 ### Future (not yet implemented)
 
