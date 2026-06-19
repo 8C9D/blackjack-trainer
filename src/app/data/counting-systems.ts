@@ -1201,6 +1201,88 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
 ];
 
+// --- Color-dependent systems (Blackjack Review comparison; tags in
+// reference-systems.md). These tag a rank by the card's color, so each carries a
+// colorValues override; the scalar values[rank] is the (red+black)/2 average the
+// reference table shows, kept so the deck-sum balance gate stays correct. Phase 0
+// (cardCountValue / colorValues) makes the engine honor the override. All three
+// are unbalanced (deck sum +2) → running-count training only. KISS 1 is omitted:
+// its reference "tens = -0.75" implies a per-ten-rank rule we could not reconcile.
+const COLOR_SYSTEMS: readonly CountingSystem[] = [
+  {
+    id: 'red-seven',
+    name: 'Red Seven',
+    // 2-6 = +1, red 7 = +1 / black 7 = 0 (avg +0.5), tens/A = -1. Unbalanced (deck sum 2).
+    description:
+      'Unbalanced color-dependent system (Red Seven, Snyder). 2–6 = +1, red 7 = +1 and black 7 = 0, tens and aces = −1; 8/9 neutral. Running count only.',
+    balanced: false,
+    values: {
+      '2': 1,
+      '3': 1,
+      '4': 1,
+      '5': 1,
+      '6': 1,
+      '7': 0.5,
+      '8': 0,
+      '9': 0,
+      '10': -1,
+      J: -1,
+      Q: -1,
+      K: -1,
+      A: -1,
+    },
+    colorValues: { '7': { red: 1, black: 0 } },
+  },
+  {
+    id: 'kiss-2',
+    name: 'KISS 2',
+    // black 2 = +1 / red 2 = 0 (avg +0.5), 3-6 = +1, tens = -1. Unbalanced (deck sum 2).
+    description:
+      'Unbalanced color-dependent system (KISS 2, Renzey). Black 2 = +1 and red 2 = 0, 3–6 = +1, tens = −1; 7/8/9 and aces neutral. Running count only.',
+    balanced: false,
+    values: {
+      '2': 0.5,
+      '3': 1,
+      '4': 1,
+      '5': 1,
+      '6': 1,
+      '7': 0,
+      '8': 0,
+      '9': 0,
+      '10': -1,
+      J: -1,
+      Q: -1,
+      K: -1,
+      A: 0,
+    },
+    colorValues: { '2': { red: 0, black: 1 } },
+  },
+  {
+    id: 'kiss-3',
+    name: 'KISS 3',
+    // black 2 = +1 / red 2 = 0 (avg +0.5), 3-7 = +1, tens/A = -1. Unbalanced (deck sum 2).
+    description:
+      'Unbalanced color-dependent system (KISS 3, Renzey). Black 2 = +1 and red 2 = 0, 3–7 = +1, tens and aces = −1; 8/9 neutral. Running count only.',
+    balanced: false,
+    values: {
+      '2': 0.5,
+      '3': 1,
+      '4': 1,
+      '5': 1,
+      '6': 1,
+      '7': 1,
+      '8': 0,
+      '9': 0,
+      '10': -1,
+      J: -1,
+      Q: -1,
+      K: -1,
+      A: -1,
+    },
+    colorValues: { '2': { red: 0, black: 1 } },
+  },
+];
+
 // Registry of available systems. The original four keep their exported consts
 // (the card-counting page imports HI_LO as the default); additional systems are
 // discovered purely via this array and verified by id in counting-systems.spec.ts.
@@ -1210,4 +1292,5 @@ export const COUNTING_SYSTEMS: readonly CountingSystem[] = [
   OMEGA_II,
   WONG_HALVES,
   ...STANDARD_SYSTEMS,
+  ...COLOR_SYSTEMS,
 ] as const;

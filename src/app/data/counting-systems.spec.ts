@@ -113,6 +113,22 @@ const EXPECTED: Record<string, ExpectedSystem> = {
   'uston-ss': { deckSum: 4, values: row(-2, 2, 2, 2, 3, 2, 1, 0, -1, -2) },
   'victor-apc': { deckSum: 0, values: row(0, 2, 2, 2, 3, 2, 2, 0, -1, -3) },
   zen: { deckSum: 0, values: row(-1, 1, 1, 2, 2, 2, 1, 0, 0, -2) },
+  // Color batch (per-color overrides; values hold the (red+black)/2 average).
+  'red-seven': {
+    deckSum: 2,
+    colorValues: { '7': { red: 1, black: 0 } },
+    values: row(-1, 1, 1, 1, 1, 1, 0.5, 0, 0, -1),
+  },
+  'kiss-2': {
+    deckSum: 2,
+    colorValues: { '2': { red: 0, black: 1 } },
+    values: row(0, 0.5, 1, 1, 1, 1, 0, 0, 0, -1),
+  },
+  'kiss-3': {
+    deckSum: 2,
+    colorValues: { '2': { red: 0, black: 1 } },
+    values: row(-1, 0.5, 1, 1, 1, 1, 1, 0, 0, -1),
+  },
 };
 
 describe('counting systems registry (data-driven golden)', () => {
