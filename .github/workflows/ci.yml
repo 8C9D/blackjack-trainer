@@ -19,3 +19,7 @@ jobs:
       - run: npm run lint
       - run: CI=true npm test
       - run: npm run build
+      - name: Verify parity fixtures are up to date (anti-drift gate)
+        run: |
+          npm run export:fixtures
+          git diff --exit-code -- ios/Fixtures

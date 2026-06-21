@@ -1,0 +1,618 @@
+{
+  "schema": "showdown-vectors/1",
+  "generatedBy": "tools/export-parity-fixtures.ts",
+  "description": "Pure dealer-play and settlement cases: dealerShouldHit (H17/S17 soft-17), playDealerHand draw loops, and settle() outcomes (3:2 naturals, bust ordering, totals, pushes). Suits are arbitrary.",
+  "dealerShouldHitCases": [
+    {
+      "hand": [
+        "10",
+        "3"
+      ],
+      "kind": "hard",
+      "total": 13,
+      "ruleSet": "H17",
+      "shouldHit": true
+    },
+    {
+      "hand": [
+        "10",
+        "4"
+      ],
+      "kind": "hard",
+      "total": 14,
+      "ruleSet": "H17",
+      "shouldHit": true
+    },
+    {
+      "hand": [
+        "10",
+        "5"
+      ],
+      "kind": "hard",
+      "total": 15,
+      "ruleSet": "H17",
+      "shouldHit": true
+    },
+    {
+      "hand": [
+        "10",
+        "6"
+      ],
+      "kind": "hard",
+      "total": 16,
+      "ruleSet": "H17",
+      "shouldHit": true
+    },
+    {
+      "hand": [
+        "10",
+        "7"
+      ],
+      "kind": "hard",
+      "total": 17,
+      "ruleSet": "H17",
+      "shouldHit": false
+    },
+    {
+      "hand": [
+        "10",
+        "8"
+      ],
+      "kind": "hard",
+      "total": 18,
+      "ruleSet": "H17",
+      "shouldHit": false
+    },
+    {
+      "hand": [
+        "10",
+        "9"
+      ],
+      "kind": "hard",
+      "total": 19,
+      "ruleSet": "H17",
+      "shouldHit": false
+    },
+    {
+      "hand": [
+        "10",
+        "10"
+      ],
+      "kind": "hard",
+      "total": 20,
+      "ruleSet": "H17",
+      "shouldHit": false
+    },
+    {
+      "hand": [
+        "7",
+        "7",
+        "7"
+      ],
+      "kind": "hard",
+      "total": 21,
+      "ruleSet": "H17",
+      "shouldHit": false
+    },
+    {
+      "hand": [
+        "A",
+        "2"
+      ],
+      "kind": "soft",
+      "total": 13,
+      "ruleSet": "H17",
+      "shouldHit": true
+    },
+    {
+      "hand": [
+        "A",
+        "3"
+      ],
+      "kind": "soft",
+      "total": 14,
+      "ruleSet": "H17",
+      "shouldHit": true
+    },
+    {
+      "hand": [
+        "A",
+        "4"
+      ],
+      "kind": "soft",
+      "total": 15,
+      "ruleSet": "H17",
+      "shouldHit": true
+    },
+    {
+      "hand": [
+        "A",
+        "5"
+      ],
+      "kind": "soft",
+      "total": 16,
+      "ruleSet": "H17",
+      "shouldHit": true
+    },
+    {
+      "hand": [
+        "A",
+        "6"
+      ],
+      "kind": "soft",
+      "total": 17,
+      "ruleSet": "H17",
+      "shouldHit": true
+    },
+    {
+      "hand": [
+        "A",
+        "7"
+      ],
+      "kind": "soft",
+      "total": 18,
+      "ruleSet": "H17",
+      "shouldHit": false
+    },
+    {
+      "hand": [
+        "A",
+        "8"
+      ],
+      "kind": "soft",
+      "total": 19,
+      "ruleSet": "H17",
+      "shouldHit": false
+    },
+    {
+      "hand": [
+        "A",
+        "9"
+      ],
+      "kind": "soft",
+      "total": 20,
+      "ruleSet": "H17",
+      "shouldHit": false
+    },
+    {
+      "hand": [
+        "A",
+        "10"
+      ],
+      "kind": "soft",
+      "total": 21,
+      "ruleSet": "H17",
+      "shouldHit": false
+    },
+    {
+      "hand": [
+        "10",
+        "3"
+      ],
+      "kind": "hard",
+      "total": 13,
+      "ruleSet": "S17",
+      "shouldHit": true
+    },
+    {
+      "hand": [
+        "10",
+        "4"
+      ],
+      "kind": "hard",
+      "total": 14,
+      "ruleSet": "S17",
+      "shouldHit": true
+    },
+    {
+      "hand": [
+        "10",
+        "5"
+      ],
+      "kind": "hard",
+      "total": 15,
+      "ruleSet": "S17",
+      "shouldHit": true
+    },
+    {
+      "hand": [
+        "10",
+        "6"
+      ],
+      "kind": "hard",
+      "total": 16,
+      "ruleSet": "S17",
+      "shouldHit": true
+    },
+    {
+      "hand": [
+        "10",
+        "7"
+      ],
+      "kind": "hard",
+      "total": 17,
+      "ruleSet": "S17",
+      "shouldHit": false
+    },
+    {
+      "hand": [
+        "10",
+        "8"
+      ],
+      "kind": "hard",
+      "total": 18,
+      "ruleSet": "S17",
+      "shouldHit": false
+    },
+    {
+      "hand": [
+        "10",
+        "9"
+      ],
+      "kind": "hard",
+      "total": 19,
+      "ruleSet": "S17",
+      "shouldHit": false
+    },
+    {
+      "hand": [
+        "10",
+        "10"
+      ],
+      "kind": "hard",
+      "total": 20,
+      "ruleSet": "S17",
+      "shouldHit": false
+    },
+    {
+      "hand": [
+        "7",
+        "7",
+        "7"
+      ],
+      "kind": "hard",
+      "total": 21,
+      "ruleSet": "S17",
+      "shouldHit": false
+    },
+    {
+      "hand": [
+        "A",
+        "2"
+      ],
+      "kind": "soft",
+      "total": 13,
+      "ruleSet": "S17",
+      "shouldHit": true
+    },
+    {
+      "hand": [
+        "A",
+        "3"
+      ],
+      "kind": "soft",
+      "total": 14,
+      "ruleSet": "S17",
+      "shouldHit": true
+    },
+    {
+      "hand": [
+        "A",
+        "4"
+      ],
+      "kind": "soft",
+      "total": 15,
+      "ruleSet": "S17",
+      "shouldHit": true
+    },
+    {
+      "hand": [
+        "A",
+        "5"
+      ],
+      "kind": "soft",
+      "total": 16,
+      "ruleSet": "S17",
+      "shouldHit": true
+    },
+    {
+      "hand": [
+        "A",
+        "6"
+      ],
+      "kind": "soft",
+      "total": 17,
+      "ruleSet": "S17",
+      "shouldHit": false
+    },
+    {
+      "hand": [
+        "A",
+        "7"
+      ],
+      "kind": "soft",
+      "total": 18,
+      "ruleSet": "S17",
+      "shouldHit": false
+    },
+    {
+      "hand": [
+        "A",
+        "8"
+      ],
+      "kind": "soft",
+      "total": 19,
+      "ruleSet": "S17",
+      "shouldHit": false
+    },
+    {
+      "hand": [
+        "A",
+        "9"
+      ],
+      "kind": "soft",
+      "total": 20,
+      "ruleSet": "S17",
+      "shouldHit": false
+    },
+    {
+      "hand": [
+        "A",
+        "10"
+      ],
+      "kind": "soft",
+      "total": 21,
+      "ruleSet": "S17",
+      "shouldHit": false
+    }
+  ],
+  "playCases": [
+    {
+      "label": "soft-17-h17-draws-to-bust",
+      "initial": [
+        "A",
+        "6"
+      ],
+      "ruleSet": "H17",
+      "draws": [
+        "5",
+        "10"
+      ],
+      "finalHand": [
+        "A",
+        "6",
+        "5",
+        "10"
+      ]
+    },
+    {
+      "label": "soft-17-s17-stands",
+      "initial": [
+        "A",
+        "6"
+      ],
+      "ruleSet": "S17",
+      "draws": [
+        "5",
+        "10"
+      ],
+      "finalHand": [
+        "A",
+        "6"
+      ]
+    },
+    {
+      "label": "hard-16-hits-once",
+      "initial": [
+        "10",
+        "6"
+      ],
+      "ruleSet": "H17",
+      "draws": [
+        "5"
+      ],
+      "finalHand": [
+        "10",
+        "6",
+        "5"
+      ]
+    },
+    {
+      "label": "hard-17-stands",
+      "initial": [
+        "10",
+        "7"
+      ],
+      "ruleSet": "H17",
+      "draws": [
+        "9"
+      ],
+      "finalHand": [
+        "10",
+        "7"
+      ]
+    },
+    {
+      "label": "low-hits-multiple",
+      "initial": [
+        "4",
+        "3"
+      ],
+      "ruleSet": "S17",
+      "draws": [
+        "5",
+        "2",
+        "4"
+      ],
+      "finalHand": [
+        "4",
+        "3",
+        "5",
+        "2",
+        "4"
+      ]
+    }
+  ],
+  "settleCases": [
+    {
+      "label": "player-bj-beats-17",
+      "player": [
+        "A",
+        "10"
+      ],
+      "dealer": [
+        "10",
+        "7"
+      ],
+      "outcome": "win",
+      "playerBlackjack": true,
+      "dealerBlackjack": false
+    },
+    {
+      "label": "both-naturals-push",
+      "player": [
+        "A",
+        "10"
+      ],
+      "dealer": [
+        "A",
+        "K"
+      ],
+      "outcome": "push",
+      "playerBlackjack": true,
+      "dealerBlackjack": true
+    },
+    {
+      "label": "dealer-bj-beats-player",
+      "player": [
+        "10",
+        "7"
+      ],
+      "dealer": [
+        "A",
+        "Q"
+      ],
+      "outcome": "lose",
+      "playerBlackjack": false,
+      "dealerBlackjack": true
+    },
+    {
+      "label": "player-bust-loses",
+      "player": [
+        "10",
+        "6",
+        "10"
+      ],
+      "dealer": [
+        "10",
+        "7"
+      ],
+      "outcome": "lose",
+      "playerBlackjack": false,
+      "dealerBlackjack": false
+    },
+    {
+      "label": "player-bust-loses-even-vs-dealer-bust",
+      "player": [
+        "10",
+        "6",
+        "10"
+      ],
+      "dealer": [
+        "10",
+        "6",
+        "10"
+      ],
+      "outcome": "lose",
+      "playerBlackjack": false,
+      "dealerBlackjack": false
+    },
+    {
+      "label": "dealer-bust-pays-standing-player",
+      "player": [
+        "10",
+        "7"
+      ],
+      "dealer": [
+        "10",
+        "6",
+        "10"
+      ],
+      "outcome": "win",
+      "playerBlackjack": false,
+      "dealerBlackjack": false
+    },
+    {
+      "label": "higher-total-wins",
+      "player": [
+        "10",
+        "10"
+      ],
+      "dealer": [
+        "10",
+        "9"
+      ],
+      "outcome": "win",
+      "playerBlackjack": false,
+      "dealerBlackjack": false
+    },
+    {
+      "label": "lower-total-loses",
+      "player": [
+        "10",
+        "8"
+      ],
+      "dealer": [
+        "10",
+        "10"
+      ],
+      "outcome": "lose",
+      "playerBlackjack": false,
+      "dealerBlackjack": false
+    },
+    {
+      "label": "equal-total-pushes",
+      "player": [
+        "10",
+        "9"
+      ],
+      "dealer": [
+        "10",
+        "9"
+      ],
+      "outcome": "push",
+      "playerBlackjack": false,
+      "dealerBlackjack": false
+    },
+    {
+      "label": "three-card-21-not-natural-wins",
+      "player": [
+        "7",
+        "7",
+        "7"
+      ],
+      "dealer": [
+        "10",
+        "10"
+      ],
+      "outcome": "win",
+      "playerBlackjack": false,
+      "dealerBlackjack": false
+    },
+    {
+      "label": "natural-beats-three-card-21",
+      "player": [
+        "A",
+        "10"
+      ],
+      "dealer": [
+        "10",
+        "6",
+        "5"
+      ],
+      "outcome": "win",
+      "playerBlackjack": true,
+      "dealerBlackjack": false
+    }
+  ]
+}
