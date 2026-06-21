@@ -39,7 +39,7 @@ re-introduce that risk by hand-porting the engines into Swift.
 
 ## Goal & success criteria
 
-**Goal:** A blackjack *strategy trainer* (no real-money wagering) live on the
+**Goal:** A blackjack _strategy trainer_ (no real-money wagering) live on the
 App Store, behaviorally identical to the web app's trainers, that works fully
 offline and feels native.
 
@@ -102,15 +102,15 @@ These block submission and have lead times, so start them on day one:
 
 ## Cross-cutting decisions (resolve before/at Phase 0)
 
-| # | Decision | Recommended default | Why |
-|---|---|---|---|
-| D1 | Repo layout | **Monorepo `ios/`** alongside `src/` | Parity fixtures regenerate from the TS engines in one CI run; no cross-repo vendoring. |
-| D2 | Chart/counting data delivery to Swift | **Bundle exported JSON** as app resources, decode at launch | Same bytes as the source of truth → zero transcription drift. (Alt: codegen Swift literals.) |
-| D3 | Minimum iOS version | **iOS 17** | Modern SwiftUI (Observation), WidgetKit, broad device coverage in 2026. |
-| D4 | Local persistence | **Codable structs → `UserDefaults`** | Tiny key/value stats; maps 1:1 to the web's `localStorage` keys/shape; pairs naturally with iCloud KVS. (Alt: SwiftData — overkill here.) |
-| D5 | iCloud sync transport | **`NSUbiquitousKeyValueStore`** (iCloud KVS) | The stats are a handful of small blobs; KVS mirrors `localStorage` semantics with near-zero code. (Alt: CloudKit — only if data grows.) |
-| D6 | Test framework | **Swift Testing** (fallback XCTest) | Modern, expressive; either can load the JSON fixtures as bundle resources. |
-| D7 | App Store positioning | **"Educational strategy trainer," no wagering** | Drives the age-rating questionnaire answers and review framing (see [App Store specifics](#app-store-specifics--review-risk)). |
+| #   | Decision                              | Recommended default                                         | Why                                                                                                                                       |
+| --- | ------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Repo layout                           | **Monorepo `ios/`** alongside `src/`                        | Parity fixtures regenerate from the TS engines in one CI run; no cross-repo vendoring.                                                    |
+| D2  | Chart/counting data delivery to Swift | **Bundle exported JSON** as app resources, decode at launch | Same bytes as the source of truth → zero transcription drift. (Alt: codegen Swift literals.)                                              |
+| D3  | Minimum iOS version                   | **iOS 17**                                                  | Modern SwiftUI (Observation), WidgetKit, broad device coverage in 2026.                                                                   |
+| D4  | Local persistence                     | **Codable structs → `UserDefaults`**                        | Tiny key/value stats; maps 1:1 to the web's `localStorage` keys/shape; pairs naturally with iCloud KVS. (Alt: SwiftData — overkill here.) |
+| D5  | iCloud sync transport                 | **`NSUbiquitousKeyValueStore`** (iCloud KVS)                | The stats are a handful of small blobs; KVS mirrors `localStorage` semantics with near-zero code. (Alt: CloudKit — only if data grows.)   |
+| D6  | Test framework                        | **Swift Testing** (fallback XCTest)                         | Modern, expressive; either can load the JSON fixtures as bundle resources.                                                                |
+| D7  | App Store positioning                 | **"Educational strategy trainer," no wagering**             | Drives the age-rating questionnaire answers and review framing (see [App Store specifics](#app-store-specifics--review-risk)).            |
 
 These are surfaced as `Decision:` fields on the relevant slices so the plan
 stays consumable the same way `roadmap.md` is.
@@ -197,25 +197,31 @@ therefore not "read TS, re-type Swift, hope" — it is "make the fixtures pass."
 ### Slice 0.2 — Parity fixture exporter in the web repo
 
 - **Phase:** 0 — Foundations
-- **Status:** Planned
+- **Status:** Done — `tools/export-parity-fixtures.ts` (run via `npm run
+export:fixtures`) emits the six fixtures to `ios/Fixtures/`; CI anti-drift gate
+  added. D2 resolved to the default (bundled JSON).
 - **Goal:** Produce the golden JSON the Swift engines will be graded against.
 - **Why here:** The exporter must exist before any engine is ported; it defines
   "correct."
 - **Scope:** Add `tools/export-parity-fixtures.ts` importing the live engines +
   chart data; emit the six JSON files described in
   [Parity strategy](#parity-strategy-the-backbone); add an `npm run
-  export:fixtures` script; add a CI step that regenerates and **diffs** the
+export:fixtures` script; add a CI step that regenerates and **diffs** the
   fixtures (anti-drift gate).
 - **Files (web repo):** `tools/export-parity-fixtures.ts`, `package.json`,
   `.github/workflows/ci.yml`, generated `ios/Fixtures/*.json`.
 - **Out of scope:** Swift consumption (Phase 1).
 - **Acceptance criteria:**
-  - [ ] All six fixtures generate deterministically (stable key order).
-  - [ ] Basic-strategy and deviation vectors are exhaustive over their input
-        spaces; counting vectors cover fractional + color + truncation cases.
-  - [ ] CI fails if committed fixtures are stale.
-- **Validation:** web baseline (`npm run lint`, `CI=true npm test`,
-  `npm run build`) + fixtures regenerate clean.
+  - [x] All six fixtures generate deterministically (verified byte-identical on
+        re-run; no timestamps/randomness, fixed iteration order).
+  - [x] Basic-strategy (2,720) and deviation (62,560) vectors are exhaustive over
+        their input spaces via canonical hand representatives; counting vectors
+        cover fractional (Wong Halves), color (Red Seven/KISS), and
+        truncation-toward-zero (−5/2 → −2) cases.
+  - [x] CI regenerates the fixtures and fails on any diff (anti-drift gate).
+- **Validation:** web baseline — `npm run lint` ✓, `CI=true npm test` ✓ (702
+  tests), `npm run build` ✓, and `npm run export:fixtures` re-generates with a
+  clean `git diff`.
 - **Commit:** `feat(tools): export cross-language parity fixtures for the iOS port`
 - **Decision:** **Required — D2 (bundled JSON vs codegen Swift literals).**
   Default: bundled JSON.
@@ -229,7 +235,7 @@ therefore not "read TS, re-type Swift, hope" — it is "make the fixtures pass."
 - **Why here:** Establishes the validation baseline every later slice relies on.
 - **Scope:** SwiftUI `App` (min iOS per D3), dark color scheme, a `TabView`
   scaffold with four placeholder tabs matching the web routes
-  (Strategy / Count / Deviations — the web's two counting *modes* live inside
+  (Strategy / Count / Deviations — the web's two counting _modes_ live inside
   the Count tab); Swift Testing target; SwiftFormat + SwiftLint configs;
   GitHub Actions macOS workflow running build + test + lint.
 - **Files (iOS):** project, `BlackjackTrainerApp.swift`, `RootTabView.swift`,
@@ -588,7 +594,7 @@ therefore not "read TS, re-type Swift, hope" — it is "make the fixtures pass."
 - **Validation:** baseline + device check.
 - **Commit:** `feat(ios): home-screen stats widget via WidgetKit`
 - **Decision:** **Required — which stat(s) the widget shows.** Default: accuracy
-  + current streak, per selected trainer.
+  - current streak, per selected trainer.
 
 ### Slice 4.4 — Local-notification practice reminders
 
@@ -629,8 +635,7 @@ therefore not "read TS, re-type Swift, hope" — it is "make the fixtures pass."
   [App Store specifics](#app-store-specifics--review-risk).
 - **Out of scope:** Code changes (unless review demands them).
 - **Acceptance criteria:**
-  - [ ] App Store Connect record complete and passes validation; privacy + rating
-        + export-compliance answers recorded.
+  - [ ] App Store Connect record complete and passes validation; privacy + rating + export-compliance answers recorded.
 - **Validation:** App Store Connect validation.
 - **Commit:** `chore(ios): App Store Connect metadata, privacy labels, and ratings`
 - **Decision:** **Required — D7 framing + final age rating.** Default:
@@ -677,13 +682,13 @@ therefore not "read TS, re-type Swift, hope" — it is "make the fixtures pass."
 - **Gambling guideline (5.3).** Apple's gambling rules target **real-money**
   gaming. This app has **no wagering, no real or virtual currency, and no
   payouts** — the showdown's "3:2" is flavor with a win/lose/push tally — so it
-  is a *strategy trainer*, not gambling. Still, **card-counting / blackjack
+  is a _strategy trainer_, not gambling. Still, **card-counting / blackjack
   framing draws reviewer scrutiny**: position the app as **educational**, avoid
   implying real-money advantage, and answer the **age-rating** "Simulated
   Gambling" item honestly (blackjack trainers commonly land at **17+**). This is
   the most likely source of friction; budget a review round for it.
 - **Minimum functionality (4.2).** A native SwiftUI app with real interaction
-  clears this easily (the reason a webview wrapper was *not* chosen).
+  clears this easily (the reason a webview wrapper was _not_ chosen).
 - **Privacy.** No analytics, no accounts, no third-party SDKs; stats live
   on-device and in the user's own iCloud. App Privacy = **Data Not Collected**.
   Keep it that way to preserve the simplest possible privacy posture.
@@ -695,14 +700,14 @@ therefore not "read TS, re-type Swift, hope" — it is "make the fixtures pass."
 
 ## Risk register
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| Swift engine silently diverges from TS | Med | Exhaustive parity vectors + CI anti-drift gate ([Parity strategy](#parity-strategy-the-backbone)). |
-| App Review flags gambling/age rating | Med | Educational positioning; honest 17+ rating; no wagering; budget a review round. |
-| Card-art SVG rendering fidelity on device | Low-Med | Evaluate SVG lib vs asset-catalog conversion early (Slice 2.3); keep LGPL notices. |
-| iCloud KVS limits/edge cases (no account, conflicts) | Low | Local-first with KVS mirror + LWW merge; graceful offline fallback (Slice 4.2). |
-| Apple Developer enrollment delay | Low | Start Slice 0.1 on day one; it gates submission, not development. |
-| Scope creep from "native extras" | Med | Extras are isolated to Phase 4; each is independently shippable and can be cut for v1. |
+| Risk                                                 | Likelihood | Mitigation                                                                                         |
+| ---------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------- |
+| Swift engine silently diverges from TS               | Med        | Exhaustive parity vectors + CI anti-drift gate ([Parity strategy](#parity-strategy-the-backbone)). |
+| App Review flags gambling/age rating                 | Med        | Educational positioning; honest 17+ rating; no wagering; budget a review round.                    |
+| Card-art SVG rendering fidelity on device            | Low-Med    | Evaluate SVG lib vs asset-catalog conversion early (Slice 2.3); keep LGPL notices.                 |
+| iCloud KVS limits/edge cases (no account, conflicts) | Low        | Local-first with KVS mirror + LWW merge; graceful offline fallback (Slice 4.2).                    |
+| Apple Developer enrollment delay                     | Low        | Start Slice 0.1 on day one; it gates submission, not development.                                  |
+| Scope creep from "native extras"                     | Med        | Extras are isolated to Phase 4; each is independently shippable and can be cut for v1.             |
 
 ## Rough sizing (very approximate, solo dev)
 
@@ -733,7 +738,7 @@ so they're included above. Each is a clean cut line if timelines tighten.
 
 ## How this roadmap is consumed
 
-Like [`roadmap.md`](roadmap.md): this file is the source of truth for *what* each
+Like [`roadmap.md`](roadmap.md): this file is the source of truth for _what_ each
 slice is. Implement the next **Planned** slice, leave the project green per the
 [validation baseline](#validation-baseline-applies-to-every-slice), make one
 commit per slice, and record progress (and any resolved `Decision:` defaults) in

@@ -8,6 +8,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "export:fixtures": "tsx tools/export-parity-fixtures.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "npm run typecheck && npm run format:check"
@@ -33,6 +34,7 @@
     "@angular/compiler-cli": "^21.2.0",
     "jsdom": "^28.0.0",
     "prettier": "^3.8.1",
+    "tsx": "^4.22.4",
     "typescript": "~5.9.2",
     "vitest": "^4.0.8"
   }
