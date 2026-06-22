@@ -7,13 +7,13 @@ format._
 **Roadmap:** [docs/ios-app-roadmap.md](ios-app-roadmap.md)
 **iOS project location:** `./ios` (monorepo, D1 default)
 **Toolchain:** `xcodebuild` 16.4 (Build 16F6) ✓ · `swift` 6.1.2 ✓ · `swiftformat`
-**absent** · `swiftlint` **absent** · macOS 15.6.1 host. Swift build/test gates
-run locally; SwiftFormat/SwiftLint will be installed (Homebrew) at Slice 0.3 if
-available, else those lint gates run in CI only and are noted as a local gap.
+✓ · `swiftlint` ✓ (both installed via Homebrew at Slice 0.3) · `xcodegen` 2.45.4
+✓ · macOS 15.6.1 host. All Swift build/test/lint gates run locally. Simulator
+destination is `iPhone 16 Pro` (no plain "iPhone 16" is installed).
 **Apple Developer account:** not available on this machine → account/device/App
 Store-gated steps are prepared and handed off (see _Pending human actions_).
-**Current phase:** 0
-**Next slice:** 0.3
+**Current phase:** 1
+**Next slice:** 1.1
 
 ## Decisions applied
 
@@ -21,10 +21,10 @@ Store-gated steps are prepared and handed off (see _Pending human actions_).
 | --- | --------------------------- | ----------------------------------------- | ----------------------------------------------------------- |
 | D1  | Repo layout                 | **Monorepo `./ios`** alongside `src/`     | default (roadmap §Cross-cutting decisions) — applied in 0.1 |
 | D2  | Chart/counting data → Swift | Bundle exported JSON, decode at launch    | default — **applied in 0.2**; reused in 1.2                 |
-| D3  | Minimum iOS version         | iOS 17                                    | default — to apply in 0.3                                   |
+| D3  | Minimum iOS version         | iOS 17                                    | default — **applied in 0.3**                                |
 | D4  | Local persistence           | Codable → `UserDefaults`                  | default — to apply in 2.1                                   |
 | D5  | iCloud sync transport       | `NSUbiquitousKeyValueStore` (KVS)         | default — to apply in 4.2                                   |
-| D6  | Test framework              | Swift Testing (fallback XCTest)           | default — to apply in 0.3                                   |
+| D6  | Test framework              | Swift Testing (fallback XCTest)           | default — **applied in 0.3**                                |
 | D7  | App Store positioning       | Educational strategy trainer, no wagering | default — to apply in 5.1                                   |
 
 ## Pending human actions (handoffs)
@@ -54,10 +54,11 @@ everything automatable around them and does **not** mark them Done.
 
 ## Execution log
 
-| Phase | Slice | Title                                | Status | Commit  | Validated                                        | Date       | Notes                                                                                                                                                                                                                                                                                                                                                                                       |
-| ----: | ----: | ------------------------------------ | ------ | ------- | ------------------------------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|   pre |     — | Lockfile engines sync                | Done   | 341088f | tracked tree clean                               | 2026-06-07 | Pre-flight: committed unrelated `package-lock.json` change so the autopilot could start on a clean tracked tree (user-approved).                                                                                                                                                                                                                                                            |
-|     0 |   0.1 | Repo layout decision + Apple prereqs | Done   | b191a08 | n/a (process)                                    | 2026-06-07 | D1 = monorepo `./ios` (default). Apple enrollment + bundle ID + ASC record recorded as pending human actions; per roadmap they gate signing/submission, not dev, so we proceed to 0.2.                                                                                                                                                                                                      |
-|     0 |   0.2 | Parity fixture exporter              | Done   | pending | npm lint+test(702)+build ✓; byte-clean re-export | 2026-06-07 | `tools/export-parity-fixtures.ts` (tsx) → 6 fixtures in `ios/Fixtures/`: charts, counting-systems (58), basic-strategy-vectors (2,720), deviation-vectors (62,560, columnar/interned to ~4MB), counting-vectors, showdown-vectors. D2 = bundled JSON. CI anti-drift gate added. Installed `tsx` devDep. Prettier-normalized the roadmap docs to satisfy the repo's `prettier --check` gate. |
+| Phase | Slice | Title                                | Status | Commit  | Validated                                        | Date       | Notes                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ----: | ----: | ------------------------------------ | ------ | ------- | ------------------------------------------------ | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|   pre |     — | Lockfile engines sync                | Done   | 341088f | tracked tree clean                               | 2026-06-07 | Pre-flight: committed unrelated `package-lock.json` change so the autopilot could start on a clean tracked tree (user-approved).                                                                                                                                                                                                                                                                                              |
+|     0 |   0.1 | Repo layout decision + Apple prereqs | Done   | b191a08 | n/a (process)                                    | 2026-06-07 | D1 = monorepo `./ios` (default). Apple enrollment + bundle ID + ASC record recorded as pending human actions; per roadmap they gate signing/submission, not dev, so we proceed to 0.2.                                                                                                                                                                                                                                        |
+|     0 |   0.2 | Parity fixture exporter              | Done   | a350ebd | npm lint+test(702)+build ✓; byte-clean re-export | 2026-06-07 | `tools/export-parity-fixtures.ts` (tsx) → 6 fixtures in `ios/Fixtures/`: charts, counting-systems (58), basic-strategy-vectors (2,720), deviation-vectors (62,560, columnar/interned to ~4MB), counting-vectors, showdown-vectors. D2 = bundled JSON. CI anti-drift gate added. Installed `tsx` devDep. Prettier-normalized the roadmap docs to satisfy the repo's `prettier --check` gate.                                   |
+|     0 |   0.3 | Xcode SwiftUI skeleton + CI          | Done   | pending | xcodebuild build+test ✓; swiftformat+swiftlint ✓ | 2026-06-07 | XcodeGen-generated `ios/BlackjackTrainer.xcodeproj` (committed). SwiftUI app: 4 dark-mode tabs (Strategy/Count/Deviations/About), Swift Testing target (smoke test). `.swiftformat`, `.swiftlint.yml`, `ios/project.yml`, and `.github/workflows/ios-ci.yml` added. D3 = iOS 17, D6 = Swift Testing. Installed `xcodegen`, `swiftformat`, `swiftlint` (Homebrew). `ios/` excluded from web prettier; `ios/build/` gitignored. |
 
 </content>
