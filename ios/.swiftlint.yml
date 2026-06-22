@@ -11,6 +11,13 @@ excluded:
 disabled_rules:
   - todo
 
+# The engines use short, math-y identifiers (card values a/b, rank r, etc.),
+# mirroring the TypeScript source. Allow them while keeping the rest of the rule.
+identifier_name:
+  min_length:
+    warning: 1
+    error: 1
+
 line_length:
   warning: 120
   error: 160
