@@ -229,7 +229,10 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 ### Slice 0.3 — Xcode project skeleton + CI
 
 - **Phase:** 0 — Foundations
-- **Status:** Planned
+- **Status:** Done — XcodeGen-generated `ios/BlackjackTrainer.xcodeproj` (committed)
+  builds + tests green on the iPhone 16 Pro simulator (iOS 18.5 SDK, iOS 17
+  deployment); SwiftFormat + SwiftLint clean; iOS CI workflow added. D3 = iOS 17,
+  D6 = Swift Testing. Four tabs: Strategy / Count / Deviations / About.
 - **Goal:** A buildable, testable SwiftUI app shell with empty tabs and a green
   CI run.
 - **Why here:** Establishes the validation baseline every later slice relies on.
@@ -242,9 +245,14 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
   `.swiftformat`, `.swiftlint.yml`, CI workflow.
 - **Out of scope:** Real screens, engines, assets.
 - **Acceptance criteria:**
-  - [ ] App launches to four empty tabs in the simulator.
-  - [ ] `xcodebuild test` + lint run green locally and in CI.
-- **Validation:** baseline.
+  - [x] App launches to four empty tabs (Strategy / Count / Deviations / About)
+        in the simulator (build succeeds; root view instantiates in tests).
+  - [x] `xcodebuild test` + SwiftFormat/SwiftLint run green locally. CI workflow
+        added (`.github/workflows/ios-ci.yml`); green-in-CI is provable only when
+        it runs on a GitHub macOS runner.
+- **Validation:** baseline — `xcodebuild build` ✓, `xcodebuild test` ✓ (Swift
+  Testing smoke test), `swiftformat --lint` ✓, `swiftlint` ✓. Destination is
+  `iPhone 16 Pro` (no plain "iPhone 16" simulator is installed).
 - **Commit:** `chore(ios): scaffold SwiftUI app, test target, and CI`
 - **Decision:** **Required — D3 (min iOS), D6 (test framework).** Defaults:
   iOS 17, Swift Testing.

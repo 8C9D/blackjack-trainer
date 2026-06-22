@@ -14,8 +14,9 @@ package-lock.json
 # Vendored card SVGs — do not reformat
 public/cards/
 
-# Generated parity fixtures for the iOS port — machine-written, do not reformat
-ios/Fixtures/
+# iOS subproject — governed by SwiftFormat/SwiftLint, not prettier.
+# (Includes the machine-written ios/Fixtures/*.json from the parity exporter.)
+ios/
 
 # Intentionally-untracked scratch file — never reformat or commit
 docs/repo-current-state.md

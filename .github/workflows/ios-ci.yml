@@ -1,0 +1,35 @@
+name: iOS CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-ci.yml'
+
+jobs:
+  build-test:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install lint tools
+        run: brew install swiftformat swiftlint
+      - name: SwiftFormat (lint gate)
+        run: swiftformat --lint .
+      - name: SwiftLint
+        run: swiftlint lint
+      - name: Build and test
+        run: |
+          xcodebuild \
+            -scheme BlackjackTrainer \
+            -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+            -derivedDataPath build/DerivedData \
+            build test
