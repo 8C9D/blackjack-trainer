@@ -267,7 +267,9 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 ### Slice 1.1 — Card & hand model
 
 - **Phase:** 1 — Engines
-- **Status:** Planned
+- **Status:** Done — `Card.swift` + `Hand.swift` port the value types and hand
+  math; `CardHandTests` cross-checks canonical labels against
+  `basic-strategy-vectors.json` (8 tests green).
 - **Goal:** Port `card.model.ts` + `hand.model.ts` (Rank, Suit, Card,
   ten-value normalization, soft-aware N-card totals, pair detection, hand labels
   like `Soft 18 (A,7)` / `Hard 16` / `Pair of 8s` / `Blackjack`).
@@ -276,9 +278,11 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
   validated against labels embedded in `basic-strategy-vectors.json`.
 - **Out of scope:** Strategy/counting decisions.
 - **Acceptance criteria:**
-  - [ ] Totals/soft/pair/label helpers match the web semantics (face→10, A+10 =
-        Blackjack, hard-4→hard-5 clamp, etc.).
-- **Validation:** baseline + label cross-check.
+  - [x] Totals/soft/pair/label helpers match the web semantics (face→10, A+10 =
+        Blackjack, soft-aware N-card totals, pair/ten-value detection); labels
+        cross-checked against the fixture.
+- **Validation:** baseline + label cross-check — `xcodebuild test` ✓ (8 tests),
+  `swiftformat --lint` ✓, `swiftlint` ✓.
 - **Commit:** `feat(ios): port card and hand domain model`
 - **Decision:** None.
 
