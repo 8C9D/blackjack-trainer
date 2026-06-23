@@ -289,7 +289,9 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 ### Slice 1.2 — Chart & counting-system data layer
 
 - **Phase:** 1 — Engines
-- **Status:** Planned
+- **Status:** Done — `StrategyChart.swift` / `CountingSystem.swift` decode the
+  bundled `charts.json` + `counting-systems.json`; `GameData` loads them from the
+  app bundle and runs the integrity check. 13 tests green.
 - **Goal:** Load `charts.json` + `counting-systems.json` as bundled resources
   into Decodable Swift models (the single source of truth, per D2).
 - **Why here:** The engines read off this data; loading it as the exported bytes
@@ -299,9 +301,11 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
   mirroring the web's structural specs.
 - **Out of scope:** Decision logic (next slices).
 - **Acceptance criteria:**
-  - [ ] All four charts + 58 systems decode; integrity check passes; per-color
-        tags preserved for Red Seven / KISS.
-- **Validation:** baseline.
+  - [x] Both charts (H17/S17) + 58 systems decode; integrity check passes (key
+        sets, legal cell symbols, full rank coverage, color-averaging invariant);
+        per-color tags preserved for Red Seven / KISS (verified via `value(for:)`).
+- **Validation:** baseline — `xcodebuild test` ✓ (13 tests), `swiftformat` ✓,
+  `swiftlint` ✓.
 - **Commit:** `feat(ios): load chart and counting-system data from exported JSON`
 - **Decision:** Confirms D2.
 
