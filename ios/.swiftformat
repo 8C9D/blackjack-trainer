@@ -6,5 +6,9 @@
 --self remove
 --importgrouping testable-bottom
 
+# Keep the opening brace on the same line as a wrapped signature/condition so
+# SwiftFormat and SwiftLint's opening_brace rule agree.
+--disable wrapMultilineStatementBraces
+
 # Generated project & exported fixtures must not be reformatted.
 --exclude BlackjackTrainer.xcodeproj,Fixtures
