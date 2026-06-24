@@ -312,7 +312,10 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 ### Slice 1.3 — Basic-strategy engine
 
 - **Phase:** 1 — Engines
-- **Status:** Planned
+- **Status:** Done — `BasicStrategyEngine` (+ `Strategy.swift` model) reproduces
+  all 2,720 `basic-strategy-vectors` exactly (action + source + label +
+  rationale); `evaluate` handles the insurance short-circuit. The parity harness
+  is proven end-to-end.
 - **Goal:** Port `basic-strategy-engine.service.ts` (`decide` + `evaluate`),
   including the resolution order: insurance short-circuit → pair (with `YN`/DAS
   and `SUR_Y` fall-through) → soft → hard, and `SUR_*`/`Ds` handling.
@@ -322,8 +325,10 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
   test; insurance is always wrong (fixed rationale).
 - **Out of scope:** Deviations, counting.
 - **Acceptance criteria:**
-  - [ ] Every basic-strategy vector passes (action + source + label + rationale).
-- **Validation:** baseline + full vector pass.
+  - [x] Every basic-strategy vector passes (action + source + label + rationale)
+        — all 2,720 vectors green.
+- **Validation:** baseline + full vector pass — `xcodebuild test` ✓ (16 tests
+  incl. the 2,720-vector sweep), `swiftformat` ✓, `swiftlint` ✓.
 - **Commit:** `feat(ios): port basic-strategy engine (parity-verified)`
 - **Decision:** None.
 
