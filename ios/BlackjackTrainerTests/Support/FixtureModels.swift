@@ -55,3 +55,54 @@ struct DeckEstimateCase: Decodable {
     let tolerance: Double?
     let withinBand: Bool
 }
+
+// MARK: deviation-vectors.json (columnar)
+
+struct DeviationVectorsFile: Decodable {
+    let columns: [String]
+    let sources: [String]
+    let count: Int
+    let rows: [DeviationVectorRow]
+
+    /// Resolves a row's interned `matchedRuleSourceIndex` to the source string
+    /// (nil when the index is -1).
+    func source(_ index: Int) -> String? {
+        index >= 0 ? sources[index] : nil
+    }
+}
+
+/// One columnar row, decoded positionally per `columns`.
+struct DeviationVectorRow: Decodable {
+    let handCard1: String
+    let handCard2: String
+    let dealer: String
+    let trueCount: Int
+    let ruleSet: String
+    let das: Bool
+    let lateSurrender: Bool
+    let expectedAction: String
+    let basicAction: String
+    let deviationApplied: Bool
+    let matchedRuleSourceIndex: Int
+    let evalSource: String
+
+    init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        handCard1 = try container.decode(String.self)
+        handCard2 = try container.decode(String.self)
+        dealer = try container.decode(String.self)
+        trueCount = try container.decode(Int.self)
+        ruleSet = try container.decode(String.self)
+        das = try container.decode(Bool.self)
+        lateSurrender = try container.decode(Bool.self)
+        expectedAction = try container.decode(String.self)
+        basicAction = try container.decode(String.self)
+        deviationApplied = try container.decode(Bool.self)
+        matchedRuleSourceIndex = try container.decode(Int.self)
+        evalSource = try container.decode(String.self)
+    }
+
+    var player: TwoCardHand {
+        TwoCardHand(card(handCard1), card(handCard2))
+    }
+}
