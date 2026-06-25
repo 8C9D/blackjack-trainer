@@ -12,8 +12,8 @@ format._
 destination is `iPhone 16 Pro` (no plain "iPhone 16" is installed).
 **Apple Developer account:** not available on this machine → account/device/App
 Store-gated steps are prepared and handed off (see _Pending human actions_).
-**Current phase:** 1
-**Next slice:** 1.6
+**Current phase:** 2
+**Next slice:** 2.1
 
 ## Decisions applied
 
@@ -64,6 +64,7 @@ everything automatable around them and does **not** mark them Done.
 |     1 |   1.2 | Chart & counting-system data layer   | Done   | 30284f0 | xcodebuild test (13) ✓; swiftformat+swiftlint ✓                            | 2026-06-07 | `StrategyChart.swift` + `CountingSystem.swift` Decodable models; `GameData` loads `charts.json` + `counting-systems.json` from the app bundle and runs the integrity check (key sets, legal cell symbols, 58 systems, color-averaging invariant). App target bundles the two data files; `DataLayerTests` cover decode + integrity + color/fractional flags.                                                                  |
 |     1 |   1.3 | Basic-strategy engine                | Done   | abed13e | xcodebuild test (16, incl. 2,720-vector sweep) ✓; swiftformat+swiftlint ✓  | 2026-06-07 | `Strategy.swift` (Action/EngineOptions/DecisionSource/EngineInput) + `BasicStrategyEngine` reproduce every `basic-strategy-vectors` row exactly (action+source+label+rationale), incl. pair fall-through, SUR\_\* options, and the `evaluate` insurance short-circuit. Resolved the swiftformat↔swiftlint brace conflict via `--disable wrapMultilineStatementBraces`.                                                        |
 |     1 |   1.4 | Counting engine                      | Done   | 3c01244 | xcodebuild test (21) ✓; swiftformat+swiftlint ✓                            | 2026-06-07 | `CountingEngine`: running/true count (truncation toward zero), `scoreDeckEstimate`, `isFractionalSystem`, integer/decimal answer validators. Graded against `counting-vectors` (58 systems × sequences incl. fractional Wong Halves, color Red Seven/KISS, −5/2→−2) and the deck-estimate boundaries. `validateSettings`/drill-result builders deferred to 3.3.                                                               |
-|     1 |   1.5 | Deviation engine + evaluator         | Done   | pending | xcodebuild test (24, incl. 62,560-vector sweep) ✓; swiftformat+swiftlint ✓ | 2026-06-07 | `Deviation.swift` (DeviationRule/Decision/Scenario/Result) + `DeviationEngine` (resolveDeviationDecision/resolveInsuranceDecision, classifyForDeviation, surrender precedence) + `DeviationEvaluator` reproduce every `deviation-vectors` row (expectedAction/basicAction/deviationApplied/matchedRuleSource/evalSource). `ChartsFile` extended to decode the deviation tables. Feedback explanation strings deferred to 3.5. |
+|     1 |   1.5 | Deviation engine + evaluator         | Done   | ecca02e | xcodebuild test (24, incl. 62,560-vector sweep) ✓; swiftformat+swiftlint ✓ | 2026-06-07 | `Deviation.swift` (DeviationRule/Decision/Scenario/Result) + `DeviationEngine` (resolveDeviationDecision/resolveInsuranceDecision, classifyForDeviation, surrender precedence) + `DeviationEvaluator` reproduce every `deviation-vectors` row (expectedAction/basicAction/deviationApplied/matchedRuleSource/evalSource). `ChartsFile` extended to decode the deviation tables. Feedback explanation strings deferred to 3.5. |
+|     1 |   1.6 | Shoe + showdown settlement           | Done   | pending | xcodebuild test (30) ✓; swiftformat+swiftlint ✓                            | 2026-06-07 | `Showdown` (dealerShouldHit/playDealerHand/settle) reproduces all `showdown-vectors`; `Shoe` (finite/depleting/cut-card) tested independently (no replacement, reshuffle at cut card, carries position across rounds). **Phase 1 complete — all 6 engines parity-verified across ~65,300 golden vectors.**                                                                                                                    |
 
 </content>
