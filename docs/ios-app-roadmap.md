@@ -386,7 +386,10 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 ### Slice 1.6 — Shoe model + showdown settlement
 
 - **Phase:** 1 — Engines
-- **Status:** Planned
+- **Status:** Done — `Showdown` (dealerShouldHit/playDealerHand/settle)
+  reproduces all `showdown-vectors`; `Shoe` (finite, depleting, cut card)
+  tested independently (depletes without replacement, reshuffles at the cut
+  card, carries position across rounds). **Phase 1 complete.**
 - **Goal:** Port `shoe.model.ts` (finite deck, depletion, penetration/cut card,
   carry-across + reshuffle) and `showdown.model.ts` (dealer auto-play H17/S17,
   3:2 naturals, win/lose/push settlement, bust ordering).
@@ -396,9 +399,10 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
   independently (RNG is a seam — see [Parity strategy](#parity-strategy-the-backbone)).
 - **Out of scope:** Multi-hand / bankroll (deferred in the web app too).
 - **Acceptance criteria:**
-  - [ ] Settlement vectors pass; shoe depletes without replacement, reshuffles at
-        the cut card, carries running count across rounds.
-- **Validation:** baseline + settlement vectors.
+  - [x] Settlement vectors pass; shoe depletes without replacement, reshuffles at
+        the cut card, carries position (and thus the running count) across rounds.
+- **Validation:** baseline + settlement vectors — `xcodebuild test` ✓ (30 tests),
+  `swiftformat` ✓, `swiftlint` ✓.
 - **Commit:** `feat(ios): port finite shoe and showdown settlement`
 - **Decision:** None.
 
