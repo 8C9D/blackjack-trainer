@@ -413,7 +413,10 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 ### Slice 2.1 — Stats stores (local)
 
 - **Phase:** 2 — Shell
-- **Status:** Planned
+- **Status:** Done — `SessionStatsStore` (×5 keys) + `ShowdownStatsStore`
+  (Codable → UserDefaults, D4) reuse the web's storage keys; malformed data
+  falls back to empty, reset clears only its own key, legacy keys are wiped.
+  Observable for the screens.
 - **Goal:** Port the six stat stores (Basic Strategy, Running Count, True Count,
   Deviations, Deck estimation = `StatsStore` shape; Showdown = its own
   `{ hands, wins, losses, pushes, blackjacks }` shape) to Codable+`UserDefaults`
@@ -425,12 +428,13 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
   validation); legacy-key cleanup analogue.
 - **Out of scope:** iCloud (Slice 4.2), widget sharing (Slice 4.3).
 - **Acceptance criteria:**
-  - [ ] Each store persists/restores independently; malformed data falls back to
+  - [x] Each store persists/restores independently; malformed data falls back to
         empty; reset clears only its own key.
-- **Validation:** baseline.
+- **Validation:** baseline — `xcodebuild test` ✓ (37 tests), `swiftformat` ✓,
+  `swiftlint` ✓.
 - **Commit:** `feat(ios): persist per-trainer stats with localStorage-parity keys`
-- **Decision:** **Required — D4 (UserDefaults vs SwiftData).** Default:
-  UserDefaults.
+- **Decision:** **Resolved — D4 = UserDefaults** (the default; Codable structs
+  → UserDefaults).
 
 ### Slice 2.2 — App shell, navigation & theme
 
