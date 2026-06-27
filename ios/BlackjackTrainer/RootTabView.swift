@@ -51,7 +51,7 @@ struct RootTabView: View {
     var body: some View {
         TabView(selection: $selection) {
             ForEach(AppTab.allCases) { tab in
-                PlaceholderTab(title: tab.title, systemImage: tab.icon)
+                content(for: tab)
                     .id(visits[tab, default: 0]) // re-entry → fresh in-memory state
                     .tabItem { Label(tab.label, systemImage: tab.icon) }
                     .tag(tab)
@@ -60,6 +60,18 @@ struct RootTabView: View {
         .tint(Theme.accent)
         .onChange(of: selection, initial: true) { _, newValue in
             visits[newValue, default: 0] += 1
+        }
+    }
+
+    /// The About tab carries the acknowledgements (Slice 2.3); the trainer tabs
+    /// stay placeholders until Phase 3.
+    @ViewBuilder
+    private func content(for tab: AppTab) -> some View {
+        switch tab {
+        case .about:
+            AboutView()
+        default:
+            PlaceholderTab(title: tab.title, systemImage: tab.icon)
         }
     }
 }
