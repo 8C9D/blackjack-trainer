@@ -439,7 +439,11 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 ### Slice 2.2 — App shell, navigation & theme
 
 - **Phase:** 2 — Shell
-- **Status:** Planned
+- **Status:** Done — `Theme` (dark casino-green palette mirroring the web),
+  `AppModel` composition root (engines + stat stores, injected via environment),
+  and a themed `RootTabView` whose per-tab visit-keyed `.id` rebuilds a tab on
+  re-entry (in-memory drill state resets; persisted stats survive). Renders in
+  the simulator (smoke screenshot).
 - **Goal:** Real tab navigation + dark theme + safe-area handling; per-tab state
   reset semantics matching the web (navigating away discards in-memory drill
   state; only persisted stats survive).
@@ -449,9 +453,11 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
   handling, hand-off of state-reset semantics to each screen's view model.
 - **Out of scope:** Trainer screen internals (Phase 3).
 - **Acceptance criteria:**
-  - [ ] Three tabs route correctly; leaving and returning to a tab resets
-        in-progress drill state but preserves stats.
-- **Validation:** baseline + manual smoke.
+  - [x] Tabs route correctly; leaving and returning to a tab resets in-progress
+        drill state (visit-keyed `.id`) but preserves stats (held by `AppModel`).
+- **Validation:** baseline + manual smoke — `xcodebuild test` ✓ (39 tests),
+  `swiftformat` ✓, `swiftlint` ✓, themed shell renders in the iPhone 16 Pro
+  simulator.
 - **Commit:** `feat(ios): tab navigation, dark theme, and safe-area shell`
 - **Decision:** None.
 
