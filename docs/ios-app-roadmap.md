@@ -506,7 +506,15 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 ### Slice 3.1 — Shared SwiftUI components
 
 - **Phase:** 3 — Screens
-- **Status:** Planned
+- **Status:** Done — `Views/Components/` ports the five shared views:
+  `BlackjackTableView` (dealer upcard + hole / full reveal), `ActionButtonsView`
+  (subsettable H/S/D/P/R/I, default = full set), `FeedbackShellView` (verdict
+  chrome + `@ViewBuilder` detail slot + "Deal next hand"), `RuleControlsView`
+  (S17/H17 segmented + DAS/LS toggles bound to `EngineOptions`), and
+  `StatsPanelView` (attempts/correct/accuracy/streak/longest + reset). Hardware
+  hotkeys (H/S/D/P/R/I via `Keyboard.swift`, Enter→deal) are wired with
+  `.keyboardShortcut`; key-hint chips show only when a hardware keyboard is
+  attached (`HardwareKeyboardMonitor` → `\.hasHardwareKeyboard`).
 - **Goal:** Port the shared UI: blackjack table (dealer/player layout), action
   buttons (subsettable: H/S/D/P/R/I), feedback shell, rule controls (H17/S17 +
   DAS + LS), stats panel (+ reset), reused across screens.
@@ -517,8 +525,13 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
   (mirrors the web hiding hint chips on touch).
 - **Out of scope:** Per-trainer orchestration.
 - **Acceptance criteria:**
-  - [ ] Each shared view renders standalone in previews; action subsetting works.
-- **Validation:** baseline + previews.
+  - [x] Each shared view renders standalone in previews (all five have `#Preview`
+        blocks that compile into the debug build); action subsetting works
+        (`ActionButtonsView(actions:)` — tested defaults + subsets).
+- **Validation:** baseline + previews — `xcodebuild test` ✓ (48 tests, incl.
+  hotkey mapping + accuracy formatting), `swiftformat --lint` ✓, `swiftlint` ✓.
+  Disabled `multiple_closures_with_trailing_closure` (idiomatic SwiftUI builder
+  views) and excluded build output earlier (2.3).
 - **Commit:** `feat(ios): shared blackjack-UI components`
 - **Decision:** None.
 

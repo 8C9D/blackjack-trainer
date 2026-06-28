@@ -47,6 +47,7 @@ enum AppTab: String, CaseIterable, Identifiable {
 struct RootTabView: View {
     @State private var selection: AppTab = .strategy
     @State private var visits: [AppTab: Int] = [:]
+    @State private var keyboardMonitor = HardwareKeyboardMonitor()
 
     var body: some View {
         TabView(selection: $selection) {
@@ -58,6 +59,7 @@ struct RootTabView: View {
             }
         }
         .tint(Theme.accent)
+        .environment(\.hasHardwareKeyboard, keyboardMonitor.isConnected)
         .onChange(of: selection, initial: true) { _, newValue in
             visits[newValue, default: 0] += 1
         }
