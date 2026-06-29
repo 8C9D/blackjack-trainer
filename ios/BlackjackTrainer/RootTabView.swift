@@ -73,6 +73,8 @@ struct RootTabView: View {
         switch tab {
         case .strategy:
             BasicStrategyView(app: model)
+        case .count:
+            CountingView(app: model)
         case .about:
             AboutView()
         default:

@@ -16,9 +16,11 @@
 		1D678812320D7F3EB2147C24 /* AppModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E38CEB24905B810A63FC4E4 /* AppModelTests.swift */; };
 		284AFBB818EAAC119ACBFDFC /* counting-systems.json in Resources */ = {isa = PBXBuildFile; fileRef = D9BB02017204C216ACEDAB62 /* counting-systems.json */; };
 		2C2BD8A7B0B54F9C5D1A3704 /* charts.json in Resources */ = {isa = PBXBuildFile; fileRef = A6556669B8FAFE12C55367F9 /* charts.json */; };
+		2D528424128E711BB0F538BD /* CountAnswerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 232402DABC1D385D19FC8B05 /* CountAnswerView.swift */; };
 		305BF7C658768E40E98B280B /* charts.json in Resources */ = {isa = PBXBuildFile; fileRef = A6556669B8FAFE12C55367F9 /* charts.json */; };
 		30715FEEF950524036747DC0 /* SharedComponentsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 645F62DA06D6384BB1E98209 /* SharedComponentsTests.swift */; };
 		320D2B7B79708BB8EA3EA3D5 /* GameData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E31BAB1CB5F4A5CE16EFDD5 /* GameData.swift */; };
+		33492E9B5E4EF3FF48BC4CE1 /* CountingDrillTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F836831ED5AA3612EC1A6 /* CountingDrillTests.swift */; };
 		386E32FE6EC444B9D31E527A /* basic-strategy-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = D52EF9B7479E51758C09565B /* basic-strategy-vectors.json */; };
 		3A74F45037FD6FA9B90F07CE /* BasicStrategyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17D37EE0DCEE76979C4B31A9 /* BasicStrategyView.swift */; };
 		3D06500A85C04C83F3E882BD /* StatsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A3B7FB8E53D8E1DEAAEE93B /* StatsModels.swift */; };
@@ -27,6 +29,7 @@
 		488D636848CD51976F413918 /* AUTHORS.txt in Resources */ = {isa = PBXBuildFile; fileRef = 25A35DC18D354F2C90FF460B /* AUTHORS.txt */; };
 		4DC171F2E11923E6F13DE2DF /* CardImageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7D35732C70EB138CD4848D4 /* CardImageTests.swift */; };
 		53E0D784E52D67FE0E0D7D30 /* CardGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2705BBD8AAF017C2486055AE /* CardGenerator.swift */; };
+		5426F4C307C738A4E0CDD151 /* CountingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69A95A626303D8499464CCC /* CountingView.swift */; };
 		5486C1B108D1CEE024BC8BE8 /* RuleControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4278214D3A2C4A4D26D871E /* RuleControlsView.swift */; };
 		55C4A5D71E0995E7E51A7E45 /* CardHandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22F61940A575094590E7A1D7 /* CardHandTests.swift */; };
 		5ACE6A73BE71B4664EF7B2BD /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CDF8C0414B1B8AF850B0DF5 /* SmokeTests.swift */; };
@@ -38,6 +41,7 @@
 		7208BDF07124A909B973F40D /* counting-systems.json in Resources */ = {isa = PBXBuildFile; fileRef = D9BB02017204C216ACEDAB62 /* counting-systems.json */; };
 		737978C330F4F9CB41FDC9FF /* COPYING.LESSER.txt in Resources */ = {isa = PBXBuildFile; fileRef = 4C391C226F94DEFB8E908E8A /* COPYING.LESSER.txt */; };
 		751F87683B0C43F746AE71BE /* CardGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07A16802F2169B099AE3D66 /* CardGeneratorTests.swift */; };
+		846B2EEF3BB562DEE492DE65 /* CountFeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F0F142E7986FA01C30FBDC9 /* CountFeedbackView.swift */; };
 		8BF8225B5B5683063C0901C3 /* deviation-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = 15F33EF1E2388D4C0EE28E6B /* deviation-vectors.json */; };
 		8F6FD9EB91B2EBBFAE4EC568 /* StrategyChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78DC33D28D09EB8697F6D833 /* StrategyChart.swift */; };
 		94843E9634E49F20DAD75618 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45B95CDB1F240EEC3FC88326 /* AppModel.swift */; };
@@ -49,6 +53,8 @@
 		AD8CEF17C16BE870BECFA4D3 /* BasicStrategyModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC45F6CF6A7EA6DA43DE0C6C /* BasicStrategyModelTests.swift */; };
 		AE6F2FE0E95A40C9E21207A8 /* CardImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DAE402AA61CF04300B0AF9 /* CardImage.swift */; };
 		BA5DE4E164B9DD95D3D4D36A /* BasicStrategyEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 412EEBB6BE3B2274CC4757FB /* BasicStrategyEngine.swift */; };
+		BD6E7BF5AA767DA6D790CF8D /* CountingModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01B4AFDADA3CF8230C9FA589 /* CountingModelTests.swift */; };
+		C800EE2297C6AF0CB9999B6A /* CardCounting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1046B13D6373233EEA1F35 /* CardCounting.swift */; };
 		CA4D608DD9DB115BD8BEDD6B /* CountingParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */; };
 		CCF53B5EC96C4C0EF2F84921 /* HardwareKeyboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56D03F7A78236CB3E5505245 /* HardwareKeyboard.swift */; };
 		CD5DF8C13DB099C1784832CB /* Showdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = B174892CC11A60C0F530B406 /* Showdown.swift */; };
@@ -77,6 +83,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		01B4AFDADA3CF8230C9FA589 /* CountingModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingModelTests.swift; sourceTree = "<group>"; };
 		0896F4168F59A3A9EBFF7CDE /* Deviation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Deviation.swift; sourceTree = "<group>"; };
 		09C557C64B5EC75385C98395 /* Fixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fixtures.swift; sourceTree = "<group>"; };
 		0CDF8C0414B1B8AF850B0DF5 /* SmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeTests.swift; sourceTree = "<group>"; };
@@ -86,10 +93,12 @@
 		17D37EE0DCEE76979C4B31A9 /* BasicStrategyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicStrategyView.swift; sourceTree = "<group>"; };
 		18C6C68585013F882B690DA5 /* DeviationParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationParityTests.swift; sourceTree = "<group>"; };
 		22F61940A575094590E7A1D7 /* CardHandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardHandTests.swift; sourceTree = "<group>"; };
+		232402DABC1D385D19FC8B05 /* CountAnswerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountAnswerView.swift; sourceTree = "<group>"; };
 		25A35DC18D354F2C90FF460B /* AUTHORS.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = AUTHORS.txt; sourceTree = "<group>"; };
 		2705BBD8AAF017C2486055AE /* CardGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardGenerator.swift; sourceTree = "<group>"; };
 		2A3B7FB8E53D8E1DEAAEE93B /* StatsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsModels.swift; sourceTree = "<group>"; };
 		2E31BAB1CB5F4A5CE16EFDD5 /* GameData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameData.swift; sourceTree = "<group>"; };
+		3F0F142E7986FA01C30FBDC9 /* CountFeedbackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountFeedbackView.swift; sourceTree = "<group>"; };
 		40DA33CFF9EA9742E7504A05 /* StatsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsStoreTests.swift; sourceTree = "<group>"; };
 		412EEBB6BE3B2274CC4757FB /* BasicStrategyEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicStrategyEngine.swift; sourceTree = "<group>"; };
 		45B95CDB1F240EEC3FC88326 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
@@ -102,9 +111,11 @@
 		6A64DE6664C81E82AA4D8054 /* ActionButtonsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionButtonsView.swift; sourceTree = "<group>"; };
 		6E38CEB24905B810A63FC4E4 /* AppModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelTests.swift; sourceTree = "<group>"; };
 		6EDEA06AB0AD95400DD8619E /* FixtureModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureModels.swift; sourceTree = "<group>"; };
+		705F836831ED5AA3612EC1A6 /* CountingDrillTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingDrillTests.swift; sourceTree = "<group>"; };
 		70F62C66DE7F2F32BDF25DEE /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		786E4951CEEAFF7A09457F30 /* ShowdownParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownParityTests.swift; sourceTree = "<group>"; };
 		78DC33D28D09EB8697F6D833 /* StrategyChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrategyChart.swift; sourceTree = "<group>"; };
+		7B1046B13D6373233EEA1F35 /* CardCounting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardCounting.swift; sourceTree = "<group>"; };
 		825AB70D2C6317662368AC83 /* BasicStrategyParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicStrategyParityTests.swift; sourceTree = "<group>"; };
 		92869AF24C67B01CE515A238 /* StatsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsStore.swift; sourceTree = "<group>"; };
 		98AC306A85F2BCC5BE60F1E3 /* BlackjackTrainer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = BlackjackTrainer.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -129,6 +140,7 @@
 		D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingParityTests.swift; sourceTree = "<group>"; };
 		D9BB02017204C216ACEDAB62 /* counting-systems.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "counting-systems.json"; sourceTree = "<group>"; };
 		DE80FB44276C2813F39EC18F /* StatsPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsPanelView.swift; sourceTree = "<group>"; };
+		E69A95A626303D8499464CCC /* CountingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingView.swift; sourceTree = "<group>"; };
 		E94C977CD3606FA31236F02A /* Hand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hand.swift; sourceTree = "<group>"; };
 		E96987FAD78F068E0FF56D55 /* showdown-vectors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "showdown-vectors.json"; sourceTree = "<group>"; };
 		EEF70F593374993ECA4C38A4 /* Shoe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shoe.swift; sourceTree = "<group>"; };
@@ -206,6 +218,9 @@
 			isa = PBXGroup;
 			children = (
 				17D37EE0DCEE76979C4B31A9 /* BasicStrategyView.swift */,
+				232402DABC1D385D19FC8B05 /* CountAnswerView.swift */,
+				3F0F142E7986FA01C30FBDC9 /* CountFeedbackView.swift */,
+				E69A95A626303D8499464CCC /* CountingView.swift */,
 			);
 			path = Screens;
 			sourceTree = "<group>";
@@ -220,6 +235,8 @@
 				D07A16802F2169B099AE3D66 /* CardGeneratorTests.swift */,
 				22F61940A575094590E7A1D7 /* CardHandTests.swift */,
 				C7D35732C70EB138CD4848D4 /* CardImageTests.swift */,
+				705F836831ED5AA3612EC1A6 /* CountingDrillTests.swift */,
+				01B4AFDADA3CF8230C9FA589 /* CountingModelTests.swift */,
 				D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */,
 				BA0B879E8B1D853622E0CC86 /* DataLayerTests.swift */,
 				18C6C68585013F882B690DA5 /* DeviationParityTests.swift */,
@@ -245,6 +262,7 @@
 			children = (
 				412EEBB6BE3B2274CC4757FB /* BasicStrategyEngine.swift */,
 				AC3A18A1400C61F3B32D13F1 /* Card.swift */,
+				7B1046B13D6373233EEA1F35 /* CardCounting.swift */,
 				2705BBD8AAF017C2486055AE /* CardGenerator.swift */,
 				CF4D671AA4A053AF40395078 /* CountingEngine.swift */,
 				12BE32AD13FB36B33BAA1B8A /* CountingSystem.swift */,
@@ -426,10 +444,14 @@
 				DB3622622CA10DC9E1416CE4 /* BlackjackTableView.swift in Sources */,
 				DDEAA480768F763AC0404C2B /* BlackjackTrainerApp.swift in Sources */,
 				ED40B991FC2DEDC8BA58ADD7 /* Card.swift in Sources */,
+				C800EE2297C6AF0CB9999B6A /* CardCounting.swift in Sources */,
 				53E0D784E52D67FE0E0D7D30 /* CardGenerator.swift in Sources */,
 				AE6F2FE0E95A40C9E21207A8 /* CardImage.swift in Sources */,
+				2D528424128E711BB0F538BD /* CountAnswerView.swift in Sources */,
+				846B2EEF3BB562DEE492DE65 /* CountFeedbackView.swift in Sources */,
 				F6C919CA4ED0021197E1F128 /* CountingEngine.swift in Sources */,
 				5DB30E135B7A136CDC249DC4 /* CountingSystem.swift in Sources */,
+				5426F4C307C738A4E0CDD151 /* CountingView.swift in Sources */,
 				5AF9B9674E93ACAEF2C9D226 /* Deviation.swift in Sources */,
 				6E1A2AA4CC616FC93B1C6DBD /* DeviationEngine.swift in Sources */,
 				3FD4BF64CAFAE561BCADE811 /* FeedbackShellView.swift in Sources */,
@@ -460,6 +482,8 @@
 				751F87683B0C43F746AE71BE /* CardGeneratorTests.swift in Sources */,
 				55C4A5D71E0995E7E51A7E45 /* CardHandTests.swift in Sources */,
 				4DC171F2E11923E6F13DE2DF /* CardImageTests.swift in Sources */,
+				33492E9B5E4EF3FF48BC4CE1 /* CountingDrillTests.swift in Sources */,
+				BD6E7BF5AA767DA6D790CF8D /* CountingModelTests.swift in Sources */,
 				CA4D608DD9DB115BD8BEDD6B /* CountingParityTests.swift in Sources */,
 				6513222E1254F0172453951E /* DataLayerTests.swift in Sources */,
 				AD5CA329F1BC4A32BF660060 /* DeviationParityTests.swift in Sources */,

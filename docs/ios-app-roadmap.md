@@ -564,7 +564,16 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 ### Slice 3.3 — Card Counting screen (running + true count)
 
 - **Phase:** 3 — Screens
-- **Status:** Planned
+- **Status:** Done — `CountingView` over a `@MainActor @Observable`
+  `CountingModel` (idle → streaming → answering → feedback). System picker over
+  all 58 systems, mode selector (true count hidden/coerced for unbalanced KO),
+  number-of-cards + ms steppers, and the **classic** decks-remaining preset; the
+  timed card stream advances via an async task; `CountAnswerView` does
+  integer/decimal entry (decimal for fractional systems); `CountFeedbackView`
+  shows the count/true-count details, the running ÷ decks formula, and the
+  card-by-card breakdown. The drill-result builders + `validateSettings` were
+  added to `CountingEngine` (deferred from 1.4). Live shoe / deck estimation /
+  showdown remain for 3.4.
 - **Goal:** The counting trainer's shared flow: mode selector (running/true),
   settings (system picker over 58 systems, card count 1–200, ms ≥ 100, classic
   decks-remaining preset), card stream with progress, numeric answer
@@ -576,9 +585,13 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
   systems from the data layer.
 - **Out of scope:** Live shoe + showdown (Slice 3.4).
 - **Acceptance criteria:**
-  - [ ] Running and true-count (classic preset) drills match the web; breakdown
-        and validation behave identically; KO is running-count-only.
-- **Validation:** baseline + manual smoke.
+  - [x] Running and true-count (classic preset) drills match the web (engine-
+        graded; truncation toward zero; fractional decimal entry); breakdown and
+        validation behave identically; KO is running-count-only (coerced on
+        system change) — covered by `CountingDrillTests` + `CountingModelTests`.
+- **Validation:** baseline + manual smoke — `xcodebuild test` ✓ (66 tests, incl.
+  the timed drill round), `swiftformat --lint` ✓, `swiftlint` ✓ (0 violations),
+  app launches cleanly with the Count tab wired (its model builds at launch).
 - **Commit:** `feat(ios): card counting trainer (running and true count)`
 - **Decision:** None.
 
