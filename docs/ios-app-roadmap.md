@@ -538,7 +538,13 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 ### Slice 3.2 — Basic Strategy screen
 
 - **Phase:** 3 — Screens
-- **Status:** Planned
+- **Status:** Done — `BasicStrategyView` over a testable `@Observable`
+  `BasicStrategyModel` (deal → answer → feedback → next, mirroring the web page
+  component): shared table/action-buttons/rule-controls/stats-panel/feedback-shell
+  components, the six actions (gated once graded), the insurance-always-wrong
+  rationale, and persisted session stats with reset. `CardGenerator` ports the
+  RNG-seam scenario generator. Wired to the Strategy tab; renders the live
+  trainer in the simulator (smoke screenshot — card art crisp at trainer size).
 - **Goal:** Full Basic Strategy trainer: two-card hand vs dealer upcard, six
   actions, H17/S17 + DAS + LS toggles, per-attempt feedback (hand label, correct
   action, rationale, "insurance is always wrong"), stats + reset.
@@ -546,8 +552,12 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 - **Scope:** Screen + view model over the Slice 1.3 engine and Slice 2.1 store.
 - **Out of scope:** Counting/deviations.
 - **Acceptance criteria:**
-  - [ ] Behavior matches the web trainer; stats update and persist; reset works.
-- **Validation:** baseline + manual smoke.
+  - [x] Behavior matches the web trainer (engine-graded, insurance always wrong);
+        stats update and persist (UserDefaults via the 2.1 store); reset works —
+        covered by `BasicStrategyModelTests` + a live simulator screenshot.
+- **Validation:** baseline + manual smoke — `xcodebuild test` ✓ (57 tests, incl.
+  `CardGeneratorTests` + `BasicStrategyModelTests`), `swiftformat --lint` ✓,
+  `swiftlint` ✓, live Strategy screen screenshotted in the iPhone 16 Pro sim.
 - **Commit:** `feat(ios): basic strategy trainer screen`
 - **Decision:** None.
 
