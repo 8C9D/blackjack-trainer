@@ -21,7 +21,7 @@ struct CountingDrillSettings: Equatable {
     var millisecondsBetweenCards: Int = 1000
     /// Decks remaining for classic (preset) true-count mode.
     var decksRemaining: Double = 1
-    var trueCountSource: TrueCountSource = .classic
+    var trueCountSource: TrueCountSource = .liveShoe
     var numberOfDecks: Int = ShoeConstants.defaultNumberOfDecks
     var penetration: Double = ShoeConstants.defaultPenetration
 }
