@@ -629,7 +629,16 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 ### Slice 3.5 — Deviations screen
 
 - **Phase:** 3 — Screens
-- **Status:** Planned
+- **Status:** Done — `DeviationsView` over a testable `@Observable`
+  `DeviationsModel` (random hand+upcard+TC, graded by the 1.5 evaluator):
+  Random/Manual TC source (manual validated to `[-20,+20]`, next-hand gated on a
+  valid value), All-hands vs Deviation-only practice (`DeviationScenarioGenerator`
+  builds hands that route back to an encoded rule with a threshold-biased count),
+  the six actions, and feedback with the matched-rule rationale + the insurance
+  overlay. `DeviationTrainer.swift` adds the feedback formatters
+  (`formatTrueCount`/`formatThreshold`/`explanation`, deferred from 1.5) and
+  `parseManualTrueCount`. Wired the Deviations tab; removed the placeholder.
+  **Phase 3 complete — all four trainers live.**
 - **Goal:** Deviations trainer: random two-card hand + upcard + true count (Random
   in `[-5,+8]` or Manual in `[-20,+20]`), All-hands vs Deviation-only practice,
   six actions, feedback with matched-rule rationale and the insurance overlay.
@@ -638,9 +647,13 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
   scenario generation (count biased to thresholds under Random).
 - **Out of scope:** KO/Omega/Wong deviation charts (Hi-Lo only, as in the web app).
 - **Acceptance criteria:**
-  - [ ] Matches the web deviations trainer across both TC sources and both
-        practice modes; insurance evaluated at TC ≥ +3.
-- **Validation:** baseline + manual smoke.
+  - [x] Matches the web deviations trainer across both TC sources and both
+        practice modes; insurance evaluated at TC ≥ +3 — covered by
+        `DeviationFeedbackTests`, `DeviationScenarioGeneratorTests` (every encoded
+        rule's generated hand routes back to it), and `DeviationsModelTests`.
+- **Validation:** baseline + manual smoke — `xcodebuild test` ✓ (88 tests),
+  `swiftformat --lint` ✓, `swiftlint` ✓ (0 violations), app launches cleanly with
+  all four trainer tabs live.
 - **Commit:** `feat(ios): deviations trainer screen`
 - **Decision:** None.
 

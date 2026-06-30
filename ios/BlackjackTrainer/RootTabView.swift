@@ -43,7 +43,6 @@ enum AppTab: String, CaseIterable, Identifiable {
 /// Root tab shell. Each tab's content is keyed on a per-tab visit counter, so
 /// re-entering a tab rebuilds it — in-memory drill state resets while the
 /// persisted stats (owned by `AppModel`) survive, matching the web's behavior.
-/// Tabs are placeholders until Phase 3.
 struct RootTabView: View {
     @Environment(AppModel.self) private var model
     @State private var selection: AppTab = .strategy
@@ -66,8 +65,8 @@ struct RootTabView: View {
         }
     }
 
-    /// The About tab carries the acknowledgements (Slice 2.3); trainer tabs are
-    /// filled in across Phase 3 (the Strategy tab landed in 3.2).
+    /// Each tab's screen. The About tab carries the acknowledgements (2.3); the
+    /// four trainers landed across Phase 3.
     @ViewBuilder
     private func content(for tab: AppTab) -> some View {
         switch tab {
@@ -75,38 +74,10 @@ struct RootTabView: View {
             BasicStrategyView(app: model)
         case .count:
             CountingView(app: model)
+        case .deviations:
+            DeviationsView(app: model)
         case .about:
             AboutView()
-        default:
-            PlaceholderTab(title: tab.title, systemImage: tab.icon)
-        }
-    }
-}
-
-/// Temporary screen used for every tab until Phase 3. The tap counter is
-/// in-memory "drill" state that demonstrates the reset-on-re-entry behavior.
-private struct PlaceholderTab: View {
-    let title: String
-    let systemImage: String
-    @State private var taps = 0
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 16) {
-                Image(systemName: systemImage)
-                    .font(.largeTitle)
-                    .foregroundStyle(Theme.secondaryText)
-                Text(title)
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(Theme.primaryText)
-                Text("Coming soon")
-                    .foregroundStyle(Theme.secondaryText)
-                Button("Taps this visit: \(taps)") { taps += 1 }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Theme.accent)
-            }
-            .appBackground()
-            .navigationTitle(title)
         }
     }
 }
