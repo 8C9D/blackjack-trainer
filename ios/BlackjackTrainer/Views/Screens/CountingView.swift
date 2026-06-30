@@ -1,144 +1,4 @@
-import Observation
 import SwiftUI
-
-/// Drives the Card Counting trainer (classic running/true-count drill; the live
-/// shoe + deck estimation + showdown land in Slice 3.4). Mirrors the running/
-/// true-count slice of the web `CardCountingPageComponent`. `@MainActor` because
-/// the card stream advances from an async task. Kept separate from the view so
-/// the loop is testable.
-@MainActor
-@Observable
-final class CountingModel {
-    enum DrillState {
-        case idle, streaming, answering, feedback
-    }
-
-    var system: CountingSystem
-    var settings = CountingDrillSettings()
-    private(set) var state: DrillState = .idle
-    private(set) var cards: [Card] = []
-    private(set) var currentIndex = 0
-    private(set) var result: CountingDrillResult?
-
-    @ObservationIgnored let systems: [CountingSystem]
-    @ObservationIgnored private let engine: CountingEngine
-    @ObservationIgnored private let runningStore: SessionStatsStore
-    @ObservationIgnored private let trueCountStore: SessionStatsStore
-    @ObservationIgnored private let generator: CardGenerator
-    @ObservationIgnored private var streamTask: Task<Void, Never>?
-
-    init(
-        systems: [CountingSystem],
-        engine: CountingEngine,
-        runningStore: SessionStatsStore,
-        trueCountStore: SessionStatsStore,
-        generator: CardGenerator = CardGenerator()
-    ) {
-        self.systems = systems
-        self.engine = engine
-        self.runningStore = runningStore
-        self.trueCountStore = trueCountStore
-        self.generator = generator
-        system = systems.first { $0.id == "hi-lo" } ?? systems[0]
-    }
-
-    var trueCountAvailable: Bool {
-        system.balanced
-    }
-
-    /// Fractional running counts (Wong Halves) need decimal input; true counts
-    /// are always whole, so this only applies in running-count mode.
-    var fractionalAnswers: Bool {
-        settings.mode == .runningCount && engine.isFractionalSystem(system)
-    }
-
-    var validation: SettingsValidation {
-        engine.validateSettings(settings)
-    }
-
-    var isDrillActive: Bool {
-        state == .streaming || state == .answering
-    }
-
-    var settingsLocked: Bool {
-        isDrillActive
-    }
-
-    var currentCard: Card? {
-        currentIndex >= 0 && currentIndex < cards.count ? cards[currentIndex] : nil
-    }
-
-    private var activeStore: SessionStatsStore {
-        settings.mode == .trueCount ? trueCountStore : runningStore
-    }
-
-    var activeStats: SessionStats {
-        activeStore.stats
-    }
-
-    /// Begin a drill (no-op while one is active or settings are invalid).
-    func start() {
-        guard !isDrillActive, validation.valid else { return }
-        cards = generator.generateSequence(settings.numberOfCards)
-        currentIndex = 0
-        result = nil
-        state = .streaming
-        streamTask?.cancel()
-        streamTask = Task { [weak self] in await self?.runStream() }
-    }
-
-    private func runStream() async {
-        let interval = UInt64(max(1, settings.millisecondsBetweenCards)) * 1_000_000
-        while !Task.isCancelled {
-            try? await Task.sleep(nanoseconds: interval)
-            if Task.isCancelled { return }
-            let next = currentIndex + 1
-            if next >= cards.count {
-                state = .answering
-                return
-            }
-            currentIndex = next
-        }
-    }
-
-    func answer(_ value: Double) {
-        guard state == .answering else { return }
-        if settings.mode == .trueCount {
-            let evaluated = engine.evaluateTrueCount(
-                cards,
-                userTrueCount: Int(value),
-                decksRemaining: settings.decksRemaining,
-                system: system
-            )
-            result = .trueCount(evaluated)
-            trueCountStore.recordAttempt(correct: evaluated.isCorrect)
-        } else {
-            let evaluated = engine.evaluate(cards, userRunningCount: value, system: system)
-            result = .running(evaluated)
-            runningStore.recordAttempt(correct: evaluated.isCorrect)
-        }
-        state = .feedback
-    }
-
-    /// Switch system; unbalanced systems (KO) are running-count-only, so coerce
-    /// the mode back if true count was selected.
-    func changeSystem(_ id: String) {
-        guard let next = systems.first(where: { $0.id == id }) else { return }
-        system = next
-        if !next.balanced, settings.mode == .trueCount {
-            settings.mode = .runningCount
-        }
-    }
-
-    func resetActiveStats() {
-        activeStore.reset()
-    }
-
-    func cancel() {
-        streamTask?.cancel()
-        streamTask = nil
-    }
-}
 
 /// The Card Counting trainer screen.
 struct CountingView: View {
@@ -150,22 +10,22 @@ struct CountingView: View {
                 systems: app.countingSystems,
                 engine: app.counting,
                 runningStore: app.runningCountStats,
-                trueCountStore: app.trueCountStats
+                trueCountStore: app.trueCountStats,
+                deckEstimationStore: app.deckEstimationStats,
+                showdownStatsStore: app.showdownStats
             )
         )
     }
 
     var body: some View {
-        @Bindable var trainer = trainer
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
                     header
                     settings(trainer)
+                    reshuffleBanner
                     drill(trainer)
-                    StatsPanelView(stats: trainer.activeStats, title: statsTitle) {
-                        trainer.resetActiveStats()
-                    }
+                    statsSection(trainer)
                 }
                 .padding()
             }
@@ -173,10 +33,6 @@ struct CountingView: View {
             .navigationTitle("Card Counting")
         }
         .onDisappear { trainer.cancel() }
-    }
-
-    private var statsTitle: String {
-        trainer.settings.mode == .trueCount ? "True count" : "Running count"
     }
 
     private var header: some View {
@@ -189,6 +45,16 @@ struct CountingView: View {
                 .foregroundStyle(Theme.secondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var reshuffleBanner: some View {
+        if trainer.reshuffleNotice, trainer.state != .idle {
+            Text("Shoe reshuffled at the cut card — running count reset to 0.")
+                .font(.footnote)
+                .foregroundStyle(Theme.accent)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     // MARK: - settings
@@ -204,7 +70,9 @@ struct CountingView: View {
             .tint(Theme.primaryText)
 
             modeControl(trainer)
+            sourceControl(trainer)
             drillFields(trainer)
+            trueCountConfig(trainer)
             validationErrors(trainer)
         }
         .foregroundStyle(Theme.primaryText)
@@ -213,6 +81,8 @@ struct CountingView: View {
         .background(Theme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .disabled(trainer.settingsLocked)
+        .onChange(of: trainer.settings.numberOfDecks) { _, _ in trainer.invalidateShoe() }
+        .onChange(of: trainer.settings.penetration) { _, _ in trainer.invalidateShoe() }
     }
 
     @ViewBuilder
@@ -235,6 +105,18 @@ struct CountingView: View {
     }
 
     @ViewBuilder
+    private func sourceControl(_ trainer: CountingModel) -> some View {
+        @Bindable var trainer = trainer
+        if trainer.settings.mode == .trueCount {
+            Picker("Decks source", selection: $trainer.settings.trueCountSource) {
+                Text("Live shoe").tag(TrueCountSource.liveShoe)
+                Text("Classic").tag(TrueCountSource.classic)
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
+    @ViewBuilder
     private func drillFields(_ trainer: CountingModel) -> some View {
         @Bindable var trainer = trainer
         Stepper(
@@ -248,14 +130,39 @@ struct CountingView: View {
             in: CountingConstants.minMillisecondsBetweenCards ... 5000,
             step: 100
         )
+    }
+
+    @ViewBuilder
+    private func trueCountConfig(_ trainer: CountingModel) -> some View {
+        @Bindable var trainer = trainer
         if trainer.settings.mode == .trueCount {
-            Picker("Decks remaining", selection: $trainer.settings.decksRemaining) {
-                ForEach(CountingConstants.decksRemainingPresets, id: \.self) { preset in
-                    Text(CountFormat.decks(preset)).tag(preset)
+            if trainer.settings.trueCountSource == .classic {
+                Picker("Decks remaining", selection: $trainer.settings.decksRemaining) {
+                    ForEach(CountingConstants.decksRemainingPresets, id: \.self) { preset in
+                        Text(CountFormat.decks(preset)).tag(preset)
+                    }
                 }
+                .pickerStyle(.menu)
+                .tint(Theme.primaryText)
+            } else {
+                Picker("Number of decks", selection: $trainer.settings.numberOfDecks) {
+                    ForEach(ShoeConstants.deckOptions, id: \.self) { decks in
+                        Text("\(decks)").tag(decks)
+                    }
+                }
+                .pickerStyle(.menu)
+                .tint(Theme.primaryText)
+                Picker("Penetration", selection: $trainer.settings.penetration) {
+                    ForEach(ShoeConstants.penetrationPresets, id: \.self) { value in
+                        Text("\(Int((value * 100).rounded()))%").tag(value)
+                    }
+                }
+                .pickerStyle(.menu)
+                .tint(Theme.primaryText)
+                Text("Decks remaining (live): \(CountFormat.decks(trainer.liveDecksRemaining))")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.secondaryText)
             }
-            .pickerStyle(.menu)
-            .tint(Theme.primaryText)
         }
     }
 
@@ -294,16 +201,60 @@ struct CountingView: View {
                 index: trainer.currentIndex,
                 total: trainer.cards.count
             )
+        case .estimating:
+            DeckEstimateView { trainer.onEstimate($0) }
         case .answering:
-            CountAnswerView(mode: trainer.settings.mode,
-                            allowFractions: trainer.fractionalAnswers) {
-                trainer.answer($0)
-            }
+            CountAnswerView(
+                mode: trainer.settings.mode,
+                allowFractions: trainer.fractionalAnswers
+            ) { trainer.answer($0) }
         case .feedback:
-            if let result = trainer.result {
-                CountFeedbackView(result: result, system: trainer.system) { trainer.start() }
+            feedbackSection(trainer)
+        case .showdown:
+            showdownSection(trainer)
+        }
+    }
+
+    @ViewBuilder
+    private func feedbackSection(_ trainer: CountingModel) -> some View {
+        if let result = trainer.result {
+            CountFeedbackView(result: result, system: trainer.system) { trainer.start() }
+        }
+        if trainer.liveShoeTrueCount, trainer.showdownAvailable {
+            Button("Play a hand vs the dealer") { trainer.enterShowdown() }
+                .buttonStyle(.bordered)
+                .tint(Theme.accent)
+        }
+    }
+
+    @ViewBuilder
+    private func showdownSection(_ trainer: CountingModel) -> some View {
+        if let shoe = trainer.shoe {
+            ShowdownView(shoe: shoe, ruleSet: .s17, stats: trainer.showdownStatsStore) {
+                trainer.exitShowdown()
             }
         }
+    }
+
+    @ViewBuilder
+    private func statsSection(_ trainer: CountingModel) -> some View {
+        if trainer.liveShoeTrueCount {
+            StatsPanelView(stats: trainer.trueCountStats, title: "True count") {
+                trainer.resetTrueCountStats()
+            }
+            StatsPanelView(
+                stats: trainer.deckEstimationStats,
+                title: "Deck estimation (within ±0.5)"
+            ) { trainer.resetDeckEstimationStats() }
+        } else {
+            StatsPanelView(stats: trainer.activeStats, title: statsTitle) {
+                trainer.resetActiveStats()
+            }
+        }
+    }
+
+    private var statsTitle: String {
+        trainer.settings.mode == .trueCount ? "True count" : "Running count"
     }
 }
 
