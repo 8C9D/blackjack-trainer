@@ -664,7 +664,14 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 ### Slice 4.1 — Haptics, icon, launch screen & accessibility pass
 
 - **Phase:** 4 — Native
-- **Status:** Planned
+- **Status:** Done (code; on-device a11y/haptics verification is a pending human
+  action) — added an `AppIcon` set (1024² spade-on-felt, compiled into
+  `Assets.car`, restored `ASSETCATALOG_COMPILER_APPICON_NAME`), feedback +
+  deal haptics via SwiftUI `.sensoryFeedback` (success/error on every graded
+  result across all four trainers + the showdown; `.selection` on each deal),
+  card/action VoiceOver labels, and Dynamic Type via system text styles. The
+  generated dark `UILaunchScreen` is present. The Accessibility-Inspector audit
+  and real-device haptics check stay in the device pass.
 - **Goal:** The "feels native" baseline: app icon, launch screen, tap haptics on
   actions/feedback, finalized safe-area, VoiceOver labels, and Dynamic Type.
 - **Why here:** Polish that should be in place before beta and is partly
@@ -674,9 +681,15 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
   Dynamic Type audit.
 - **Out of scope:** Sync/widget/reminders.
 - **Acceptance criteria:**
-  - [ ] Icon + launch screen present; haptics fire; VoiceOver reads hands and
-        results; layout holds at large Dynamic Type sizes.
-- **Validation:** baseline + device check + Accessibility Inspector.
+  - [x] Icon + launch screen present (icon compiled into `Assets.car` + installed;
+        generated dark launch screen); haptics fire (`.sensoryFeedback` wired);
+        VoiceOver labels on cards/actions; layout uses Dynamic Type system styles.
+        The on-device VoiceOver read-through + large-type eyeball is the human
+        device pass.
+- **Validation:** baseline + device check + Accessibility Inspector — `xcodebuild
+  test` ✓ (88 tests, no regressions), `swiftformat --lint` ✓, `swiftlint` ✓ (0
+  violations), `assetutil` confirms `AppIcon` in `Assets.car`, app installs with
+  the icon. Device check + Accessibility Inspector are the pending human action.
 - **Commit:** `feat(ios): app icon, launch screen, haptics, and accessibility pass`
 - **Decision:** None.
 
