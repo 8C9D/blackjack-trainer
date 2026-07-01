@@ -184,6 +184,13 @@ struct ShowdownView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        .sensoryFeedback(trigger: model.settlement) { _, new in
+            switch new?.outcome {
+            case .win: .success
+            case .lose: .error
+            default: nil
+            }
+        }
     }
 
     private var table: some View {

@@ -162,6 +162,11 @@ struct DeviationsView: View {
             .appBackground()
             .navigationTitle("Deviations")
         }
+        .sensoryFeedback(trigger: trainer.result) { _, new in
+            guard let new else { return nil }
+            return new.correct ? .success : .error
+        }
+        .sensoryFeedback(.selection, trigger: trainer.scenario)
     }
 
     private var trueCountReadout: some View {

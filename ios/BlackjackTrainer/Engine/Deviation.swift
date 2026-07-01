@@ -27,7 +27,7 @@ struct DeviationDecision {
 
 /// A Deviations-trainer scenario: the two-card hand, dealer upcard, and the
 /// practice true count.
-struct DeviationScenario {
+struct DeviationScenario: Equatable {
     let player: TwoCardHand
     let dealerUpcard: Card
     let trueCount: Int
