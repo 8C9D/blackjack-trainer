@@ -14,6 +14,14 @@ destination is `iPhone 16 Pro` (no plain "iPhone 16" is installed).
 Store-gated steps are prepared and handed off (see _Pending human actions_).
 **Current phase:** 4
 **Next slice:** 4.3
+**Run status:** ⏸️ PAUSED at Slice 4.3 (home-screen widget). The widget needs a new
+WidgetKit extension target + App Group capability + on-device Home-Screen check —
+not safely buildable/validatable without an Apple Developer account + a device, so
+the autopilot stopped here rather than risk the green build or commit unvalidatable
+code. See the 4.3 handoff in the roadmap and _Pending human actions_ below. The
+remaining account-free work (Slice 4.4 local-notification reminders) is the natural
+next implementation step once the widget approach is decided; re-invoke the
+autopilot to continue.
 
 ## Decisions applied
 
@@ -39,10 +47,14 @@ everything automatable around them and does **not** mark them Done.
       Needs the account. _(Slice 0.1.)_
 - [ ] **Provision the iCloud KVS capability** and run the two-device iCloud sync
       verification. _(Slice 4.2.)_
-- [ ] **Provision the App Group** shared container and verify the widget on a
-      real Home Screen. _(Slice 4.3.)_
-- [ ] **Verify notification permission + on-schedule delivery on device.**
-      _(Slice 4.4.)_
+- [ ] **Build the widget (Slice 4.3):** add the WidgetKit extension target,
+      provision the **App Group** shared container, and verify the widget on a
+      real Home Screen. The autopilot **paused here** (see the 4.3 handoff in the
+      roadmap) — needs the account + a device.
+- [ ] **Local-notification reminders (Slice 4.4):** the code is account-free and
+      simulator-implementable (permission UX, repeating schedule, deep-link); only
+      **on-device on-schedule delivery** needs hardware. Not yet implemented (sits
+      after the paused 4.3); re-invoke the autopilot to build it.
 - [ ] **Device pass:** icon/launch screen on hardware + Accessibility Inspector
       audit. _(Slice 4.1.)_
 - [ ] **App Store Connect:** metadata entry, screenshots from a near-final
@@ -75,6 +87,7 @@ everything automatable around them and does **not** mark them Done.
 |     3 |   3.4 | Live shoe + deck estimation + showdown | Done | 4bd8ad3 | xcodebuild test (72) ✓; swiftformat+swiftlint ✓ (0 viol); sim launch     | 2026-06-07 | Extended `CountingModel` (states `estimating`/`showdown`; live shoe carries running count + position, reshuffles at cut card; deck-estimate scored ±0.5; split True-count + Deck-estimation panels). `Engine/ShoeFactory.swift` (build + Fisher–Yates shuffle, RNG seam). `DeckEstimateView`, `ShowdownView` (+ `@MainActor ShowdownModel`: hit/stand, dealer auto-play, 3:2 naturals, win/lose/push tally) deal off the same persistent shoe. Default `trueCountSource` → `.liveShoe` (web parity). Split `CountingModel` into its own file (file_length). `ShoeFactoryTests` + `ShowdownModelTests` + live-shoe `CountingModelTests`. |
 |     3 |   3.5 | Deviations screen                   | Done   | 5731517 | xcodebuild test (88) ✓; swiftformat+swiftlint ✓ (0 viol); sim launch       | 2026-06-07 | `Views/Screens/DeviationsView` over `@Observable DeviationsModel` (graded by the 1.5 evaluator): Random/Manual TC (manual validated `[-20,+20]`, next gated on validity), All-hands vs Deviation-only practice, feedback with matched-rule rationale + insurance overlay. `Engine/DeviationScenarioGenerator.swift` (builds rule-routed hands + threshold-biased TC, RNG seam) and `Engine/DeviationTrainer.swift` (feedback formatters deferred from 1.5 + `parseManualTrueCount`). Wired Deviations tab; removed PlaceholderTab (switch now exhaustive). `DeviationFeedbackTests` + `DeviationScenarioGeneratorTests` (routing parity over all rules) + `DeviationsModelTests`. **Phase 3 complete — all four trainers live.** |
 |     4 |   4.1 | Icon, launch screen, haptics, a11y  | Done   | b249886 | xcodebuild test (88) ✓; swiftformat+swiftlint ✓ (0 viol); assetutil(AppIcon); install | 2026-06-07 | `AppIcon.appiconset` (1024² spade-on-felt, generated; compiled into Assets.car; restored `ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon`). Haptics via SwiftUI `.sensoryFeedback` — success/error on every graded result (Basic/Count/Deviations/Showdown) + `.selection` on deal (Basic/Deviations). VoiceOver labels on cards/actions; Dynamic Type via system styles. Generated dark `UILaunchScreen` present. `DeviationScenario` made Equatable (deal-haptic trigger). **Code complete; on-device a11y/haptics audit is a pending human action (no account needed).** |
-|     4 |   4.2 | iCloud stats sync                   | Done   | pending | xcodebuild test (94) ✓; swiftformat+swiftlint ✓ (0 viol)                   | 2026-06-07 | `Stores/CloudKeyValueStore.swift` (`CloudKeyValueStore`/`CloudSyncable` protocols + `UbiquitousKeyValueStore` KVS backing + `StatsCloudSync` coordinator: launch seed/pull + did-change-externally observer, LWW per D5). Stat stores write-through to KVS + `adoptFromCloud`/`pushToCloud`. AppModel builds the cloud store + coordinator, injects into all 6 stores. `BlackjackTrainer.entitlements` (KVS key) wired via `CODE_SIGN_ENTITLEMENTS` — inert with signing off (build stays green; local-only until provisioned). `CloudSyncTests` (fake cloud = two devices). D5 = KVS resolved. **Code+entitlement done; iCloud capability provisioning + two-device test are pending human actions.** |
+|     4 |   4.2 | iCloud stats sync                   | Done   | ce26966 | xcodebuild test (94) ✓; swiftformat+swiftlint ✓ (0 viol)                   | 2026-06-07 | `Stores/CloudKeyValueStore.swift` (`CloudKeyValueStore`/`CloudSyncable` protocols + `UbiquitousKeyValueStore` KVS backing + `StatsCloudSync` coordinator: launch seed/pull + did-change-externally observer, LWW per D5). Stat stores write-through to KVS + `adoptFromCloud`/`pushToCloud`. AppModel builds the cloud store + coordinator, injects into all 6 stores. `BlackjackTrainer.entitlements` (KVS key) wired via `CODE_SIGN_ENTITLEMENTS` — inert with signing off (build stays green; local-only until provisioned). `CloudSyncTests` (fake cloud = two devices). D5 = KVS resolved. **Code+entitlement done; iCloud capability provisioning + two-device test are pending human actions.** |
+|     4 |   4.3 | Home-screen widget                  | Needs review | — | n/a (paused) | 2026-06-07 | ⏸️ **Autopilot paused here.** The widget requires a new WidgetKit extension target + App Group capability + on-device Home-Screen verification — not safely buildable/validatable without an Apple Developer account + a device (embedding an extension in an unsigned app risks the green build; App-Group sharing + Home-Screen render need provisioning). Prepared a concrete handoff/sub-plan (roadmap 4.3 Status) and resolved the decision default (accuracy + current streak per trainer). Resume by re-invoking the autopilot. |
 
 </content>

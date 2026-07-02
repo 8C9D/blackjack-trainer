@@ -727,7 +727,23 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 ### Slice 4.3 — Home-screen widget
 
 - **Phase:** 4 — Native
-- **Status:** Planned
+- **Status:** Needs review (paused — autopilot stop point). The widget needs a
+  **new WidgetKit app-extension target + an App Group capability + on-device
+  Home-Screen verification**, none of which can be safely built or validated on a
+  machine without an Apple Developer account (embedding an extension into an
+  unsigned app risks the green build; App-Group cross-process sharing and the
+  Home-Screen render require provisioning + a device). Per the autopilot's
+  "pause rather than guess on safety," this is deferred to the human. **Handoff /
+  sub-plan:**
+  1. Add an `ios/BlackjackWidget/` app-extension target (XcodeGen `type:
+     app-extension`, `WidgetKit` + `SwiftUI`), embedded in the app.
+  2. Enable the **App Group** `group.com.blackjacttrainer` on both the app and
+     the widget (Developer portal + entitlements files).
+  3. Add a shared `WidgetSnapshot` Codable (overall accuracy + current streak per
+     selected trainer) written by the app to `UserDefaults(suiteName:)` on each
+     stat change, plus `WidgetCenter.shared.reloadAllTimelines()`.
+  4. Widget `TimelineProvider` reads the snapshot; small + medium layouts.
+  5. Verify on a real Home Screen and after a drill.
 - **Goal:** A WidgetKit widget surfacing at least one stat (e.g. overall
   accuracy and current streak, selectable per trainer).
 - **Why here:** Needs the stats container shared via an **App Group**, which also
@@ -741,8 +757,8 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
         chosen trainer.
 - **Validation:** baseline + device check.
 - **Commit:** `feat(ios): home-screen stats widget via WidgetKit`
-- **Decision:** **Required — which stat(s) the widget shows.** Default: accuracy
-  - current streak, per selected trainer.
+- **Decision:** **Resolved (default) — accuracy + current streak, per selected
+  trainer.** (Implementation deferred to the human per the handoff above.)
 
 ### Slice 4.4 — Local-notification practice reminders
 
