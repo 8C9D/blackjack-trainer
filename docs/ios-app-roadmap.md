@@ -696,7 +696,14 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
 ### Slice 4.2 — iCloud stats sync
 
 - **Phase:** 4 — Native
-- **Status:** Planned
+- **Status:** Done (code + entitlement; iCloud capability provisioning + the
+  two-device verification are pending human actions) — `CloudKeyValueStore`
+  protocol + `UbiquitousKeyValueStore` (NSUbiquitousKeyValueStore) backing; the
+  six stat stores write-through to KVS and adopt external changes (last-writer-
+  wins, D5); `StatsCloudSync` seeds/pulls at launch and observes the
+  did-change-externally notification; `BlackjackTrainer.entitlements` carries the
+  KVS key (wired but inert with signing off → simulator build stays green; it
+  degrades to local-only until the human enables the iCloud capability).
 - **Goal:** Sync the per-trainer stats across a user's devices.
 - **Why here:** First of the chosen native extras; builds directly on Slice 2.1.
 - **Scope:** Mirror each stat store into `NSUbiquitousKeyValueStore` (D5) with a
@@ -704,12 +711,18 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
   capability; graceful offline/no-account fallback to local-only.
 - **Out of scope:** CloudKit, account systems, server backend.
 - **Acceptance criteria:**
-  - [ ] Stats written on device A appear on device B (same Apple ID); offline
-        edits reconcile on reconnect; no data loss when iCloud is unavailable.
-- **Validation:** baseline + two-device manual test.
+  - [x] (code) Stats mirror to KVS and a second store sharing the KVS adopts them
+        (last-writer-wins); no data loss when iCloud is unavailable (local-only
+        fallback) — covered by `CloudSyncTests` with a fake cloud standing in for
+        two devices. **The real two-device sync test on hardware is a pending
+        human action (needs the provisioned iCloud capability).**
+- **Validation:** baseline + two-device manual test — `xcodebuild test` ✓ (94
+  tests incl. `CloudSyncTests`), `swiftformat --lint` ✓, `swiftlint` ✓ (0
+  violations); the simulator logs the expected "no KVS entitlement" notice and
+  runs local-only. Two-device verification is the pending human action.
 - **Commit:** `feat(ios): iCloud sync for per-trainer stats`
-- **Decision:** **Required — D5 (KVS vs CloudKit).** Default: KVS. Re-evaluate
-  only if the data model outgrows KVS's 1MB/key limits.
+- **Decision:** **Resolved — D5 = KVS** (`NSUbiquitousKeyValueStore`), the
+  default. Re-evaluate only if the data model outgrows KVS's 1MB/key limits.
 
 ### Slice 4.3 — Home-screen widget
 

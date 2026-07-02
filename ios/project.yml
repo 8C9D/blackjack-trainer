@@ -34,6 +34,10 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.blackjacktrainer.app
         PRODUCT_NAME: BlackjackTrainer
+        # iCloud KVS entitlement (4.2). Inert with code signing disabled (the
+        # simulator build stays green); the human enables the iCloud capability
+        # for the App ID and signs to activate cross-device sync.
+        CODE_SIGN_ENTITLEMENTS: BlackjackTrainer/BlackjackTrainer.entitlements
         GENERATE_INFOPLIST_FILE: 'YES'
         MARKETING_VERSION: '1.0'
         CURRENT_PROJECT_VERSION: '1'
