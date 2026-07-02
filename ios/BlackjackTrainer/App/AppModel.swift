@@ -14,12 +14,17 @@ final class AppModel {
     let counting = CountingEngine()
     let deviationEvaluator: DeviationEvaluator
 
-    let basicStrategyStats = SessionStatsStore(key: StatsKeys.basicStrategy)
-    let runningCountStats = SessionStatsStore(key: StatsKeys.cardCounting)
-    let trueCountStats = SessionStatsStore(key: StatsKeys.trueCount)
-    let deviationStats = SessionStatsStore(key: StatsKeys.deviation)
-    let deckEstimationStats = SessionStatsStore(key: StatsKeys.deckEstimation)
-    let showdownStats = ShowdownStatsStore()
+    let basicStrategyStats: SessionStatsStore
+    let runningCountStats: SessionStatsStore
+    let trueCountStats: SessionStatsStore
+    let deviationStats: SessionStatsStore
+    let deckEstimationStats: SessionStatsStore
+    let showdownStats: ShowdownStatsStore
+
+    /// Retained for the app's lifetime; mirrors the stat stores to iCloud KVS and
+    /// adopts external changes (4.2). A no-op beyond local storage until the
+    /// iCloud capability is provisioned.
+    @ObservationIgnored private let cloudSync: StatsCloudSync
 
     init() {
         cleanupLegacyStatsKeys()
@@ -30,10 +35,28 @@ final class AppModel {
         }
         charts = loaded.charts
         countingSystems = loaded.systems
-        let basicStrategy = BasicStrategyEngine(charts: loaded.charts)
-        self.basicStrategy = basicStrategy
+        let basicStrategyEngine = BasicStrategyEngine(charts: loaded.charts)
+        basicStrategy = basicStrategyEngine
         deviationEvaluator = DeviationEvaluator(
-            engine: DeviationEngine(basic: basicStrategy, charts: loaded.charts)
+            engine: DeviationEngine(basic: basicStrategyEngine, charts: loaded.charts)
         )
+
+        let cloud = UbiquitousKeyValueStore()
+        let basicStrategyStats = SessionStatsStore(key: StatsKeys.basicStrategy, cloud: cloud)
+        let runningCountStats = SessionStatsStore(key: StatsKeys.cardCounting, cloud: cloud)
+        let trueCountStats = SessionStatsStore(key: StatsKeys.trueCount, cloud: cloud)
+        let deviationStats = SessionStatsStore(key: StatsKeys.deviation, cloud: cloud)
+        let deckEstimationStats = SessionStatsStore(key: StatsKeys.deckEstimation, cloud: cloud)
+        let showdownStats = ShowdownStatsStore(key: StatsKeys.showdown, cloud: cloud)
+        self.basicStrategyStats = basicStrategyStats
+        self.runningCountStats = runningCountStats
+        self.trueCountStats = trueCountStats
+        self.deviationStats = deviationStats
+        self.deckEstimationStats = deckEstimationStats
+        self.showdownStats = showdownStats
+        cloudSync = StatsCloudSync(cloud: cloud, stores: [
+            basicStrategyStats, runningCountStats, trueCountStats,
+            deviationStats, deckEstimationStats, showdownStats
+        ])
     }
 }

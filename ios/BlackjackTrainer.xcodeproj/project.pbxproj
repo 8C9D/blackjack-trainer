@@ -28,12 +28,14 @@
 		33492E9B5E4EF3FF48BC4CE1 /* CountingDrillTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F836831ED5AA3612EC1A6 /* CountingDrillTests.swift */; };
 		386E32FE6EC444B9D31E527A /* basic-strategy-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = D52EF9B7479E51758C09565B /* basic-strategy-vectors.json */; };
 		3A74F45037FD6FA9B90F07CE /* BasicStrategyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17D37EE0DCEE76979C4B31A9 /* BasicStrategyView.swift */; };
+		3CC9C30A7E7A343467F7DA05 /* CloudSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BD7421E78295DC500F5D504 /* CloudSyncTests.swift */; };
 		3D06500A85C04C83F3E882BD /* StatsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A3B7FB8E53D8E1DEAAEE93B /* StatsModels.swift */; };
 		3FD4BF64CAFAE561BCADE811 /* FeedbackShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A06878A6AE71D6BE3C20EB17 /* FeedbackShellView.swift */; };
 		45BA9B9281DD3E44F7D4BBEE /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA392F4E4A34C3BC514E68A8 /* RootTabView.swift */; };
 		488D636848CD51976F413918 /* AUTHORS.txt in Resources */ = {isa = PBXBuildFile; fileRef = 25A35DC18D354F2C90FF460B /* AUTHORS.txt */; };
 		4C357F27214321B492EA280F /* DeviationTrainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C64CBE362221FD3923975DBF /* DeviationTrainer.swift */; };
 		4DC171F2E11923E6F13DE2DF /* CardImageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7D35732C70EB138CD4848D4 /* CardImageTests.swift */; };
+		4F34564EAD24EB9CA97E6818 /* CloudKeyValueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 456585027076380424BE63C8 /* CloudKeyValueStore.swift */; };
 		53E0D784E52D67FE0E0D7D30 /* CardGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2705BBD8AAF017C2486055AE /* CardGenerator.swift */; };
 		5426F4C307C738A4E0CDD151 /* CountingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E69A95A626303D8499464CCC /* CountingView.swift */; };
 		5486C1B108D1CEE024BC8BE8 /* RuleControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4278214D3A2C4A4D26D871E /* RuleControlsView.swift */; };
@@ -107,6 +109,7 @@
 		1686420A2590C6534E31F3E2 /* ShoeFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoeFactory.swift; sourceTree = "<group>"; };
 		17D37EE0DCEE76979C4B31A9 /* BasicStrategyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicStrategyView.swift; sourceTree = "<group>"; };
 		18C6C68585013F882B690DA5 /* DeviationParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationParityTests.swift; sourceTree = "<group>"; };
+		1BD7421E78295DC500F5D504 /* CloudSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncTests.swift; sourceTree = "<group>"; };
 		22F61940A575094590E7A1D7 /* CardHandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardHandTests.swift; sourceTree = "<group>"; };
 		232402DABC1D385D19FC8B05 /* CountAnswerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountAnswerView.swift; sourceTree = "<group>"; };
 		25A35DC18D354F2C90FF460B /* AUTHORS.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = AUTHORS.txt; sourceTree = "<group>"; };
@@ -117,6 +120,7 @@
 		3F0F142E7986FA01C30FBDC9 /* CountFeedbackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountFeedbackView.swift; sourceTree = "<group>"; };
 		40DA33CFF9EA9742E7504A05 /* StatsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsStoreTests.swift; sourceTree = "<group>"; };
 		412EEBB6BE3B2274CC4757FB /* BasicStrategyEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicStrategyEngine.swift; sourceTree = "<group>"; };
+		456585027076380424BE63C8 /* CloudKeyValueStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKeyValueStore.swift; sourceTree = "<group>"; };
 		45B95CDB1F240EEC3FC88326 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		4C391C226F94DEFB8E908E8A /* COPYING.LESSER.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = COPYING.LESSER.txt; sourceTree = "<group>"; };
 		501FF9BB16087E1BE634AD19 /* DeckEstimateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckEstimateView.swift; sourceTree = "<group>"; };
@@ -149,6 +153,7 @@
 		B9F3808F8AC15DEF1BE4DE1B /* Keyboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keyboard.swift; sourceTree = "<group>"; };
 		BA0B879E8B1D853622E0CC86 /* DataLayerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataLayerTests.swift; sourceTree = "<group>"; };
 		BD423D666F3BBEA240356B18 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		C02963E6762BC91566A11305 /* BlackjackTrainer.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BlackjackTrainer.entitlements; sourceTree = "<group>"; };
 		C359E507A88490DEB624D413 /* BlackjackTrainerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlackjackTrainerApp.swift; sourceTree = "<group>"; };
 		C4278214D3A2C4A4D26D871E /* RuleControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleControlsView.swift; sourceTree = "<group>"; };
 		C64CBE362221FD3923975DBF /* DeviationTrainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationTrainer.swift; sourceTree = "<group>"; };
@@ -263,6 +268,7 @@
 				D07A16802F2169B099AE3D66 /* CardGeneratorTests.swift */,
 				22F61940A575094590E7A1D7 /* CardHandTests.swift */,
 				C7D35732C70EB138CD4848D4 /* CardImageTests.swift */,
+				1BD7421E78295DC500F5D504 /* CloudSyncTests.swift */,
 				705F836831ED5AA3612EC1A6 /* CountingDrillTests.swift */,
 				01B4AFDADA3CF8230C9FA589 /* CountingModelTests.swift */,
 				D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */,
@@ -323,6 +329,7 @@
 				3B9DA7A0F74320A38AB4F2C5 /* Resources */,
 				DD6EBFCEAFE637A61D6F6F4C /* Stores */,
 				4E0173E3FDCF8F52331926BF /* Views */,
+				C02963E6762BC91566A11305 /* BlackjackTrainer.entitlements */,
 				C359E507A88490DEB624D413 /* BlackjackTrainerApp.swift */,
 				CA392F4E4A34C3BC514E68A8 /* RootTabView.swift */,
 			);
@@ -341,6 +348,7 @@
 		DD6EBFCEAFE637A61D6F6F4C /* Stores */ = {
 			isa = PBXGroup;
 			children = (
+				456585027076380424BE63C8 /* CloudKeyValueStore.swift */,
 				2A3B7FB8E53D8E1DEAAEE93B /* StatsModels.swift */,
 				92869AF24C67B01CE515A238 /* StatsStore.swift */,
 			);
@@ -483,6 +491,7 @@
 				C800EE2297C6AF0CB9999B6A /* CardCounting.swift in Sources */,
 				53E0D784E52D67FE0E0D7D30 /* CardGenerator.swift in Sources */,
 				AE6F2FE0E95A40C9E21207A8 /* CardImage.swift in Sources */,
+				4F34564EAD24EB9CA97E6818 /* CloudKeyValueStore.swift in Sources */,
 				2D528424128E711BB0F538BD /* CountAnswerView.swift in Sources */,
 				846B2EEF3BB562DEE492DE65 /* CountFeedbackView.swift in Sources */,
 				F6C919CA4ED0021197E1F128 /* CountingEngine.swift in Sources */,
@@ -525,6 +534,7 @@
 				751F87683B0C43F746AE71BE /* CardGeneratorTests.swift in Sources */,
 				55C4A5D71E0995E7E51A7E45 /* CardHandTests.swift in Sources */,
 				4DC171F2E11923E6F13DE2DF /* CardImageTests.swift in Sources */,
+				3CC9C30A7E7A343467F7DA05 /* CloudSyncTests.swift in Sources */,
 				33492E9B5E4EF3FF48BC4CE1 /* CountingDrillTests.swift in Sources */,
 				BD6E7BF5AA767DA6D790CF8D /* CountingModelTests.swift in Sources */,
 				CA4D608DD9DB115BD8BEDD6B /* CountingParityTests.swift in Sources */,
@@ -559,6 +569,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = BlackjackTrainer/BlackjackTrainer.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -686,6 +697,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = BlackjackTrainer/BlackjackTrainer.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;

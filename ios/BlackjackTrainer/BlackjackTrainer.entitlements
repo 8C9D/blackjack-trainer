@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  iCloud Key-Value Store (Slice 4.2). Enables NSUbiquitousKeyValueStore to
+	  sync the per-trainer stats across a user's devices. The capability must be
+	  enabled for the App ID in the Apple Developer portal and the app signed with
+	  a matching provisioning profile (a pending human action). Until then the app
+	  degrades to local-only with no code change.
+	-->
+	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
+	<string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
+</dict>
+</plist>
