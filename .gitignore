@@ -55,3 +55,8 @@ ios/build/
 
 # Claude Code local settings (per-machine permission grants)
 .claude/
+
+# Untracked scratch report docs (point-in-time; intentionally not committed)
+/docs/codebase-docs-sync.md
+/docs/manual-testing-guide.md
+/docs/repo-current-state.md
