@@ -687,7 +687,7 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
         The on-device VoiceOver read-through + large-type eyeball is the human
         device pass.
 - **Validation:** baseline + device check + Accessibility Inspector — `xcodebuild
-  test` ✓ (88 tests, no regressions), `swiftformat --lint` ✓, `swiftlint` ✓ (0
+test` ✓ (88 tests, no regressions), `swiftformat --lint` ✓, `swiftlint` ✓ (0
   violations), `assetutil` confirms `AppIcon` in `Assets.car`, app installs with
   the icon. Device check + Accessibility Inspector are the pending human action.
 - **Commit:** `feat(ios): app icon, launch screen, haptics, and accessibility pass`
@@ -736,7 +736,7 @@ export:fixtures` script; add a CI step that regenerates and **diffs** the
   "pause rather than guess on safety," this is deferred to the human. **Handoff /
   sub-plan:**
   1. Add an `ios/BlackjackWidget/` app-extension target (XcodeGen `type:
-     app-extension`, `WidgetKit` + `SwiftUI`), embedded in the app.
+app-extension`, `WidgetKit` + `SwiftUI`), embedded in the app.
   2. Enable the **App Group** `group.com.blackjacttrainer` on both the app and
      the widget (Developer portal + entitlements files).
   3. Add a shared `WidgetSnapshot` Codable (overall accuracy + current streak per
