@@ -104,7 +104,7 @@ The codebase is in **good health**, with one concrete regression in the lint gat
   `npm run export:fixtures` + `git diff --exit-code -- ios/Fixtures` (expected: no
   fixture change — the evaluator is not part of the exporter's path).
 - **Dependency ordering:** Independent.
-- **Autopilot status:** Planned
+- **Autopilot status:** Implemented
 
 ## 4. Quick Wins
 
@@ -193,11 +193,22 @@ Opportunity F fixes).**
 
 ## 11. Autopilot Execution Log
 
-| #   | Cleanup                                | Files changed                                                             | Validation             | Commit  | Push    | Notes                                                                                                                         |
-| --- | -------------------------------------- | ------------------------------------------------------------------------- | ---------------------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| 0   | Regenerate refactor-opportunities      | docs/refactor-opportunities.md                                            | n/a (docs)             | bb526d6 | pushed  | Report regenerated for the dual TS+iOS state on `main`.                                                                       |
-| 1   | Opportunity F: Prettier-clean two docs | docs/ios-app-roadmap.md, docs/ios-app-roadmap-progress.md (+ this report) | `npm run lint` exits 0 | pending | pending | `prettier --write` on exactly the two flagged docs (inline-code continuation + table padding). Restores the red lint/CI gate. |
+| #   | Cleanup                                 | Files changed                                                             | Validation                                         | Commit  | Push    | Notes                                                                                                                                                                                            |
+| --- | --------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------- | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0   | Regenerate refactor-opportunities       | docs/refactor-opportunities.md                                            | n/a (docs)                                         | bb526d6 | pushed  | Report regenerated for the dual TS+iOS state on `main`.                                                                                                                                          |
+| 1   | Opportunity F: Prettier-clean two docs  | docs/ios-app-roadmap.md, docs/ios-app-roadmap-progress.md (+ this report) | `npm run lint` exits 0                             | 2203358 | pushed  | `prettier --write` on exactly the two flagged docs (inline-code continuation + table padding). Restores the red lint/CI gate.                                                                    |
+| 2   | Opportunity G: dedupe insurance literal | deviation-evaluator.service.ts (+ this report)                            | 702 tests pass; build ok; lint green; parity clean | pending | pending | Hoisted the duplicated base sentence to `insuranceExplanation`; incorrect branch appends the suffix. Byte-identical output (spec asserts `toContain('Take insurance')`). No `ios/Fixtures` diff. |
 
 ### Run summary
 
-_In progress — see entries above as cleanups land._
+Three commits landed on `main`: the regenerated report, Opportunity F (restored the
+red `npm run lint` / CI gate by Prettier-formatting two tracked docs), and Opportunity
+G (deduped the insurance-explanation literal). Each was validated and pushed
+separately; all changes are mechanical and behavior-preserving.
+
+**Stopped here intentionally.** The remaining candidates (§5: shared localStorage
+store, shared keydown handler, unified signed formatter) are behavioral and/or need a
+design call — outside this autopilot's safety envelope. §6 items are intentional
+patterns. The iOS subproject (§7) is out of the fast-validation path and was recently
+paused for human action, so it is left untouched. No further auto-safe cleanups remain
+on the web side; the codebase is in good shape.
