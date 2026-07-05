@@ -1,8 +1,21 @@
 # Test Coverage Improvement Report
 
-_Last updated 2026-06-02 to record the feature/shared UI-component coverage
-pass (Gap 5, now closed). The 2026-05-29 pass below (§5, Improvements 1–4) was
-run by the test-coverage-improver skill._
+_Last updated 2026-06-08 to record Gap 6 (the directly-untested engine lookup
+helpers, now closed) and to reconcile the baseline with reality. The 2026-06-02
+pass recorded the feature/shared UI-component coverage pass (Gap 5, closed). The
+2026-05-29 pass below (§5, Improvements 1–4) was run by the
+test-coverage-improver skill._
+
+> **Update (2026-06-08, skill pass):** Re-ran the analysis against the actual
+> tree. **Current baseline: 38 spec files / 713 tests passing** (`ng test`,
+> single run). Several gaps the older notes listed as "open" have since been
+> closed by intervening feature work and their own specs — notably value-level
+> chart correctness (`data/chart-values.golden.spec.ts`) and the counting-system
+> registry (`data/counting-systems.spec.ts`). The one new genuine unit gap this
+> pass found and closed was Gap 6 below: three pure lookup helpers in
+> `basic-strategy-engine.service.ts` (`normalizeUpcardKey`, `classifyAsPair`,
+> the two-card `isSoftHand`) that are explicitly "exported for tests" but were
+> only exercised transitively, never directly.
 
 > **Update (2026-06-06, docs sync):** The "current verified baseline" quoted
 > throughout (27 spec files / 481 tests) reflects 2026-06-02. Roadmap Slices 5–9
@@ -37,8 +50,10 @@ run by the test-coverage-improver skill._
   390 tests**. Interim feature work (the mobile-mirror layout) then added
   3 tests to `app.spec.ts` (**17 files / 393 tests**), and the UI-component
   pass (§5, Improvement 5) added **10 spec files / 88 tests**.
-  **Current verified baseline: 27 spec files / 481 tests passing**
-  (`CI=true npm test`, confirmed 2026-06-02).
+  As of 2026-06-02 this stood at 27 spec files / 481 tests; intervening feature
+  work plus Gap 6 (§5, Improvement 6) have grown it further.
+  **Current verified baseline: 38 spec files / 713 tests passing**
+  (`ng test`, confirmed 2026-06-08).
 - **Test layout**: co-located `*.spec.ts` next to the unit under test.
 
 ### Verified source-vs-spec inventory
@@ -169,6 +184,28 @@ Improvement 5). Every `*.component.ts` in the app now has a sibling spec.
   88 tests). Details in §5, Improvement 5. Every `*.component.ts` in the app
   now has a co-located spec.
 
+### Gap 6 — Engine lookup helpers had no direct tests — Risk: Low — Status: **Implemented (2026-06-08)**
+
+- **Location**: `src/app/core/services/basic-strategy-engine.service.ts`
+  (`normalizeUpcardKey`, `classifyAsPair`, the two-card `isSoftHand`), guarded
+  from the sibling `basic-strategy-engine.service.spec.ts`.
+- **Why it matters**: these three pure helpers gate every chart lookup —
+  `normalizeUpcardKey` picks the dealer column, `classifyAsPair` decides whether
+  the pair chart applies, and `isSoftHand` selects the soft chart. They are
+  shared by both the basic-strategy and deviation engines and are explicitly
+  commented "exported for tests", yet no spec referenced them directly (only
+  transitive coverage via `decide`). Two edge cases are easy to regress and
+  silent if they do: a mixed ten-value pair (`10`+`K` → `'10'`, not `null`),
+  and that the two-card `isSoftHand` returns **`false`** for `A,A` (treated as a
+  pair, the opposite of the multi-card `hand.model` `isSoftHand`, which returns
+  `true`).
+- **Existing tests**: none direct; behavior only reached through engine specs.
+- **Missing cases (added)**: Ace/ten-value/pip column mapping and
+  suit-independence for `normalizeUpcardKey`; same-rank, mixed-ten-value, and
+  non-pair classification for `classifyAsPair`; one-ace / `A,A` / no-ace cases
+  for the two-card `isSoftHand`.
+- **Suggested validation**: `ng test`.
+
 ## 4. Test Improvement Plan
 
 1. Establish a green baseline with `CI=true npm test`. ✓ (355 passing)
@@ -262,6 +299,24 @@ This closes Gap 5 — every `*.component.ts` in the app now has a co-located
 spec. The specs exercise rendering and interaction at the component boundary;
 they are deliberately **not** end-to-end or visual-regression tests (see §6).
 
+### Improvement 6 — Engine lookup helper specs (Gap 6)
+
+- **Files changed**: `src/app/core/services/basic-strategy-engine.service.spec.ts`
+  (extended with three `describe` blocks for `normalizeUpcardKey`,
+  `classifyAsPair`, and the two-card `isSoftHand`; helpers added to the import).
+  No production code touched.
+- **Behavior covered**: dealer-column normalization (Ace, all ten-value ranks,
+  pips 2–9, suit-independence); pair classification (same-rank, mixed
+  ten-value → `'10'`, non-pair → `null`); two-card soft detection including the
+  `A,A`-is-not-soft contract.
+- **New test cases**: 14.
+- **Validation run**: targeted `ng test --include …basic-strategy-engine.service.spec.ts`
+  (50 passing), then full `ng test`.
+- **Result**: **PASS** — full suite **38 files / 713 tests passing** (+11 over
+  the 702 pre-pass baseline; the spec file went from 36 to 50 tests).
+- **Commit**: see `git log -- src/app/core/services/basic-strategy-engine.service.spec.ts`.
+- **Push result**: pushed to `origin/main`.
+
 ## 6. Skipped Opportunities & Remaining Gaps
 
 - **`StatsStore` subclasses** — not skipped on merit; **already covered** by
@@ -290,13 +345,15 @@ yet have — not "untested units":
   a coverage percentage; coverage is asserted by hand-picked specs, not a
   threshold. Adding coverage reporting and a minimum gate would prevent silent
   regressions. **Open.**
-- **Chart value-correctness** — the basic-strategy chart specs (Gap 3) and the
-  deviation-data guards (Gap 4) are **structural only** (key sets, dealer
-  columns, legal cell symbols, lookup-key uniqueness). They deliberately do not
-  assert that each cell's action matches the BJA source PDF; only the engine
-  specs assert specific actions, and those are spot-checks, not a full-chart
-  comparison. A value-by-value chart guard (or a golden file checked against the
-  PDFs) remains unaddressed. **Open.**
+- **Chart value-correctness (regression guard)** — **now closed** by
+  `data/chart-values.golden.spec.ts`, a value-level golden serialization of all
+  four hand-transcribed charts (both basic-strategy charts and both deviation
+  charts) that goes red on any future cell drift. Note this guards against
+  _regressions_, not original transcription errors: the goldens serialize
+  today's values, so re-verifying the charts against the published BJA PDFs
+  remains a periodic **human** review task (documented in
+  `docs/repo-current-state.md`), not an automated one. **Closed (regression);
+  open (human source re-verification).**
 - **Bootstrap / routing** (`app.config.ts`, `app.routes.ts`, `main.ts`) — Low
   value; still unspecced. **Open (deferred).**
 - **Pure type-only models** (`core/models/*.model.ts` interfaces) — no runtime
@@ -316,7 +373,7 @@ basic-strategy, card-stream, deviation-feedback-panel — 10 files / 88 tests).
 Each addition was validated against a green baseline, committed, and pushed one
 at a time; none changed production code.
 
-**Current verified baseline: 27 spec files / 481 tests passing.**
+**Current verified baseline: 38 spec files / 713 tests passing.**
 
 Every `*.component.ts` and every decision-critical service now has a spec, so
 the original UI-component gap is closed. The honest remaining opportunities are
