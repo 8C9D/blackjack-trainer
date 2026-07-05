@@ -59,6 +59,7 @@ export class DeviationEvaluatorService {
       const matchedRule = insurance.matchedRule;
       const expectedAction: Action = 'INS';
       const correct = userAction === expectedAction;
+      const insuranceExplanation = `Take insurance: dealer shows an Ace and the true count is ${formatTrueCount(scenario.trueCount)} (≥ +3 makes insurance +EV).`;
       return {
         userAction,
         expectedAction,
@@ -71,8 +72,8 @@ export class DeviationEvaluatorService {
         correct,
         isDeviationCandidate,
         explanation: correct
-          ? `Take insurance: dealer shows an Ace and the true count is ${formatTrueCount(scenario.trueCount)} (≥ +3 makes insurance +EV).`
-          : `Take insurance: dealer shows an Ace and the true count is ${formatTrueCount(scenario.trueCount)} (≥ +3 makes insurance +EV). You picked ${ACTION_LABELS[userAction]}.`,
+          ? insuranceExplanation
+          : `${insuranceExplanation} You picked ${ACTION_LABELS[userAction]}.`,
       };
     }
 
