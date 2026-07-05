@@ -1,4 +1,10 @@
-import { BasicStrategyEngineService, type EngineInput } from './basic-strategy-engine.service';
+import {
+  BasicStrategyEngineService,
+  classifyAsPair,
+  isSoftHand,
+  normalizeUpcardKey,
+  type EngineInput,
+} from './basic-strategy-engine.service';
 import type { Card, Rank, Suit } from '../models/card.model';
 import type { EngineOptions, RuleSet } from '../models/strategy.model';
 
@@ -325,5 +331,72 @@ describe('BasicStrategyEngineService', () => {
       expect(r.correct).toBe(false);
       expect(r.action).toBe('S');
     });
+  });
+});
+
+// ─── pure lookup helpers (exported for tests) ──────────────────────────────
+// These feed both the basic-strategy and deviation engines: normalizeUpcardKey
+// picks the dealer column, classifyAsPair gates the pair chart, and isSoftHand
+// the soft chart. Exercised transitively above, but locked directly here so a
+// regression in the key math surfaces at the helper rather than as a confusing
+// downstream chart mislookup.
+
+describe('normalizeUpcardKey', () => {
+  it('maps an Ace to the A column', () => {
+    expect(normalizeUpcardKey(card('A'))).toBe('A');
+  });
+
+  it('collapses every ten-value rank onto the 10 column', () => {
+    for (const rank of ['10', 'J', 'Q', 'K'] as const) {
+      expect(normalizeUpcardKey(card(rank))).toBe('10');
+    }
+  });
+
+  it('passes pip ranks 2–9 through unchanged', () => {
+    for (const rank of ['2', '3', '4', '5', '6', '7', '8', '9'] as const) {
+      expect(normalizeUpcardKey(card(rank))).toBe(rank);
+    }
+  });
+
+  it('is suit-independent', () => {
+    expect(normalizeUpcardKey(card('Q', 'hearts'))).toBe('10');
+    expect(normalizeUpcardKey(card('A', 'clubs'))).toBe('A');
+  });
+});
+
+describe('classifyAsPair', () => {
+  it('classifies a same-rank pair under that rank key', () => {
+    expect(classifyAsPair([card('8'), card('8')])).toBe('8');
+    expect(classifyAsPair([card('A'), card('A')])).toBe('A');
+  });
+
+  it('classifies any two ten-value cards as a 10-pair, even mixed ranks', () => {
+    expect(classifyAsPair([card('10'), card('K')])).toBe('10');
+    expect(classifyAsPair([card('J'), card('Q')])).toBe('10');
+    expect(classifyAsPair([card('K'), card('K')])).toBe('10');
+  });
+
+  it('returns null for a non-pair hand', () => {
+    expect(classifyAsPair([card('8'), card('9')])).toBeNull();
+    expect(classifyAsPair([card('A'), card('10')])).toBeNull();
+  });
+
+  it('is suit-independent', () => {
+    expect(classifyAsPair([card('7', 'hearts'), card('7', 'spades')])).toBe('7');
+  });
+});
+
+describe('isSoftHand (two-card)', () => {
+  it('is true for exactly one ace', () => {
+    expect(isSoftHand([card('A'), card('6')])).toBe(true);
+    expect(isSoftHand([card('9'), card('A')])).toBe(true);
+  });
+
+  it('treats A,A as a pair, not a soft hand', () => {
+    expect(isSoftHand([card('A'), card('A')])).toBe(false);
+  });
+
+  it('is false for a hand with no ace', () => {
+    expect(isSoftHand([card('10'), card('7')])).toBe(false);
   });
 });
