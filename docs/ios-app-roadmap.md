@@ -727,7 +727,11 @@ test` ✓ (88 tests, no regressions), `swiftformat --lint` ✓, `swiftlint` ✓ 
 ### Slice 4.3 — Home-screen widget
 
 - **Phase:** 4 — Native
-- **Status:** Needs review (paused — autopilot stop point). The widget needs a
+- **Status:** **Updated 2026-06-12 (user-confirmed): the Apple Developer account
+  is now active → build the widget code now (simulator-validated), deferring only
+  the on-device App-Group + Home-Screen check; the progress-doc run status is
+  authoritative. The original pause note is kept below for context.** Needs review
+  (paused — autopilot stop point). The widget needs a
   **new WidgetKit app-extension target + an App Group capability + on-device
   Home-Screen verification**, none of which can be safely built or validated on a
   machine without an Apple Developer account (embedding an extension into an

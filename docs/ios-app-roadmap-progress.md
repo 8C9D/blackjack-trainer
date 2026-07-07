@@ -6,22 +6,31 @@ format._
 
 **Roadmap:** [docs/ios-app-roadmap.md](ios-app-roadmap.md)
 **iOS project location:** `./ios` (monorepo, D1 default)
-**Toolchain:** `xcodebuild` 16.4 (Build 16F6) ✓ · `swift` 6.1.2 ✓ · `swiftformat`
+**Toolchain:** `xcodebuild` 26.3 (Build 17C529) ✓ · `swift` 6.2.4 ✓ · `swiftformat`
 ✓ · `swiftlint` ✓ (both installed via Homebrew at Slice 0.3) · `xcodegen` 2.45.4
-✓ · macOS 15.6.1 host. All Swift build/test/lint gates run locally. Simulator
-destination is `iPhone 16 Pro` (no plain "iPhone 16" is installed).
-**Apple Developer account:** not available on this machine → account/device/App
-Store-gated steps are prepared and handed off (see _Pending human actions_).
+✓ · macOS 15.6.1 host. (Upgraded from Xcode 16.4 / Swift 6.1.2 on 2026-06-12 for
+iOS 26 on-device support; repo re-validated green on 26.3 — build + 94 tests +
+swiftformat + swiftlint.) All Swift build/test/lint gates run locally. Simulator
+destination is `iPhone 16 Pro`, but under Xcode 26.3 the "latest" runtime only
+auto-creates iPhone 17-family sims, so an `iPhone 16 Pro` was created on the iOS
+26.3 runtime to keep that destination resolvable — recreate with `xcrun simctl
+create "iPhone 16 Pro" com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro
+com.apple.CoreSimulator.SimRuntime.iOS-26-3`.
+**Apple Developer account:** ✅ active (team C3W798H8U8) as of 2026-06-12; Xcode
+signed in and the test iPhone (iOS 26.1) is pairing. Capability provisioning (App
+Group, iCloud KVS) and on-device/two-device checks remain (see _Pending human
+actions_).
 **Current phase:** 4
 **Next slice:** 4.3
-**Run status:** ⏸️ PAUSED at Slice 4.3 (home-screen widget). The widget needs a new
-WidgetKit extension target + App Group capability + on-device Home-Screen check —
-not safely buildable/validatable without an Apple Developer account + a device, so
-the autopilot stopped here rather than risk the green build or commit unvalidatable
-code. See the 4.3 handoff in the roadmap and _Pending human actions_ below. The
-remaining account-free work (Slice 4.4 local-notification reminders) is the natural
-next implementation step once the widget approach is decided; re-invoke the
-autopilot to continue.
+**Run status:** ▶️ READY to resume at Slice 4.3 (home-screen widget). Decision
+(2026-06-12, user-confirmed): the account is active, so **build the widget code
+now** — WidgetKit extension target, App Group entitlement
+(`group.com.arthurzhang.blackjacktrainer`), a shared `WidgetSnapshot` (accuracy +
+current streak per selected trainer) written on each stat change, and small/medium
+layouts — validating in the simulator and deferring **only** the on-device
+App-Group + Home-Screen check as a human action (same pattern as 4.2's iCloud). If
+embedding the unsigned extension cannot keep the simulator build green, pause and
+report rather than weakening the build. Then continue to Slice 4.4.
 
 ## Decisions applied
 
@@ -40,17 +49,19 @@ autopilot to continue.
 These require a human and/or an Apple Developer account; the autopilot prepares
 everything automatable around them and does **not** mark them Done.
 
-- [ ] **Enroll in the Apple Developer Program** ($99/yr). Gates signing,
-      entitlement provisioning, TestFlight, and App Store Connect. _(Slice 0.1;
-      unblocks Phases 4–5.)_
+- [x] **Enroll in the Apple Developer Program** ($99/yr). ✅ Done (team
+      C3W798H8U8, 2026-06-12); Xcode signed in. Gates signing, entitlement
+      provisioning, TestFlight, and App Store Connect. _(Slice 0.1; unblocks
+      Phases 4–5.)_
 - [ ] **Reserve the bundle ID and create the App Store Connect app record.**
       Needs the account. _(Slice 0.1.)_
 - [ ] **Provision the iCloud KVS capability** and run the two-device iCloud sync
       verification. _(Slice 4.2.)_
-- [ ] **Build the widget (Slice 4.3):** add the WidgetKit extension target,
-      provision the **App Group** shared container, and verify the widget on a
-      real Home Screen. The autopilot **paused here** (see the 4.3 handoff in the
-      roadmap) — needs the account + a device.
+- [ ] **Build the widget (Slice 4.3) — on-device portion only:** the account is
+      now active, so the autopilot will build + simulator-validate the widget code
+      (extension target, App Group entitlement, snapshot, layouts). Still needs a
+      human: provision the **App Group** container in the portal and verify the
+      widget on a real Home Screen (and that it updates after a drill).
 - [ ] **Local-notification reminders (Slice 4.4):** the code is account-free and
       simulator-implementable (permission UX, repeating schedule, deep-link); only
       **on-device on-schedule delivery** needs hardware. Not yet implemented (sits
