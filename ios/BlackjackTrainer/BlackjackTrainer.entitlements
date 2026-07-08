@@ -11,5 +11,17 @@
 	-->
 	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
 	<string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
+	<!--
+	  App Group (Slice 4.3). Lets the app and the widget extension share one
+	  UserDefaults container for the stats snapshot. The group must be enabled
+	  for both App IDs in the Apple Developer portal and the targets signed (a
+	  pending human action). Until then `UserDefaults(suiteName:)` falls back to
+	  a per-process store, so the simulator build stays green and the widget
+	  shows live data only once the group is provisioned on device.
+	-->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.arthurzhang.blackjacktrainer</string>
+	</array>
 </dict>
 </plist>
