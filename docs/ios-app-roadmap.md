@@ -727,27 +727,25 @@ test` ✓ (88 tests, no regressions), `swiftformat --lint` ✓, `swiftlint` ✓ 
 ### Slice 4.3 — Home-screen widget
 
 - **Phase:** 4 — Native
-- **Status:** **Updated 2026-06-12 (user-confirmed): the Apple Developer account
-  is now active → build the widget code now (simulator-validated), deferring only
-  the on-device App-Group + Home-Screen check; the progress-doc run status is
-  authoritative. The original pause note is kept below for context.** Needs review
-  (paused — autopilot stop point). The widget needs a
-  **new WidgetKit app-extension target + an App Group capability + on-device
-  Home-Screen verification**, none of which can be safely built or validated on a
-  machine without an Apple Developer account (embedding an extension into an
-  unsigned app risks the green build; App-Group cross-process sharing and the
-  Home-Screen render require provisioning + a device). Per the autopilot's
-  "pause rather than guess on safety," this is deferred to the human. **Handoff /
-  sub-plan:**
-  1. Add an `ios/BlackjackWidget/` app-extension target (XcodeGen `type:
-app-extension`, `WidgetKit` + `SwiftUI`), embedded in the app.
-  2. Enable the **App Group** `group.com.blackjacttrainer` on both the app and
-     the widget (Developer portal + entitlements files).
-  3. Add a shared `WidgetSnapshot` Codable (overall accuracy + current streak per
-     selected trainer) written by the app to `UserDefaults(suiteName:)` on each
-     stat change, plus `WidgetCenter.shared.reloadAllTimelines()`.
-  4. Widget `TimelineProvider` reads the snapshot; small + medium layouts.
-  5. Verify on a real Home Screen and after a drill.
+- **Status:** Done (code + entitlements; on-device App-Group provisioning +
+  Home-Screen verification are pending human actions) — added a WidgetKit
+  app-extension target `ios/BlackjackWidget/` (XcodeGen `type: app-extension`,
+  embedded into `BlackjackTrainer.app/PlugIns/` and `ValidateEmbeddedBinary`-clean
+  on the simulator). An `AppIntentConfiguration` widget (`SelectTrainerIntent`)
+  with small + medium layouts surfaces **accuracy + current streak per selected
+  trainer** (the resolved default). A shared `Shared/WidgetSnapshot.swift`
+  (compiled into both the app and the widget) carries the snapshot model + the
+  App Group store; the app's `WidgetSnapshotPublisher` (owned by `AppModel`, the
+  widget analogue of `StatsCloudSync`) rebuilds the snapshot from the five
+  session-stat stores on each change — via a new `SessionStatsStore.onChange`
+  hook — and calls `WidgetCenter.shared.reloadAllTimelines()` (timeline policy
+  `.never`, since refreshes are event-driven). App Group
+  `group.com.arthurzhang.blackjacktrainer` is wired in both entitlements files;
+  inert with signing off, so the simulator build stays green and the widget shows
+  live cross-process data only once the human provisions the group. The original
+  pause note (account-gated) no longer applies: the account is active (2026-06-12,
+  user-confirmed), so the code is built + simulator-validated and only the
+  on-device Home-Screen check is deferred (same pattern as 4.2's iCloud).
 - **Goal:** A WidgetKit widget surfacing at least one stat (e.g. overall
   accuracy and current streak, selectable per trainer).
 - **Why here:** Needs the stats container shared via an **App Group**, which also
@@ -757,9 +755,19 @@ app-extension`, `WidgetKit` + `SwiftUI`), embedded in the app.
   refresh on stat changes.
 - **Out of scope:** Interactive widgets / Live Activities.
 - **Acceptance criteria:**
-  - [ ] Widget installs and shows live stats; updates after a drill; respects the
-        chosen trainer.
-- **Validation:** baseline + device check.
+  - [x] (code) Widget builds + embeds, reads the shared snapshot, and is driven by
+        the per-trainer configuration intent (small + medium); the app writes the
+        snapshot + reloads timelines on each stat change — covered by
+        `WidgetSnapshotTests` (snapshot/store round-trip, publisher refresh on
+        record/reset, accuracy parity with the in-app panel) and a clean simulator
+        launch with the `.appex` embedded. **On-device install + Home-Screen render
+        + update-after-a-drill needs the provisioned App Group (pending human
+        action).**
+- **Validation:** baseline + device check — `xcodebuild build` ✓ (widget `.appex`
+  embedded, `ValidateEmbeddedBinary` ✓), `xcodebuild test` ✓ (104 tests incl.
+  `WidgetSnapshotTests`), `swiftformat --lint` ✓, `swiftlint` ✓ (0 violations), app
+  launches cleanly in the iPhone 16 Pro simulator with the widget embedded.
+  On-device Home-Screen verification is the pending human action.
 - **Commit:** `feat(ios): home-screen stats widget via WidgetKit`
 - **Decision:** **Resolved (default) — accuracy + current streak, per selected
   trainer.** (Implementation deferred to the human per the handoff above.)

@@ -27,6 +27,10 @@ final class SessionStatsStore: CloudSyncable {
     @ObservationIgnored let key: String
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let cloud: CloudKeyValueStore?
+    /// Fired after a local change is persisted (record or reset), so the widget
+    /// snapshot can be refreshed (4.3). Cloud adoption deliberately doesn't fire
+    /// it — the cloud-sync coordinator owns that path.
+    @ObservationIgnored var onChange: (() -> Void)?
     private(set) var stats: SessionStats
 
     init(key: String, defaults: UserDefaults = .standard, cloud: CloudKeyValueStore? = nil) {
@@ -55,6 +59,7 @@ final class SessionStatsStore: CloudSyncable {
     private func persist() {
         StatsPersistence.save(stats, key: key, defaults: defaults)
         pushToCloud()
+        onChange?()
     }
 
     // MARK: CloudSyncable
