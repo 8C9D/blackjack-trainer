@@ -775,7 +775,18 @@ test` ✓ (88 tests, no regressions), `swiftformat --lint` ✓, `swiftlint` ✓ 
 ### Slice 4.4 — Local-notification practice reminders
 
 - **Phase:** 4 — Native
-- **Status:** Planned
+- **Status:** Done (code; on-device permission prompt + on-schedule delivery are
+  pending human actions) — `UserNotifications`-backed practice reminders: a
+  `NotificationScheduling` seam (`SystemNotificationScheduler` + a fake for tests),
+  a `@MainActor @Observable RemindersModel` that requests authorization on enable,
+  schedules one daily-repeating `UNCalendarNotificationTrigger`, persists
+  `ReminderSettings` to UserDefaults, and cancels on disable; a themed
+  `RemindersView` (reached from the About tab) with an enable toggle, time picker,
+  and per-trainer target picker; and deep-linking — a tapped reminder routes to its
+  trainer tab via `AppRouter` + `NotificationCoordinator` (the
+  `UNUserNotificationCenter` delegate, set in the app entry point). Decision applied
+  (default): reminders off until enabled; one daily reminder at a chosen time
+  (default 7:00 PM) opening the chosen trainer. **Phase 4 complete.**
 - **Goal:** Optional reminders to practice on a user-set schedule.
 - **Why here:** Last native extra; self-contained (local notifications, no
   backend).
@@ -784,12 +795,21 @@ test` ✓ (88 tests, no regressions), `swiftformat --lint` ✓, `swiftlint` ✓ 
   notification to the relevant trainer.
 - **Out of scope:** Push notifications / server-scheduled reminders.
 - **Acceptance criteria:**
-  - [ ] Permission flow is correct; reminders fire on schedule; tapping opens the
-        chosen trainer; disabling cancels them.
-- **Validation:** baseline + device check.
+  - [x] (code) Permission flow requests authorization on enable and reflects a
+        denied state; one daily-repeating reminder is scheduled/rescheduled on
+        time/target changes and cancelled on disable; a tapped reminder deep-links
+        to the chosen trainer tab — covered by `RemindersTests` (12: routing,
+        daily-trigger request, enable/deny/disable, reschedule, persistence) and a
+        clean simulator launch. **On-device permission prompt + actual on-schedule
+        delivery + tap-to-open is the device check (pending human action).**
+- **Validation:** baseline + device check — `xcodebuild test` ✓ (116 tests incl.
+  `RemindersTests`), `swiftformat --lint` ✓, `swiftlint` ✓ (0 violations), app
+  launches cleanly in the iPhone 16 Pro simulator with the notification delegate
+  wired. On-schedule delivery on hardware is the pending human action.
 - **Commit:** `feat(ios): local-notification practice reminders`
-- **Decision:** **Required — default cadence & copy.** Default: off until enabled;
-  one daily reminder when turned on.
+- **Decision:** **Required — default cadence & copy. Resolved to the default
+  (applied):** off until enabled; one daily reminder (default 7:00 PM) when turned
+  on, opening the chosen trainer.
 
 ---
 

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The app's four tabs, mirroring the web routes (the two counting modes live
 /// inside the Count tab) plus an About tab for the LGPL acknowledgements (2.3).
-enum AppTab: String, CaseIterable, Identifiable {
+enum AppTab: String, CaseIterable, Identifiable, Codable {
     case strategy
     case count
     case deviations
@@ -45,6 +45,7 @@ enum AppTab: String, CaseIterable, Identifiable {
 /// persisted stats (owned by `AppModel`) survive, matching the web's behavior.
 struct RootTabView: View {
     @Environment(AppModel.self) private var model
+    @Environment(AppRouter.self) private var router
     @State private var selection: AppTab = .strategy
     @State private var visits: [AppTab: Int] = [:]
     @State private var keyboardMonitor = HardwareKeyboardMonitor()
@@ -62,6 +63,12 @@ struct RootTabView: View {
         .environment(\.hasHardwareKeyboard, keyboardMonitor.isConnected)
         .onChange(of: selection, initial: true) { _, newValue in
             visits[newValue, default: 0] += 1
+        }
+        .onChange(of: router.pendingTab) { _, pending in
+            // A tapped reminder routed here; switch tabs and clear the intent.
+            guard let pending else { return }
+            selection = pending
+            router.pendingTab = nil
         }
     }
 
@@ -85,5 +92,6 @@ struct RootTabView: View {
 #Preview {
     RootTabView()
         .environment(AppModel())
+        .environment(AppRouter())
         .preferredColorScheme(.dark)
 }
