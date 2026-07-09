@@ -46,6 +46,10 @@ targets:
         GENERATE_INFOPLIST_FILE: 'YES'
         MARKETING_VERSION: '1.0'
         CURRENT_PROJECT_VERSION: '1'
+        # Export compliance (Slice 5.1): the app uses no non-exempt encryption,
+        # so declare it up front and skip the per-upload prompt. See
+        # docs/app-store-submission.md.
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: 'NO'
         TARGETED_DEVICE_FAMILY: '1,2'
         INFOPLIST_KEY_UILaunchScreen_Generation: 'YES'
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: 'YES'

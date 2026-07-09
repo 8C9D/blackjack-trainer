@@ -21,19 +21,21 @@ signed in and the test iPhone (iOS 26.1) is pairing. Capability provisioning (Ap
 Group, iCloud KVS) and on-device/two-device checks remain (see _Pending human
 actions_).
 **Current phase:** 5
-**Next slice:** 5.1
-**Run status:** ▶️ **Phase 4 complete.** Slice 4.4 (local-notification practice
-reminders) landed 2026-06-13: `UserNotifications`-backed reminders behind a
-`NotificationScheduling` seam, a `@MainActor RemindersModel`, a themed
-`RemindersView` (from the About tab) with enable/time/target controls, and
-deep-linking via `AppRouter` + `NotificationCoordinator`. Decision applied
-(default): off until enabled; one daily reminder (7:00 PM) opening the chosen
-trainer. On-device permission prompt + on-schedule delivery is the pending human
-action. **Next: Phase 5 (App Store readiness) is entirely human/Apple-gated** —
-the autopilot prepares the automatable artifacts for Slice 5.1 (metadata, privacy
-labels, age-rating answers, export-compliance flag) and then PAUSES, since
-creating the App Store Connect record, capturing screenshots from a near-final
-build, TestFlight upload, and submission can only be done by the human.
+**Next slice:** 5.1 (Needs review — paused for the human)
+**Run status:** ⏸️ **PAUSED at Slice 5.1 — autopilot stop point.** Phases 0–4 are
+implemented, validated, committed, and pushed; the entire iOS app (four trainers +
+live shoe + showdown, iCloud sync, home-screen widget, practice reminders) is
+built and green on the simulator. **Phase 5 is human/Apple-gated and cannot be
+auto-completed.** The autopilot prepared the automatable Slice 5.1 artifacts:
+[`docs/app-store-submission.md`](app-store-submission.md) (metadata, privacy
+labels = Data Not Collected, honest age-rating answers ~17+, review notes, and the
+submission checklist) and the export-compliance flag
+`ITSAppUsesNonExemptEncryption=false` in the build. **Remaining = human only:**
+capability provisioning + signing, the App Store Connect record + metadata/privacy/
+rating entry, a privacy-policy/support URL, screenshots from a near-final build
+(5.1), TestFlight (5.2), and submission/release (5.3). Re-invoking the autopilot
+will re-pause here — there is no further code it can land. **The app is NOT
+submitted or approved.**
 
 ## Decisions applied
 
@@ -74,9 +76,13 @@ everything automatable around them and does **not** mark them Done.
       is a device check).
 - [ ] **Device pass:** icon/launch screen on hardware + Accessibility Inspector
       audit. _(Slice 4.1.)_
-- [ ] **App Store Connect:** metadata entry, screenshots from a near-final
-      build, privacy nutrition labels, age-rating questionnaire,
-      export-compliance flag. _(Slice 5.1.)_
+- [ ] **App Store Connect (Slice 5.1) — web entry only:** the copy, privacy
+      (Data Not Collected), and age-rating answers are drafted in
+      [`docs/app-store-submission.md`](app-store-submission.md), and the
+      export-compliance flag (`ITSAppUsesNonExemptEncryption=false`) is already in
+      the build. Still needs a human: create the ASC record, host a privacy-policy
+      + support URL, enter the metadata, answer privacy/age-rating, and capture
+      screenshots from a near-final build, then pass ASC validation.
 - [ ] **TestFlight:** archive upload + internal/external testing on a device
       matrix. _(Slice 5.2.)_
 - [ ] **Submit for review and release.** _(Slice 5.3.)_
@@ -106,6 +112,7 @@ everything automatable around them and does **not** mark them Done.
 |     4 |   4.1 | Icon, launch screen, haptics, a11y     | Done         | b249886 | xcodebuild test (88) ✓; swiftformat+swiftlint ✓ (0 viol); assetutil(AppIcon); install | 2026-06-07 | `AppIcon.appiconset` (1024² spade-on-felt, generated; compiled into Assets.car; restored `ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon`). Haptics via SwiftUI `.sensoryFeedback` — success/error on every graded result (Basic/Count/Deviations/Showdown) + `.selection` on deal (Basic/Deviations). VoiceOver labels on cards/actions; Dynamic Type via system styles. Generated dark `UILaunchScreen` present. `DeviationScenario` made Equatable (deal-haptic trigger). **Code complete; on-device a11y/haptics audit is a pending human action (no account needed).**                                                                                                                                                          |
 |     4 |   4.2 | iCloud stats sync                      | Done         | ce26966 | xcodebuild test (94) ✓; swiftformat+swiftlint ✓ (0 viol)                              | 2026-06-07 | `Stores/CloudKeyValueStore.swift` (`CloudKeyValueStore`/`CloudSyncable` protocols + `UbiquitousKeyValueStore` KVS backing + `StatsCloudSync` coordinator: launch seed/pull + did-change-externally observer, LWW per D5). Stat stores write-through to KVS + `adoptFromCloud`/`pushToCloud`. AppModel builds the cloud store + coordinator, injects into all 6 stores. `BlackjackTrainer.entitlements` (KVS key) wired via `CODE_SIGN_ENTITLEMENTS` — inert with signing off (build stays green; local-only until provisioned). `CloudSyncTests` (fake cloud = two devices). D5 = KVS resolved. **Code+entitlement done; iCloud capability provisioning + two-device test are pending human actions.**                           |
 |     4 |   4.3 | Home-screen widget                     | Done         | 6dc2626 | xcodebuild build (widget .appex embedded) + test (104) ✓; swiftformat+swiftlint ✓ (0 viol); sim launch | 2026-06-12 | Account now active (user-confirmed) → built the widget code + simulator-validated (per the resolved decision); only the on-device portion deferred. New `BlackjackWidget` app-extension target (XcodeGen `type: app-extension`, embedded into `app/PlugIns/`, `ValidateEmbeddedBinary` ✓). `AppIntentConfiguration` widget (`SelectTrainerIntent`, small + medium) shows accuracy + current streak per selected trainer (resolved default). `Shared/WidgetSnapshot.swift` (compiled into both targets) = snapshot model + App Group store; `WidgetSnapshotPublisher` (owned by `AppModel`) rebuilds the snapshot from the 5 session-stat stores via a new `SessionStatsStore.onChange` hook + `WidgetCenter.reloadAllTimelines()` (policy `.never`). App Group `group.com.arthurzhang.blackjacktrainer` in both entitlements — inert with signing off (sim build green). `WidgetSnapshotTests` (10). **Code+entitlements done; App Group provisioning + Home-Screen render are pending human actions.** |
-|     4 |   4.4 | Local-notification reminders           | Done         | pending | xcodebuild test (116) ✓; swiftformat+swiftlint ✓ (0 viol); sim launch | 2026-06-13 | `UserNotifications` reminders behind a `NotificationScheduling` seam (`SystemNotificationScheduler` + test fake). `RemindersModel` (`@MainActor @Observable`): requests auth on enable, schedules one daily-repeating `UNCalendarNotificationTrigger`, persists `ReminderSettings` (UserDefaults), cancels on disable, reflects denied. `RemindersView` (themed, from the About tab): enable toggle + time picker + per-trainer target picker. Deep-link: tapped reminder → trainer tab via new `AppRouter` (env) + `NotificationCoordinator` (`UNUserNotificationCenter` delegate, set in the app entry point; `RootTabView` consumes `pendingTab`; `AppTab` made `Codable`). Decision (default, applied): off until enabled; one daily reminder (7:00 PM) opening the chosen trainer. `RemindersTests` (12). **Code done; on-device permission prompt + on-schedule delivery are pending human actions. Phase 4 complete.** Hash `pending` (backfill in the 5.1 commit). |
+|     4 |   4.4 | Local-notification reminders           | Done         | 447b0f2 | xcodebuild test (116) ✓; swiftformat+swiftlint ✓ (0 viol); sim launch | 2026-06-13 | `UserNotifications` reminders behind a `NotificationScheduling` seam (`SystemNotificationScheduler` + test fake). `RemindersModel` (`@MainActor @Observable`): requests auth on enable, schedules one daily-repeating `UNCalendarNotificationTrigger`, persists `ReminderSettings` (UserDefaults), cancels on disable, reflects denied. `RemindersView` (themed, from the About tab): enable toggle + time picker + per-trainer target picker. Deep-link: tapped reminder → trainer tab via new `AppRouter` (env) + `NotificationCoordinator` (`UNUserNotificationCenter` delegate, set in the app entry point; `RootTabView` consumes `pendingTab`; `AppTab` made `Codable`). Decision (default, applied): off until enabled; one daily reminder (7:00 PM) opening the chosen trainer. `RemindersTests` (12). **Code done; on-device permission prompt + on-schedule delivery are pending human actions. Phase 4 complete.** |
+|     5 |   5.1 | ASC metadata, privacy & ratings        | Needs review | pending | `xcodebuild build` ✓ (`ITSAppUsesNonExemptEncryption=false` in built plist); n/a (ASC validation is human) | 2026-06-13 | Automatable prep only. Wrote `docs/app-store-submission.md` (name/subtitle/description/keywords/promo, Data-Not-Collected privacy answers, honest age-rating answers expecting ~17+, review notes, licensing note, human submission checklist) and wired the export-compliance flag `INFOPLIST_KEY_ITSAppUsesNonExemptEncryption=NO` (`project.yml` → built Info.plist, verified). D7 applied (educational, no-wager). **⏸️ Autopilot paused — the ASC record, privacy/support URLs, screenshots, TestFlight (5.2), and submission (5.3) are human/Apple actions. Hash `pending` (backfill next run).** |
 
 </content>
