@@ -6,9 +6,14 @@
 --self remove
 --importgrouping testable-bottom
 
-# Keep the opening brace on the same line as a wrapped signature/condition so
-# SwiftFormat and SwiftLint's opening_brace rule agree.
---disable wrapMultilineStatementBraces
+# wrapMultilineStatementBraces: keep the opening brace on the same line as a
+# wrapped signature/condition so SwiftFormat and SwiftLint's opening_brace rule
+# agree.
+# redundantSendable: keep explicit Sendable on the shared widget value types —
+# WidgetTrainer's cross-file AppEnum (AppIntents) conformance requires the
+# Sendable conformance to live in the type's own file, which the rule would
+# otherwise strip (causing a compiler warning in the widget target).
+--disable wrapMultilineStatementBraces,redundantSendable
 
 # Generated project, exported fixtures & build output must not be reformatted
 # (actool emits GeneratedAssetSymbols.swift into build/ for the card catalog).
