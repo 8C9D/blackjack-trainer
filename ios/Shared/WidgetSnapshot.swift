@@ -12,7 +12,7 @@ enum AppGroup {
 
 /// The trainers whose headline stats the widget can surface — the five
 /// session-stat trainers (the showdown tally has no accuracy/streak shape).
-enum WidgetTrainer: String, Codable, CaseIterable, Identifiable {
+enum WidgetTrainer: String, Codable, CaseIterable, Identifiable, Sendable {
     case basicStrategy
     case runningCount
     case trueCount
@@ -47,7 +47,7 @@ enum WidgetTrainer: String, Codable, CaseIterable, Identifiable {
 }
 
 /// One trainer's headline stats. The widget shows accuracy + current streak.
-struct WidgetTrainerStat: Codable, Hashable {
+struct WidgetTrainerStat: Codable, Hashable, Sendable {
     var attempts: Int
     var correct: Int
     var currentStreak: Int
@@ -66,7 +66,7 @@ struct WidgetTrainerStat: Codable, Hashable {
 
 /// Snapshot of every trainer's headline stats, written by the app to the shared
 /// App Group container on each stat change and read by the widget's timeline.
-struct WidgetSnapshot: Codable, Hashable {
+struct WidgetSnapshot: Codable, Hashable, Sendable {
     /// Keyed by `WidgetTrainer.rawValue` (Codable-friendly String keys).
     var trainers: [String: WidgetTrainerStat]
 
