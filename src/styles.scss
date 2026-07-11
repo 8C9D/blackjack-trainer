@@ -39,3 +39,29 @@ body {
 *::after {
   box-sizing: border-box;
 }
+
+// Keyboard-cap hint shared across the flow screens (home, drill actions,
+// done). Global because it appears in several scoped component styles.
+.kcap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.4rem;
+  border-radius: 6px;
+  background: var(--ground);
+  border: 1px solid #3a3f49;
+  border-bottom-width: 2.5px;
+  font-family: ui-monospace, 'SF Mono', monospace;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+// Keycaps are noise on touch devices; the shortcuts still work if a hardware
+// keyboard is attached.
+@media (max-width: 600px) {
+  .kcap {
+    display: none;
+  }
+}

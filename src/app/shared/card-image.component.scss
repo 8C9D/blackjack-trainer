@@ -3,9 +3,12 @@
   line-height: 0;
 }
 
+// Width comes from the --card-width custom property so a host screen can set
+// its own sizes (e.g. the drill stage's small dealer card vs. large player
+// cards) without reaching into this component.
 .card-image {
   display: block;
-  width: 96px;
+  width: var(--card-width, 96px);
   aspect-ratio: 224 / 313;
   border-radius: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
@@ -19,6 +22,6 @@
 
 @media (max-width: 600px) {
   .card-image {
-    width: 72px;
+    width: var(--card-width, 72px);
   }
 }
