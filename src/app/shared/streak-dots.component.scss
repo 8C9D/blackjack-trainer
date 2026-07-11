@@ -1,0 +1,34 @@
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.45rem;
+
+  &__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--raised);
+
+    &--met {
+      background: var(--good);
+    }
+
+    &--today {
+      width: 8px;
+      height: 8px;
+      background: none;
+      border: 2px solid var(--accent);
+
+      &.dots__dot--met {
+        background: var(--good);
+      }
+    }
+  }
+
+  &__label {
+    margin: 0.35rem 0 0;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.72rem;
+  }
+}
