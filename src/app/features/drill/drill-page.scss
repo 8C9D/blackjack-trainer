@@ -1,0 +1,63 @@
+// Shared layout for the Flow drill pages (Basic Strategy, Deviations).
+.drill {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.drill__question {
+  margin: 1.4rem 0 0;
+  font-size: 1.05rem;
+  color: #c6cad3;
+
+  b {
+    color: #fff;
+  }
+}
+
+.drill__rule {
+  margin: 1.4rem 0 0;
+  text-align: center;
+  font-size: 0.95rem;
+  color: #c6cad3;
+  line-height: 1.5;
+  max-width: 42ch;
+
+  b {
+    color: var(--accent);
+  }
+}
+
+.drill__continue {
+  margin: 0 0 0.6rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  // Always occupies its line so the actions grid never shifts.
+  visibility: hidden;
+
+  &--active {
+    visibility: visible;
+  }
+}
+
+// Recovery hint wording per input surface: keyboard on wide screens, touch
+// on phones.
+.drill__continue-touch {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .drill__continue-touch {
+    display: inline;
+  }
+
+  .drill__continue-key {
+    display: none;
+  }
+}
