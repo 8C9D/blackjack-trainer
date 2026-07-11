@@ -1,9 +1,10 @@
 import type { Routes } from '@angular/router';
 
 export const APP_ROUTES: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'basic-strategy' },
+  // The app always launches into the Open moment: one primary action.
   {
-    path: 'home',
+    path: '',
+    pathMatch: 'full',
     loadComponent: () =>
       import('./features/home/home-page.component').then((m) => m.HomePageComponent),
     title: 'Blackjack Trainer',
@@ -23,6 +24,14 @@ export const APP_ROUTES: Routes = [
     title: 'Basic Strategy — Blackjack Trainer',
   },
   {
+    path: 'drill/card-counting',
+    loadComponent: () =>
+      import('./features/card-counting/card-counting-page.component').then(
+        (m) => m.CardCountingPageComponent,
+      ),
+    title: 'Card Counting — Blackjack Trainer',
+  },
+  {
     path: 'drill/deviations',
     loadComponent: () =>
       import('./features/drill/deviations-drill-page.component').then(
@@ -30,29 +39,9 @@ export const APP_ROUTES: Routes = [
       ),
     title: 'Deviations — Blackjack Trainer',
   },
-  {
-    path: 'basic-strategy',
-    loadComponent: () =>
-      import('./features/basic-strategy/basic-strategy-page.component').then(
-        (m) => m.BasicStrategyPageComponent,
-      ),
-    title: 'Basic Strategy Trainer',
-  },
-  {
-    path: 'card-counting',
-    loadComponent: () =>
-      import('./features/card-counting/card-counting-page.component').then(
-        (m) => m.CardCountingPageComponent,
-      ),
-    title: 'Card Counting Trainer',
-  },
-  {
-    path: 'deviations',
-    loadComponent: () =>
-      import('./features/deviations/deviations-page.component').then(
-        (m) => m.DeviationsPageComponent,
-      ),
-    title: 'Deviations Trainer',
-  },
-  { path: '**', redirectTo: 'basic-strategy' },
+  // Pre-Flow trainer routes redirect into the flow.
+  { path: 'basic-strategy', redirectTo: 'drill/basic-strategy' },
+  { path: 'card-counting', redirectTo: 'drill/card-counting' },
+  { path: 'deviations', redirectTo: 'drill/deviations' },
+  { path: '**', redirectTo: '' },
 ];

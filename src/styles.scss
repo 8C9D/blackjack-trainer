@@ -1,8 +1,4 @@
 :root {
-  // Height of the mobile bottom tab bar. Shared by the nav itself and the
-  // content area's bottom padding so trainer content always clears the bar.
-  --mobile-nav-height: 3.5rem;
-
   // Flow design tokens — constant across breakpoints.
   --ground: #15171c;
   --surface: #1c1f25;
