@@ -2,6 +2,17 @@
   // Height of the mobile bottom tab bar. Shared by the nav itself and the
   // content area's bottom padding so trainer content always clears the bar.
   --mobile-nav-height: 3.5rem;
+
+  // Flow design tokens — constant across breakpoints.
+  --ground: #15171c;
+  --surface: #1c1f25;
+  --raised: #23262d;
+  --hairline: #2c3038;
+  --ink: #e7e9ee;
+  --muted: #8b909c;
+  --accent: #f2b64c;
+  --good: #4cc38a;
+  --bad: #e5665f;
 }
 
 html,
@@ -9,8 +20,8 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: #0a3a22;
-  color: #f4f4f4;
+  background: var(--ground);
+  color: var(--ink);
   // Prevent iOS from auto-inflating text on orientation change, and drop the
   // grey tap-flash so the components' own :active states read cleanly.
   -webkit-text-size-adjust: 100%;
