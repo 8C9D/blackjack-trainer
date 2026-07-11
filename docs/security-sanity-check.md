@@ -197,11 +197,11 @@ SwiftLint, xcodebuild) is invoked only in CI.
 Two GitHub Actions workflows, neither embedding credentials:
 
 - `.github/workflows/ci.yml` — on push/PR to `main`: `npm ci → npm run lint →
-  CI=true npm test → npm run build`, plus an anti-drift gate that regenerates
+CI=true npm test → npm run build`, plus an anti-drift gate that regenerates
   parity fixtures and fails on any diff. Uses pinned official actions
   (`actions/checkout@v5`, `actions/setup-node@v5`).
 - `.github/workflows/ios-ci.yml` — on `ios/**` changes: `brew install
-  swiftformat swiftlint`, lint gates, then `xcodebuild build test` on a
+swiftformat swiftlint`, lint gates, then `xcodebuild build test` on a
   macOS runner.
 
 No secrets, tokens, or deploy credentials are referenced in either workflow.
@@ -233,8 +233,8 @@ None required for safety. Optional, defensive follow-ups:
   `ls`, `git ls-files | wc -l`
 - `git grep -nI` for secret keyword/token patterns over `src`, `ios`, `tools`
 - `git grep -lI` for network APIs (`HttpClient|fetch|XMLHttpRequest|WebSocket|
-  sendBeacon`, `URLSession`) and unsafe DOM/Swift sinks (`innerHTML|eval|
-  bypassSecurityTrust`, `WKWebView|loadHTMLString`)
+sendBeacon`, `URLSession`) and unsafe DOM/Swift sinks (`innerHTML|eval|
+bypassSecurityTrust`, `WKWebView|loadHTMLString`)
 - `git grep -nI` for `NSAppTransportSecurity|NSAllowsArbitraryLoads`,
   `http://`, `Process()|system(`
 - `git check-ignore .env .env.local .env.example .claude dist`

@@ -760,8 +760,7 @@ test` ✓ (88 tests, no regressions), `swiftformat --lint` ✓, `swiftlint` ✓ 
         snapshot + reloads timelines on each stat change — covered by
         `WidgetSnapshotTests` (snapshot/store round-trip, publisher refresh on
         record/reset, accuracy parity with the in-app panel) and a clean simulator
-        launch with the `.appex` embedded. **On-device install + Home-Screen render
-        + update-after-a-drill needs the provisioned App Group (pending human
+        launch with the `.appex` embedded. **On-device install + Home-Screen render + update-after-a-drill needs the provisioned App Group (pending human
         action).**
 - **Validation:** baseline + device check — `xcodebuild build` ✓ (widget `.appex`
   embedded, `ValidateEmbeddedBinary` ✓), `xcodebuild test` ✓ (104 tests incl.
