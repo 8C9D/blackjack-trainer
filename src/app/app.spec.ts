@@ -1,69 +1,53 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 
 import { App } from './app';
+import { APP_ROUTES } from './app.routes';
 
 describe('App', () => {
   beforeEach(async () => {
+    localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideRouter([])],
+      providers: [provideRouter(APP_ROUTES)],
     }).compileComponents();
   });
 
-  it('renders a primary nav with all trainer links', async () => {
-    const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    const labels = Array.from(compiled.querySelectorAll('nav a')).map((a) => a.textContent?.trim());
-    expect(labels).toContain('Basic Strategy');
-    expect(labels).toContain('Card Counting');
-    expect(labels).toContain('Deviations');
-  });
-
-  it('exposes a /deviations route in the primary nav', async () => {
-    const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    const hrefs = Array.from(compiled.querySelectorAll('nav a')).map((a) => a.getAttribute('href'));
-    expect(hrefs).toContain('/deviations');
-  });
-
-  it('renders a router outlet', async () => {
+  it('is a bare shell: a router outlet and no navigation chrome', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('router-outlet')).not.toBeNull();
+    expect(compiled.querySelector('nav')).toBeNull();
   });
 
-  it('renders both a desktop top nav and a mobile bottom nav', async () => {
-    const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('nav.nav--top')).not.toBeNull();
-    expect(compiled.querySelector('nav.nav--bottom')).not.toBeNull();
-  });
+  describe('routing', () => {
+    async function urlAfter(path: string): Promise<string> {
+      const fixture = TestBed.createComponent(App);
+      const router = TestBed.inject(Router);
+      await router.navigateByUrl(path);
+      await fixture.whenStable();
+      return router.url;
+    }
 
-  it('uses short labels on the mobile bottom nav targeting the same routes', async () => {
-    const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    const tabs = Array.from(compiled.querySelectorAll('nav.nav--bottom a'));
-    expect(tabs.map((a) => a.textContent?.trim())).toEqual(['Strategy', 'Count', 'Deviations']);
-    expect(tabs.map((a) => a.getAttribute('href'))).toEqual([
-      '/basic-strategy',
-      '/card-counting',
-      '/deviations',
-    ]);
-  });
+    it('launches into the home (Open) screen', async () => {
+      const fixture = TestBed.createComponent(App);
+      const router = TestBed.inject(Router);
+      await router.navigateByUrl('/');
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(router.url).toBe('/');
+      expect((fixture.nativeElement as HTMLElement).querySelector('.home__primary')).not.toBeNull();
+    });
 
-  it('keeps full trainer names accessible on the mobile tabs', async () => {
-    const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    const ariaLabels = Array.from(compiled.querySelectorAll('nav.nav--bottom a')).map((a) =>
-      a.getAttribute('aria-label'),
-    );
-    expect(ariaLabels).toEqual(['Basic Strategy', 'Card Counting', 'Deviations']);
+    it('redirects the pre-Flow trainer routes into the flow', async () => {
+      expect(await urlAfter('/basic-strategy')).toBe('/drill/basic-strategy');
+      expect(await urlAfter('/card-counting')).toBe('/drill/card-counting');
+      expect(await urlAfter('/deviations')).toBe('/drill/deviations');
+    });
+
+    it('sends unknown routes home', async () => {
+      expect(await urlAfter('/no-such-page')).toBe('/');
+    });
   });
 });
