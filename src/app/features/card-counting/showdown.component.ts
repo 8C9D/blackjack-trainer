@@ -9,7 +9,7 @@ import {
   signal,
 } from '@angular/core';
 
-import { handleTrainerKeydown } from '../../core/keyboard';
+import { ACTION_KEY_HINTS, handleTrainerKeydown } from '../../core/keyboard';
 import type { Card } from '../../core/models/card.model';
 import { handTotal, isBlackjack, isBust } from '../../core/models/hand.model';
 import { Shoe } from '../../core/models/shoe.model';
@@ -19,8 +19,7 @@ import {
   settle,
   type Settlement,
 } from '../../core/models/showdown.model';
-import type { Action, RuleSet } from '../../core/models/strategy.model';
-import { ActionButtonsComponent } from '../../shared/action-buttons.component';
+import { ACTION_LABELS, type Action, type RuleSet } from '../../core/models/strategy.model';
 import { CardImageComponent } from '../../shared/card-image.component';
 import { ShowdownStatsService } from '../../core/services/showdown-stats.service';
 
@@ -30,36 +29,16 @@ type ShowdownPhase = 'player-turn' | 'resolved' | 'exhausted';
 
 // Post-count showdown: deals a single hand from the persistent shoe the player
 // just counted, plays it hit/stand only, auto-plays the dealer by the active
-// RuleSet, and settles win/lose/push (3:2 naturals). Hit/stand only — no
-// doubles, splits, surrender, bankroll, or bets.
+// RuleSet (from the shared table rules — no controls here), and settles
+// win/lose/push (3:2 naturals). Hit/stand only — no doubles, splits,
+// surrender, bankroll, or bets.
 @Component({
   selector: 'app-showdown',
-  imports: [CardImageComponent, ActionButtonsComponent],
+  imports: [CardImageComponent],
   template: `
     <section class="showdown" aria-label="Showdown vs dealer">
       <header class="showdown__header">
         <h2 class="showdown__heading">Play a hand vs the dealer</h2>
-        <fieldset class="showdown__rule">
-          <legend>Dealer rule</legend>
-          <label>
-            <input
-              type="radio"
-              name="showdown-ruleset"
-              [checked]="ruleSet() === 'S17'"
-              (change)="ruleSetChange.emit('S17')"
-            />
-            S17 — stand on soft 17
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="showdown-ruleset"
-              [checked]="ruleSet() === 'H17'"
-              (change)="ruleSetChange.emit('H17')"
-            />
-            H17 — hit on soft 17
-          </label>
-        </fieldset>
       </header>
 
       @if (phase() === 'exhausted') {
@@ -100,7 +79,13 @@ type ShowdownPhase = 'player-turn' | 'resolved' | 'exhausted';
         </div>
 
         @if (phase() === 'player-turn') {
-          <app-action-buttons [actions]="playerActions" (action)="onAction($event)" />
+          <div class="showdown__actions" role="group" aria-label="Player actions">
+            @for (a of playerActions; track a) {
+              <button type="button" class="showdown__action" (click)="onAction(a)">
+                {{ labelFor(a) }} <kbd class="kcap">{{ keyFor(a) }}</kbd>
+              </button>
+            }
+          </div>
         }
 
         @if (phase() === 'resolved' && settlement(); as s) {
@@ -130,30 +115,13 @@ type ShowdownPhase = 'player-turn' | 'resolved' | 'exhausted';
       }
 
       <button type="button" class="showdown__exit" (click)="exit.emit()">Back to counting</button>
-
-      <section class="showdown__stats" aria-label="Showdown statistics">
-        <div class="showdown__stats-cells">
-          <div><strong>Hands</strong>: {{ stats.stats().hands }}</div>
-          <div><strong>Wins</strong>: {{ stats.stats().wins }}</div>
-          <div><strong>Losses</strong>: {{ stats.stats().losses }}</div>
-          <div><strong>Pushes</strong>: {{ stats.stats().pushes }}</div>
-          <div><strong>Blackjacks</strong>: {{ stats.stats().blackjacks }}</div>
-          <div><strong>Win rate</strong>: {{ winRate() }}</div>
-        </div>
-        <button
-          type="button"
-          class="showdown__stats-reset"
-          [disabled]="stats.stats().hands === 0"
-          (click)="stats.reset()"
-        >
-          Reset showdown stats
-        </button>
-      </section>
     </section>
   `,
   styleUrl: './showdown.component.scss',
 })
 export class ShowdownComponent implements OnInit {
+  // Records win/loss tallies under its pre-Flow key even though the Flow UI
+  // no longer surfaces them.
   protected readonly stats = inject(ShowdownStatsService);
 
   // The persistent shoe the player just counted; the showdown deals from it so
@@ -161,7 +129,6 @@ export class ShowdownComponent implements OnInit {
   readonly shoe = input.required<Shoe>();
   readonly ruleSet = input.required<RuleSet>();
 
-  readonly ruleSetChange = output<RuleSet>();
   // Emitted when the player chooses to return to the counting drill.
   readonly exit = output<void>();
 
@@ -179,10 +146,14 @@ export class ShowdownComponent implements OnInit {
   protected readonly dealerTotal = computed(() => handTotal(this.dealerCards()));
   protected readonly dealerUpcard = computed<Card | null>(() => this.dealerCards()[0] ?? null);
   protected readonly canDealAnother = computed(() => this.remaining() >= MIN_SHOWDOWN_CARDS);
-  protected readonly winRate = computed(() => {
-    const s = this.stats.stats();
-    return s.hands === 0 ? '—' : `${Math.round((s.wins / s.hands) * 100)}%`;
-  });
+
+  protected labelFor(a: Action): string {
+    return ACTION_LABELS[a];
+  }
+
+  protected keyFor(a: Action): string {
+    return ACTION_KEY_HINTS[a];
+  }
 
   ngOnInit(): void {
     this.remaining.set(this.shoe().cardsRemaining);

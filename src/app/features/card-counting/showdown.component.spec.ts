@@ -91,7 +91,7 @@ describe('ShowdownComponent', () => {
     expect(c.stats.stats()).toMatchObject({ hands: 1, wins: 1, blackjacks: 1 });
     expect(fixture.nativeElement.textContent).toContain('Blackjack');
     // No action buttons once resolved.
-    expect(fixture.nativeElement.querySelector('app-action-buttons')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.showdown__action')).toBeNull();
   });
 
   it('a dealer natural at the deal loses for a non-natural player', () => {
@@ -147,20 +147,14 @@ describe('ShowdownComponent', () => {
     expect(exited).toBe(true);
   });
 
-  it('emits ruleSetChange when the dealer rule is toggled', () => {
+  it('hosts no rule controls — the dealer rule comes from the shared table rules', () => {
     const { fixture } = createShowdown(makeShoe(['9', '10', '7', '6']), 'S17');
-    let received: RuleSet | undefined;
-    fixture.componentInstance.ruleSetChange.subscribe((r) => (received = r));
-    const radios = fixture.nativeElement.querySelectorAll(
-      '.showdown__rule input[type=radio]',
-    ) as NodeListOf<HTMLInputElement>;
-    radios[1].dispatchEvent(new Event('change')); // H17
-    expect(received).toBe('H17');
+    expect(fixture.nativeElement.querySelector('input[type=radio]')).toBeNull();
   });
 
   it('renders Hit and Stand buttons only during the player turn', () => {
     const { fixture } = createShowdown(makeShoe(['9', '10', '7', '6']));
-    const buttons = fixture.nativeElement.querySelectorAll('.actions__button');
+    const buttons = fixture.nativeElement.querySelectorAll('.showdown__action');
     expect(buttons.length).toBe(2);
     expect((buttons[0] as HTMLElement).textContent).toContain('Hit');
     expect((buttons[1] as HTMLElement).textContent).toContain('Stand');
@@ -172,12 +166,10 @@ describe('ShowdownComponent', () => {
     expect(c.phase()).toBe('resolved');
   });
 
-  it('resets the showdown tally', () => {
-    const { fixture, c } = createShowdown(makeShoe(['10', '10', '9', '8', '2']));
+  it('keeps recording the win/loss tally even without a stats panel', () => {
+    const { c } = createShowdown(makeShoe(['10', '10', '9', '8', '2']));
     c.onAction('S');
     expect(c.stats.stats().hands).toBe(1);
-    fixture.detectChanges(); // enable the reset button now that a hand was played
-    (fixture.nativeElement.querySelector('.showdown__stats-reset') as HTMLButtonElement).click();
-    expect(c.stats.stats().hands).toBe(0);
+    expect(localStorage.getItem('blackjack-showdown-stats')).not.toBeNull();
   });
 });
