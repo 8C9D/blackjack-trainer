@@ -18,6 +18,14 @@
   }
 }
 
+.drill__tc {
+  color: var(--muted);
+
+  b {
+    color: var(--accent);
+  }
+}
+
 .drill__rule {
   margin: 1.4rem 0 0;
   text-align: center;

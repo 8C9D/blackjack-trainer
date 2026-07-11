@@ -11,6 +11,14 @@ export const APP_ROUTES: Routes = [
     title: 'Basic Strategy — Blackjack Trainer',
   },
   {
+    path: 'drill/deviations',
+    loadComponent: () =>
+      import('./features/drill/deviations-drill-page.component').then(
+        (m) => m.DeviationsDrillPageComponent,
+      ),
+    title: 'Deviations — Blackjack Trainer',
+  },
+  {
     path: 'basic-strategy',
     loadComponent: () =>
       import('./features/basic-strategy/basic-strategy-page.component').then(
