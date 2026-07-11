@@ -31,7 +31,7 @@ import {
   generateScenarioForDeviationRule,
   pickDeviationRule,
   pickTrueCountForDeviationRule,
-} from './scenario-generators';
+} from '../drill/scenario-generators';
 
 // Inclusive range used for random true-count generation. Wide enough to
 // exercise both negative- and positive-side deviations from the BJA chart.
