@@ -12,18 +12,18 @@ roadmap's _App Store specifics & review risk_.
 
 ## App identity
 
-| Field | Value |
-| --- | --- |
-| App name | Blackjack Trainer |
-| Subtitle | Basic strategy & card counting |
-| Bundle ID (app) | `com.arthurzhang.blackjacktrainer.app` |
-| Bundle ID (widget) | `com.arthurzhang.blackjacktrainer.app.widget` |
-| Apple Team | `C3W798H8U8` |
-| SKU | `blackjack-trainer-ios` (suggested) |
-| Primary category | Education |
-| Secondary category | Games › Card (optional) |
-| Version / Build | 1.0 / 1 (`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`) |
-| Price | Free (suggested) |
+| Field              | Value                                                     |
+| ------------------ | --------------------------------------------------------- |
+| App name           | Blackjack Trainer                                         |
+| Subtitle           | Basic strategy & card counting                            |
+| Bundle ID (app)    | `com.arthurzhang.blackjacktrainer.app`                    |
+| Bundle ID (widget) | `com.arthurzhang.blackjacktrainer.app.widget`             |
+| Apple Team         | `C3W798H8U8`                                              |
+| SKU                | `blackjack-trainer-ios` (suggested)                       |
+| Primary category   | Education                                                 |
+| Secondary category | Games › Card (optional)                                   |
+| Version / Build    | 1.0 / 1 (`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`) |
+| Price              | Free (suggested)                                          |
 
 ## Description (draft)
 
@@ -35,13 +35,13 @@ roadmap's _App Store specifics & review risk_.
 > play:
 >
 > • Basic Strategy — every hand vs. dealer upcard, with H17/S17, DAS, and
->   late-surrender rules.
+> late-surrender rules.
 > • Running Count — 58 counting systems, including unbalanced and fractional
->   systems.
+> systems.
 > • True Count — convert the running count using a live, depleting shoe and
->   deck-estimation practice.
+> deck-estimation practice.
 > • Deviations — the Hi-Lo index plays (and the insurance line) that adjust basic
->   strategy by the count.
+> strategy by the count.
 >
 > Every answer is checked against an engine, with a clear explanation of the
 > correct play. Track your accuracy and streaks per trainer, see them on a

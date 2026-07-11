@@ -20,3 +20,6 @@ ios/
 
 # Intentionally-untracked scratch file — never reformat or commit
 docs/repo-current-state.md
+
+# Playwright MCP session artifacts
+.playwright-mcp/

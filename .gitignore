@@ -60,3 +60,6 @@ ios/build/
 /docs/codebase-docs-sync.md
 /docs/manual-testing-guide.md
 /docs/repo-current-state.md
+
+# Playwright MCP session artifacts
+.playwright-mcp/
