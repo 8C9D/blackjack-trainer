@@ -3,6 +3,14 @@ import type { Routes } from '@angular/router';
 export const APP_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'basic-strategy' },
   {
+    path: 'drill/basic-strategy',
+    loadComponent: () =>
+      import('./features/drill/basic-strategy-drill-page.component').then(
+        (m) => m.BasicStrategyDrillPageComponent,
+      ),
+    title: 'Basic Strategy — Blackjack Trainer',
+  },
+  {
     path: 'basic-strategy',
     loadComponent: () =>
       import('./features/basic-strategy/basic-strategy-page.component').then(
