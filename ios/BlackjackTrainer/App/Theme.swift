@@ -1,17 +1,30 @@
 import SwiftUI
 
-/// Dark color tokens mirroring the web app's casino-green palette
-/// (`#0a3a22` background, `#0f4a2c` felt, `#f4f4f4` text).
+/// The Flow redesign's dark palette, identical to the web design tokens. A
+/// single amber accent marks active/primary/progress only; green/red are the
+/// correct/wrong verdict colors.
 enum Theme {
-    static let background = Color(hex: 0x0A3A22)
-    static let felt = Color(hex: 0x0F4A2C)
-    static let surface = Color(hex: 0x0D4327)
-    static let surfaceRaised = Color(hex: 0x115A36)
-    static let primaryText = Color(hex: 0xF4F4F4)
-    static let secondaryText = Color(hex: 0xF4F4F4).opacity(0.7)
-    static let accent = Color(hex: 0x4F8CFF) // brightened web blue for legibility on green
-    static let correct = Color(hex: 0x66BB6A)
-    static let incorrect = Color(hex: 0xEF6E6E)
+    static let ground = Color(hex: 0x15171C)
+    static let surface = Color(hex: 0x1C1F25)
+    static let raised = Color(hex: 0x23262D)
+    static let hairline = Color(hex: 0x2C3038)
+    static let ink = Color(hex: 0xE7E9EE)
+    /// A slightly dimmer ink for secondary body text (the web `#c6cad3`).
+    static let midInk = Color(hex: 0xC6CAD3)
+    static let muted = Color(hex: 0x8B909C)
+    static let accent = Color(hex: 0xF2B64C)
+    static let good = Color(hex: 0x4CC38A)
+    static let bad = Color(hex: 0xE5665F)
+
+    // Compatibility aliases for the pre-Flow screens still in the tree; removed
+    // once those screens are deleted.
+    static let background = ground
+    static let felt = surface
+    static let surfaceRaised = raised
+    static let primaryText = ink
+    static let secondaryText = muted
+    static let correct = good
+    static let incorrect = bad
 }
 
 extension Color {

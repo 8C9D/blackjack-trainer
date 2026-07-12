@@ -19,6 +19,8 @@
 		1545392CB4419FD4C62C30D3 /* PracticeReminders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 455D3327443EB36780BE24A7 /* PracticeReminders.swift */; };
 		15D8DA3209658F589B896F3D /* Shoe.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEF70F593374993ECA4C38A4 /* Shoe.swift */; };
 		1725C1780292E9BEAB8D9C6B /* StatsPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE80FB44276C2813F39EC18F /* StatsPanelView.swift */; };
+		197BAE81A01297B717C2C0E3 /* FlowTopBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28F2B341E3013B66C148210C /* FlowTopBarView.swift */; };
+		1A772648A71A6664F5BE6C8E /* FlowStageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1965DF5EA178C870607212F6 /* FlowStageView.swift */; };
 		1C33D6AB533F90ED1B38271F /* FlowPrefsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1FB0D0470FEEDD9AABEFE2 /* FlowPrefsStoreTests.swift */; };
 		1D678812320D7F3EB2147C24 /* AppModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E38CEB24905B810A63FC4E4 /* AppModelTests.swift */; };
 		26F2A7EFD436472155454735 /* DeviationScenarioGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AACC2CA555089684205FE973 /* DeviationScenarioGenerator.swift */; };
@@ -30,6 +32,7 @@
 		30715FEEF950524036747DC0 /* SharedComponentsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 645F62DA06D6384BB1E98209 /* SharedComponentsTests.swift */; };
 		320D2B7B79708BB8EA3EA3D5 /* GameData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E31BAB1CB5F4A5CE16EFDD5 /* GameData.swift */; };
 		33492E9B5E4EF3FF48BC4CE1 /* CountingDrillTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F836831ED5AA3612EC1A6 /* CountingDrillTests.swift */; };
+		3428BB4167FFAF6545B55B08 /* FlowDoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04F36DA98AA4623DF7523D3F /* FlowDoneView.swift */; };
 		386E32FE6EC444B9D31E527A /* basic-strategy-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = D52EF9B7479E51758C09565B /* basic-strategy-vectors.json */; };
 		3A74F45037FD6FA9B90F07CE /* BasicStrategyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17D37EE0DCEE76979C4B31A9 /* BasicStrategyView.swift */; };
 		3CC9C30A7E7A343467F7DA05 /* CloudSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BD7421E78295DC500F5D504 /* CloudSyncTests.swift */; };
@@ -55,7 +58,9 @@
 		5FE3CA2FA3F64B9184E87603 /* WidgetSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137C79C4AEE66B4C6F08DD6F /* WidgetSnapshotTests.swift */; };
 		6233AA0E43B7287043B90CE3 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA7773071A88011CBC0C77FF /* WidgetSnapshot.swift */; };
 		6513222E1254F0172453951E /* DataLayerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA0B879E8B1D853622E0CC86 /* DataLayerTests.swift */; };
+		65D49FF023B11E415D09DEA6 /* StreakDotsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F7F71F87D6F8DE7DB2A52 /* StreakDotsView.swift */; };
 		6E1A2AA4CC616FC93B1C6DBD /* DeviationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F423E49F3EE23CE7C3E35ABB /* DeviationEngine.swift */; };
+		70B2CC600AF785AD0951D879 /* GoalRingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72027F1B6A9AFD3511240253 /* GoalRingView.swift */; };
 		71E8DC4F7A50BA7406DE81F9 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F62C66DE7F2F32BDF25DEE /* Theme.swift */; };
 		7208BDF07124A909B973F40D /* counting-systems.json in Resources */ = {isa = PBXBuildFile; fileRef = D9BB02017204C216ACEDAB62 /* counting-systems.json */; };
 		737978C330F4F9CB41FDC9FF /* COPYING.LESSER.txt in Resources */ = {isa = PBXBuildFile; fileRef = 4C391C226F94DEFB8E908E8A /* COPYING.LESSER.txt */; };
@@ -92,6 +97,7 @@
 		D1FF42D81F430C0468DF7729 /* RemindersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1F3C9E741253484F3D5474 /* RemindersTests.swift */; };
 		D2AB7ED7BE3625300AACE48F /* ShowdownModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A14FE863E2084BF0AC794D /* ShowdownModelTests.swift */; };
 		D64887099FD3A74A49D1E6DB /* COPYING.txt in Resources */ = {isa = PBXBuildFile; fileRef = D646C0CD8526C8E211E25C42 /* COPYING.txt */; };
+		D7C8B961AF9E71D941DA9126 /* FlowActionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0091241C5E0CB4080EF4B19B /* FlowActionsView.swift */; };
 		D83606F3A43703FD227F6FCA /* DeviationsModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 867510EEE90AB06BAEA53ECE /* DeviationsModelTests.swift */; };
 		DAA0754AABD5AAFC8003BF86 /* Strategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 577C951192BCC781DBE8EBDD /* Strategy.swift */; };
 		DB3622622CA10DC9E1416CE4 /* BlackjackTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A15361EC27E9DF33A89716E /* BlackjackTableView.swift */; };
@@ -142,7 +148,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0091241C5E0CB4080EF4B19B /* FlowActionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowActionsView.swift; sourceTree = "<group>"; };
 		01B4AFDADA3CF8230C9FA589 /* CountingModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingModelTests.swift; sourceTree = "<group>"; };
+		04F36DA98AA4623DF7523D3F /* FlowDoneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowDoneView.swift; sourceTree = "<group>"; };
 		0532EF5C44190141EA29F7E8 /* PracticeHistoryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeHistoryStoreTests.swift; sourceTree = "<group>"; };
 		063271D90DDF91F490DF21C5 /* BlackjackStatsWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlackjackStatsWidget.swift; sourceTree = "<group>"; };
 		0896F4168F59A3A9EBFF7CDE /* Deviation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Deviation.swift; sourceTree = "<group>"; };
@@ -160,6 +168,7 @@
 		1686420A2590C6534E31F3E2 /* ShoeFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoeFactory.swift; sourceTree = "<group>"; };
 		17D37EE0DCEE76979C4B31A9 /* BasicStrategyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicStrategyView.swift; sourceTree = "<group>"; };
 		18C6C68585013F882B690DA5 /* DeviationParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationParityTests.swift; sourceTree = "<group>"; };
+		1965DF5EA178C870607212F6 /* FlowStageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowStageView.swift; sourceTree = "<group>"; };
 		1A1FB0D0470FEEDD9AABEFE2 /* FlowPrefsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowPrefsStoreTests.swift; sourceTree = "<group>"; };
 		1BD7421E78295DC500F5D504 /* CloudSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncTests.swift; sourceTree = "<group>"; };
 		1F8840CC6E0B7C1C81FB294A /* FlowAdvanceScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowAdvanceScheduler.swift; sourceTree = "<group>"; };
@@ -168,6 +177,7 @@
 		24E2ACB0914EF2BC010B1FA0 /* RemindersModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemindersModel.swift; sourceTree = "<group>"; };
 		25A35DC18D354F2C90FF460B /* AUTHORS.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = AUTHORS.txt; sourceTree = "<group>"; };
 		2705BBD8AAF017C2486055AE /* CardGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardGenerator.swift; sourceTree = "<group>"; };
+		28F2B341E3013B66C148210C /* FlowTopBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowTopBarView.swift; sourceTree = "<group>"; };
 		2A3B7FB8E53D8E1DEAAEE93B /* StatsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsModels.swift; sourceTree = "<group>"; };
 		2E31BAB1CB5F4A5CE16EFDD5 /* GameData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameData.swift; sourceTree = "<group>"; };
 		38181BAA4EC763FE68C1300C /* DrillSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillSessionTests.swift; sourceTree = "<group>"; };
@@ -194,6 +204,7 @@
 		6EDEA06AB0AD95400DD8619E /* FixtureModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureModels.swift; sourceTree = "<group>"; };
 		705F836831ED5AA3612EC1A6 /* CountingDrillTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingDrillTests.swift; sourceTree = "<group>"; };
 		70F62C66DE7F2F32BDF25DEE /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		72027F1B6A9AFD3511240253 /* GoalRingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalRingView.swift; sourceTree = "<group>"; };
 		732250420D9C90F9AD665184 /* DrillHandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillHandTests.swift; sourceTree = "<group>"; };
 		786E4951CEEAFF7A09457F30 /* ShowdownParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownParityTests.swift; sourceTree = "<group>"; };
 		78DC33D28D09EB8697F6D833 /* StrategyChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrategyChart.swift; sourceTree = "<group>"; };
@@ -233,6 +244,7 @@
 		CF4D671AA4A053AF40395078 /* CountingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingEngine.swift; sourceTree = "<group>"; };
 		D07A16802F2169B099AE3D66 /* CardGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardGeneratorTests.swift; sourceTree = "<group>"; };
 		D0DAE402AA61CF04300B0AF9 /* CardImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardImage.swift; sourceTree = "<group>"; };
+		D33F7F71F87D6F8DE7DB2A52 /* StreakDotsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakDotsView.swift; sourceTree = "<group>"; };
 		D52EF9B7479E51758C09565B /* basic-strategy-vectors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "basic-strategy-vectors.json"; sourceTree = "<group>"; };
 		D646C0CD8526C8E211E25C42 /* COPYING.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = COPYING.txt; sourceTree = "<group>"; };
 		D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingParityTests.swift; sourceTree = "<group>"; };
@@ -309,6 +321,7 @@
 			isa = PBXGroup;
 			children = (
 				4AD3FC17EC94E310D5FEC089 /* Components */,
+				AAD93C57AC1C50600759CD4C /* Flow */,
 				565A9F075107D402A81A17FB /* Screens */,
 				0E938F0CC74CC666924D7E3E /* AboutView.swift */,
 				D0DAE402AA61CF04300B0AF9 /* CardImage.swift */,
@@ -422,6 +435,19 @@
 				24E2ACB0914EF2BC010B1FA0 /* RemindersModel.swift */,
 			);
 			path = Notifications;
+			sourceTree = "<group>";
+		};
+		AAD93C57AC1C50600759CD4C /* Flow */ = {
+			isa = PBXGroup;
+			children = (
+				0091241C5E0CB4080EF4B19B /* FlowActionsView.swift */,
+				04F36DA98AA4623DF7523D3F /* FlowDoneView.swift */,
+				1965DF5EA178C870607212F6 /* FlowStageView.swift */,
+				28F2B341E3013B66C148210C /* FlowTopBarView.swift */,
+				72027F1B6A9AFD3511240253 /* GoalRingView.swift */,
+				D33F7F71F87D6F8DE7DB2A52 /* StreakDotsView.swift */,
+			);
+			path = Flow;
 			sourceTree = "<group>";
 		};
 		B192DBDF08A4A6C2D451DF6F /* Shared */ = {
@@ -659,9 +685,14 @@
 				C8E377757426914C0C25B692 /* DrillHand.swift in Sources */,
 				FC846BD0CB3A030987224F37 /* DrillSession.swift in Sources */,
 				3FD4BF64CAFAE561BCADE811 /* FeedbackShellView.swift in Sources */,
+				D7C8B961AF9E71D941DA9126 /* FlowActionsView.swift in Sources */,
 				7CA47BF6219EAC05D7BF9D0D /* FlowAdvanceScheduler.swift in Sources */,
+				3428BB4167FFAF6545B55B08 /* FlowDoneView.swift in Sources */,
 				EAAD9174590C20E72577CBCA /* FlowPrefs.swift in Sources */,
+				1A772648A71A6664F5BE6C8E /* FlowStageView.swift in Sources */,
+				197BAE81A01297B717C2C0E3 /* FlowTopBarView.swift in Sources */,
 				320D2B7B79708BB8EA3EA3D5 /* GameData.swift in Sources */,
+				70B2CC600AF785AD0951D879 /* GoalRingView.swift in Sources */,
 				FECDA79A9CA43DFD1CAC1855 /* Hand.swift in Sources */,
 				CCF53B5EC96C4C0EF2F84921 /* HardwareKeyboard.swift in Sources */,
 				A92CDBEB90E70B6B983D8C5D /* Keyboard.swift in Sources */,
@@ -682,6 +713,7 @@
 				A0FAF8E256C05D8BE1293316 /* StatsStore.swift in Sources */,
 				DAA0754AABD5AAFC8003BF86 /* Strategy.swift in Sources */,
 				8F6FD9EB91B2EBBFAE4EC568 /* StrategyChart.swift in Sources */,
+				65D49FF023B11E415D09DEA6 /* StreakDotsView.swift in Sources */,
 				71E8DC4F7A50BA7406DE81F9 /* Theme.swift in Sources */,
 				6233AA0E43B7287043B90CE3 /* WidgetSnapshot.swift in Sources */,
 				58FA482974AB94147769C875 /* WidgetSnapshotPublisher.swift in Sources */,
