@@ -13,7 +13,10 @@
 # WidgetTrainer's cross-file AppEnum (AppIntents) conformance requires the
 # Sendable conformance to live in the type's own file, which the rule would
 # otherwise strip (causing a compiler warning in the widget target).
---disable wrapMultilineStatementBraces,redundantSendable
+# wrapIfStatementBodies: a newer default rule that wraps single-line if bodies
+# onto their own line; the codebase's engines use single-line short ifs, so keep
+# it off to match the established style (and leave the engines byte-identical).
+--disable wrapMultilineStatementBraces,redundantSendable,wrapIfStatementBodies
 
 # Generated project, exported fixtures & build output must not be reformatted
 # (actool emits GeneratedAssetSymbols.swift into build/ for the card catalog).
