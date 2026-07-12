@@ -21,6 +21,12 @@ final class AppModel {
     let deckEstimationStats: SessionStatsStore
     let showdownStats: ShowdownStatsStore
 
+    /// Flow redesign stores: the pre-made decisions, the daily-goal/streak
+    /// history, and the per-scenario weak-spot tallies.
+    let flowPrefs: FlowPrefsStore
+    let practiceHistory: PracticeHistoryStore
+    let missTally: MissTallyStore
+
     /// Retained for the app's lifetime; mirrors the stat stores to iCloud KVS and
     /// adopts external changes (4.2). A no-op beyond local storage until the
     /// iCloud capability is provisioned.
@@ -59,9 +65,18 @@ final class AppModel {
         self.deviationStats = deviationStats
         self.deckEstimationStats = deckEstimationStats
         self.showdownStats = showdownStats
+
+        let flowPrefs = FlowPrefsStore(cloud: cloud)
+        let practiceHistory = PracticeHistoryStore(cloud: cloud)
+        let missTally = MissTallyStore(cloud: cloud)
+        self.flowPrefs = flowPrefs
+        self.practiceHistory = practiceHistory
+        self.missTally = missTally
+
         cloudSync = StatsCloudSync(cloud: cloud, stores: [
             basicStrategyStats, runningCountStats, trueCountStats,
-            deviationStats, deckEstimationStats, showdownStats
+            deviationStats, deckEstimationStats, showdownStats,
+            flowPrefs, practiceHistory, missTally
         ])
         // Built after cloud adoption so the seeded snapshot reflects any value
         // pulled from iCloud at launch. The showdown tally has no accuracy/streak

@@ -10,6 +10,11 @@ enum StatsKeys {
     static let deckEstimation = "blackjack-deck-estimation-stats"
     static let showdown = "blackjack-showdown-stats"
 
+    // Flow redesign stores (additive; mirror the web's new localStorage keys).
+    static let flowPrefs = "blackjack-flow-prefs"
+    static let practiceHistory = "blackjack-practice-history"
+    static let missTally = "blackjack-miss-tally"
+
     /// Keys from earlier versions, wiped once at launch.
     static let legacy = ["blackjack-trainer:stats:v1"]
 }
