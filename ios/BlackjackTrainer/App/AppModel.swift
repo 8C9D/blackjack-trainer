@@ -79,14 +79,8 @@ final class AppModel {
             flowPrefs, practiceHistory, missTally
         ])
         // Built after cloud adoption so the seeded snapshot reflects any value
-        // pulled from iCloud at launch. The showdown tally has no accuracy/streak
-        // shape, so the widget surfaces the five session-stat trainers.
-        widgetPublisher = WidgetSnapshotPublisher(sources: [
-            .init(trainer: .basicStrategy, store: basicStrategyStats),
-            .init(trainer: .runningCount, store: runningCountStats),
-            .init(trainer: .trueCount, store: trueCountStats),
-            .init(trainer: .deviations, store: deviationStats),
-            .init(trainer: .deckEstimation, store: deckEstimationStats)
-        ])
+        // pulled from iCloud at launch. The widget mirrors the Flow home surface —
+        // the daily-goal ring and the streak — from the practice history + goal.
+        widgetPublisher = WidgetSnapshotPublisher(history: practiceHistory, prefs: flowPrefs)
     }
 }

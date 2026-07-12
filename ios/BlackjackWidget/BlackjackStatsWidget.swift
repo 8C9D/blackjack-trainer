@@ -1,71 +1,28 @@
-import AppIntents
 import SwiftUI
 import WidgetKit
 
-// MARK: - Configuration
-
-/// Lets the user pick which trainer the widget shows. The cases/order come from
-/// the shared `WidgetTrainer`; only the display strings live here.
-extension WidgetTrainer: AppEnum {
-    static var typeDisplayRepresentation: TypeDisplayRepresentation {
-        "Trainer"
-    }
-
-    static var caseDisplayRepresentations: [WidgetTrainer: DisplayRepresentation] {
-        [
-            .basicStrategy: "Basic Strategy",
-            .runningCount: "Running Count",
-            .trueCount: "True Count",
-            .deviations: "Deviations",
-            .deckEstimation: "Deck Estimation"
-        ]
-    }
-}
-
-/// The widget's configuration intent — the trainer whose stats to display.
-struct SelectTrainerIntent: WidgetConfigurationIntent {
-    static var title: LocalizedStringResource {
-        "Select Trainer"
-    }
-
-    static var description: IntentDescription {
-        IntentDescription("Choose which trainer's stats to display.")
-    }
-
-    @Parameter(title: "Trainer", default: .basicStrategy)
-    var trainer: WidgetTrainer
-}
-
 // MARK: - Timeline
 
-struct StatsEntry: TimelineEntry {
+struct FlowEntry: TimelineEntry {
     let date: Date
-    let trainer: WidgetTrainer
-    let stat: WidgetTrainerStat
+    let snapshot: WidgetSnapshot
 }
 
-/// Reads the shared snapshot on demand. The app refreshes timelines on every
-/// stat change (`WidgetCenter.reloadAllTimelines`), so the timeline never needs a
-/// scheduled reload — hence `.never`.
-struct StatsProvider: AppIntentTimelineProvider {
-    func placeholder(in _: Context) -> StatsEntry {
-        StatsEntry(date: .now, trainer: .basicStrategy, stat: .empty)
+/// Reads the shared snapshot on demand. The app refreshes timelines whenever the
+/// practice history or daily goal changes (`WidgetCenter.reloadAllTimelines`), so
+/// the timeline never needs a scheduled reload — hence `.never`.
+struct FlowProvider: TimelineProvider {
+    func placeholder(in _: Context) -> FlowEntry {
+        FlowEntry(date: .now, snapshot: .empty)
     }
 
-    func snapshot(for configuration: SelectTrainerIntent, in _: Context) async -> StatsEntry {
-        entry(for: configuration.trainer)
+    func getSnapshot(in _: Context, completion: @escaping (FlowEntry) -> Void) {
+        completion(FlowEntry(date: .now, snapshot: WidgetSnapshotStore.load()))
     }
 
-    func timeline(
-        for configuration: SelectTrainerIntent,
-        in _: Context
-    ) async -> Timeline<StatsEntry> {
-        Timeline(entries: [entry(for: configuration.trainer)], policy: .never)
-    }
-
-    private func entry(for trainer: WidgetTrainer) -> StatsEntry {
-        let snapshot = WidgetSnapshotStore.load()
-        return StatsEntry(date: .now, trainer: trainer, stat: snapshot.stat(for: trainer))
+    func getTimeline(in _: Context, completion: @escaping (Timeline<FlowEntry>) -> Void) {
+        let entry = FlowEntry(date: .now, snapshot: WidgetSnapshotStore.load())
+        completion(Timeline(entries: [entry], policy: .never))
     }
 }
 
@@ -75,28 +32,25 @@ struct BlackjackStatsWidget: Widget {
     let kind = "BlackjackStatsWidget"
 
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(
-            kind: kind,
-            intent: SelectTrainerIntent.self,
-            provider: StatsProvider()
-        ) { entry in
-            StatsWidgetView(entry: entry)
-                .containerBackground(WidgetTheme.background, for: .widget)
+        StaticConfiguration(kind: kind, provider: FlowProvider()) { entry in
+            GoalWidgetView(snapshot: entry.snapshot)
+                .containerBackground(WidgetTheme.ground, for: .widget)
         }
-        .configurationDisplayName("Trainer Stats")
-        .description("Your accuracy and current streak for a chosen trainer.")
+        .configurationDisplayName("Daily goal")
+        .description("Your daily-goal ring and practice streak.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
 
-// MARK: - Views
+// MARK: - Theme
 
 private enum WidgetTheme {
-    static let background = Color(rgb: 0x0A3A22) // mirrors the app's Theme palette
-    static let primaryText = Color(rgb: 0xF4F4F4)
-    static let secondaryText = Color(rgb: 0xF4F4F4).opacity(0.7)
-    static let accent = Color(rgb: 0x4F8CFF)
-    static let positive = Color(rgb: 0x66BB6A)
+    static let ground = Color(rgb: 0x15171C)
+    static let raised = Color(rgb: 0x23262D)
+    static let ink = Color(rgb: 0xE7E9EE)
+    static let muted = Color(rgb: 0x8B909C)
+    static let accent = Color(rgb: 0xF2B64C)
+    static let good = Color(rgb: 0x4CC38A)
 }
 
 private extension Color {
@@ -113,100 +67,143 @@ private extension Color {
     }
 }
 
-struct StatsWidgetView: View {
+// MARK: - Views
+
+struct GoalWidgetView: View {
     @Environment(\.widgetFamily) private var family
-    let entry: StatsEntry
+    let snapshot: WidgetSnapshot
 
     var body: some View {
         switch family {
-        case .systemSmall: SmallStatsView(entry: entry)
-        default: MediumStatsView(entry: entry)
+        case .systemSmall:
+            SmallGoalView(snapshot: snapshot)
+        default:
+            MediumGoalView(snapshot: snapshot)
         }
     }
 }
 
-/// Compact layout: trainer name, big accuracy, streak.
-private struct SmallStatsView: View {
-    let entry: StatsEntry
+private struct SmallGoalView: View {
+    let snapshot: WidgetSnapshot
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(entry.trainer.shortTitle)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(WidgetTheme.secondaryText)
-            Spacer(minLength: 0)
-            Text(entry.stat.accuracyDisplay)
-                .font(.system(size: 40, weight: .bold, design: .rounded))
-                .foregroundStyle(WidgetTheme.primaryText)
-                .minimumScaleFactor(0.6)
-                .lineLimit(1)
-            Text("Accuracy")
+        VStack(spacing: 8) {
+            WidgetGoalRing(snapshot: snapshot, size: 82, lineWidth: 9)
+            Text(snapshot.streakLabel)
                 .font(.caption2)
-                .foregroundStyle(WidgetTheme.secondaryText)
-            Spacer(minLength: 0)
-            streakLabel
+                .foregroundStyle(WidgetTheme.muted)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var streakLabel: some View {
-        Label("\(entry.stat.currentStreak) streak", systemImage: "flame.fill")
-            .font(.caption.weight(.medium))
-            .foregroundStyle(WidgetTheme.positive)
-            .labelStyle(.titleAndIcon)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
-/// Wider layout: trainer title plus accuracy / streak / hands cells.
-private struct MediumStatsView: View {
-    let entry: StatsEntry
+private struct MediumGoalView: View {
+    let snapshot: WidgetSnapshot
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(entry.trainer.title)
-                .font(.headline)
-                .foregroundStyle(WidgetTheme.primaryText)
-            HStack(alignment: .top, spacing: 16) {
-                cell("Accuracy", entry.stat.accuracyDisplay, tint: WidgetTheme.accent)
-                cell("Streak", "\(entry.stat.currentStreak)", tint: WidgetTheme.positive)
-                cell("Hands", "\(entry.stat.attempts)", tint: WidgetTheme.primaryText)
+        HStack(spacing: 20) {
+            WidgetGoalRing(snapshot: snapshot, size: 92, lineWidth: 10)
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Daily goal")
+                    .font(.headline)
+                    .foregroundStyle(WidgetTheme.ink)
+                StreakDotsRow(dots: snapshot.dots)
+                Text(snapshot.streakLabel)
+                    .font(.subheadline)
+                    .foregroundStyle(WidgetTheme.muted)
             }
             Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+}
+
+private struct WidgetGoalRing: View {
+    let snapshot: WidgetSnapshot
+    let size: CGFloat
+    let lineWidth: CGFloat
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(WidgetTheme.raised, lineWidth: lineWidth)
+                .padding(lineWidth / 2)
+            Circle()
+                .trim(from: 0, to: snapshot.goalMet ? 1 : snapshot.fraction)
+                .stroke(
+                    snapshot.goalMet ? WidgetTheme.good : WidgetTheme.accent,
+                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .padding(lineWidth / 2)
+            VStack(spacing: 1) {
+                Text("\(snapshot.handsToday)/\(snapshot.dailyGoal)")
+                    .font(.system(size: size * 0.2, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(.white)
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+                Text(snapshot.goalMet ? "goal met" : "today")
+                    .font(.system(size: size * 0.11))
+                    .foregroundStyle(WidgetTheme.muted)
+            }
+            .padding(4)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+private struct StreakDotsRow: View {
+    let dots: [Bool]
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(Array(dots.enumerated()), id: \.offset) { index, met in
+                let isToday = index == dots.count - 1
+                Circle()
+                    .fill(dotColor(met: met, isToday: isToday))
+                    .frame(width: 10, height: 10)
+                    .overlay {
+                        if isToday {
+                            Circle().strokeBorder(WidgetTheme.accent, lineWidth: 2)
+                        }
+                    }
+            }
+        }
     }
 
-    private func cell(_ label: String, _ value: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value)
-                .font(.title2.weight(.bold))
-                .foregroundStyle(tint)
-                .minimumScaleFactor(0.6)
-                .lineLimit(1)
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(WidgetTheme.secondaryText)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    private func dotColor(met: Bool, isToday: Bool) -> Color {
+        if met { return WidgetTheme.good }
+        return isToday ? .clear : WidgetTheme.raised
     }
 }
 
 #Preview(as: .systemSmall) {
     BlackjackStatsWidget()
 } timeline: {
-    StatsEntry(
+    FlowEntry(
         date: .now,
-        trainer: .basicStrategy,
-        stat: WidgetTrainerStat(attempts: 40, correct: 35, currentStreak: 6)
+        snapshot: WidgetSnapshot(
+            handsToday: 8,
+            dailyGoal: 20,
+            streak: 5,
+            dots: [true, true, false, true, true, true, false]
+        )
     )
 }
 
 #Preview(as: .systemMedium) {
     BlackjackStatsWidget()
 } timeline: {
-    StatsEntry(
+    FlowEntry(
         date: .now,
-        trainer: .trueCount,
-        stat: WidgetTrainerStat(attempts: 0, correct: 0, currentStreak: 0)
+        snapshot: WidgetSnapshot(
+            handsToday: 20,
+            dailyGoal: 20,
+            streak: 6,
+            dots: [true, true, true, true, true, true, true]
+        )
     )
 }

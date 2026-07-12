@@ -2,46 +2,39 @@ import Foundation
 import Testing
 @testable import BlackjackTrainer
 
-/// Slice 4.3 — the home-screen widget's shared snapshot, its App Group store, and
-/// the publisher that refreshes it from the live stat stores.
+/// The home-screen widget's Flow snapshot (goal ring + streak), its App Group
+/// store, and the publisher that refreshes it from the practice history + goal.
 struct WidgetSnapshotTests {
     private func suite() -> UserDefaults {
         let name = "widget-test-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: name)!
+        let defaults = UserDefaults(suiteName: name) ?? .standard
         defaults.removePersistentDomain(forName: name)
         return defaults
     }
 
-    // MARK: accuracyDisplay (em dash before attempts, rounded percent after)
+    // MARK: snapshot fields
 
-    @Test func accuracyDisplayIsEmDashBeforeAttempts() {
-        #expect(WidgetTrainerStat.empty.accuracyDisplay == "—")
-    }
+    @Test func snapshotComputesGoalRingAndStreakFields() {
+        let met = WidgetSnapshot(handsToday: 20, dailyGoal: 20, streak: 6, dots: [])
+        #expect(met.goalMet)
+        #expect(met.fraction == 1)
+        #expect(met.streakLabel == "6-day streak")
 
-    @Test func accuracyDisplayRoundsLikeMathRound() {
-        let stat = WidgetTrainerStat(attempts: 40, correct: 35, currentStreak: 0)
-        #expect(stat.accuracyDisplay == "88%") // 87.5 rounds up, like Math.round
-        #expect(WidgetTrainerStat(attempts: 3, correct: 1, currentStreak: 0)
-            .accuracyDisplay == "33%")
-    }
-
-    // MARK: snapshot lookup
-
-    @Test func snapshotReturnsEmptyForMissingTrainer() {
-        #expect(WidgetSnapshot.empty.stat(for: .deviations) == .empty)
+        let partial = WidgetSnapshot(handsToday: 8, dailyGoal: 20, streak: 0, dots: [])
+        #expect(!partial.goalMet)
+        #expect(abs(partial.fraction - 0.4) < 0.0001)
+        #expect(partial.streakLabel == "No streak yet")
     }
 
     // MARK: App Group store round-trip
 
     @Test func storeRoundTripsThroughDefaults() {
         let defaults = suite()
-        let snapshot = WidgetSnapshot(trainers: [
-            WidgetTrainer.basicStrategy.rawValue:
-                WidgetTrainerStat(attempts: 5, correct: 4, currentStreak: 2)
-        ])
+        let snapshot = WidgetSnapshot(
+            handsToday: 5, dailyGoal: 20, streak: 2, dots: [true, false, true]
+        )
         WidgetSnapshotStore.save(snapshot, to: defaults)
         #expect(WidgetSnapshotStore.load(from: defaults) == snapshot)
-        #expect(WidgetSnapshotStore.load(from: defaults).stat(for: .basicStrategy).correct == 4)
     }
 
     @Test func storeLoadsEmptyWhenAbsent() {
@@ -52,83 +45,59 @@ struct WidgetSnapshotTests {
 
     @Test func publisherSeedsSnapshotOnInit() {
         var writes: [WidgetSnapshot] = []
-        let store = SessionStatsStore(key: "k", defaults: suite())
+        let defaults = suite()
+        let history = PracticeHistoryStore(defaults: defaults)
+        let prefs = FlowPrefsStore(defaults: defaults)
         _ = WidgetSnapshotPublisher(
-            sources: [.init(trainer: .basicStrategy, store: store)],
+            history: history,
+            prefs: prefs,
             write: { writes.append($0) },
             reload: {}
         )
         #expect(writes.count == 1) // seeded at launch
-        #expect(writes.first?.stat(for: .basicStrategy) == .empty)
+        #expect(writes.first?.handsToday == 0)
+        #expect(writes.first?.dailyGoal == 20)
     }
 
-    // The store holds `onChange` weakly (no retain cycle), so the publisher must
-    // outlive the recorded attempts — `AppModel` keeps it for the app's lifetime;
-    // the tests use `withExtendedLifetime` to match.
+    // The stores hold `onChange` weakly (no retain cycle), so the publisher must
+    // outlive the recorded hands — `AppModel` keeps it for the app's lifetime; the
+    // tests use `withExtendedLifetime` to match.
 
-    @Test func publisherWritesAndReloadsOnRecord() {
+    @Test func publisherWritesAndReloadsWhenAHandIsRecorded() {
         var writes: [WidgetSnapshot] = []
         var reloads = 0
-        let store = SessionStatsStore(key: "k", defaults: suite())
+        let defaults = suite()
+        let history = PracticeHistoryStore(defaults: defaults)
+        let prefs = FlowPrefsStore(defaults: defaults)
         let publisher = WidgetSnapshotPublisher(
-            sources: [.init(trainer: .basicStrategy, store: store)],
+            history: history,
+            prefs: prefs,
             write: { writes.append($0) },
             reload: { reloads += 1 }
         )
         withExtendedLifetime(publisher) {
-            store.recordAttempt(correct: true)
-            store.recordAttempt(correct: false)
+            history.recordHand()
+            history.recordHand()
         }
         #expect(writes.count == 3) // 1 seed + 2 records
         #expect(reloads == 3)
-        let latest = writes.last?.stat(for: .basicStrategy)
-        #expect(latest?.attempts == 2)
-        #expect(latest?.correct == 1)
-        #expect(latest?.currentStreak == 0) // the miss reset the streak
+        #expect(writes.last?.handsToday == 2)
     }
 
-    @Test func publisherReactsToReset() {
+    @Test func publisherReactsToADailyGoalChange() {
         var writes: [WidgetSnapshot] = []
-        let store = SessionStatsStore(key: "k", defaults: suite())
+        let defaults = suite()
+        let history = PracticeHistoryStore(defaults: defaults)
+        let prefs = FlowPrefsStore(defaults: defaults)
         let publisher = WidgetSnapshotPublisher(
-            sources: [.init(trainer: .runningCount, store: store)],
+            history: history,
+            prefs: prefs,
             write: { writes.append($0) },
             reload: {}
         )
         withExtendedLifetime(publisher) {
-            store.recordAttempt(correct: true)
-            store.reset()
+            prefs.setDailyGoal(10)
         }
-        #expect(writes.count == 3) // seed + record + reset
-        #expect(writes.last?.stat(for: .runningCount) == .empty)
-    }
-
-    @Test func multipleTrainersAreCapturedIndependently() {
-        var writes: [WidgetSnapshot] = []
-        let basic = SessionStatsStore(key: "basic", defaults: suite())
-        let deviations = SessionStatsStore(key: "dev", defaults: suite())
-        let publisher = WidgetSnapshotPublisher(
-            sources: [
-                .init(trainer: .basicStrategy, store: basic),
-                .init(trainer: .deviations, store: deviations)
-            ],
-            write: { writes.append($0) },
-            reload: {}
-        )
-        withExtendedLifetime(publisher) {
-            basic.recordAttempt(correct: true)
-        }
-        let snapshot = writes.last
-        #expect(snapshot?.stat(for: .basicStrategy).attempts == 1)
-        #expect(snapshot?.stat(for: .deviations).attempts == 0)
-    }
-
-    @Test func onChangeFiresOnRecordAndReset() {
-        var fired = 0
-        let store = SessionStatsStore(key: "k", defaults: suite())
-        store.onChange = { fired += 1 }
-        store.recordAttempt(correct: true)
-        store.reset()
-        #expect(fired == 2)
+        #expect(writes.last?.dailyGoal == 10)
     }
 }
