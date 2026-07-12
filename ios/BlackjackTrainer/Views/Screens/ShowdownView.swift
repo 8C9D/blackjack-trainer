@@ -150,16 +150,10 @@ struct ShowdownView: View {
     }
 
     var body: some View {
-        @Bindable var model = model
         VStack(alignment: .leading, spacing: 16) {
             Text("Play a hand vs the dealer")
                 .font(.headline)
                 .foregroundStyle(Theme.primaryText)
-            Picker("Dealer rule", selection: $model.ruleSet) {
-                Text("S17").tag(RuleSet.s17)
-                Text("H17").tag(RuleSet.h17)
-            }
-            .pickerStyle(.segmented)
 
             if model.phase == .exhausted {
                 Text("The shoe is too low to deal a hand. Return to counting to reshuffle.")
@@ -177,8 +171,6 @@ struct ShowdownView: View {
             Button("Back to counting", action: onExit)
                 .buttonStyle(.bordered)
                 .tint(Theme.accent)
-
-            statsPanel
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -242,39 +234,6 @@ struct ShowdownView: View {
                     .font(.footnote)
                     .foregroundStyle(Theme.secondaryText)
             }
-        }
-    }
-
-    private var statsPanel: some View {
-        let stats = model.showdownStats
-        return VStack(alignment: .leading, spacing: 10) {
-            Text("Showdown")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Theme.primaryText)
-            let columns = [GridItem(.adaptive(minimum: 84), alignment: .leading)]
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
-                statCell("Hands", "\(stats.hands)")
-                statCell("Wins", "\(stats.wins)")
-                statCell("Losses", "\(stats.losses)")
-                statCell("Pushes", "\(stats.pushes)")
-                statCell("Blackjacks", "\(stats.blackjacks)")
-                statCell("Win rate", model.winRate)
-            }
-            Button("Reset showdown stats", role: .destructive) { model.resetStats() }
-                .buttonStyle(.bordered)
-                .tint(Theme.incorrect)
-                .disabled(stats.hands == 0)
-        }
-    }
-
-    private func statCell(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(Theme.secondaryText)
-            Text(value)
-                .font(.headline)
-                .foregroundStyle(Theme.primaryText)
         }
     }
 }
