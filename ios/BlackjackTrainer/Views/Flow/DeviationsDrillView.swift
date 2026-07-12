@@ -255,6 +255,7 @@ struct DeviationsDrillView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.ground.ignoresSafeArea())
+        .onDisappear { model.exit() }
     }
 
     private var drillBody: some View {
