@@ -1,46 +1,36 @@
 import Foundation
 import UserNotifications
 
-/// Persisted settings for the optional daily practice reminder (4.4). Default:
-/// off until the user enables it; one daily reminder at the chosen time, opening
-/// the chosen trainer tab (the roadmap's resolved default cadence).
+/// Persisted settings for the optional daily practice reminder. Default: off
+/// until the user enables it; one daily reminder at the chosen time. A tapped
+/// reminder simply opens the app — which always lands on the Open home, so there
+/// is no trainer to deep-link (the Flow redesign replaced the tab bar).
 struct ReminderSettings: Codable, Equatable {
     var isEnabled: Bool
     var hour: Int
     var minute: Int
-    var target: AppTab
 
     static let `default` = ReminderSettings(
         isEnabled: false,
         hour: 19, // 7:00 PM
-        minute: 0,
-        target: .strategy
+        minute: 0
     )
 }
 
-/// Builds the reminder's content/trigger and decodes a tapped notification back
-/// to a tab. Kept free of any live notification-center state so it's unit-testable.
+/// Builds the reminder's content/trigger. Kept free of any live notification-
+/// center state so it's unit-testable. The no-guilt copy is unchanged.
 enum PracticeReminder {
     /// Single fixed identifier — scheduling replaces any existing reminder.
     static let identifier = "blackjack-practice-reminder"
-    static let tabUserInfoKey = "tab"
     static let title = "Time to practice"
     static let body = "Keep your blackjack edge sharp with a quick drill."
 
-    /// The tab a tapped reminder should open, or `nil` if the payload is missing
-    /// or unrecognized.
-    static func tab(from userInfo: [AnyHashable: Any]) -> AppTab? {
-        guard let raw = userInfo[tabUserInfoKey] as? String else { return nil }
-        return AppTab(rawValue: raw)
-    }
-
-    /// A daily-repeating request firing at `hour:minute`, deep-linking to `target`.
-    static func request(hour: Int, minute: Int, target: AppTab) -> UNNotificationRequest {
+    /// A daily-repeating request firing at `hour:minute`.
+    static func request(hour: Int, minute: Int) -> UNNotificationRequest {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
-        content.userInfo = [tabUserInfoKey: target.rawValue]
 
         var components = DateComponents()
         components.hour = hour

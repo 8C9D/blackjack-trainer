@@ -39,29 +39,13 @@ struct RemindersTests {
         return defaults
     }
 
-    // MARK: routing (deep-link a tapped reminder to a tab)
+    // MARK: request construction (daily-repeating)
 
-    @Test func routesValidPayloadToTab() {
-        let userInfo: [AnyHashable: Any] = [
-            PracticeReminder.tabUserInfoKey: AppTab.deviations.rawValue
-        ]
-        #expect(PracticeReminder.tab(from: userInfo) == .deviations)
-    }
-
-    @Test func routingIgnoresMissingOrUnknownPayload() {
-        #expect(PracticeReminder.tab(from: [:]) == nil)
-        #expect(PracticeReminder.tab(from: [PracticeReminder.tabUserInfoKey: "nope"]) == nil)
-    }
-
-    // MARK: request construction (daily-repeating, deep-linked)
-
-    @Test func requestIsDailyRepeatingAndDeepLinked() {
-        let request = PracticeReminder.request(hour: 8, minute: 30, target: .deviations)
+    @Test func requestIsDailyRepeating() {
+        let request = PracticeReminder.request(hour: 8, minute: 30)
         #expect(request.identifier == PracticeReminder.identifier)
-        #expect(
-            request.content.userInfo[PracticeReminder.tabUserInfoKey] as? String
-                == AppTab.deviations.rawValue
-        )
+        #expect(request.content.title == PracticeReminder.title)
+        #expect(request.content.body == PracticeReminder.body)
         let trigger = request.trigger as? UNCalendarNotificationTrigger
         #expect(trigger?.repeats == true)
         #expect(trigger?.dateComponents.hour == 8)
@@ -74,7 +58,6 @@ struct RemindersTests {
         let model = RemindersModel(scheduler: FakeScheduler(), defaults: suite())
         #expect(model.settings.isEnabled == false)
         #expect(model.settings.hour == 19)
-        #expect(model.settings.target == .strategy)
     }
 
     @Test func enablingSchedulesWhenAuthorized() async {
@@ -122,15 +105,6 @@ struct RemindersTests {
         await model.setTime(hour: 8, minute: 15)
         #expect(model.settings.hour == 8)
         #expect(scheduler.scheduled.isEmpty)
-    }
-
-    @Test func changingTargetReschedulesDeepLink() async {
-        let scheduler = FakeScheduler()
-        let model = RemindersModel(scheduler: scheduler, defaults: suite())
-        await model.setEnabled(true)
-        await model.setTarget(.count)
-        let userInfo = scheduler.scheduled.first?.content.userInfo
-        #expect(userInfo?[PracticeReminder.tabUserInfoKey] as? String == AppTab.count.rawValue)
     }
 
     @Test func settingsPersistAcrossModels() async {

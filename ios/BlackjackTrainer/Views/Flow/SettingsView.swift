@@ -30,6 +30,7 @@ struct SettingsView: View {
                 tableRulesSection
                 deviationsSection
                 countingSection
+                aboutSection
             }
             .scrollContentBackground(.hidden)
             .background(Theme.ground.ignoresSafeArea())
@@ -175,6 +176,15 @@ struct SettingsView: View {
                     .font(.footnote)
                     .foregroundStyle(Theme.bad)
             }
+        }
+    }
+
+    // MARK: Notifications & about
+
+    private var aboutSection: some View {
+        Section {
+            NavigationLink("Practice reminders") { RemindersView() }
+            NavigationLink("About & licenses") { AboutView() }
         }
     }
 

@@ -31,18 +31,4 @@ struct SharedComponentsTests {
     @Test func fullTrainerSetMatchesWebDefault() {
         #expect(Action.fullTrainerSet == [.hit, .stand, .double, .split, .surrender, .insurance])
     }
-
-    @Test func accuracyDisplayFormatsRoundedPercentWithEmDashAtZero() {
-        #expect(StatsPanelView.accuracyDisplay(.empty) == "—")
-        #expect(
-            StatsPanelView.accuracyDisplay(
-                SessionStats(attempts: 4, correct: 3, streak: 0, longestStreak: 0)
-            ) == "75%"
-        )
-        #expect(
-            StatsPanelView.accuracyDisplay(
-                SessionStats(attempts: 3, correct: 1, streak: 0, longestStreak: 0)
-            ) == "33%"
-        )
-    }
 }
