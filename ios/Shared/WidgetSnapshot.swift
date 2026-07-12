@@ -3,77 +3,37 @@ import Foundation
 /// Identifiers shared between the app and its widget extension.
 enum AppGroup {
     /// App Group container the app and the widget both read/write so they share
-    /// one stats snapshot. Provisioning this group for the App IDs is a pending
-    /// human action; until then `UserDefaults(suiteName:)` falls back to a
-    /// per-process store, so the simulator build stays green and cross-process
-    /// sharing simply waits for the entitlement (mirrors the 4.2 KVS pattern).
+    /// one snapshot. Provisioning this group for the App IDs is a pending human
+    /// action; until then `UserDefaults(suiteName:)` falls back to a per-process
+    /// store, so the simulator build stays green and cross-process sharing simply
+    /// waits for the entitlement (mirrors the 4.2 KVS pattern).
     static let identifier = "group.com.arthurzhang.blackjacktrainer"
 }
 
-/// The trainers whose headline stats the widget can surface — the five
-/// session-stat trainers (the showdown tally has no accuracy/streak shape).
-enum WidgetTrainer: String, Codable, CaseIterable, Identifiable, Sendable {
-    case basicStrategy
-    case runningCount
-    case trueCount
-    case deviations
-    case deckEstimation
-
-    var id: String {
-        rawValue
-    }
-
-    /// Full title for the medium widget and the configuration picker.
-    var title: String {
-        switch self {
-        case .basicStrategy: "Basic Strategy"
-        case .runningCount: "Running Count"
-        case .trueCount: "True Count"
-        case .deviations: "Deviations"
-        case .deckEstimation: "Deck Estimation"
-        }
-    }
-
-    /// Short label for the compact small widget.
-    var shortTitle: String {
-        switch self {
-        case .basicStrategy: "Strategy"
-        case .runningCount: "Running"
-        case .trueCount: "True Count"
-        case .deviations: "Deviations"
-        case .deckEstimation: "Deck Est."
-        }
-    }
-}
-
-/// One trainer's headline stats. The widget shows accuracy + current streak.
-struct WidgetTrainerStat: Codable, Hashable, Sendable {
-    var attempts: Int
-    var correct: Int
-    var currentStreak: Int
-
-    static let empty = WidgetTrainerStat(attempts: 0, correct: 0, currentStreak: 0)
-
-    /// Rounded accuracy percentage, or an em dash before any attempts. Mirrors
-    /// the app's `StatsPanelView.accuracyDisplay` so the widget and in-app number
-    /// always agree.
-    var accuracyDisplay: String {
-        guard attempts > 0 else { return "—" }
-        let percent = (Double(correct) / Double(attempts) * 100).rounded()
-        return "\(Int(percent))%"
-    }
-}
-
-/// Snapshot of every trainer's headline stats, written by the app to the shared
-/// App Group container on each stat change and read by the widget's timeline.
+/// The Flow home surface the widget mirrors: the daily-goal ring and the streak
+/// (not raw per-trainer stats). Written by the app to the shared App Group
+/// container whenever the practice history or the daily goal changes.
 struct WidgetSnapshot: Codable, Hashable, Sendable {
-    /// Keyed by `WidgetTrainer.rawValue` (Codable-friendly String keys).
-    var trainers: [String: WidgetTrainerStat]
+    var handsToday: Int
+    var dailyGoal: Int
+    var streak: Int
+    /// The last seven days' goal-met flags, oldest first; the last entry is today.
+    var dots: [Bool]
 
-    static let empty = WidgetSnapshot(trainers: [:])
+    static let empty = WidgetSnapshot(handsToday: 0, dailyGoal: 20, streak: 0, dots: [])
 
-    func stat(for trainer: WidgetTrainer) -> WidgetTrainerStat {
-        trainers[trainer.rawValue] ?? .empty
+    var goalMet: Bool {
+        handsToday >= dailyGoal
+    }
+
+    /// Ring fill fraction, clamped to [0, 1].
+    var fraction: Double {
+        guard dailyGoal > 0 else { return 1 }
+        return min(1, Double(handsToday) / Double(dailyGoal))
+    }
+
+    var streakLabel: String {
+        streak == 0 ? "No streak yet" : "\(streak)-day streak"
     }
 }
 
