@@ -65,19 +65,9 @@ final class RemindersModel {
         if settings.isEnabled { await reschedule() }
     }
 
-    func setTarget(_ target: AppTab) async {
-        settings.target = target
-        persist()
-        if settings.isEnabled { await reschedule() }
-    }
-
     private func reschedule() async {
         await scheduler.schedule(
-            PracticeReminder.request(
-                hour: settings.hour,
-                minute: settings.minute,
-                target: settings.target
-            )
+            PracticeReminder.request(hour: settings.hour, minute: settings.minute)
         )
     }
 

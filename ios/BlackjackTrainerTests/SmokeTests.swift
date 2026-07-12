@@ -8,7 +8,7 @@ import Testing
 @MainActor
 struct SmokeTests {
     @Test func rootViewInstantiates() {
-        _ = RootTabView()
+        _ = FlowRootView()
         #expect(Bool(true))
     }
 }

@@ -1,12 +1,10 @@
 import SwiftUI
 
-/// Practice-reminder settings (4.4), reached from the About tab. A single daily
-/// reminder, off until enabled; when on, the user picks the time and which
-/// trainer a tapped reminder opens.
+/// Practice-reminder settings, reached from Settings. A single daily reminder,
+/// off until enabled; when on, the user picks the time. A tapped reminder just
+/// opens the app (which always lands on the Open home).
 struct RemindersView: View {
     @State private var model = RemindersModel()
-
-    private let trainerTabs: [AppTab] = [.strategy, .count, .deviations]
 
     var body: some View {
         ScrollView {
@@ -50,19 +48,6 @@ struct RemindersView: View {
                         )
                         .foregroundStyle(Theme.primaryText)
                         .tint(Theme.accent)
-
-                        Divider().overlay(Theme.background)
-
-                        HStack {
-                            Text("Open")
-                                .foregroundStyle(Theme.primaryText)
-                            Spacer()
-                            Picker("Trainer", selection: targetBinding) {
-                                ForEach(trainerTabs) { Text($0.title).tag($0) }
-                            }
-                            .labelsHidden()
-                            .tint(Theme.accent)
-                        }
                     }
                 }
             }
@@ -99,13 +84,6 @@ struct RemindersView: View {
                 let parts = Calendar.current.dateComponents([.hour, .minute], from: newDate)
                 Task { await model.setTime(hour: parts.hour ?? 0, minute: parts.minute ?? 0) }
             }
-        )
-    }
-
-    private var targetBinding: Binding<AppTab> {
-        Binding(
-            get: { model.settings.target },
-            set: { newValue in Task { await model.setTarget(newValue) } }
         )
     }
 

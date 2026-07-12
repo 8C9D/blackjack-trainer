@@ -12,22 +12,17 @@ struct WidgetSnapshotTests {
         return defaults
     }
 
-    // MARK: accuracyDisplay parity with the in-app stats panel
+    // MARK: accuracyDisplay (em dash before attempts, rounded percent after)
 
     @Test func accuracyDisplayIsEmDashBeforeAttempts() {
         #expect(WidgetTrainerStat.empty.accuracyDisplay == "—")
     }
 
-    @Test func accuracyDisplayMatchesTheStatsPanel() {
+    @Test func accuracyDisplayRoundsLikeMathRound() {
         let stat = WidgetTrainerStat(attempts: 40, correct: 35, currentStreak: 0)
         #expect(stat.accuracyDisplay == "88%") // 87.5 rounds up, like Math.round
         #expect(WidgetTrainerStat(attempts: 3, correct: 1, currentStreak: 0)
             .accuracyDisplay == "33%")
-        // Anti-drift: the widget number must equal the app's own formatter.
-        let panel = StatsPanelView.accuracyDisplay(
-            SessionStats(attempts: 40, correct: 35, streak: 0, longestStreak: 0)
-        )
-        #expect(stat.accuracyDisplay == panel)
     }
 
     // MARK: snapshot lookup
