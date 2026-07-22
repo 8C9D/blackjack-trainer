@@ -11,7 +11,11 @@
     "export:fixtures": "tsx tools/export-parity-fixtures.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "npm run typecheck && npm run format:check"
+    "lint": "npm run typecheck && npm run format:check",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:report": "playwright show-report",
+    "e2e:install": "playwright install --with-deps chromium"
   },
   "private": true,
   "packageManager": "npm@11.12.1",
@@ -32,6 +36,7 @@
     "@angular/build": "^21.2.9",
     "@angular/cli": "^21.2.9",
     "@angular/compiler-cli": "^21.2.0",
+    "@playwright/test": "^1.61.1",
     "jsdom": "^28.0.0",
     "prettier": "^3.8.1",
     "tsx": "^4.22.4",

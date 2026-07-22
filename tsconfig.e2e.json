@@ -1,0 +1,18 @@
+/* Standalone TS config for the E2E suite. Kept separate from tsconfig.app.json
+   (src app) and tsconfig.spec.json (Vitest units) so Playwright specs are
+   invisible to the unit run and the app typecheck. Playwright compiles specs
+   itself via esbuild; this exists for editor support and an optional
+   `tsc -p tsconfig.e2e.json --noEmit` check. */
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["e2e/**/*.ts", "playwright.config.ts"]
+}

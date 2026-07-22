@@ -63,3 +63,9 @@ ios/build/
 
 # Playwright MCP session artifacts
 .playwright-mcp/
+
+# Playwright E2E output
+/playwright-report/
+/test-results/
+/blob-report/
+/playwright/.cache/
