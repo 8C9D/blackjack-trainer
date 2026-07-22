@@ -219,8 +219,15 @@ export class SettingsPageComponent {
   }
 
   protected onGoalChange(event: Event): void {
-    const value = (event.target as HTMLInputElement).valueAsNumber;
-    if (Number.isFinite(value)) this.prefsService.setDailyGoal(value);
+    const input = event.target as HTMLInputElement;
+    const value = input.valueAsNumber;
+    if (Number.isFinite(value)) {
+      this.prefsService.setDailyGoal(value);
+    } else {
+      // Blank / non-numeric: re-sync the field to the stored goal so it never
+      // sits empty and out of sync (mirrors onManualTrueCountChange).
+      input.value = String(this.prefs().dailyGoal);
+    }
   }
 
   protected setRuleSet(ruleSet: RuleSet): void {

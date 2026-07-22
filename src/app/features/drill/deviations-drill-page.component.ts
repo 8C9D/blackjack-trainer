@@ -290,6 +290,9 @@ export class DeviationsDrillPageComponent {
   @HostListener('window:keydown', ['$event'])
   protected onKeyDown(event: KeyboardEvent): void {
     if (shouldIgnoreKeyboardEvent(event)) return;
+    // Ignore OS key auto-repeat: a held answer key would otherwise grade and
+    // then immediately continue past the miss explanation before it can be read.
+    if (event.repeat) return;
     const phase = this.phase();
     // The Done screen owns its own Enter/Esc handling.
     if (phase === 'done') return;

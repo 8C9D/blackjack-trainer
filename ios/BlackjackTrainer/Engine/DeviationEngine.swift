@@ -39,8 +39,14 @@ struct DeviationEngine {
         let dealerKey = normalizeUpcardKey(input.dealerUpcard)
         let (category, playerHand) = Self.classifyForDeviation(input.player)
 
-        let surrenderRule = findRule(ruleSet: input.ruleSet, category: "surrender",
-                                     playerHand: playerHand, dealerUpcard: dealerKey)
+        // Surrender deviations are HARD-total rules ('15'/'16'). Only apply them
+        // to a hard hand: a soft hand's total key collides with a hard total
+        // (soft 15 (A,4) → '15', soft 16 (A,5) → '16'), and surrendering a soft
+        // 15/16 — which can never bust — is never correct.
+        let surrenderRule = category == "hard"
+            ? findRule(ruleSet: input.ruleSet, category: "surrender",
+                       playerHand: playerHand, dealerUpcard: dealerKey)
+            : nil
         if let surrenderRule, isThresholdMet(surrenderRule, trueCount: trueCount) {
             return DeviationDecision(basicAction: basicAction,
                                      finalAction: Self.action(surrenderRule.deviationAction),

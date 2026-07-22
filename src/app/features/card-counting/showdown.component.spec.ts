@@ -9,15 +9,28 @@ import { ShowdownComponent } from './showdown.component';
 
 // Protected signals/methods are plain properties at runtime; this mirror lets
 // the tests drive the hand without scattering `as any`.
+type PlayerHandView = {
+  cards: readonly Card[];
+  doubled: boolean;
+  isSplitAce: boolean;
+  done: boolean;
+  settlement: Settlement | null;
+};
+
 type Internals = {
   phase(): 'player-turn' | 'resolved' | 'exhausted';
   playerCards(): readonly Card[];
   dealerCards(): readonly Card[];
   settlement(): Settlement | null;
+  hands(): readonly PlayerHandView[];
+  activeIndex(): number;
   remaining(): number;
   canDealAnother(): boolean;
   onAction(a: Action): void;
   dealAnother(): void;
+  playerActions(): readonly Action[];
+  doubled(): boolean;
+  verdict(h: PlayerHandView): string;
   stats: { stats(): ShowdownStats; reset(): void };
 };
 
@@ -139,12 +152,88 @@ describe('ShowdownComponent', () => {
     expect(c.phase()).toBe('exhausted');
   });
 
-  it('emits exit when "Back to counting" is clicked', () => {
+  describe('double down', () => {
+    it('offers Double only on the opening two-card hand', () => {
+      // player [9,7]=16 vs dealer 10; hitting draws a 2 → 3-card hand.
+      const { c } = createShowdown(makeShoe(['9', '10', '7', '6', '2']));
+      expect(c.playerActions()).toEqual(['H', 'S', 'D']);
+      c.onAction('H');
+      expect(c.playerCards().length).toBe(3);
+      expect(c.playerActions()).toEqual(['H', 'S']); // no Double after a hit
+    });
+
+    it('takes exactly one card, ends the turn, and marks the win as doubled', () => {
+      // player [5,6]=11, dealer [10,7]=17; double draws K → player 21 beats 17.
+      const { c } = createShowdown(makeShoe(['5', '10', '6', '7', 'K']));
+      c.onAction('D');
+      expect(c.doubled()).toBe(true);
+      expect(c.playerCards().map((x) => x.rank)).toEqual(['5', '6', 'K']); // one card only
+      expect(c.phase()).toBe('resolved');
+      expect(c.settlement()!.outcome).toBe('win');
+      expect(c.verdict(c.hands()[0])).toContain('(doubled)');
+    });
+
+    it('a double that busts loses', () => {
+      // player [10,6]=16, dealer [10,7]=17; double draws K → 26 bust.
+      const { c } = createShowdown(makeShoe(['10', '10', '6', '7', 'K']));
+      c.onAction('D');
+      expect(c.phase()).toBe('resolved');
+      expect(c.settlement()!.outcome).toBe('lose');
+      expect(c.stats.stats()).toMatchObject({ hands: 1, losses: 1 });
+    });
+  });
+
+  describe('splits', () => {
+    it('does not offer Split on a non-pair', () => {
+      const { c } = createShowdown(makeShoe(['9', '10', '7', '6'])); // 9,7 — not a pair
+      expect(c.playerActions()).not.toContain('P');
+    });
+
+    it('splits a pair into two independently-settled hands', () => {
+      // player 8,8 vs dealer 10,7=17. hand1 draws 10 → 18 (win); hand2 draws 5 →
+      // 13 (lose). Dealer stands on 17 (S17).
+      const { c } = createShowdown(makeShoe(['8', '10', '8', '7', '10', '5']));
+      expect(c.playerActions()).toContain('P');
+      c.onAction('P');
+      c.onAction('S'); // stand hand 1
+      c.onAction('S'); // stand hand 2
+      expect(c.hands().length).toBe(2);
+      expect(c.phase()).toBe('resolved');
+      expect(c.hands()[0].settlement!.outcome).toBe('win');
+      expect(c.hands()[1].settlement!.outcome).toBe('lose');
+      expect(c.stats.stats()).toMatchObject({ hands: 2, wins: 1, losses: 1 });
+    });
+
+    it('split aces take exactly one card each, auto-stand, and a 21 is not a natural', () => {
+      // A,A vs dealer 10,7=17. Aces draw 10 → 21 and 9 → 20; both win but neither
+      // is a blackjack (split 21 pays even money).
+      const { c } = createShowdown(makeShoe(['A', '10', 'A', '7', '10', '9']));
+      c.onAction('P');
+      expect(c.phase()).toBe('resolved'); // resolves without further input
+      expect(c.hands().length).toBe(2);
+      expect(c.hands()[0].cards.length).toBe(2); // one card each, no hits
+      expect(c.hands()[0].settlement!.outcome).toBe('win');
+      expect(c.hands()[0].settlement!.playerBlackjack).toBe(false);
+      expect(c.stats.stats()).toMatchObject({ hands: 2, wins: 2, blackjacks: 0 });
+    });
+
+    it('offers a re-split when a split hand pairs again (under the four-hand cap)', () => {
+      const { c } = createShowdown(makeShoe(['8', '10', '8', '7', '8', '5', '5', '5']));
+      c.onAction('P'); // hand 1 draws another 8 → 8,8
+      expect(c.playerCards().map((x) => x.rank)).toEqual(['8', '8']);
+      expect(c.playerActions()).toContain('P'); // re-split available
+    });
+  });
+
+  it('emits exit with every dealt card when "Back to counting" is clicked', () => {
     const { fixture } = createShowdown(makeShoe(['9', '10', '7', '6']));
-    let exited = false;
-    fixture.componentInstance.exit.subscribe(() => (exited = true));
+    let emitted: readonly Card[] | undefined;
+    fixture.componentInstance.exit.subscribe((cards) => (emitted = cards));
     (fixture.nativeElement.querySelector('.showdown__exit') as HTMLButtonElement).click();
-    expect(exited).toBe(true);
+    expect(emitted).toBeDefined();
+    // The opening deal drew all four cards from the shoe (player, dealer, ×2),
+    // and they carry back so the drill can fold their count into the shoe.
+    expect(emitted!.map((c) => c.rank)).toEqual(['9', '10', '7', '6']);
   });
 
   it('hosts no rule controls — the dealer rule comes from the shared table rules', () => {
@@ -152,12 +241,13 @@ describe('ShowdownComponent', () => {
     expect(fixture.nativeElement.querySelector('input[type=radio]')).toBeNull();
   });
 
-  it('renders Hit and Stand buttons only during the player turn', () => {
+  it('renders Hit, Stand, and Double on the opening hand', () => {
     const { fixture } = createShowdown(makeShoe(['9', '10', '7', '6']));
     const buttons = fixture.nativeElement.querySelectorAll('.showdown__action');
-    expect(buttons.length).toBe(2);
+    expect(buttons.length).toBe(3);
     expect((buttons[0] as HTMLElement).textContent).toContain('Hit');
     expect((buttons[1] as HTMLElement).textContent).toContain('Stand');
+    expect((buttons[2] as HTMLElement).textContent).toContain('Double');
   });
 
   it("'s' key stands the hand", () => {

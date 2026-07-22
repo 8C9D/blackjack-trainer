@@ -7,6 +7,10 @@ import UserNotifications
 @main
 struct BlackjackTrainerApp: App {
     @State private var model = AppModel()
+    /// Tracks whether a hardware keyboard is attached so trainer screens can
+    /// surface their key-hint chips. Held here (and read in `body`) so its
+    /// `@Observable` connect/disconnect updates flow into the environment.
+    @State private var keyboard = HardwareKeyboardMonitor()
     /// Retained for the app's lifetime — `UNUserNotificationCenter.delegate` is
     /// weak, so the coordinator must be held here to keep presenting reminders.
     private let notificationCoordinator = NotificationCoordinator()
@@ -19,6 +23,7 @@ struct BlackjackTrainerApp: App {
         WindowGroup {
             FlowRootView()
                 .environment(model)
+                .environment(\.hasHardwareKeyboard, keyboard.isConnected)
                 .tint(Theme.accent)
                 .preferredColorScheme(.dark)
         }

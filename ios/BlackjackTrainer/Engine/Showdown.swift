@@ -45,8 +45,12 @@ enum Showdown {
     /// settle before bust logic; a player bust loses even if the dealer also
     /// busts; a dealer bust pays any standing hand; else higher total wins and
     /// equal totals push.
-    static func settle(player: [Card], dealer: [Card]) -> Settlement {
-        let playerBlackjack = Hand.isBlackjack(player)
+    /// `playerNatural` overrides whether the player hand counts as a natural
+    /// blackjack (3:2); it defaults to a real two-card 21. Split hands pass
+    /// `false`: a 21 made after splitting is not a natural and pays even money.
+    static func settle(player: [Card], dealer: [Card],
+                       playerNatural: Bool? = nil) -> Settlement {
+        let playerBlackjack = playerNatural ?? Hand.isBlackjack(player)
         let dealerBlackjack = Hand.isBlackjack(dealer)
 
         if playerBlackjack || dealerBlackjack {

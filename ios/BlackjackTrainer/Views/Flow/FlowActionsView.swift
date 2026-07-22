@@ -53,6 +53,8 @@ private struct FlowActionButton: View {
     let graded: Bool
     let onTap: () -> Void
 
+    @Environment(\.hasHardwareKeyboard) private var hasHardwareKeyboard
+
     private var isDim: Bool {
         graded && !isCorrect && !isWrongPick
     }
@@ -91,6 +93,8 @@ private struct FlowActionButton: View {
                     Text("your pick").font(.system(size: 10))
                 } else if showCorrectNote {
                     Text("correct").font(.system(size: 10))
+                } else if hasHardwareKeyboard, isLegal, !graded {
+                    Text("[\(action.keyHint)]").font(.system(size: 10)).opacity(0.7)
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 54)
@@ -101,6 +105,7 @@ private struct FlowActionButton: View {
             .shadow(color: isCorrect ? Theme.good.opacity(0.3) : .clear, radius: 10)
         }
         .buttonStyle(.plain)
+        .keyboardShortcut(KeyEquivalent(action.hotkey), modifiers: [])
         .opacity(opacity)
         .disabled(graded || !isLegal)
     }

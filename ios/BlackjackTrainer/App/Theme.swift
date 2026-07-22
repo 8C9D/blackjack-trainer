@@ -15,16 +15,6 @@ enum Theme {
     static let accent = Color(hex: 0xF2B64C)
     static let good = Color(hex: 0x4CC38A)
     static let bad = Color(hex: 0xE5665F)
-
-    // Compatibility aliases for the pre-Flow screens still in the tree; removed
-    // once those screens are deleted.
-    static let background = ground
-    static let felt = surface
-    static let surfaceRaised = raised
-    static let primaryText = ink
-    static let secondaryText = muted
-    static let correct = good
-    static let incorrect = bad
 }
 
 extension Color {
@@ -46,7 +36,7 @@ struct AppBackground: ViewModifier {
     func body(content: Content) -> some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Theme.background.ignoresSafeArea())
+            .background(Theme.ground.ignoresSafeArea())
     }
 }
 

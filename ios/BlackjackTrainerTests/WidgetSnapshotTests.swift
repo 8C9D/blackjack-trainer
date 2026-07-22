@@ -26,6 +26,31 @@ struct WidgetSnapshotTests {
         #expect(partial.streakLabel == "No streak yet")
     }
 
+    // MARK: day-boundary staleness
+
+    @Test func forDayKeepsACurrentSnapshot() {
+        let today = WidgetSnapshot.dayKey(for: .now)
+        let snap = WidgetSnapshot(
+            handsToday: 12, dailyGoal: 20, streak: 4, dots: [true, false, true], dayKey: today
+        )
+        #expect(snap.forDay(today) == snap)
+    }
+
+    @Test func forDayResetsAStaleSnapshotToAFreshDay() {
+        // A snapshot stamped for an earlier day must not show yesterday's hands
+        // (or "goal met") as today's.
+        let stale = WidgetSnapshot(
+            handsToday: 20, dailyGoal: 20, streak: 5,
+            dots: [true, true, true, true, true, true, true], dayKey: "2000-01-01"
+        )
+        let fresh = stale.forDay("2000-01-02")
+        #expect(fresh.handsToday == 0)
+        #expect(fresh.goalMet == false)
+        #expect(fresh.streak == 5) // an empty new day doesn't break the streak
+        #expect(fresh.dots == [true, true, true, true, true, true, false]) // shifted, empty today
+        #expect(fresh.dayKey == "2000-01-02")
+    }
+
     // MARK: App Group store round-trip
 
     @Test func storeRoundTripsThroughDefaults() {

@@ -80,7 +80,12 @@ export class HomePageComponent {
   private readonly trueCountStats = inject(TrueCountStatsService);
   private readonly router = inject(Router);
 
-  protected readonly dayLabel = formatDayLabel(new Date());
+  // A getter, not a field: recomputed each change-detection pass so the label
+  // doesn't freeze at construction time (e.g. showing "afternoon" into the
+  // evening, or yesterday's weekday past midnight, while home stays mounted).
+  protected get dayLabel(): string {
+    return formatDayLabel(new Date());
+  }
 
   protected readonly goal = computed(() => this.prefs.prefs().dailyGoal);
   protected readonly lastTrainer = computed(() => this.prefs.prefs().lastTrainer);

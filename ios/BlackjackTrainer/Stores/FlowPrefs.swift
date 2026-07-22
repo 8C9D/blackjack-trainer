@@ -315,6 +315,9 @@ final class FlowPrefsStore: CloudSyncable {
         guard let cloud, let data = cloud.data(forKey: key) else { return }
         prefs = FlowPrefs.merged(from: try? JSONSerialization.jsonObject(with: data))
         Self.save(prefs, key: key, defaults: defaults)
+        // A cross-device sync changed the goal/settings; notify so the widget
+        // snapshot republishes (the publisher listens on onChange).
+        onChange?()
     }
 
     func pushToCloud() {

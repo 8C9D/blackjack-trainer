@@ -22,7 +22,7 @@ struct CountFeedbackView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(result.isCorrect ? "Correct!" : "Incorrect")
                 .font(.title3.weight(.bold))
-                .foregroundStyle(result.isCorrect ? Theme.correct : Theme.incorrect)
+                .foregroundStyle(result.isCorrect ? Theme.good : Theme.bad)
 
             details
 
@@ -46,11 +46,11 @@ struct CountFeedbackView: View {
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background((result.isCorrect ? Theme.correct : Theme.incorrect).opacity(0.14))
+        .background((result.isCorrect ? Theme.good : Theme.bad).opacity(0.14))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(result.isCorrect ? Theme.correct : Theme.incorrect, lineWidth: 1)
+                .stroke(result.isCorrect ? Theme.good : Theme.bad, lineWidth: 1)
         )
     }
 
@@ -78,7 +78,7 @@ struct CountFeedbackView: View {
                     + "true count \(trueCount.correctTrueCount)"
             )
             .font(.footnote)
-            .foregroundStyle(Theme.secondaryText)
+            .foregroundStyle(Theme.muted)
         }
     }
 
@@ -90,10 +90,10 @@ struct CountFeedbackView: View {
                     CardImage(entry.card, width: 44)
                     Text(entry.delta)
                         .font(.caption2)
-                        .foregroundStyle(Theme.secondaryText)
+                        .foregroundStyle(Theme.muted)
                     Text("→ \(entry.runningTotal)")
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(Theme.primaryText)
+                        .foregroundStyle(Theme.ink)
                 }
             }
         }
@@ -116,11 +116,11 @@ struct CountFeedbackView: View {
     private func detailRow(_ label: String, _ value: String) -> some View {
         HStack {
             Text(label)
-                .foregroundStyle(Theme.secondaryText)
+                .foregroundStyle(Theme.muted)
             Spacer()
             Text(value)
                 .fontWeight(.semibold)
-                .foregroundStyle(Theme.primaryText)
+                .foregroundStyle(Theme.ink)
         }
     }
 }

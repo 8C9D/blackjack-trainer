@@ -2,9 +2,13 @@ import { Injectable, signal, type Signal } from '@angular/core';
 
 export const PRACTICE_HISTORY_KEY = 'blackjack-practice-history';
 
-// How many days of per-day hand counts to retain. Enough for the 7-day streak
-// dots plus headroom; older entries are pruned on every write.
-const MAX_HISTORY_DAYS = 30;
+// How many days of per-day hand counts to retain. The 7-day dot strip needs
+// only a week, but streak() walks back day-by-day with no other bound, so
+// retention must exceed any streak we want to display accurately: at 30 days a
+// real 31+ day streak was silently capped at 30. 400 days (> a year) keeps the
+// stored array small while making the cap effectively unreachable. Older
+// entries are pruned on every write.
+const MAX_HISTORY_DAYS = 400;
 
 export interface PracticeDay {
   // Local calendar date, 'YYYY-MM-DD'.

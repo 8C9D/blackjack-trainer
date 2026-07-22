@@ -21,7 +21,7 @@ struct DeckEstimateView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("How many decks remain?")
                 .font(.headline)
-                .foregroundStyle(Theme.primaryText)
+                .foregroundStyle(Theme.ink)
             TextField("Decks", text: $raw)
                 .keyboardType(.decimalPad)
                 .textFieldStyle(.roundedBorder)
@@ -30,7 +30,7 @@ struct DeckEstimateView: View {
                 .onSubmit(submit)
             Text("Estimate to the nearest half-deck — within ±0.5 counts as good.")
                 .font(.footnote)
-                .foregroundStyle(Theme.secondaryText)
+                .foregroundStyle(Theme.muted)
             Button(action: submit) {
                 Text("Submit estimate")
                     .frame(maxWidth: .infinity, minHeight: 30)
