@@ -31,7 +31,7 @@ struct ActionButtonsView: View {
                     .frame(maxWidth: .infinity, minHeight: 30)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Theme.surfaceRaised)
+                .tint(Theme.raised)
                 .keyboardShortcut(KeyEquivalent(action.hotkey), modifiers: [])
                 .accessibilityLabel(action.label)
             }

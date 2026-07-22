@@ -129,5 +129,15 @@ describe('showdown.model', () => {
       // A three-card 21 loses to a dealer natural.
       expect(settle(threeCard21, [card('A'), card('K')]).outcome).toBe('lose');
     });
+
+    it('honors playerNatural=false so a split-ace 21 is not a natural (even money)', () => {
+      const splitAce21 = [card('A'), card('K')]; // two cards totalling 21
+      // Default: treated as a natural.
+      expect(settle(splitAce21, [card('10'), card('9')]).playerBlackjack).toBe(true);
+      // Overridden (a split hand): still wins, but not as a blackjack.
+      const s = settle(splitAce21, [card('10'), card('9')], false);
+      expect(s.outcome).toBe('win');
+      expect(s.playerBlackjack).toBe(false);
+    });
   });
 });

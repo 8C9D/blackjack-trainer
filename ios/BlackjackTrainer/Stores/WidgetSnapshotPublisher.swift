@@ -34,7 +34,8 @@ final class WidgetSnapshotPublisher {
             handsToday: history.handsToday(),
             dailyGoal: goal,
             streak: history.streak(goal: goal),
-            dots: history.last7(goal: goal).map(\.met)
+            dots: history.last7(goal: goal).map(\.met),
+            dayKey: WidgetSnapshot.dayKey(for: .now)
         )
     }
 

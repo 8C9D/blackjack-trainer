@@ -33,6 +33,10 @@
 
     &:disabled {
       cursor: default;
+      // Let taps fall through to the host so "tap anywhere to continue" works
+      // over the (disabled) action grid during a miss — the grid is the largest,
+      // most thumb-natural target on the screen.
+      pointer-events: none;
     }
 
     // Illegal for this hand — visible but clearly dead.

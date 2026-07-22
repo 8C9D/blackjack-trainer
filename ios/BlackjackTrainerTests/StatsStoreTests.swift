@@ -63,11 +63,14 @@ struct StatsStoreTests {
         store.record(outcome: .lose)
         store.record(outcome: .push)
         store.record(outcome: .win)
+        // A non-win carrying playerBlackjack must NOT count as a blackjack: only
+        // a winning natural pays 3:2 (guards the `outcome == .win` condition).
+        store.record(outcome: .push, playerBlackjack: true)
         #expect(store.stats == ShowdownStats(
-            hands: 4,
+            hands: 5,
             wins: 2,
             losses: 1,
-            pushes: 1,
+            pushes: 2,
             blackjacks: 1
         ))
         #expect(store.key == "blackjack-showdown-stats")

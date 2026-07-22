@@ -71,12 +71,20 @@ export class DeviationEngineService {
     const dealerKey = normalizeUpcardKey(input.dealerUpcard);
     const { category, playerHand } = classifyForDeviation(input.player);
 
-    const surrenderRule = this.findDeviationRule({
-      ruleSet: input.ruleSet,
-      category: 'surrender',
-      playerHand,
-      dealerUpcard: dealerKey,
-    });
+    // Surrender deviations are HARD-total rules ('15'/'16'). Only apply them to
+    // a hard hand: a soft hand's total key collides with a hard total (soft 15
+    // (A,4) → '15', soft 16 (A,5) → '16'), and surrendering a soft 15/16 — which
+    // can never bust — is never correct. Gating on category keeps the overlay
+    // off soft (and pair) hands whose key would otherwise match a hard rule.
+    const surrenderRule =
+      category === 'hard'
+        ? this.findDeviationRule({
+            ruleSet: input.ruleSet,
+            category: 'surrender',
+            playerHand,
+            dealerUpcard: dealerKey,
+          })
+        : undefined;
     if (surrenderRule && this.isDeviationThresholdMet(surrenderRule, trueCount)) {
       return {
         basicAction,

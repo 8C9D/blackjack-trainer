@@ -9,20 +9,42 @@ struct FlowEntry: TimelineEntry {
 }
 
 /// Reads the shared snapshot on demand. The app refreshes timelines whenever the
-/// practice history or daily goal changes (`WidgetCenter.reloadAllTimelines`), so
-/// the timeline never needs a scheduled reload — hence `.never`.
+/// practice history or daily goal changes (`WidgetCenter.reloadAllTimelines`), but
+/// a day can also turn over with the app closed, so the timeline also carries a
+/// midnight entry (that resets today's figures) and reloads after it — otherwise
+/// a snapshot from an earlier day would show yesterday's "goal met" as today's.
 struct FlowProvider: TimelineProvider {
     func placeholder(in _: Context) -> FlowEntry {
         FlowEntry(date: .now, snapshot: .empty)
     }
 
     func getSnapshot(in _: Context, completion: @escaping (FlowEntry) -> Void) {
-        completion(FlowEntry(date: .now, snapshot: WidgetSnapshotStore.load()))
+        let now = Date.now
+        let snapshot = WidgetSnapshotStore.load().forDay(WidgetSnapshot.dayKey(for: now))
+        completion(FlowEntry(date: now, snapshot: snapshot))
     }
 
     func getTimeline(in _: Context, completion: @escaping (Timeline<FlowEntry>) -> Void) {
-        let entry = FlowEntry(date: .now, snapshot: WidgetSnapshotStore.load())
-        completion(Timeline(entries: [entry], policy: .never))
+        let now = Date.now
+        let calendar = Calendar.current
+        let loaded = WidgetSnapshotStore.load()
+        let startOfTomorrow = calendar.startOfDay(
+            for: calendar.date(byAdding: .day, value: 1, to: now) ?? now
+        )
+        let entries = [
+            FlowEntry(
+                date: now,
+                snapshot: loaded.forDay(WidgetSnapshot.dayKey(for: now, calendar: calendar))
+            ),
+            FlowEntry(
+                date: startOfTomorrow,
+                snapshot: loaded.forDay(WidgetSnapshot.dayKey(
+                    for: startOfTomorrow,
+                    calendar: calendar
+                ))
+            )
+        ]
+        completion(Timeline(entries: entries, policy: .after(startOfTomorrow)))
     }
 }
 

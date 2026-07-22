@@ -153,6 +153,10 @@ final class PracticeHistoryStore: CloudSyncable {
             return PracticeDay(date: date, hands: hands)
         }
         Self.save(days, key: key, defaults: defaults)
+        // A cross-device sync changed today's data; notify so the widget snapshot
+        // republishes (the publisher listens on onChange). No-op before launch
+        // wires it up; the init seed covers that first adoption.
+        onChange?()
     }
 
     func pushToCloud() {

@@ -52,8 +52,15 @@ export function playDealerHand(
 // naturals settle before bust logic; a player bust loses even if the dealer also
 // busts; a dealer bust pays any standing player hand; otherwise the higher total
 // wins and equal totals push.
-export function settle(player: readonly Card[], dealer: readonly Card[]): Settlement {
-  const playerBlackjack = isBlackjack(player);
+export function settle(
+  player: readonly Card[],
+  dealer: readonly Card[],
+  // Whether the player hand counts as a natural blackjack (3:2). Defaults to a
+  // real two-card 21. Split hands pass `false`: a 21 made after splitting is not
+  // a natural and pays even money.
+  playerNatural: boolean = isBlackjack(player),
+): Settlement {
+  const playerBlackjack = playerNatural;
   const dealerBlackjack = isBlackjack(dealer);
 
   if (playerBlackjack || dealerBlackjack) {

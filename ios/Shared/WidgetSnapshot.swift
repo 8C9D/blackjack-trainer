@@ -19,6 +19,10 @@ struct WidgetSnapshot: Codable, Hashable, Sendable {
     var streak: Int
     /// The last seven days' goal-met flags, oldest first; the last entry is today.
     var dots: [Bool]
+    /// The local calendar day ('YYYY-MM-DD') this snapshot describes, so the
+    /// widget can tell a snapshot left over from an earlier day from a current
+    /// one and reset today's figures instead of showing them as today's.
+    var dayKey: String = ""
 
     static let empty = WidgetSnapshot(handsToday: 0, dailyGoal: 20, streak: 0, dots: [])
 
@@ -34,6 +38,25 @@ struct WidgetSnapshot: Codable, Hashable, Sendable {
 
     var streakLabel: String {
         streak == 0 ? "No streak yet" : "\(streak)-day streak"
+    }
+
+    /// The local day key for a date ('YYYY-MM-DD'), the stamp the publisher and
+    /// widget compare to detect a stale snapshot.
+    static func dayKey(for date: Date, calendar: Calendar = .current) -> String {
+        let c = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+    }
+
+    /// This snapshot as it should read on `todayKey`: unchanged if it already
+    /// describes that day, otherwise a fresh day — 0 hands (so a stale "goal met"
+    /// never shows as today's), the streak preserved (an empty new day doesn't
+    /// break it yet), and the dot strip shifted one day with an empty today.
+    func forDay(_ todayKey: String) -> WidgetSnapshot {
+        guard dayKey != todayKey else { return self }
+        let shifted = dots.isEmpty ? dots : Array(dots.dropFirst()) + [false]
+        return WidgetSnapshot(
+            handsToday: 0, dailyGoal: dailyGoal, streak: streak, dots: shifted, dayKey: todayKey
+        )
     }
 }
 

@@ -128,7 +128,11 @@ final class MissTallyStore: CloudSyncable {
         guard let forTrainer = state[trainer.rawValue] else { return nil }
         let cutoff = cutoffDate()
         var best: WeakSpot?
-        for tally in forTrainer.values {
+        // Iterate in a stable (sorted-key) order: Dictionary.values order is
+        // nondeterministic across launches, which would resolve a miss/rate tie
+        // differently each time. Sorting the scenario keys makes the pick stable.
+        for key in forTrainer.keys.sorted() {
+            let tally = forTrainer[key]!
             var attempts = 0
             var misses = 0
             for day in tally.days where day.date >= cutoff {

@@ -27,9 +27,15 @@ describe('DrillSession', () => {
     const s = new DrillSession();
     s.record(true);
     s.record(false);
+    s.record(true); // correct = 2, streak = 1 before reset
     s.reset();
     expect(s.attempts()).toBe(0);
+    expect(s.correct()).toBe(0);
+    expect(s.streak()).toBe(0);
     expect(s.bestStreak()).toBe(0);
     expect(s.accuracy()).toBeNull();
+    // A reset that failed to zero correct() would show here as accuracy > 100%.
+    s.record(true);
+    expect(s.accuracy()).toBe(100);
   });
 });

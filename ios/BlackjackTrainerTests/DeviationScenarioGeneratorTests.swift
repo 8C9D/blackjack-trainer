@@ -37,4 +37,38 @@ struct DeviationScenarioGeneratorTests {
             }
         }
     }
+
+    /// The point of pickTrueCount is to land the count on the intended side of
+    /// the rule's threshold — not merely within range. A swapped met/unmet
+    /// branch in `range(for:wantMet:)` would train the user backwards yet still
+    /// pass the bounds check above.
+    @Test func pickedTrueCountLandsOnTheIntendedSideOfEachThreshold() throws {
+        let charts = try GameData.loadCharts()
+        func meets(_ rule: DeviationRule, _ tc: Int) -> Bool {
+            switch rule.direction {
+            case "at-or-above": tc >= rule.index
+            case "at-or-below": tc <= rule.index
+            case "positive": tc > 0
+            case "negative": tc < 0
+            default: false
+            }
+        }
+        // random() < 0.5 forces the "met" side; >= 0.5 forces "not met". With a
+        // constant source pickInt is deterministic; wide bounds keep every range
+        // non-empty so there is no fallback flip to the other side.
+        for (source, wantMet) in [(0.0, true), (0.9, false)] {
+            let generator = DeviationScenarioGenerator(
+                random: { source }, rulesByRuleSet: charts.deviations
+            )
+            for ruleSet in RuleSet.allCases {
+                for rule in generator.rules(for: ruleSet) {
+                    let tc = generator.pickTrueCount(for: rule, minTc: -20, maxTc: 20)
+                    #expect(
+                        meets(rule, tc) == wantMet,
+                        "\(rule.direction) idx \(rule.index): tc \(tc), wantMet \(wantMet)"
+                    )
+                }
+            }
+        }
+    }
 }

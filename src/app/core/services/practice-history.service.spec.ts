@@ -67,12 +67,13 @@ describe('PracticeHistoryService', () => {
     });
 
     it('prunes entries older than the retention window on write', () => {
-      const old = { date: '2026-01-01', hands: 5 };
+      // Well outside the 400-day retention window ending at BASE (2026-07-10).
+      const old = { date: '2024-01-01', hands: 5 };
       const recent = { date: '2026-07-09', hands: 2 };
       localStorage.setItem(PRACTICE_HISTORY_KEY, JSON.stringify({ days: [old, recent] }));
       const s = createService(() => current);
       s.recordHand();
-      expect(s.days().some((d) => d.date === '2026-01-01')).toBe(false);
+      expect(s.days().some((d) => d.date === '2024-01-01')).toBe(false);
       expect(s.handsOn('2026-07-09')).toBe(2);
     });
 
@@ -105,6 +106,17 @@ describe('PracticeHistoryService', () => {
     it('includes today once its goal is met', () => {
       const s = seed({ 0: 20, 1: 20, 2: 20 });
       expect(s.streak(20)).toBe(3);
+    });
+
+    it('reports a streak longer than the 7-day dot strip and survives a pruning write', () => {
+      // 40 consecutive met days exceeds the old 30-day retention cap that used
+      // to silently truncate long streaks. recordHand() triggers prune, which
+      // must not drop days still inside the streak.
+      const longRun: Record<number, number> = {};
+      for (let back = 0; back < 40; back++) longRun[back] = 20;
+      const s = seed(longRun);
+      s.recordHand(); // today 20 -> 21, still met; prunes on write
+      expect(s.streak(20)).toBe(40);
     });
 
     it('breaks on a day below the goal', () => {

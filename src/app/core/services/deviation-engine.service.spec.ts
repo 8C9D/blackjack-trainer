@@ -136,6 +136,38 @@ describe('DeviationEngineService', () => {
     });
   });
 
+  // ─── surrender overlay must not touch soft/pair hands ─────────────────
+  describe('resolveDeviationDecision — surrender overlay is hard-only', () => {
+    // Soft 15 (A,4) and soft 16 (A,5) share a total key with the hard-15/16
+    // surrender rules, but a soft 15/16 can never bust so surrender is never
+    // correct. The overlay must be gated to hard hands.
+    it('never surrenders soft 15 (A,4) even where the hard-15 rule threshold is met', () => {
+      // H17 charts a "Hard 15 v 9 surrender @ +2". Soft 15 must ignore it.
+      for (const tc of [-5, 0, 2, 5, 8]) {
+        const decision = engine.resolveDeviationDecision(scenario('A', '4', '9', 'H17'), tc);
+        expect(decision.finalAction).not.toBe('SUR');
+        expect(decision.basicAction).not.toBe('SUR');
+      }
+    });
+
+    it('never surrenders soft 16 (A,5) even where the hard-16 rule threshold is met', () => {
+      for (const tc of [-5, -1, 0, 4, 8]) {
+        const decision = engine.resolveDeviationDecision(scenario('A', '5', '9', 'H17'), tc);
+        expect(decision.finalAction).not.toBe('SUR');
+      }
+      // vs 8 (S17 charts a hard-16 v 8 surrender) — soft 16 still must not.
+      expect(
+        engine.resolveDeviationDecision(scenario('A', '5', '8', 'S17'), 5).finalAction,
+      ).not.toBe('SUR');
+    });
+
+    it('still surrenders the genuine hard 15 v 9 at the charted threshold (H17)', () => {
+      const at2 = engine.resolveDeviationDecision(scenario('10', '5', '9', 'H17'), 2);
+      expect(at2.finalAction).toBe('SUR');
+      expect(at2.deviationApplied).toBe(true);
+    });
+  });
+
   // ─── resolveDeviationDecision: no match path ──────────────────────────
   describe('resolveDeviationDecision — no matching rule', () => {
     it('hand with no deviation returns basic strategy unchanged at any TC', () => {

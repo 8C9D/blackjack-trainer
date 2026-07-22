@@ -15,12 +15,12 @@ struct RemindersView: View {
                         + "cancel them anytime."
                 )
                 .font(.subheadline)
-                .foregroundStyle(Theme.secondaryText)
+                .foregroundStyle(Theme.muted)
 
                 card {
                     Toggle("Daily reminder", isOn: enabledBinding)
                         .tint(Theme.accent)
-                        .foregroundStyle(Theme.primaryText)
+                        .foregroundStyle(Theme.ink)
                 }
 
                 if model.authorizationDenied {
@@ -28,13 +28,13 @@ struct RemindersView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Notifications are turned off")
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Theme.primaryText)
+                                .foregroundStyle(Theme.ink)
                             Text(
                                 "Enable notifications for Blackjack Trainer in iOS "
                                     + "Settings to receive reminders."
                             )
                             .font(.footnote)
-                            .foregroundStyle(Theme.secondaryText)
+                            .foregroundStyle(Theme.muted)
                         }
                     }
                 }
@@ -46,7 +46,7 @@ struct RemindersView: View {
                             selection: timeBinding,
                             displayedComponents: .hourAndMinute
                         )
-                        .foregroundStyle(Theme.primaryText)
+                        .foregroundStyle(Theme.ink)
                         .tint(Theme.accent)
                     }
                 }

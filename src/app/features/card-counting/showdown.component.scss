@@ -40,6 +40,18 @@
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
+
+    // Split hands get a subtle frame; the one being played is highlighted.
+    &--player {
+      padding: 0.5rem 0.6rem;
+      border-radius: 8px;
+      border: 1px solid transparent;
+    }
+
+    &--active {
+      border-color: rgba(242, 182, 76, 0.55);
+      background: rgba(242, 182, 76, 0.06);
+    }
   }
 
   &__label {
@@ -113,9 +125,21 @@
   }
 
   &__verdict {
-    margin: 0 0 0.6rem;
-    font-size: 1.15rem;
+    margin: 0.2rem 0 0;
+    font-size: 1rem;
     font-weight: 700;
+
+    &--win {
+      color: var(--good);
+    }
+
+    &--lose {
+      color: var(--bad);
+    }
+
+    &--push {
+      color: var(--accent);
+    }
   }
 
   &__note {

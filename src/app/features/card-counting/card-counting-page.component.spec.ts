@@ -52,7 +52,7 @@ type Internals = {
   shoe: Shoe | null;
   showdownAvailable(): boolean;
   enterShowdown(): void;
-  exitShowdown(): void;
+  exitShowdown(cards: readonly Card[]): void;
 };
 
 function asInternals(c: CardCountingPageComponent): Internals {
@@ -727,8 +727,28 @@ describe('CardCountingPageComponent', () => {
       toLiveShoeFeedback(c);
       c.enterShowdown();
       expect(c.state()).toBe('showdown');
-      c.exitShowdown();
+      c.exitShowdown([]);
       expect(c.state()).toBe('feedback');
+    });
+
+    it('exitShowdown folds the showdown cards into the carried running count', () => {
+      // The showdown depletes the shared shoe (shrinking the next round's
+      // decks-remaining denominator), so its cards' running-count value must be
+      // folded into the carried count or the next round grades inconsistently.
+      configureLiveShoe({ numberOfDecks: 6, numberOfCards: 10 });
+      const { c } = createPage();
+      toLiveShoeFeedback(c);
+      c.enterShowdown();
+      const before = c.shoeRunningCount();
+      const dealt: readonly Card[] = [
+        { rank: '5', suit: 'hearts' },
+        { rank: '6', suit: 'spades' },
+      ];
+      c.exitShowdown(dealt);
+      expect(c.state()).toBe('feedback');
+      const delta = new CountingEngineService().runningCount(dealt, HI_LO);
+      expect(delta).toBeGreaterThan(0); // 5 and 6 are +1 each in Hi-Lo
+      expect(c.shoeRunningCount()).toBe(before + delta);
     });
 
     it('does not enter a showdown from a non-feedback state', () => {

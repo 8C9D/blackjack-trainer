@@ -26,10 +26,10 @@ struct AboutView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Blackjack Trainer")
                 .font(.title.weight(.bold))
-                .foregroundStyle(Theme.primaryText)
+                .foregroundStyle(Theme.ink)
             Text("An educational basic-strategy and card-counting trainer. No real-money wagering.")
                 .font(.subheadline)
-                .foregroundStyle(Theme.secondaryText)
+                .foregroundStyle(Theme.muted)
         }
     }
 
@@ -43,11 +43,11 @@ struct AboutView: View {
                     + "does not alter its license."
             )
             .font(.subheadline)
-            .foregroundStyle(Theme.primaryText)
+            .foregroundStyle(Theme.ink)
 
             Text("Vector Playing Card Library 1.3 — © Chris Aguilar — LGPL 3.0")
                 .font(.footnote)
-                .foregroundStyle(Theme.secondaryText)
+                .foregroundStyle(Theme.muted)
         }
     }
 
@@ -57,7 +57,7 @@ struct AboutView: View {
                 + "© 2026 Arthur Zhang."
         )
         .font(.subheadline)
-        .foregroundStyle(Theme.primaryText)
+        .foregroundStyle(Theme.ink)
     }
 
     private var licenseLinks: some View {
@@ -78,25 +78,25 @@ struct AboutView: View {
         } label: {
             HStack {
                 Text(title)
-                    .foregroundStyle(Theme.primaryText)
+                    .foregroundStyle(Theme.ink)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Theme.secondaryText)
+                    .foregroundStyle(Theme.muted)
             }
             .padding()
         }
     }
 
     private var divider: some View {
-        Divider().overlay(Theme.background)
+        Divider().overlay(Theme.ground)
     }
 
     private func section(title: String, body: some View) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title.uppercased())
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(Theme.secondaryText)
+                .foregroundStyle(Theme.muted)
             body
         }
     }
@@ -111,7 +111,7 @@ struct LicenseTextView: View {
         ScrollView {
             Text(LicenseLoader.text(file))
                 .font(.system(.footnote, design: .monospaced))
-                .foregroundStyle(Theme.primaryText)
+                .foregroundStyle(Theme.ink)
                 .textSelection(.enabled)
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)

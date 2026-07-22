@@ -562,8 +562,14 @@ describe('CountingEngineService', () => {
       expect(v.errors.some((e) => e.includes('shoe size'))).toBe(true);
     });
 
-    it('live-shoe mode accepts a card count up to exactly the shoe size', () => {
+    it('live-shoe mode rejects a card count equal to the whole shoe (would leave 0 decks → div-by-zero)', () => {
       const v = engine.validateSettings(liveSettings({ numberOfDecks: 1, numberOfCards: 52 }));
+      expect(v.valid).toBe(false);
+      expect(v.errors.some((e) => e.includes('shoe size'))).toBe(true);
+    });
+
+    it('live-shoe mode accepts a card count one below the shoe size (≥ 1 card remains)', () => {
+      const v = engine.validateSettings(liveSettings({ numberOfDecks: 1, numberOfCards: 51 }));
       expect(v.valid).toBe(true);
     });
   });

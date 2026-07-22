@@ -25,7 +25,7 @@ struct CountAnswerView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(prompt)
                 .font(.headline)
-                .foregroundStyle(Theme.primaryText)
+                .foregroundStyle(Theme.ink)
             TextField("Count", text: $raw)
                 .keyboardType(.numbersAndPunctuation)
                 .textFieldStyle(.roundedBorder)
@@ -35,7 +35,7 @@ struct CountAnswerView: View {
             if allowFractions {
                 Text("This system uses fractional values — enter halves like 2.5 or -0.5.")
                     .font(.footnote)
-                    .foregroundStyle(Theme.secondaryText)
+                    .foregroundStyle(Theme.muted)
             }
             Button(action: submit) {
                 Text("Submit")

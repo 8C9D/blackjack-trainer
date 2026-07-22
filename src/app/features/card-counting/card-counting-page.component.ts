@@ -126,7 +126,7 @@ type DrillState =
           }
 
           @if (state() === 'showdown') {
-            <app-showdown [shoe]="shoe!" [ruleSet]="ruleSet()" (exit)="exitShowdown()" />
+            <app-showdown [shoe]="shoe!" [ruleSet]="ruleSet()" (exit)="exitShowdown($event)" />
           }
         </div>
       } @else {
@@ -412,8 +412,17 @@ export class CardCountingPageComponent {
 
   // Return to the count-drill feedback; the shoe keeps whatever depletion the
   // showdown caused, so the next round reshuffles if it has crossed the cut.
-  protected exitShowdown(): void {
+  // The showdown's dealt cards really left the shoe, so fold their running-count
+  // value into the carried count: otherwise the next round's numerator (carried
+  // count, missing these cards) and denominator (decks remaining, already
+  // reduced by them) disagree, and a trainee who counted the visible showdown
+  // cards is graded wrong. A reshuffle next round resets the count to 0 anyway.
+  protected exitShowdown(showdownCards: readonly Card[]): void {
     if (this.state() !== 'showdown') return;
+    if (showdownCards.length > 0) {
+      const delta = this.engine.runningCount(showdownCards, this.system());
+      this.shoeRunningCount.update((rc) => rc + delta);
+    }
     this.state.set('feedback');
   }
 

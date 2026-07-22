@@ -15,7 +15,7 @@ struct CountStreamView: View {
                 CardImage(faceDown: 120)
             }
             Text("Card \(min(index + 1, max(total, 1))) of \(total)")
-                .foregroundStyle(Theme.secondaryText)
+                .foregroundStyle(Theme.muted)
                 .accessibilityLabel("Card \(min(index + 1, max(total, 1))) of \(total)")
         }
         .frame(maxWidth: .infinity)

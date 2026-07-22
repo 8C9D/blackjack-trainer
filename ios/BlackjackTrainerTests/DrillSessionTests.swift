@@ -29,9 +29,15 @@ struct DrillSessionTests {
         let s = DrillSession()
         s.record(true)
         s.record(false)
+        s.record(true) // correct = 2, streak = 1 before reset
         s.reset()
         #expect(s.attempts == 0)
+        #expect(s.correct == 0)
+        #expect(s.streak == 0)
         #expect(s.bestStreak == 0)
         #expect(s.accuracy == nil)
+        // A reset that failed to zero `correct` would show here as accuracy > 100.
+        s.record(true)
+        #expect(s.accuracy == 100)
     }
 }

@@ -137,9 +137,11 @@ export class CountingEngineService {
           Number.isInteger(settings.numberOfCards) &&
           settings.numberOfCards >= 1 &&
           deckOptions.includes(settings.numberOfDecks) &&
-          settings.numberOfCards > settings.numberOfDecks * CARDS_PER_DECK
+          settings.numberOfCards >= settings.numberOfDecks * CARDS_PER_DECK
         ) {
-          errors.push('Number of cards must not exceed the shoe size (52 × decks).');
+          // Strictly fewer than the whole shoe: at least one card must remain so
+          // decks-remaining stays positive and the true count never divides by 0.
+          errors.push('Number of cards must be fewer than the shoe size (52 × decks).');
         }
       }
     }
