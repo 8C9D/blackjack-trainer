@@ -12,7 +12,15 @@ import {
 
 const card = (rank: Rank, suit: Suit = 'spades'): Card => ({ rank, suit });
 
-const BASE = new Date(2026, 6, 10, 18, 0); // 2026-07-10 local
+// Anchored to the real "today" (not a fixed literal) because the service
+// prunes its 7-day window at load time using the real wall clock, before a
+// test's setNowSource can take effect. A fixed past date would drift out of
+// that window and fail the reload test once the real date advanced 7+ days.
+const BASE = (() => {
+  const d = new Date();
+  d.setHours(18, 0, 0, 0);
+  return d;
+})();
 
 const HARD_16_V_10: ScenarioRef = { kind: 'hard', hand: '16', dealer: '10' };
 const SOFT_18_V_9: ScenarioRef = { kind: 'soft', hand: '18', dealer: '9' };
@@ -116,7 +124,8 @@ describe('MissTallyService', () => {
       const s = createService(() => current);
       s.record('basic-strategy', HARD_16_V_10, false);
       // 8 days later the old miss has aged out of the window.
-      current = new Date(2026, 6, 18, 9, 0);
+      current = new Date(BASE);
+      current.setDate(current.getDate() + 8);
       expect(s.weakSpotFor('basic-strategy')).toBeNull();
       // A write prunes the stale scenario from storage entirely.
       s.record('basic-strategy', SOFT_18_V_9, false);
