@@ -147,9 +147,10 @@ appears (when the shoe holds enough cards for the opening round). It deals from
 the **same persistent shoe**, depleting it further:
 
 - **One to three boxes** — Settings → Card counting → **Showdown hands** picks how many hands you play at once against the single dealer. The opening round deals in casino order (one card to each box, the dealer's upcard, a second to each box, the dealer's hole card), and each box is then played and settled on its own.
-- **Hit, stand, double, and split** — doubling takes exactly one card; pairs re-split up to four hands; split aces take one card each and stand; a 21 made after splitting is not a natural. No surrender or insurance.
+- **Hit, stand, double, and split** — doubling takes exactly one card; pairs re-split up to four hands **per box**; split aces take one card each and stand; a 21 made after splitting is not a natural. No surrender or insurance.
 - **Dealer auto-plays** the rule set from the shared table rules: stand on hard 17+, hit soft 17 only under H17.
-- **Settlement** — each hand settles win / lose / push independently; a player natural pays 3:2; a dealer natural beats any non-natural; two naturals push; a player bust loses immediately even if the dealer later busts. A dealer natural ends every box at once, and a box holding a natural is paid immediately and sits out the rest of the round. Multi-hand rounds close with a one-line tally ("2 won, 1 lost"). There is **no bankroll or betting** — the "3:2" is flavor; the showdown keeps a win/lose/push (plus blackjacks) tally under its own `localStorage` key.
+- **Settlement** — each hand settles win / lose / push independently; a player natural pays 3:2; a dealer natural beats any non-natural; two naturals push; a player bust loses immediately even if the dealer later busts. A dealer natural ends every box at once, and a box holding a natural is paid immediately and sits out the rest of the round. Multi-hand rounds close with a one-line tally ("2 won, 1 lost"). The showdown keeps a win/lose/push (plus blackjacks) tally under its own `localStorage` key.
+- **Bet sizing (optional)** — Settings → Card counting → **Bet sizing (bankroll)** turns the showdown into a spreading drill. Each round opens on a bet before any card is dealt (the count you just practised is the only information you have), every box posts that bet, and a double or split posts a second one. Hands settle against a persisted bankroll of 500 chips: a win pays the stake, a natural 3:2 on the bet, a push returns it, a loss forfeits it. Chips are abstract units, not currency — what is being drilled is the ratio between the bet and the bankroll. A bet the bankroll cannot back across every box is not offered, and running out of chips offers a reset. Off by default, when the showdown is the pure hand tally above.
 
 Returning from the showdown keeps the depletion it caused, so the next count
 round may reshuffle past the cut card.
@@ -307,7 +308,8 @@ src/app/
 │   │   ├── deviation.model.ts                   DeviationRule / DeviationDecision types
 │   │   ├── shoe.model.ts                        Shoe — finite deck, depletion, cut card
 │   │   ├── hand.model.ts                        N-card soft-aware hand math
-│   │   └── showdown.model.ts                    dealer play + settlement (3:2 naturals)
+│   │   ├── showdown.model.ts                    dealer play + settlement (3:2 naturals)
+│   │   └── bankroll.model.ts                    bet clamping + payouts (chips, not currency)
 │   └── services/
 │       ├── basic-strategy-engine.service.ts     pure-TS basic-strategy logic
 │       ├── counting-engine.service.ts           pure-TS counting engine (system-agnostic)
@@ -324,7 +326,8 @@ src/app/
 │       ├── true-count-stats.service.ts          True count StatsStore
 │       ├── deviation-stats.service.ts           Deviations StatsStore
 │       ├── deck-estimation-stats.service.ts     Deck-estimate (±0.5) StatsStore
-│       └── showdown-stats.service.ts            Showdown win/lose/push tally (own shape)
+│       ├── showdown-stats.service.ts            Showdown win/lose/push tally (own shape)
+│       └── bankroll.service.ts                  Showdown bankroll (chips wagered + net)
 ├── data/
 │   ├── h17-basic-strategy.ts                    BJA H17 chart (PDF linked)
 │   ├── s17-basic-strategy.ts                    BJA S17 chart (PDF linked)
@@ -476,14 +479,15 @@ dedicated `localStorage` key. The first five share the `StatsStore` base class
 (`{ attempts, correct, streak, longestStreak }`); the showdown keeps a
 different tally and does **not** extend `StatsStore`:
 
-| Trainer / mode  | Key                               | Shape                                         |
-| --------------- | --------------------------------- | --------------------------------------------- |
-| Basic Strategy  | `blackjack-basic-strategy-stats`  | StatsStore                                    |
-| Running Count   | `blackjack-card-counting-stats`   | StatsStore                                    |
-| True Count      | `blackjack-true-count-stats`      | StatsStore                                    |
-| Deviations      | `blackjack-deviation-stats`       | StatsStore                                    |
-| Deck estimation | `blackjack-deck-estimation-stats` | StatsStore (±0.5-deck hit = "correct")        |
-| Showdown        | `blackjack-showdown-stats`        | `{ hands, wins, losses, pushes, blackjacks }` |
+| Trainer / mode  | Key                               | Shape                                          |
+| --------------- | --------------------------------- | ---------------------------------------------- |
+| Basic Strategy  | `blackjack-basic-strategy-stats`  | StatsStore                                     |
+| Running Count   | `blackjack-card-counting-stats`   | StatsStore                                     |
+| True Count      | `blackjack-true-count-stats`      | StatsStore                                     |
+| Deviations      | `blackjack-deviation-stats`       | StatsStore                                     |
+| Deck estimation | `blackjack-deck-estimation-stats` | StatsStore (±0.5-deck hit = "correct")         |
+| Showdown        | `blackjack-showdown-stats`        | `{ hands, wins, losses, pushes, blackjacks }`  |
+| Showdown chips  | `blackjack-showdown-bankroll`     | `{ bankroll, wagered, net }` (bet sizing only) |
 
 The Flow shell adds three keys of its own:
 
@@ -581,8 +585,9 @@ and the cursor/handoff log in
 Deferred follow-ons, documented in `docs/roadmap-progress.md` and
 `docs/ios-app-roadmap.md`:
 
-- **Showdown bankroll / betting / surrender** — the showdown now plays doubles
-  and splits, but still has no money, bets, or surrender.
+- **Showdown surrender / insurance** — the showdown plays doubles, splits, and
+  (optionally) bets against a bankroll, but offers neither surrender nor
+  insurance.
 - **KO true count** — IRC / key-count math so unbalanced systems get a true
   count (KO is running-count only today).
 - **Deviation charts for KO / Omega II / Wong Halves** — deviations are Hi-Lo

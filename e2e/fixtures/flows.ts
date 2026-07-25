@@ -38,15 +38,19 @@ export async function runCountingRound(page: Page): Promise<void> {
 
 // Stand every box that still owes a decision, leaving the round resolved. The
 // number of turns is not fixed: an opening natural settles its box without ever
-// taking one, and a bust ends one early. Checking visibility first would race
-// the re-render that follows the last stand, so the bounded click is the exit.
+// taking one, and a bust ends one early. The loop's exit is the round's own
+// terminal state — the deal-another control — rather than a click timeout, which
+// under parallel workers can expire on a slow render and leave a box unplayed.
 export async function standEveryBox(page: Page): Promise<void> {
-  const actions = page.getByRole('group', { name: 'Player actions' });
-  for (let i = 0; i < 8; i++) {
-    try {
-      await actions.getByRole('button', { name: /Stand/ }).click({ timeout: 2000 });
-    } catch {
-      return;
-    }
+  const stand = page
+    .getByRole('group', { name: 'Player actions' })
+    .getByRole('button', { name: /Stand/ });
+  const resolved = page.getByRole('button', { name: /Deal another/ });
+  for (let i = 0; i < 10; i++) {
+    if (await resolved.isVisible()) return;
+    // The stand that resolves the round detaches the button mid-click. That is
+    // the loop finishing rather than a failure, so swallow it and let the next
+    // pass read the phase from the deal-another control.
+    await stand.click({ timeout: 5000 }).catch(() => undefined);
   }
 }
