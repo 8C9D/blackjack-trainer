@@ -1,40 +1,12 @@
-import type { Page } from '@playwright/test';
-
 import { expect, test } from '../fixtures/app.fixture';
+import { configureCounting, runCountingRound, standEveryBox } from '../fixtures/flows';
 
 // The post-count showdown hangs off the end of a live-shoe true-count round, so
 // every spec walks the real path: configure in Settings, run a counting round,
 // then take the offered showdown. Cards come from the live shoe, so these specs
 // assert structure and flow — never which hand wins, which the unit specs own.
 test.describe('post-count showdown', () => {
-  // Shrink the counting drill and pick how many boxes the showdown deals to.
-  async function configure(page: Page, spots: string): Promise<void> {
-    await page.goto('/settings');
-    await page.getByLabel('Number of cards').fill('3');
-    await page.getByLabel('Time between cards (ms)').fill('100');
-    await page
-      .getByRole('radiogroup', { name: 'Drill mode' })
-      .getByRole('radio', { name: 'True count', exact: true })
-      .check();
-    await page.getByLabel('Showdown hands').selectOption(spots);
-  }
-
-  // Run one live-shoe true-count rep, ending on the feedback screen where the
-  // showdown is offered.
-  async function runCountingRound(page: Page): Promise<void> {
-    await page.goto('/drill/card-counting');
-    await page.getByRole('button', { name: /Start counting/ }).click();
-
-    const estimate = page.getByLabel('How many decks remain?');
-    await expect(estimate).toBeVisible();
-    await estimate.fill('6');
-    await page.getByRole('button', { name: /Submit estimate/ }).click();
-
-    const answer = page.getByLabel('What is the true count?');
-    await expect(answer).toBeVisible();
-    await answer.fill('0');
-    await page.getByRole('button', { name: /^Submit/ }).click();
-  }
+  const configure = configureCounting;
 
   test('a single-box showdown deals one hand against the dealer', async ({ page }) => {
     await configure(page, '1');
@@ -74,20 +46,8 @@ test.describe('post-count showdown', () => {
     await runCountingRound(page);
     await page.getByRole('button', { name: 'Play 2 hands vs the dealer' }).click();
 
-    const actions = page.getByRole('group', { name: 'Player actions' });
-    await expect(actions).toBeVisible();
-
-    // Stand each box in turn until none is left to act on. The count is not
-    // fixed: an opening natural settles its box without ever taking a turn, and
-    // a bust ends one early. Checking visibility first would race the re-render
-    // that follows the last stand, so the bounded click is the loop's exit.
-    for (let i = 0; i < 4; i++) {
-      try {
-        await actions.getByRole('button', { name: /Stand/ }).click({ timeout: 2000 });
-      } catch {
-        break; // no box still owes a decision — the round has resolved
-      }
-    }
+    await expect(page.getByRole('group', { name: 'Player actions' })).toBeVisible();
+    await standEveryBox(page);
 
     // Every box carries its own verdict, and the round summarises them.
     const verdicts = page.locator('.showdown__verdict');

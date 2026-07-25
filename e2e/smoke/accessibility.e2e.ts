@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 
 import { expect, test } from '../fixtures/app.fixture';
+import { configureCounting, runCountingRound, standEveryBox } from '../fixtures/flows';
 
 // Structural accessibility guards. These are the checks that regress silently
 // when markup moves: the landmark a screen-reader user skips to, the single
@@ -147,6 +148,27 @@ test.describe('accessibility', () => {
         const failures = await contrastFailures(page);
         expect(failures, `${route} (${scheme})`).toEqual([]);
       }
+    });
+  }
+
+  // The route sweep above only measures each screen's opening state, so the
+  // showdown — the screen with the most colour of its own (per-box verdicts in
+  // win/lose/push, the round tally, the active-box highlight) — goes unmeasured.
+  // Walk into it and measure both the turn and the resolved states.
+  for (const scheme of ['dark', 'light'] as const) {
+    test(`the showdown meets WCAG AA in the ${scheme} theme`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await configureCounting(page, '3');
+      await runCountingRound(page);
+      await page.getByRole('button', { name: 'Play 3 hands vs the dealer' }).click();
+
+      const showdown = page.getByRole('region', { name: 'Showdown vs dealer' });
+      await expect(showdown).toBeVisible();
+      expect(await contrastFailures(page), `showdown player turn (${scheme})`).toEqual([]);
+
+      await standEveryBox(page);
+      await expect(page.getByRole('button', { name: /Deal another round/ })).toBeVisible();
+      expect(await contrastFailures(page), `showdown resolved (${scheme})`).toEqual([]);
     });
   }
 
