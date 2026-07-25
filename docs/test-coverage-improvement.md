@@ -6,6 +6,19 @@ pass recorded the feature/shared UI-component coverage pass (Gap 5, closed). The
 2026-05-29 pass below (§5, Improvements 1–4) was run by the
 test-coverage-improver skill._
 
+> **Update (2026-07-23, docs sync):** Current baseline: **42 spec files / 694 tests passing** (`CI=true npm test`) — the Flow redesign replaced some heavily-specced pre-Flow components, so the total went down while file count went up.
+> The §6 claim that "no E2E layer exists" is now false: a Playwright smoke suite lives in `e2e/` with its own CI job.
+> The §6 coverage-threshold gap is also closed as of this sync: `vitest.config.ts` enforces global thresholds (92% statements / 89% branches / 88% functions / 95% lines) and CI runs `npm run test:coverage`.
+> Still open from §6: bootstrap/routing specs.
+
+> **Update (2026-07-24, later):** Baseline after the light-theme, adaptive-practice, and seeded-RNG passes: **45 spec files / 746 tests** with coverage at 95.05% statements / 92.54% branches / 91.58% functions / 97.60% lines, all above the `vitest.config.ts` floors.
+> The Playwright suite grew from 14 to **34 tests** (`seeded`, `theme`, and `review-round` specs added); it is green against both `ng serve` and the production bundle, and was re-run eight times to confirm it is not flaky.
+> Two flakes were fixed along the way, both test-side: `responsive.e2e.ts` counted `.kcap` elements with `count()` (which does not auto-wait) and passed vacuously on a cold run, and the new drill specs had to learn the counter-then-grid wait order described in [`docs/e2e-testing-plan.md`](e2e-testing-plan.md).
+> Still open: nothing from §6 — the coverage gate, bootstrap/routing specs, and the E2E layer all exist now.
+
+> **Update (2026-07-24):** Bootstrap/routing specs landed in `src/app/app.spec.ts` (lazy-route resolution for all drill/settings routes, redirects, per-route titles).
+> The chart-transcription review also ran: all four chart data files (`h17/s17-basic-strategy.ts`, `h17/s17-deviations.ts`) were compared value-by-value against their cited BJA PDFs (the 2024 basic-strategy pair and the 2018 deviation pair) — 600 basic-strategy cells and 53 deviation rules, including thresholds and directions, matched exactly; no discrepancies.
+
 > **Update (2026-06-08, skill pass):** Re-ran the analysis against the actual
 > tree. **Current baseline: 38 spec files / 713 tests passing** (`ng test`,
 > single run). Several gaps the older notes listed as "open" have since been

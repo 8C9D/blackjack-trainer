@@ -110,6 +110,9 @@ on the About screen (Slice 2.3). No action needed beyond keeping that screen.
 
 ## Human checklist
 
+> **Update (2026-07-23):** Collateral for two of these items now exists locally under `ios/AppStore/` (currently untracked): `privacy.html` and `support.html` (ready-to-host pages for the privacy/support URLs, each still containing `CONTACT_EMAIL_HERE` / `PRIVACY_URL_HERE` placeholders to fill before hosting) and `screenshots-6.9/` (six 1320×2868 6.9″ portrait screenshots).
+> The checklist items themselves remain human actions: the pages must be hosted and the screenshots uploaded via App Store Connect.
+
 These can only be done by a human with the Apple Developer account / a device —
 the autopilot cannot and must not represent them as done:
 

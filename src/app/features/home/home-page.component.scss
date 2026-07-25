@@ -5,7 +5,8 @@
   min-height: 100dvh;
   max-width: 460px;
   margin: 0 auto;
-  padding: 2.2rem 1.25rem calc(1.4rem + env(safe-area-inset-bottom));
+  padding: calc(2.2rem + env(safe-area-inset-top)) 1.25rem
+    calc(1.4rem + env(safe-area-inset-bottom));
   gap: 0.7rem;
 }
 
@@ -38,7 +39,7 @@
   justify-content: space-between;
   gap: 1rem;
   background: var(--accent);
-  color: #1a1408;
+  color: var(--on-accent);
   border: none;
   border-radius: 14px;
   padding: 1rem 1.2rem;
@@ -65,9 +66,9 @@
   }
 
   .kcap {
-    background: rgba(26, 20, 8, 0.18);
-    border-color: rgba(26, 20, 8, 0.35);
-    color: #1a1408;
+    background: var(--on-accent-tint);
+    border-color: var(--on-accent-edge);
+    color: var(--on-accent);
     flex: none;
   }
 }
@@ -89,7 +90,7 @@
   border-radius: 12px;
   padding: 0.75rem 0.8rem;
   font-size: 0.85rem;
-  color: #c6cad3;
+  color: var(--ink-2);
   cursor: pointer;
 
   &:hover {
@@ -97,7 +98,7 @@
   }
 
   &:focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
 
@@ -118,13 +119,13 @@
   font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
   background: var(--raised);
-  color: #c6cad3;
+  color: var(--ink-2);
   border: 1px solid var(--hairline);
   flex: none;
 
   &--good {
     color: var(--good);
-    border-color: rgba(76, 195, 138, 0.4);
+    border-color: var(--good-edge-soft);
   }
 
   &--new {
@@ -150,7 +151,7 @@
   }
 
   &:focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
 }

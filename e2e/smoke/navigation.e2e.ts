@@ -48,6 +48,24 @@ test.describe('navigation & routing', () => {
     await expect(page).toHaveTitle(/^Blackjack Trainer$/);
   });
 
+  test('the PWA manifest is linked and carries installable icons', async ({ page }) => {
+    const href = await page.getAttribute('link[rel="manifest"]', 'href');
+    expect(href).toBeTruthy();
+    const manifest = await (await page.request.get(href!)).json();
+    expect(manifest.display).toBe('standalone');
+    const maskable = manifest.icons.filter((i: { purpose?: string }) =>
+      i.purpose?.includes('maskable'),
+    );
+    expect(maskable.map((i: { sizes: string }) => i.sizes).sort()).toEqual(['192x192', '512x512']);
+    // The icon files actually resolve (the CI static server 404s missing assets).
+    const responses = await Promise.all(
+      maskable.map((icon: { src: string }) => page.request.get(icon.src)),
+    );
+    for (const response of responses) {
+      expect(response.status()).toBe(200);
+    }
+  });
+
   test('keyboard shortcuts navigate from home', async ({ page }) => {
     // The home button being visible means Angular has bootstrapped and its
     // window:keydown listener is attached before we press a key.

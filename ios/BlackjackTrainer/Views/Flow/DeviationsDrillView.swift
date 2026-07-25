@@ -24,6 +24,9 @@ final class DeviationsDrillModel {
     private(set) var target = 0
     let session = DrillSession()
 
+    /// A review round drills only the weak list; an ordinary round mixes it in.
+    @ObservationIgnored private var reviewing = false
+
     init(
         evaluator: DeviationEvaluator,
         charts: ChartsFile,
@@ -112,8 +115,16 @@ final class DeviationsDrillModel {
         handsToday >= prefs.prefs.dailyGoal
     }
 
+    var weakSpots: [WeakSpot] {
+        missTally.weakSpots(.deviations)
+    }
+
     var weakSpot: WeakSpot? {
-        missTally.weakSpotFor(.deviations)
+        weakSpots.first
+    }
+
+    var clearedSpots: [WeakSpot] {
+        missTally.clearedSpots(.deviations)
     }
 
     func answer(_ action: Action) {
@@ -148,7 +159,19 @@ final class DeviationsDrillModel {
     }
 
     func oneMoreRound() {
+        startRound(reviewing: false)
+    }
+
+    /// "Drill my misses": the same round, but every hand comes from the weak list
+    /// (falling back to fresh hands once it empties mid-round).
+    func reviewMisses() {
+        guard missTally.weakSpotFor(.deviations) != nil else { return }
+        startRound(reviewing: true)
+    }
+
+    private func startRound(reviewing: Bool) {
         guard phase == .done else { return }
+        self.reviewing = reviewing
         session.reset()
         target = nextSessionTarget(handsToday: history.handsToday(), goal: prefs.prefs.dailyGoal)
         deal(firstScenario())
@@ -164,7 +187,26 @@ final class DeviationsDrillModel {
             phase = .done
             return
         }
-        deal(generateScenario())
+        deal(nextScenario())
+    }
+
+    /// Every later hand: weighted toward the scenarios being missed, so a weakness
+    /// gets repetition inside the session that surfaced it. A review round draws
+    /// from the weak list every time. This applies in both practice modes — a weak
+    /// spot recorded in deviation-only mode is itself a deviation scenario, and
+    /// hand one has always been drawn this way.
+    private func nextScenario() -> DeviationScenario {
+        let share = reviewing ? 1 : weakSpotShare
+        let source = { Double.random(in: 0 ..< 1) }
+        if let weak = pickWeakSpot(weakSpots, random: source, share: share) {
+            let base = scenarioFromRef(weak.ref, random: source)
+            return DeviationScenario(
+                player: base.player,
+                dealerUpcard: base.dealerUpcard,
+                trueCount: pickTrueCount()
+            )
+        }
+        return generateScenario()
     }
 
     /// Load a scenario and reset to the question phase (transition + test seam).
@@ -246,7 +288,10 @@ struct DeviationsDrillView: View {
                     bestStreak: model.session.bestStreak,
                     accuracy: model.session.accuracy,
                     weakSpot: model.weakSpot,
+                    weakSpots: model.weakSpots,
+                    cleared: model.clearedSpots,
                     onAgain: { model.oneMoreRound() },
+                    onReview: { model.reviewMisses() },
                     onExit: leave
                 )
             } else {

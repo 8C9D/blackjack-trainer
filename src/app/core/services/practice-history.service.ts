@@ -1,5 +1,7 @@
 import { Injectable, signal, type Signal } from '@angular/core';
 
+import { readJson, writeJson } from './storage';
+
 export const PRACTICE_HISTORY_KEY = 'blackjack-practice-history';
 
 // How many days of per-day hand counts to retain. The 7-day dot strip needs
@@ -109,11 +111,8 @@ export class PracticeHistoryService {
   }
 
   private load(): readonly PracticeDay[] {
-    if (typeof localStorage === 'undefined') return [];
-    try {
-      const raw = localStorage.getItem(PRACTICE_HISTORY_KEY);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw) as { days?: unknown };
+    return readJson(PRACTICE_HISTORY_KEY, [] as readonly PracticeDay[], (raw) => {
+      const parsed = raw as { days?: unknown };
       if (!Array.isArray(parsed.days)) return [];
       return parsed.days.filter(
         (d): d is PracticeDay =>
@@ -122,18 +121,10 @@ export class PracticeHistoryService {
           typeof (d as PracticeDay).date === 'string' &&
           typeof (d as PracticeDay).hands === 'number',
       );
-    } catch {
-      // Malformed payload — start empty.
-      return [];
-    }
+    });
   }
 
   private persist(days: readonly PracticeDay[]): void {
-    if (typeof localStorage === 'undefined') return;
-    try {
-      localStorage.setItem(PRACTICE_HISTORY_KEY, JSON.stringify({ days }));
-    } catch {
-      // localStorage can throw on quota / private browsing; tolerate silently.
-    }
+    writeJson(PRACTICE_HISTORY_KEY, { days });
   }
 }

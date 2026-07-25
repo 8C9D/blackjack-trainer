@@ -20,7 +20,9 @@ npm run e2e:report    # open the last HTML report
 ```
 
 The config's `webServer` starts `npm start` (http://127.0.0.1:4200) and reuses a
-dev server you already have running locally.
+dev server you already have running locally. In CI (`CI` set) it instead serves
+the production bundle with `tools/serve-dist.mjs`, so run `npm run build` first
+in that mode.
 
 ## Layout
 
@@ -33,6 +35,8 @@ e2e/
     ├── navigation.e2e.ts     # routes, titles, redirects, keyboard nav
     ├── responsive.e2e.ts     # .kcap visible desktop / hidden < 600px
     ├── basic-strategy.e2e.ts # answer → session counter advances
+    ├── card-counting.e2e.ts  # Settings-configured stream → (estimate) → answer → feedback
+    ├── deviations.e2e.ts     # TC in the question line, manual TC from Settings, rep counting
     └── persistence.e2e.ts    # handsToday + last trainer survive a reload
 ```
 

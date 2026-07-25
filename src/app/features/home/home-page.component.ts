@@ -32,6 +32,10 @@ interface TrainerCard {
   imports: [GoalRingComponent, StreakDotsComponent],
   template: `
     <div class="home">
+      <!-- The design has no visible title — the primary action is the screen.
+           Screen readers still need one heading to anchor the page. -->
+      <h1 class="sr-only">Blackjack Trainer</h1>
+
       <div class="home__glance">
         <p class="home__day">{{ dayLabel }}</p>
         <app-goal-ring [value]="handsToday()" [goal]="goal()" />

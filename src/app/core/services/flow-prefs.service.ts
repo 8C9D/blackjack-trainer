@@ -3,6 +3,7 @@ import { Injectable, signal, type Signal } from '@angular/core';
 import type { DrillMode, TrueCountSource } from '../models/card-counting.model';
 import { DEFAULT_NUMBER_OF_DECKS, DEFAULT_PENETRATION } from '../models/shoe.model';
 import { DEFAULT_ENGINE_OPTIONS, type EngineOptions, type RuleSet } from '../models/strategy.model';
+import { readJson, writeJson } from './storage';
 
 export const FLOW_PREFS_KEY = 'blackjack-flow-prefs';
 
@@ -25,6 +26,11 @@ export const TRAINER_LABELS: Readonly<Record<TrainerId, string>> = {
 export type DeviationTrueCountSource = 'random' | 'manual';
 export type DeviationPracticeMode = 'all-hands' | 'deviation-only';
 
+// 'system' follows the OS setting; the other two pin a theme regardless.
+export type ThemePref = 'system' | 'light' | 'dark';
+
+export const THEME_PREFS: readonly ThemePref[] = ['system', 'light', 'dark'];
+
 export interface DeviationPrefs {
   readonly practiceMode: DeviationPracticeMode;
   readonly trueCountSource: DeviationTrueCountSource;
@@ -45,6 +51,7 @@ export interface CountingPrefs {
 export interface FlowPrefs {
   readonly lastTrainer: TrainerId;
   readonly dailyGoal: number;
+  readonly theme: ThemePref;
   // Table rules shared by the Basic Strategy and Deviations drills (and the
   // counting showdown's dealer play).
   readonly ruleSet: RuleSet;
@@ -59,6 +66,7 @@ export const MAX_DAILY_GOAL = 200;
 export const DEFAULT_FLOW_PREFS: FlowPrefs = {
   lastTrainer: 'basic-strategy',
   dailyGoal: 20,
+  theme: 'system',
   ruleSet: 'S17',
   options: DEFAULT_ENGINE_OPTIONS,
   deviations: {
@@ -95,6 +103,10 @@ export class FlowPrefsService {
     this.set({ ...this._prefs(), dailyGoal: clampGoal(goal) });
   }
 
+  setTheme(theme: ThemePref): void {
+    this.set({ ...this._prefs(), theme });
+  }
+
   setRuleSet(ruleSet: RuleSet): void {
     this.set({ ...this._prefs(), ruleSet });
   }
@@ -119,24 +131,11 @@ export class FlowPrefsService {
   }
 
   private load(): FlowPrefs {
-    if (typeof localStorage === 'undefined') return DEFAULT_FLOW_PREFS;
-    try {
-      const raw = localStorage.getItem(FLOW_PREFS_KEY);
-      if (!raw) return DEFAULT_FLOW_PREFS;
-      return mergePrefs(JSON.parse(raw));
-    } catch {
-      // Malformed payload — fall back to defaults.
-      return DEFAULT_FLOW_PREFS;
-    }
+    return readJson(FLOW_PREFS_KEY, DEFAULT_FLOW_PREFS, mergePrefs);
   }
 
   private persist(prefs: FlowPrefs): void {
-    if (typeof localStorage === 'undefined') return;
-    try {
-      localStorage.setItem(FLOW_PREFS_KEY, JSON.stringify(prefs));
-    } catch {
-      // localStorage can throw on quota / private browsing; tolerate silently.
-    }
+    writeJson(FLOW_PREFS_KEY, prefs);
   }
 }
 
@@ -160,6 +159,7 @@ export function mergePrefs(parsed: unknown): FlowPrefs {
   return {
     lastTrainer: oneOf(p['lastTrainer'], TRAINER_ORDER, d.lastTrainer),
     dailyGoal: typeof p['dailyGoal'] === 'number' ? clampGoal(p['dailyGoal']) : d.dailyGoal,
+    theme: oneOf(p['theme'], THEME_PREFS, d.theme),
     ruleSet: oneOf(p['ruleSet'], ['H17', 'S17'] as const, d.ruleSet),
     options: {
       doubleAfterSplit: bool(opts['doubleAfterSplit'], d.options.doubleAfterSplit),

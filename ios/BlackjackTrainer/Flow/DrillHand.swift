@@ -61,6 +61,36 @@ func nextSessionTarget(handsToday: Int, goal: Int) -> Int {
     return (max(0, handsToday) / safeGoal + 1) * safeGoal
 }
 
+/// Share of an ordinary round's hands drawn from the user's weak spots. High
+/// enough that a weakness gets real repetition inside one session, low enough
+/// that the round still feels like practice rather than a loop of three hands.
+/// Mirrors the web `WEAK_SPOT_SHARE`.
+let weakSpotShare = 0.4
+
+/// Choose the next hand's source: a weak spot, or nil meaning "deal a fresh
+/// random hand". Weak spots compete in proportion to their miss counts, so the
+/// scenario a user misses most comes back most. `share` is the probability of
+/// drawing from the weak list at all — review rounds pass 1. Mirrors
+/// `pickWeakSpot`.
+func pickWeakSpot(
+    _ weakSpots: [WeakSpot],
+    random: () -> Double,
+    share: Double = weakSpotShare
+) -> WeakSpot? {
+    if weakSpots.isEmpty { return nil }
+    if random() >= share { return nil }
+    let total = weakSpots.reduce(0) { $0 + $1.misses }
+    if total <= 0 { return nil }
+    var ticket = random() * Double(total)
+    for spot in weakSpots {
+        ticket -= Double(spot.misses)
+        if ticket < 0 { return spot }
+    }
+    // Only reachable if `random()` returns exactly 1 (or floating-point error
+    // eats the last slice); the final spot is the right answer either way.
+    return weakSpots.last
+}
+
 /// Build a concrete deal matching a recorded weak-spot ref, so a session can open
 /// with the scenario the user keeps missing. Mirrors `scenarioFromRef`.
 func scenarioFromRef(_ ref: ScenarioRef, random: () -> Double) -> Scenario {

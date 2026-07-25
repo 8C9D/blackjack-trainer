@@ -54,6 +54,20 @@ describe('SettingsPageComponent', () => {
     expect(prefs.prefs().dailyGoal).toBe(1);
   });
 
+  it('edits the theme, offering system alongside both explicit choices', () => {
+    const { fixture, prefs } = createPage();
+    expect(prefs.prefs().theme).toBe('system');
+
+    labelledControl(fixture, 'Light').click();
+    expect(prefs.prefs().theme).toBe('light');
+
+    labelledControl(fixture, 'Dark').click();
+    expect(prefs.prefs().theme).toBe('dark');
+
+    labelledControl(fixture, 'Match system').click();
+    expect(prefs.prefs().theme).toBe('system');
+  });
+
   it('edits the shared table rules', () => {
     const { fixture, prefs } = createPage();
     labelledControl(fixture, 'H17').click();

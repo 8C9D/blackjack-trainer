@@ -13,9 +13,11 @@
       name="description"
       content="Practice blackjack basic strategy, Hi-Lo card counting, true count, and deviations. Frontend-only trainer with per-session stats."
     />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="dark light" />
 
-    <!-- Browser/OS chrome theming + PWA-ready basics. -->
+    <!-- Browser/OS chrome theming + PWA-ready basics. The dark ground is the
+       pre-boot default (it is what :root declares); ThemeService rewrites this
+       to the resolved theme's ground as soon as the app starts. -->
     <meta name="theme-color" content="#15171c" />
     <link rel="manifest" href="manifest.webmanifest" />
 
@@ -26,7 +28,7 @@
     <meta name="apple-mobile-web-app-title" content="Blackjack Trainer" />
 
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
-    <link rel="apple-touch-icon" href="favicon.ico" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   </head>
   <body>
     <app-root></app-root>

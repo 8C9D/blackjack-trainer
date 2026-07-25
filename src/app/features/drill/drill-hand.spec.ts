@@ -2,8 +2,15 @@ import type { Card, Rank, Suit } from '../../core/models/card.model';
 import { DEFAULT_ENGINE_OPTIONS } from '../../core/models/strategy.model';
 import { classifyAsPair, isSoftHand } from '../../core/services/basic-strategy-engine.service';
 import { cardHighValue } from '../../core/models/card.model';
-import type { ScenarioRef } from '../../core/services/miss-tally.service';
-import { handQuestion, legalActionsFor, nextSessionTarget, scenarioFromRef } from './drill-hand';
+import type { ScenarioRef, WeakSpot } from '../../core/services/miss-tally.service';
+import {
+  WEAK_SPOT_SHARE,
+  handQuestion,
+  legalActionsFor,
+  nextSessionTarget,
+  pickWeakSpot,
+  scenarioFromRef,
+} from './drill-hand';
 
 const card = (rank: Rank, suit: Suit = 'spades'): Card => ({ rank, suit });
 
@@ -129,5 +136,63 @@ describe('scenarioFromRef', () => {
 
     const aces = scenarioFromRef({ kind: 'pair', hand: 'A', dealer: '5' }, seededRandom());
     expect(aces.player.map((c) => c.rank)).toEqual(['A', 'A']);
+  });
+});
+
+describe('pickWeakSpot', () => {
+  const weak = (label: string, misses: number): WeakSpot => ({
+    ref: { kind: 'hard', hand: label, dealer: '10' },
+    label,
+    misses,
+    attempts: misses * 2,
+    streak: 0,
+  });
+
+  // Feeds the two `random()` calls in order: the share roll, then the
+  // weighted draw.
+  function rolls(...values: number[]): () => number {
+    let i = 0;
+    return () => values[i++];
+  }
+
+  it('deals a fresh hand when nothing has been missed', () => {
+    expect(pickWeakSpot([], rolls(0))).toBeNull();
+  });
+
+  it('deals a fresh hand when the share roll misses', () => {
+    const spots = [weak('16', 3)];
+    expect(pickWeakSpot(spots, rolls(WEAK_SPOT_SHARE))).toBeNull();
+    expect(pickWeakSpot(spots, rolls(0.99))).toBeNull();
+  });
+
+  it('draws from the weak list when the share roll hits', () => {
+    const picked = pickWeakSpot([weak('16', 3)], rolls(0, 0));
+    expect(picked!.label).toBe('16');
+  });
+
+  it('weights the draw by miss count', () => {
+    // Weights 3 and 1 over a total of 4: the first spot owns [0, 0.75).
+    const spots = [weak('16', 3), weak('12', 1)];
+    expect(pickWeakSpot(spots, rolls(0, 0))!.label).toBe('16');
+    expect(pickWeakSpot(spots, rolls(0, 0.74))!.label).toBe('16');
+    expect(pickWeakSpot(spots, rolls(0, 0.76))!.label).toBe('12');
+    // A share of 1 makes every hand a weak spot — the review round.
+    expect(pickWeakSpot(spots, rolls(0.99, 0.9), 1)!.label).toBe('12');
+  });
+
+  it('lands on the last spot when the draw rounds past the end', () => {
+    const spots = [weak('16', 3), weak('12', 1)];
+    expect(pickWeakSpot(spots, rolls(0, 1))!.label).toBe('12');
+  });
+
+  it('holds the share it advertises over many draws', () => {
+    const spots = [weak('16', 1)];
+    let hits = 0;
+    for (let i = 0; i < 10_000; i++) {
+      if (pickWeakSpot(spots, Math.random)) hits++;
+    }
+    // ±4 points is far outside sampling noise at n = 10,000 but immune to
+    // an unlucky seed.
+    expect(Math.abs(hits / 10_000 - WEAK_SPOT_SHARE)).toBeLessThan(0.04);
   });
 });

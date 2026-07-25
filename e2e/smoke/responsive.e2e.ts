@@ -15,6 +15,10 @@ test.describe('responsive key-cap hints', () => {
     await page.setViewportSize(PHONE);
     // Every key cap is display:none on a touch-width viewport.
     const caps = page.locator('.kcap');
+    // `count()` does not auto-wait, so it has to be preceded by something that
+    // does: on a cold, contended run the home screen has not rendered its caps
+    // yet and a bare count reads 0, passing the loop below vacuously.
+    await expect(caps.first()).toBeAttached();
     const count = await caps.count();
     expect(count).toBeGreaterThan(0);
     for (let i = 0; i < count; i++) {

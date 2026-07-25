@@ -1,9 +1,13 @@
 import SwiftUI
 
+/// How many cleared scenarios are named before the line collapses to a count.
+private let clearedShown = 3
+
 /// Session-end screen (peak-end rule): the completed ring and the session's best
-/// numbers, one queued weakness for next time, a primary "One more round", and an
-/// always-first-class "Done for today". Never a confirmation dialog, never guilt
-/// copy. Mirrors the web `flow-done` component.
+/// numbers, the queued weakness as something you can act on now, the week's
+/// cleared scenarios, a primary "One more round", and an always-first-class
+/// "Done for today". Never a confirmation dialog, never guilt copy. Mirrors the
+/// web `flow-done` component.
 struct FlowDoneView: View {
     let hands: Int
     let target: Int
@@ -12,7 +16,13 @@ struct FlowDoneView: View {
     /// Session accuracy percentage (0–100), or nil when nothing was answered.
     let accuracy: Int?
     var weakSpot: WeakSpot?
+    /// Every outstanding weak spot, worst first — `weakSpot` is its head. Only the
+    /// count is shown; the list is what a review round would draw from.
+    var weakSpots: [WeakSpot] = []
+    /// Scenarios missed this week and since cleared.
+    var cleared: [WeakSpot] = []
     let onAgain: () -> Void
+    var onReview: () -> Void = {}
     let onExit: () -> Void
 
     private let buttonBrown = Color(hex: 0x1A1408)
@@ -22,6 +32,20 @@ struct FlowDoneView: View {
             + Text("\(bestStreak)").bold().foregroundStyle(Theme.good)
         guard let accuracy else { return base }
         return base + Text(" · \(accuracy)% today")
+    }
+
+    private var othersLabel: String {
+        let others = max(0, weakSpots.count - 1)
+        return others == 0 ? "" : " · +\(others) more"
+    }
+
+    /// "16 vs 10 · A,7 vs 9 · +2 more", or nil when nothing was cleared.
+    private var clearedLabel: String? {
+        if cleared.isEmpty { return nil }
+        let shown = cleared.prefix(clearedShown).map(\.label)
+        let rest = cleared.count - shown.count
+        let joined = shown.joined(separator: " · ")
+        return rest > 0 ? "\(joined) · +\(rest) more" : joined
     }
 
     var body: some View {
@@ -35,7 +59,16 @@ struct FlowDoneView: View {
                 .multilineTextAlignment(.center)
 
             if let weakSpot {
-                weakCard(weakSpot)
+                Button(action: onReview) { weakCard(weakSpot) }
+                    .buttonStyle(.plain)
+            }
+
+            if let clearedLabel {
+                (Text("Cleared: ") + Text(clearedLabel).bold().foregroundStyle(Theme.good))
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(Theme.muted)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 300)
             }
 
             Button(action: onAgain) {
@@ -67,12 +100,15 @@ struct FlowDoneView: View {
         .accessibilityLabel("Session complete")
     }
 
+    /// The queued weakness is a control, not a caption: the round it promises can
+    /// start from here. Styled as a quiet card so "One more round" stays the
+    /// screen's one loud action.
     private func weakCard(_ weak: WeakSpot) -> some View {
         VStack(spacing: 3) {
-            (Text("Drill next: ") + Text(weak.label).bold().foregroundStyle(Theme.accent))
+            (Text("Drill my misses: ") + Text(weak.label).bold().foregroundStyle(Theme.accent))
                 .font(.system(size: 14))
                 .foregroundStyle(Theme.midInk)
-            Text("missed \(weak.misses) of \(weak.attempts) this week")
+            Text("missed \(weak.misses) of \(weak.attempts) this week\(othersLabel)")
                 .font(.system(size: 11.5))
                 .foregroundStyle(Theme.muted)
         }
@@ -99,7 +135,31 @@ struct FlowDoneView: View {
             misses: 3,
             attempts: 7
         ),
+        weakSpots: [
+            WeakSpot(
+                ref: ScenarioRef(kind: "hard", hand: "16", dealer: "10"),
+                label: "16 vs 10",
+                misses: 3,
+                attempts: 7
+            ),
+            WeakSpot(
+                ref: ScenarioRef(kind: "pair", hand: "8", dealer: "10"),
+                label: "8,8 vs 10",
+                misses: 1,
+                attempts: 4
+            )
+        ],
+        cleared: [
+            WeakSpot(
+                ref: ScenarioRef(kind: "soft", hand: "18", dealer: "9"),
+                label: "A,7 vs 9",
+                misses: 1,
+                attempts: 6,
+                streak: 3
+            )
+        ],
         onAgain: {},
+        onReview: {},
         onExit: {}
     )
     .background(Theme.ground)

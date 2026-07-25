@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 
 import type { Card, Rank, Suit } from '../models/card.model';
+import { localDateKey } from './practice-history.service';
 import {
+  CLEAR_STREAK,
   MISS_TALLY_KEY,
   MissTallyService,
   scenarioKey,
@@ -24,6 +26,7 @@ const BASE = (() => {
 
 const HARD_16_V_10: ScenarioRef = { kind: 'hard', hand: '16', dealer: '10' };
 const SOFT_18_V_9: ScenarioRef = { kind: 'soft', hand: '18', dealer: '9' };
+const PAIR_8S_V_10: ScenarioRef = { kind: 'pair', hand: '8', dealer: '10' };
 
 function createService(now: () => Date): MissTallyService {
   const service = TestBed.inject(MissTallyService);
@@ -91,11 +94,19 @@ describe('MissTallyService', () => {
 
     it('accumulates attempts and misses for a scenario', () => {
       const s = createService(() => current);
-      for (const correct of [false, true, false, false, true, true, true]) {
+      // Ends on a single correct answer, short of the clear streak that
+      // would retire this scenario from the weak list.
+      for (const correct of [false, true, false, true, true, false, true]) {
         s.record('basic-strategy', HARD_16_V_10, correct);
       }
       const weak = s.weakSpotFor('basic-strategy');
-      expect(weak).toEqual({ ref: HARD_16_V_10, label: '16 vs 10', misses: 3, attempts: 7 });
+      expect(weak).toEqual({
+        ref: HARD_16_V_10,
+        label: '16 vs 10',
+        misses: 3,
+        attempts: 7,
+        streak: 1,
+      });
     });
 
     it('picks the scenario with the most misses, tiebreaking on miss rate', () => {
@@ -149,6 +160,85 @@ describe('MissTallyService', () => {
       expect(s.weakSpotFor('basic-strategy')).toBeNull();
       s.record('basic-strategy', HARD_16_V_10, false);
       expect(s.weakSpotFor('basic-strategy')).not.toBeNull();
+    });
+  });
+
+  describe('clearing a weak spot', () => {
+    it('retires a scenario from the weak list after CLEAR_STREAK correct answers', () => {
+      const s = createService(() => current);
+      s.record('basic-strategy', HARD_16_V_10, false);
+      for (let i = 0; i < CLEAR_STREAK - 1; i++) {
+        s.record('basic-strategy', HARD_16_V_10, true);
+        expect(s.weakSpotFor('basic-strategy')).not.toBeNull();
+      }
+      s.record('basic-strategy', HARD_16_V_10, true);
+
+      expect(s.weakSpots('basic-strategy')).toEqual([]);
+      expect(s.weakSpotFor('basic-strategy')).toBeNull();
+      expect(s.clearedSpots('basic-strategy').map((spot) => spot.label)).toEqual(['16 vs 10']);
+    });
+
+    it('a single miss un-clears a cleared scenario', () => {
+      const s = createService(() => current);
+      s.record('basic-strategy', HARD_16_V_10, false);
+      for (let i = 0; i < CLEAR_STREAK; i++) {
+        s.record('basic-strategy', HARD_16_V_10, true);
+      }
+      expect(s.clearedSpots('basic-strategy')).toHaveLength(1);
+
+      s.record('basic-strategy', HARD_16_V_10, false);
+      expect(s.clearedSpots('basic-strategy')).toEqual([]);
+      expect(s.weakSpotFor('basic-strategy')!.streak).toBe(0);
+    });
+
+    it('never counts a scenario that was answered correctly from the start', () => {
+      const s = createService(() => current);
+      for (let i = 0; i < CLEAR_STREAK + 2; i++) {
+        s.record('basic-strategy', HARD_16_V_10, true);
+      }
+      // Clearing is only meaningful for something that was missed this week.
+      expect(s.clearedSpots('basic-strategy')).toEqual([]);
+      expect(s.weakSpots('basic-strategy')).toEqual([]);
+    });
+
+    it('survives a payload written before clear-streak tracking existed', () => {
+      const legacy = {
+        'basic-strategy': {
+          [scenarioKey(HARD_16_V_10)]: {
+            ref: HARD_16_V_10,
+            days: [{ date: localDateKey(current), attempts: 4, misses: 2 }],
+          },
+        },
+      };
+      localStorage.setItem(MISS_TALLY_KEY, JSON.stringify(legacy));
+
+      const s = createService(() => current);
+      const weak = s.weakSpotFor('basic-strategy')!;
+      expect(weak.misses).toBe(2);
+      expect(weak.streak).toBe(0);
+    });
+  });
+
+  describe('weakSpots ranking', () => {
+    it('orders by misses, then miss rate, then a stable key', () => {
+      const s = createService(() => current);
+      // 16v10: 2 of 4. A,7v9: 2 of 2 — same misses, higher rate, so first.
+      s.record('basic-strategy', HARD_16_V_10, false);
+      s.record('basic-strategy', HARD_16_V_10, false);
+      s.record('basic-strategy', HARD_16_V_10, true);
+      s.record('basic-strategy', HARD_16_V_10, true);
+      s.record('basic-strategy', SOFT_18_V_9, false);
+      s.record('basic-strategy', SOFT_18_V_9, false);
+      // Pair 8s: 3 misses — the most, so it leads.
+      s.record('basic-strategy', PAIR_8S_V_10, false);
+      s.record('basic-strategy', PAIR_8S_V_10, false);
+      s.record('basic-strategy', PAIR_8S_V_10, false);
+
+      expect(s.weakSpots('basic-strategy').map((spot) => spot.label)).toEqual([
+        '8,8 vs 10',
+        'A,7 vs 9',
+        '16 vs 10',
+      ]);
     });
   });
 });

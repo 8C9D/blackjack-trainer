@@ -19,13 +19,14 @@
     }
 
     &:focus-visible {
-      outline: 2px solid var(--accent);
+      outline: 2px solid var(--focus);
       outline-offset: 2px;
     }
   }
 
   &__name {
-    color: #c6cad3;
+    margin: 0;
+    color: var(--ink-2);
     font-weight: 600;
     font-size: 0.82rem;
     white-space: nowrap;
@@ -42,7 +43,7 @@
   &__fill {
     display: block;
     height: 100%;
-    background: var(--accent);
+    background: var(--accent-ink);
     border-radius: 99px;
     transition: width 0.25s ease;
   }
@@ -61,14 +62,24 @@
     font-size: 0.78rem;
     font-variant-numeric: tabular-nums;
     color: var(--good);
-    border: 1px solid rgba(76, 195, 138, 0.4);
+    border: 1px solid var(--good-edge-soft);
     background: var(--raised);
     white-space: nowrap;
   }
 }
 
+// The trainer name is the screen's <h1>. There is no room for it on a phone,
+// but hiding it with `display: none` would take the page's only heading out of
+// the accessibility tree too — so hide it visually and leave it announced.
 @media (max-width: 600px) {
   .topbar__name {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    border: 0;
   }
 }
