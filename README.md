@@ -143,12 +143,13 @@ attempts persist under their own `localStorage` key (see
 #### Post-count showdown (live shoe only)
 
 After a live-shoe true-count round, a **"Play a hand vs the dealer"** option
-appears (when the shoe has at least four cards). It deals one player hand from
+appears (when the shoe holds enough cards for the opening round). It deals from
 the **same persistent shoe**, depleting it further:
 
+- **One to three boxes** — Settings → Card counting → **Showdown hands** picks how many hands you play at once against the single dealer. The opening round deals in casino order (one card to each box, the dealer's upcard, a second to each box, the dealer's hole card), and each box is then played and settled on its own.
 - **Hit, stand, double, and split** — doubling takes exactly one card; pairs re-split up to four hands; split aces take one card each and stand; a 21 made after splitting is not a natural. No surrender or insurance.
 - **Dealer auto-plays** the rule set from the shared table rules: stand on hard 17+, hit soft 17 only under H17.
-- **Settlement** — each hand settles win / lose / push independently; a player natural pays 3:2; a dealer natural beats any non-natural; two naturals push; a player bust loses immediately even if the dealer later busts. There is **no bankroll or betting** — the "3:2" is flavor; the showdown keeps a win/lose/push (plus blackjacks) tally under its own `localStorage` key.
+- **Settlement** — each hand settles win / lose / push independently; a player natural pays 3:2; a dealer natural beats any non-natural; two naturals push; a player bust loses immediately even if the dealer later busts. A dealer natural ends every box at once, and a box holding a natural is paid immediately and sits out the rest of the round. Multi-hand rounds close with a one-line tally ("2 won, 1 lost"). There is **no bankroll or betting** — the "3:2" is flavor; the showdown keeps a win/lose/push (plus blackjacks) tally under its own `localStorage` key.
 
 Returning from the showdown keeps the depletion it caused, so the next count
 round may reshuffle past the cut card.
@@ -566,7 +567,9 @@ and the cursor/handoff log in
 - **Flow redesign** — the one-action home (continue, daily-goal ring, 7-day streak), full-screen auto-advancing drills, the weak-spot "Drill next" loop, and a dedicated Settings screen replacing all in-drill configuration.
 - **Playwright E2E smoke suite** — navigation, drill flows (basic strategy, card counting, deviations), persistence, responsive, theme, seeded-determinism, and review-round specs in `e2e/`, with a CI job uploading the HTML report.
 - **Showdown doubles and splits** — double takes one card; pairs re-split to four hands; split aces take one card; split 21s pay even money.
-- **iOS SwiftUI app** — the Flow shell mirrored natively (widget, iCloud sync, daily reminder), with fixture-enforced engine parity and App Store collateral prepared. Adaptive weak-spot practice and review rounds are mirrored too; the light theme is web-only so far (the iOS app pins the dark palette at its root).
+- **iOS SwiftUI app** — the Flow shell mirrored natively (widget, iCloud sync, daily reminder), with fixture-enforced engine parity and App Store collateral prepared. Adaptive weak-spot practice, review rounds, the Appearance preference, and multi-hand showdowns are mirrored too.
+- **Multi-hand showdowns** — one to three simultaneous boxes against a single dealer, on both web and iOS, with the box count in Settings.
+- **Light theme on iOS** — `Theme` resolves every token per color scheme (mirroring the web light/dark palettes) and Settings → Appearance drives `preferredColorScheme`.
 - **Real PWA install** — Angular service worker for offline use, maskable 192/512 icons, apple-touch-icon, and top safe-area handling for iOS standalone.
 - **Coverage gate + deeper E2E** — enforced coverage thresholds (`vitest.config.ts`, run in CI), counting/deviation drill e2e specs, and a value-by-value audit (2026-07-24) of all four chart data files against the published BJA PDFs — every cell matched.
 - **Seeded sessions** — a `?seed=` hook behind one injection token makes every draw reproducible, which is what lets the E2E suite assert exact outcomes instead of only that the flow advanced.
@@ -584,9 +587,6 @@ Deferred follow-ons, documented in `docs/roadmap-progress.md` and
   count (KO is running-count only today).
 - **Deviation charts for KO / Omega II / Wong Halves** — deviations are Hi-Lo
   only.
-- **Light theme on iOS** — the web app ships both palettes; the SwiftUI app still
-  pins `.preferredColorScheme(.dark)` at its root and reads a fixed `Theme`, so
-  supporting light there means making those colors trait-aware first.
 - **App Store submission** — the human/Apple steps in
   [`docs/app-store-submission.md`](docs/app-store-submission.md): hosting the
   privacy/support pages, App Store Connect setup, TestFlight, and review.

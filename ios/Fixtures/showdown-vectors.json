@@ -1,7 +1,7 @@
 {
-  "schema": "showdown-vectors/1",
+  "schema": "showdown-vectors/2",
   "generatedBy": "tools/export-parity-fixtures.ts",
-  "description": "Pure dealer-play and settlement cases: dealerShouldHit (H17/S17 soft-17), playDealerHand draw loops, and settle() outcomes (3:2 naturals, bust ordering, totals, pushes). Suits are arbitrary.",
+  "description": "Pure dealer-play and settlement cases: dealerShouldHit (H17/S17 soft-17), playDealerHand draw loops, settle() outcomes (3:2 naturals, bust ordering, totals, pushes), and the multi-box spot clamp / opening-round card requirement. Suits are arbitrary.",
   "dealerShouldHitCases": [
     {
       "hand": [
@@ -613,6 +613,43 @@
       "outcome": "win",
       "playerBlackjack": true,
       "dealerBlackjack": false
+    }
+  ],
+  "spotsCases": [
+    {
+      "spots": -1,
+      "clamped": 1,
+      "minCards": 4
+    },
+    {
+      "spots": 0,
+      "clamped": 1,
+      "minCards": 4
+    },
+    {
+      "spots": 1,
+      "clamped": 1,
+      "minCards": 4
+    },
+    {
+      "spots": 2,
+      "clamped": 2,
+      "minCards": 6
+    },
+    {
+      "spots": 3,
+      "clamped": 3,
+      "minCards": 8
+    },
+    {
+      "spots": 4,
+      "clamped": 3,
+      "minCards": 8
+    },
+    {
+      "spots": 99,
+      "clamped": 3,
+      "minCards": 8
     }
   ]
 }

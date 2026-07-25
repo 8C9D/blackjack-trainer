@@ -30,6 +30,15 @@ struct ShowdownParityTests {
         }
     }
 
+    @Test func spotClampAndOpeningRoundSizeMatch() throws {
+        for testCase in try file().spotsCases {
+            #expect(Showdown.clampSpots(testCase.spots) == testCase.clamped,
+                    "clampSpots(\(testCase.spots))")
+            #expect(Showdown.minCards(forSpots: testCase.spots) == testCase.minCards,
+                    "minCards(forSpots: \(testCase.spots))")
+        }
+    }
+
     @Test func settleMatches() throws {
         for testCase in try file().settleCases {
             let settlement = Showdown.settle(

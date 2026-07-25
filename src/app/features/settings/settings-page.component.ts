@@ -39,7 +39,7 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
   selector: 'app-settings-page',
   imports: [CountingSettingsComponent],
   template: `
-    <div class="settings">
+    <main class="settings">
       <header class="settings__header">
         <button type="button" class="settings__back" (click)="goHome()">
           ← Back <kbd class="kcap">esc</kbd>
@@ -189,6 +189,7 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
           [deckOptions]="deckOptions"
           [penetrationPresets]="penetrationPresets"
           [liveDecksRemaining]="prefs().counting.numberOfDecks"
+          [showdownSpots]="prefs().counting.showdownSpots"
           [errors]="countingErrors()"
           (systemChange)="onSystemChange($event)"
           (modeChange)="updateCounting({ mode: $event })"
@@ -198,9 +199,10 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
           (trueCountSourceChange)="updateCounting({ trueCountSource: $event })"
           (numberOfDecksChange)="updateCounting({ numberOfDecks: $event })"
           (penetrationChange)="updateCounting({ penetration: $event })"
+          (showdownSpotsChange)="updateCounting({ showdownSpots: $event })"
         />
       </section>
-    </div>
+    </main>
   `,
   styleUrl: './settings-page.component.scss',
 })
@@ -305,6 +307,7 @@ export class SettingsPageComponent {
       trueCountSource: TrueCountSource;
       numberOfDecks: number;
       penetration: number;
+      showdownSpots: number;
     }>,
   ): void {
     this.prefsService.updateCounting(partial);

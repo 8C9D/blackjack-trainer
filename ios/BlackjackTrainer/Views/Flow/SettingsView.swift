@@ -27,6 +27,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 dailyGoalSection
+                appearanceSection
                 tableRulesSection
                 deviationsSection
                 countingSection
@@ -39,7 +40,7 @@ struct SettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Done") { router.goHome() }
-                        .tint(Theme.accent)
+                        .tint(Theme.accentInk)
                 }
             }
         }
@@ -57,6 +58,19 @@ struct SettingsView: View {
                 ),
                 in: FlowPrefsConstants.minDailyGoal ... FlowPrefsConstants.maxDailyGoal
             )
+        }
+    }
+
+    // MARK: Appearance
+
+    private var appearanceSection: some View {
+        Section("Appearance") {
+            Picker("Theme", selection: themeBinding) {
+                ForEach(ThemePref.allCases, id: \.self) { theme in
+                    Text(theme.label).tag(theme)
+                }
+            }
+            .pickerStyle(.segmented)
         }
     }
 
@@ -168,6 +182,11 @@ struct SettingsView: View {
                             Text("\(Int((value * 100).rounded()))%").tag(value)
                         }
                     }
+                    Picker("Showdown hands", selection: showdownSpotsBinding) {
+                        ForEach(Showdown.showdownSpotOptions, id: \.self) { spots in
+                            Text("\(spots)").tag(spots)
+                        }
+                    }
                 }
             }
 
@@ -187,9 +206,13 @@ struct SettingsView: View {
             NavigationLink("About & licenses") { AboutView() }
         }
     }
+}
 
-    // MARK: Bindings
+// MARK: - Bindings
 
+/// The prefs bindings, kept out of the view struct so the screen body stays
+/// readable (and under the type-body length limit).
+extension SettingsView {
     private func intBinding(get: @escaping () -> Int,
                             set: @escaping (Int) -> Void) -> Binding<Int> {
         Binding(get: get, set: set)
@@ -288,6 +311,22 @@ struct SettingsView: View {
         Binding(
             get: { prefs.counting.penetration },
             set: { value in model.flowPrefs.updateCounting { $0.penetration = value } }
+        )
+    }
+
+    private var themeBinding: Binding<ThemePref> {
+        Binding(
+            get: { prefs.theme },
+            set: { value in model.flowPrefs.setTheme(value) }
+        )
+    }
+
+    private var showdownSpotsBinding: Binding<Int> {
+        Binding(
+            get: { prefs.counting.showdownSpots },
+            set: { value in
+                model.flowPrefs.updateCounting { $0.showdownSpots = Showdown.clampSpots(value) }
+            }
         )
     }
 }

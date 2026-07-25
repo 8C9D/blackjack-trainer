@@ -73,6 +73,7 @@
 		92B298BC5D3D877D16326218 /* CardCountingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE50DEB7576D2B5A6C544838 /* CardCountingFlowView.swift */; };
 		94843E9634E49F20DAD75618 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45B95CDB1F240EEC3FC88326 /* AppModel.swift */; };
 		94A043188027320FBD0E92AB /* MissTally.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3FF9EB17A9713215F67B6B /* MissTally.swift */; };
+		965A2A3BC3BC2994FDE0D8C8 /* ShowdownModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F34FE14AC0C70AE7B5CDF936 /* ShowdownModel.swift */; };
 		9695E3114F049A577095071C /* DeviationsDrillView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7244BE12FDAD7DBD620EFE49 /* DeviationsDrillView.swift */; };
 		988378D0421E203A0233C3B7 /* BlackjackWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2AC3CF9F36E63A1B0EF4A6 /* BlackjackWidgetBundle.swift */; };
 		98D26850C6A96B642A438808 /* BasicStrategyParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 825AB70D2C6317662368AC83 /* BasicStrategyParityTests.swift */; };
@@ -105,6 +106,7 @@
 		DBE51B6B16BCDF2D61562892 /* counting-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = A039C5E6271C7F1C7AFECA72 /* counting-vectors.json */; };
 		DDEAA480768F763AC0404C2B /* BlackjackTrainerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C359E507A88490DEB624D413 /* BlackjackTrainerApp.swift */; };
 		E08FEF15973E3C29239780BD /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA7773071A88011CBC0C77FF /* WidgetSnapshot.swift */; };
+		E89681A0A7CDFDB53BD9F974 /* ShowdownMultiBoxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57A574AA683108F8EF54F104 /* ShowdownMultiBoxTests.swift */; };
 		EAAD9174590C20E72577CBCA /* FlowPrefs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98EFDB01E654E3C42D38A419 /* FlowPrefs.swift */; };
 		ED40B991FC2DEDC8BA58ADD7 /* Card.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC3A18A1400C61F3B32D13F1 /* Card.swift */; };
 		EE1BBDF8E6F169D9A24CDA81 /* ShowdownParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 786E4951CEEAFF7A09457F30 /* ShowdownParityTests.swift */; };
@@ -198,6 +200,7 @@
 		501FF9BB16087E1BE634AD19 /* DeckEstimateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckEstimateView.swift; sourceTree = "<group>"; };
 		56D03F7A78236CB3E5505245 /* HardwareKeyboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareKeyboard.swift; sourceTree = "<group>"; };
 		577C951192BCC781DBE8EBDD /* Strategy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Strategy.swift; sourceTree = "<group>"; };
+		57A574AA683108F8EF54F104 /* ShowdownMultiBoxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownMultiBoxTests.swift; sourceTree = "<group>"; };
 		58E087668BAE429A0E764D17 /* CountingModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingModel.swift; sourceTree = "<group>"; };
 		5A74F8324193BA0A96DB8B29 /* BlackjackTrainerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = BlackjackTrainerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5D6A6BE6AD0BE9426D92EAA5 /* HomeHelpersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeHelpersTests.swift; sourceTree = "<group>"; };
@@ -258,6 +261,7 @@
 		EA44A857F312C0801027DE52 /* DrillHand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillHand.swift; sourceTree = "<group>"; };
 		EE50DEB7576D2B5A6C544838 /* CardCountingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardCountingFlowView.swift; sourceTree = "<group>"; };
 		EEF70F593374993ECA4C38A4 /* Shoe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shoe.swift; sourceTree = "<group>"; };
+		F34FE14AC0C70AE7B5CDF936 /* ShowdownModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownModel.swift; sourceTree = "<group>"; };
 		F423E49F3EE23CE7C3E35ABB /* DeviationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationEngine.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -336,6 +340,7 @@
 				70E0FD3BB6A069CD721C48F8 /* CountStreamView.swift */,
 				501FF9BB16087E1BE634AD19 /* DeckEstimateView.swift */,
 				980E7AECAB91B60175930CD3 /* RemindersView.swift */,
+				F34FE14AC0C70AE7B5CDF936 /* ShowdownModel.swift */,
 				165C075DFEF13830088AC4E9 /* ShowdownView.swift */,
 			);
 			path = Screens;
@@ -371,6 +376,7 @@
 				645F62DA06D6384BB1E98209 /* SharedComponentsTests.swift */,
 				3D44944317BBDF4871E4996D /* ShoeFactoryTests.swift */,
 				B1A14FE863E2084BF0AC794D /* ShowdownModelTests.swift */,
+				57A574AA683108F8EF54F104 /* ShowdownMultiBoxTests.swift */,
 				786E4951CEEAFF7A09457F30 /* ShowdownParityTests.swift */,
 				0CDF8C0414B1B8AF850B0DF5 /* SmokeTests.swift */,
 				40DA33CFF9EA9742E7504A05 /* StatsStoreTests.swift */,
@@ -710,6 +716,7 @@
 				15D8DA3209658F589B896F3D /* Shoe.swift in Sources */,
 				0672F0196E2D44640C38AE91 /* ShoeFactory.swift in Sources */,
 				CD5DF8C13DB099C1784832CB /* Showdown.swift in Sources */,
+				965A2A3BC3BC2994FDE0D8C8 /* ShowdownModel.swift in Sources */,
 				8A5FCA013C37B817EE6309EA /* ShowdownView.swift in Sources */,
 				3D06500A85C04C83F3E882BD /* StatsModels.swift in Sources */,
 				A0FAF8E256C05D8BE1293316 /* StatsStore.swift in Sources */,
@@ -764,6 +771,7 @@
 				30715FEEF950524036747DC0 /* SharedComponentsTests.swift in Sources */,
 				9C4B22D42A6A12BC4DC5C62E /* ShoeFactoryTests.swift in Sources */,
 				D2AB7ED7BE3625300AACE48F /* ShowdownModelTests.swift in Sources */,
+				E89681A0A7CDFDB53BD9F974 /* ShowdownMultiBoxTests.swift in Sources */,
 				EE1BBDF8E6F169D9A24CDA81 /* ShowdownParityTests.swift in Sources */,
 				5ACE6A73BE71B4664EF7B2BD /* SmokeTests.swift in Sources */,
 				EEAEAB42B68664042D826147 /* StatsStoreTests.swift in Sources */,
@@ -801,7 +809,6 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -972,7 +979,6 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

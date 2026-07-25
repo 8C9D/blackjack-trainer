@@ -19,7 +19,7 @@ struct RemindersView: View {
 
                 card {
                     Toggle("Daily reminder", isOn: enabledBinding)
-                        .tint(Theme.accent)
+                        .tint(Theme.accentInk)
                         .foregroundStyle(Theme.ink)
                 }
 
@@ -47,7 +47,7 @@ struct RemindersView: View {
                             displayedComponents: .hourAndMinute
                         )
                         .foregroundStyle(Theme.ink)
-                        .tint(Theme.accent)
+                        .tint(Theme.accentInk)
                     }
                 }
             }
@@ -57,7 +57,7 @@ struct RemindersView: View {
         .appBackground()
         .navigationTitle("Practice reminders")
         .navigationBarTitleDisplayMode(.inline)
-        .tint(Theme.accent)
+        .tint(Theme.accentInk)
         .task { await model.refreshAuthorization() }
     }
 

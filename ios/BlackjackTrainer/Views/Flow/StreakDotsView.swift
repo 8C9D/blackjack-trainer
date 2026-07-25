@@ -35,7 +35,7 @@ private struct DotView: View {
             Circle()
                 .fill(dot.met ? Theme.good : Color.clear)
                 .frame(width: 8, height: 8)
-                .overlay(Circle().strokeBorder(Theme.accent, lineWidth: 2))
+                .overlay(Circle().strokeBorder(Theme.accentInk, lineWidth: 2))
         } else {
             Circle()
                 .fill(dot.met ? Theme.good : Theme.raised)

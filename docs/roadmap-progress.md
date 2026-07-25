@@ -163,6 +163,28 @@ All nine planned slices are **Done**. Slice 9 (the final slice) shipped the
 single-hand post-count showdown (Option A) as `feat: add post-count showdown vs
 dealer`. There is no next slice; **Next slice** is `none (roadmap complete)`.
 
+### Post-roadmap: the deferred showdown options have since landed
+
+The Slice 9 write-up below deferred **Option B** (multi-hand) and the
+splits/doubles half of **Option C**. Both have since shipped:
+
+- **Doubles and splits** (Option C, minus bankroll/bet sizing, which stays out
+  of scope) — `feat: add showdown doubles and splits, with audit and iOS cleanup
+fixes`.
+- **Multi-hand** (Option B, 2026-07-25) — the showdown now deals **one to three
+  simultaneous boxes** against a single dealer, configured by
+  `counting.showdownSpots` in flow prefs (Settings → Card counting → _Showdown
+  hands_). The opening round deals in casino order; each box is played and
+  settled independently; a dealer natural ends every box at once and a box
+  holding a natural is paid immediately and sits out. Still **no bankroll or bet
+  sizing** — the tally stays win/lose/push.
+
+  One correctness note worth recording: the pre-existing code inferred "this
+  hand came from a split" from `hands.length > 1`, which was sound while splits
+  were the only way to get multiple hands. Multiple boxes break that inference
+  (a natural in box 2 would have been denied its 3:2), so the flag is now
+  tracked per hand as `fromSplit` on both platforms.
+
 What Slice 9 added (Option A, as locked above):
 
 - **`core/models/hand.model.ts`** — pure N-card, soft-aware hand math

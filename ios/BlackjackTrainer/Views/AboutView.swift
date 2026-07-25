@@ -19,7 +19,7 @@ struct AboutView: View {
         .appBackground()
         .navigationTitle("About")
         .navigationBarTitleDisplayMode(.inline)
-        .tint(Theme.accent)
+        .tint(Theme.accentInk)
     }
 
     private var header: some View {

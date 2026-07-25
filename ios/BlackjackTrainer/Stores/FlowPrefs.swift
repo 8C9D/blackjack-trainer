@@ -17,6 +17,23 @@ enum TrainerId: String, CaseIterable, Codable {
     }
 }
 
+/// The appearance the app renders in. `system` follows the device setting; the
+/// other two pin a scheme regardless. Raw values match the web `ThemePref` so
+/// the persisted `blackjack-flow-prefs` shape stays identical.
+enum ThemePref: String, CaseIterable, Codable {
+    case system
+    case light
+    case dark
+
+    var label: String {
+        switch self {
+        case .system: "System"
+        case .light: "Light"
+        case .dark: "Dark"
+        }
+    }
+}
+
 /// EngineOptions carries no synthesized Equatable in the engine layer (kept
 /// byte-identical); FlowPrefs needs it for value equality.
 extension EngineOptions: Equatable {
@@ -43,6 +60,8 @@ struct CountingPrefs: Equatable {
     var trueCountSource: TrueCountSource
     var numberOfDecks: Int
     var penetration: Double
+    /// Boxes the player occupies in the optional post-count showdown (1–3).
+    var showdownSpots: Int
 
     /// The `CountingDrillSettings` the drill/engine consume (systemId stripped,
     /// mirroring the web's `const { systemId, ...settings } = counting`).
@@ -64,6 +83,7 @@ struct CountingPrefs: Equatable {
 struct FlowPrefs: Equatable {
     var lastTrainer: TrainerId
     var dailyGoal: Int
+    var theme: ThemePref
     var ruleSet: RuleSet
     var options: EngineOptions
     var deviations: DeviationPrefs
@@ -79,6 +99,7 @@ extension FlowPrefs {
     static let `default` = FlowPrefs(
         lastTrainer: .basicStrategy,
         dailyGoal: 20,
+        theme: .system,
         ruleSet: .s17,
         options: .default,
         deviations: DeviationPrefs(
@@ -94,7 +115,8 @@ extension FlowPrefs {
             decksRemaining: 1,
             trueCountSource: .liveShoe,
             numberOfDecks: ShoeConstants.defaultNumberOfDecks,
-            penetration: ShoeConstants.defaultPenetration
+            penetration: ShoeConstants.defaultPenetration,
+            showdownSpots: 1
         )
     )
 }
@@ -139,6 +161,7 @@ extension FlowPrefs {
         return FlowPrefs(
             lastTrainer: oneOf(p["lastTrainer"], TrainerId.self, d.lastTrainer),
             dailyGoal: numberValue(p["dailyGoal"]).map { clampGoal($0) } ?? d.dailyGoal,
+            theme: oneOf(p["theme"], ThemePref.self, d.theme),
             ruleSet: oneOf(p["ruleSet"], RuleSet.self, d.ruleSet),
             options: EngineOptions(
                 doubleAfterSplit: boolValue(opts["doubleAfterSplit"]) ?? d.options.doubleAfterSplit,
@@ -169,7 +192,10 @@ extension FlowPrefs {
                     d.counting.trueCountSource
                 ),
                 numberOfDecks: intValue(cnt["numberOfDecks"]) ?? d.counting.numberOfDecks,
-                penetration: numberValue(cnt["penetration"]) ?? d.counting.penetration
+                penetration: numberValue(cnt["penetration"]) ?? d.counting.penetration,
+                showdownSpots: Showdown.clampSpots(
+                    intValue(cnt["showdownSpots"]) ?? d.counting.showdownSpots
+                )
             )
         )
     }
@@ -179,6 +205,7 @@ extension FlowPrefs {
         [
             "lastTrainer": lastTrainer.rawValue,
             "dailyGoal": dailyGoal,
+            "theme": theme.rawValue,
             "ruleSet": ruleSet.rawValue,
             "options": [
                 "doubleAfterSplit": options.doubleAfterSplit,
@@ -197,7 +224,8 @@ extension FlowPrefs {
                 "decksRemaining": counting.decksRemaining,
                 "trueCountSource": counting.trueCountSource.rawValue,
                 "numberOfDecks": counting.numberOfDecks,
-                "penetration": counting.penetration
+                "penetration": counting.penetration,
+                "showdownSpots": counting.showdownSpots
             ]
         ]
     }
@@ -265,6 +293,11 @@ final class FlowPrefsStore: CloudSyncable {
 
     func setDailyGoal(_ goal: Double) {
         prefs.dailyGoal = clampGoal(goal)
+        persist()
+    }
+
+    func setTheme(_ theme: ThemePref) {
+        prefs.theme = theme
         persist()
     }
 

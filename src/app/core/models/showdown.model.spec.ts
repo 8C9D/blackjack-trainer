@@ -1,5 +1,14 @@
 import type { Card, Rank, Suit } from './card.model';
-import { dealerShouldHit, playDealerHand, settle } from './showdown.model';
+import {
+  MAX_SHOWDOWN_SPOTS,
+  MIN_SHOWDOWN_CARDS,
+  MIN_SHOWDOWN_SPOTS,
+  clampSpots,
+  dealerShouldHit,
+  minCardsForSpots,
+  playDealerHand,
+  settle,
+} from './showdown.model';
 
 const card = (rank: Rank, suit: Suit = 'spades'): Card => ({ rank, suit });
 
@@ -138,6 +147,39 @@ describe('showdown.model', () => {
       const s = settle(splitAce21, [card('10'), card('9')], false);
       expect(s.outcome).toBe('win');
       expect(s.playerBlackjack).toBe(false);
+    });
+  });
+
+  describe('clampSpots', () => {
+    it('keeps a supported box count', () => {
+      expect(clampSpots(1)).toBe(1);
+      expect(clampSpots(2)).toBe(2);
+      expect(clampSpots(3)).toBe(3);
+    });
+
+    it('clamps out-of-range values to the supported bounds', () => {
+      expect(clampSpots(0)).toBe(MIN_SHOWDOWN_SPOTS);
+      expect(clampSpots(-5)).toBe(MIN_SHOWDOWN_SPOTS);
+      expect(clampSpots(99)).toBe(MAX_SHOWDOWN_SPOTS);
+    });
+
+    it('rounds fractions and falls back on non-finite input', () => {
+      expect(clampSpots(2.4)).toBe(2);
+      expect(clampSpots(Number.NaN)).toBe(MIN_SHOWDOWN_SPOTS);
+      expect(clampSpots(Number.POSITIVE_INFINITY)).toBe(MIN_SHOWDOWN_SPOTS);
+    });
+  });
+
+  describe('minCardsForSpots', () => {
+    it('needs two cards per box plus the dealer two', () => {
+      expect(minCardsForSpots(1)).toBe(MIN_SHOWDOWN_CARDS);
+      expect(minCardsForSpots(2)).toBe(6);
+      expect(minCardsForSpots(3)).toBe(8);
+    });
+
+    it('clamps its argument like clampSpots', () => {
+      expect(minCardsForSpots(0)).toBe(4);
+      expect(minCardsForSpots(99)).toBe(8);
     });
   });
 });

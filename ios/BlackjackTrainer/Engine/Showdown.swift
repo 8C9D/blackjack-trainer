@@ -18,8 +18,28 @@ struct Settlement: Equatable {
 /// against `showdown-vectors.json`; the live shoe (RNG seam) is tested
 /// separately.
 enum Showdown {
-    /// Fewest cards for an opening showdown hand (two player + two dealer).
+    /// Fewest cards for a single-box opening showdown hand (two player + two
+    /// dealer).
     static let minShowdownCards = 4
+
+    /// How many simultaneous boxes the player may occupy. One dealer plays
+    /// against all of them from the same shoe.
+    static let minShowdownSpots = 1
+    static let maxShowdownSpots = 3
+
+    /// Selectable box counts, for the settings picker.
+    static let showdownSpotOptions = [1, 2, 3]
+
+    /// Clamps a box count into the supported range. Mirrors the web `clampSpots`.
+    static func clampSpots(_ spots: Int) -> Int {
+        min(maxShowdownSpots, max(minShowdownSpots, spots))
+    }
+
+    /// Cards consumed by the opening deal for `spots` boxes: two per box plus the
+    /// dealer's two. Mirrors the web `minCardsForSpots`.
+    static func minCards(forSpots spots: Int) -> Int {
+        clampSpots(spots) * 2 + 2
+    }
 
     /// Whether the dealer must draw: hits anything under 17 and a soft 17 only
     /// under H17; stands on hard 17 and any total of 18+.

@@ -2,6 +2,7 @@ import { Injectable, signal, type Signal } from '@angular/core';
 
 import type { DrillMode, TrueCountSource } from '../models/card-counting.model';
 import { DEFAULT_NUMBER_OF_DECKS, DEFAULT_PENETRATION } from '../models/shoe.model';
+import { clampSpots } from '../models/showdown.model';
 import { DEFAULT_ENGINE_OPTIONS, type EngineOptions, type RuleSet } from '../models/strategy.model';
 import { readJson, writeJson } from './storage';
 
@@ -46,6 +47,8 @@ export interface CountingPrefs {
   readonly trueCountSource: TrueCountSource;
   readonly numberOfDecks: number;
   readonly penetration: number;
+  // Boxes the player occupies in the optional post-count showdown (1–3).
+  readonly showdownSpots: number;
 }
 
 export interface FlowPrefs {
@@ -83,6 +86,7 @@ export const DEFAULT_FLOW_PREFS: FlowPrefs = {
     trueCountSource: 'live-shoe',
     numberOfDecks: DEFAULT_NUMBER_OF_DECKS,
     penetration: DEFAULT_PENETRATION,
+    showdownSpots: 1,
   },
 };
 
@@ -194,6 +198,7 @@ export function mergePrefs(parsed: unknown): FlowPrefs {
       ),
       numberOfDecks: num(cnt['numberOfDecks'], d.counting.numberOfDecks),
       penetration: num(cnt['penetration'], d.counting.penetration),
+      showdownSpots: clampSpots(num(cnt['showdownSpots'], d.counting.showdownSpots)),
     },
   };
 }

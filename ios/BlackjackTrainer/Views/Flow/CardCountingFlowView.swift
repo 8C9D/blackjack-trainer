@@ -23,6 +23,7 @@ final class CardCountingFlowModel {
         prefs.setLastTrainer(.cardCounting)
         // Configure the drill entirely from the pre-made decisions.
         counting.settings = prefs.prefs.counting.drillSettings
+        counting.showdownSpots = prefs.prefs.counting.showdownSpots
         if let system = counting.systems.first(where: { $0.id == prefs.prefs.counting.systemId }) {
             counting.system = system
         }
@@ -209,7 +210,7 @@ struct CardCountingFlowView: View {
                     model.exit()
                     router.go(.settings)
                 }
-                .tint(Theme.accent)
+                .tint(Theme.accentInk)
             }
         }
         .padding(.top, 40)
@@ -220,9 +221,11 @@ struct CardCountingFlowView: View {
             CountFeedbackView(result: result, system: model.counting.system) { model.runAgain() }
         }
         if model.counting.liveShoeTrueCount, model.counting.showdownAvailable {
-            Button("Play a hand vs the dealer") { model.enterShowdown() }
+            Button(model.counting.showdownSpots > 1
+                ? "Play \(model.counting.showdownSpots) hands vs the dealer"
+                : "Play a hand vs the dealer") { model.enterShowdown() }
                 .buttonStyle(.bordered)
-                .tint(Theme.accent)
+                .tint(Theme.accentInk)
         }
     }
 
@@ -231,7 +234,8 @@ struct CardCountingFlowView: View {
             ShowdownView(
                 shoe: shoe,
                 ruleSet: model.ruleSet,
-                stats: model.counting.showdownStatsStore
+                stats: model.counting.showdownStatsStore,
+                spots: model.counting.showdownSpots
             ) {
                 model.exitShowdown()
             }

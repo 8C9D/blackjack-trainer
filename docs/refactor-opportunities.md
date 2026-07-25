@@ -125,23 +125,33 @@ Both are mechanical, behavior-preserving, and covered by the existing gates.
 
 ## 5. Larger Refactors (deferred — need human judgment)
 
-- **Shared localStorage-backed JSON store.** `StatsStore`
-  (`stats-store.ts`) and `ShowdownStatsService` (`showdown-stats.service.ts`) share
-  the same load/persist **mechanics** (`typeof localStorage` guard → `JSON.parse` in
-  try/catch → per-field numeric validation → tolerant `setItem`). The duplication is
-  shallow and the two hold **intentionally different shapes** (correct/incorrect vs
-  win/lose/push). Extracting a generic `readJson`/`writeJson` helper is plausible but
-  requires a design call (how the per-field validator is expressed) and touches a
-  persistence path — **left to human judgment.**
-- **Shared trainer keydown handler.** Four components
-  (`basic-strategy-page`, `deviations-page`, `card-counting-page`, `showdown`) carry
-  `@HostListener('window:keydown')` handlers with the same Enter→next / key→answer
-  skeleton but different gating (e.g. the Deviations page's `canDealNextHand()`). A
-  shared helper in `core/keyboard.ts` could absorb the skeleton, but the variations
-  are **behavioral** — needs judgment. **Not auto-implemented.**
-- **Unified signed-integer formatter.** `formatTrueCount` and the count-feedback
-  `deltaLabel` share the "+N for positives" shape across **different domains** (true
-  count vs per-card value). Merging risks over-abstraction. **Judgment call.**
+> **Re-checked 2026-07-25 against the live source.** The 2026-07-24 update near
+> the top of this report still stands on all three items. One follow-on landed
+> since — the storage extraction went a level deeper, recorded in the first
+> bullet.
+
+- **Shared localStorage-backed JSON store. — mechanics done 2026-07-24;
+  per-field validation extracted 2026-07-25.**
+  The generic `readJson`/`writeJson` helpers live in
+  `core/services/storage.ts` and are used by all five persisted stores
+  (`stats-store`, `showdown-stats`, `flow-prefs`, `practice-history`,
+  `miss-tally`). What was still duplicated on re-check was the _per-field_
+  validation: `StatsStore` and `ShowdownStatsService` each hand-rolled the same
+  `typeof x === 'number'` chain over their own field names. That is now
+  `coerceNumericRecord(parsed, fallback)` in `storage.ts` — the keys of the
+  fallback define the expected shape, and a payload missing any of them, or
+  carrying a non-number, is rejected wholesale rather than merged field by
+  field. The two stores keep their intentionally different shapes.
+- **Shared trainer keydown handler. — still declined.** Re-confirmed 2026-07-25:
+  `handleTrainerKeydown` has exactly one consumer, `showdown.component.ts`. The
+  Flow redesign replaced the drill pages' Enter-to-deal skeleton with
+  flash/any-key-continues semantics, so there is no shared skeleton left to
+  extract.
+- **Unified signed-integer formatter. — still declined.** `formatTrueCount`
+  (`deviation-evaluator.service.ts`) and the count-feedback `deltaLabel` format
+  different domains (a true count vs a per-card counting value). Two one-line
+  expressions with no shared meaning; merging them would couple unrelated
+  domains to save nothing. **Recommend leaving as-is.**
 
 ## 6. Things Not Worth Refactoring Yet
 
