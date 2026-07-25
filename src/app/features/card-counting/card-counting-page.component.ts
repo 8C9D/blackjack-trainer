@@ -135,6 +135,7 @@ type DrillState =
               [shoe]="shoe!"
               [ruleSet]="ruleSet()"
               [spots]="showdownSpots()"
+              [betting]="showdownBetting()"
               (exit)="exitShowdown($event)"
             />
           }
@@ -182,6 +183,7 @@ export class CardCountingPageComponent {
     const {
       systemId: _systemId,
       showdownSpots: _showdownSpots,
+      showdownBetting: _showdownBetting,
       ...settings
     } = this.prefs.prefs().counting;
     return settings;
@@ -189,6 +191,9 @@ export class CardCountingPageComponent {
 
   // Boxes the post-count showdown deals to, from the Settings screen.
   protected readonly showdownSpots = computed(() => this.prefs.prefs().counting.showdownSpots);
+
+  // Whether the showdown opens each round on a bet, from the Settings screen.
+  protected readonly showdownBetting = computed(() => this.prefs.prefs().counting.showdownBetting);
 
   protected readonly system = computed<CountingSystem>(
     () => COUNTING_SYSTEMS.find((s) => s.id === this.prefs.prefs().counting.systemId) ?? HI_LO,

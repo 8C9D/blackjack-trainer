@@ -151,6 +151,14 @@ import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.mo
               }
             </select>
           </label>
+          <label class="settings__check">
+            <input
+              type="checkbox"
+              [checked]="showdownBetting()"
+              (change)="onShowdownBettingChange($event)"
+            />
+            <span>Bet sizing (bankroll)</span>
+          </label>
         }
       }
       @if (errors().length > 0) {
@@ -183,6 +191,8 @@ export class CountingSettingsComponent {
   // Boxes the post-count showdown deals to. Only reachable from the live-shoe
   // true-count path, which is the only place the showdown is offered.
   readonly showdownSpots = input(1);
+  // Bet sizing: each showdown round opens on a bet, settled against a bankroll.
+  readonly showdownBetting = input(false);
   readonly errors = input<readonly string[]>([]);
   readonly disabled = input(false);
 
@@ -195,6 +205,7 @@ export class CountingSettingsComponent {
   readonly numberOfDecksChange = output<number>();
   readonly penetrationChange = output<number>();
   readonly showdownSpotsChange = output<number>();
+  readonly showdownBettingChange = output<boolean>();
 
   protected readonly spotOptions = SHOWDOWN_SPOT_OPTIONS;
 
@@ -233,6 +244,10 @@ export class CountingSettingsComponent {
 
   protected onShowdownSpotsChange(event: Event): void {
     this.showdownSpotsChange.emit(clampSpots(Number((event.target as HTMLSelectElement).value)));
+  }
+
+  protected onShowdownBettingChange(event: Event): void {
+    this.showdownBettingChange.emit((event.target as HTMLInputElement).checked);
   }
 
   // Half-deck presets render as e.g. "0.5"; whole decks render as e.g. "1".

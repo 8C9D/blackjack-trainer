@@ -7,7 +7,7 @@ import { expect, type Page } from '@playwright/test';
 
 // Shrink the counting drill to a fast live-shoe true-count rep, and pick how
 // many boxes the post-count showdown deals to.
-export async function configureCounting(page: Page, spots: string): Promise<void> {
+export async function configureCounting(page: Page, spots: string, betting = false): Promise<void> {
   await page.goto('/settings');
   await page.getByLabel('Number of cards').fill('3');
   await page.getByLabel('Time between cards (ms)').fill('100');
@@ -16,6 +16,7 @@ export async function configureCounting(page: Page, spots: string): Promise<void
     .getByRole('radio', { name: 'True count', exact: true })
     .check();
   await page.getByLabel('Showdown hands').selectOption(spots);
+  if (betting) await page.getByLabel('Bet sizing (bankroll)').check();
 }
 
 // Run one live-shoe true-count rep, ending on the feedback screen where the

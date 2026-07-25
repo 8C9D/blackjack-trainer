@@ -10,6 +10,13 @@ import {
 } from '@angular/core';
 
 import { ACTION_KEY_HINTS, handleTrainerKeydown } from '../../core/keyboard';
+import {
+  BET_OPTIONS,
+  MIN_BET,
+  clampBet,
+  handPayout,
+  stakeFor,
+} from '../../core/models/bankroll.model';
 import { cardHighValue, isAce, type Card } from '../../core/models/card.model';
 import { handTotal, isBlackjack, isBust } from '../../core/models/hand.model';
 import { Shoe } from '../../core/models/shoe.model';
@@ -23,11 +30,14 @@ import {
 } from '../../core/models/showdown.model';
 import { ACTION_LABELS, type Action, type RuleSet } from '../../core/models/strategy.model';
 import { CardImageComponent } from '../../shared/card-image.component';
+import { BankrollService } from '../../core/services/bankroll.service';
 import { ShowdownStatsService } from '../../core/services/showdown-stats.service';
 
 // 'player-turn': the player is acting on the active hand. 'resolved': every hand
 // is settled and the dealer hand revealed. 'exhausted': the shoe ran too low.
-type ShowdownPhase = 'player-turn' | 'resolved' | 'exhausted';
+// 'betting' only occurs when bet sizing is on: the round waits for a bet before
+// any card is dealt, which is the whole point of practising against the count.
+type ShowdownPhase = 'betting' | 'player-turn' | 'resolved' | 'exhausted';
 
 // Most a pair can be split to (3 splits → 4 hands), the common casino cap. The
 // cap is per box: occupying three boxes does not shrink any one box's splits.
@@ -41,6 +51,10 @@ interface PlayerHand {
   // Which box (0-based) this hand belongs to. Splits stay in their box, so the
   // four-hand cap counts only the hands sharing a box.
   readonly box: number;
+  // Chips this hand has up. Every box posts the round's bet, and a split puts a
+  // second bet on the new hand — so a split doubles the box's exposure, exactly
+  // as at a table. Zero when betting is off.
+  readonly bet: number;
   // Doubled: took exactly one card at a doubled stake.
   readonly doubled: boolean;
   // A split-ace hand takes exactly one card, then stands (no hit/double/re-split).
@@ -56,11 +70,18 @@ interface PlayerHand {
 
 function freshHand(
   cards: readonly Card[],
-  box: number,
-  isSplitAce = false,
-  fromSplit = false,
+  origin: { box: number; bet: number; isSplitAce?: boolean; fromSplit?: boolean },
 ): PlayerHand {
-  return { cards, box, doubled: false, isSplitAce, fromSplit, done: false, settlement: null };
+  return {
+    cards,
+    box: origin.box,
+    bet: origin.bet,
+    doubled: false,
+    isSplitAce: origin.isSplitAce ?? false,
+    fromSplit: origin.fromSplit ?? false,
+    done: false,
+    settlement: null,
+  };
 }
 
 // Post-count showdown: deals one to three boxes from the persistent shoe the
@@ -81,10 +102,65 @@ function freshHand(
         </h2>
       </header>
 
+      @if (betting()) {
+        <p class="showdown__bankroll">
+          Bankroll <strong>{{ chips(bankrollService.bankroll()) }}</strong>
+          @if (bankrollService.state().wagered > 0) {
+            <span class="showdown__bankroll-net">
+              (wagered {{ chips(bankrollService.state().wagered) }}, net
+              {{ signedChips(bankrollService.state().net) }})
+            </span>
+          }
+        </p>
+      }
+
       @if (phase() === 'exhausted') {
         <p class="showdown__exhausted" role="status">
           The shoe is too low to deal a hand. Return to counting to reshuffle.
         </p>
+      } @else if (phase() === 'betting') {
+        @if (bankrollService.bustedOut()) {
+          <p class="showdown__exhausted" role="status">
+            Out of chips. Reset the bankroll to keep practising.
+          </p>
+          <button type="button" class="showdown__next" (click)="resetBankroll()">
+            Reset bankroll
+          </button>
+        } @else {
+          <div class="showdown__betting">
+            <p class="showdown__bet-prompt">
+              {{
+                spots() > 1
+                  ? 'Size the bet for each of the ' + spots() + ' boxes.'
+                  : 'Size the bet before the deal.'
+              }}
+            </p>
+            <div class="showdown__bets" role="group" aria-label="Bet size">
+              @for (option of betOptions; track option) {
+                <button
+                  type="button"
+                  class="showdown__bet"
+                  [class.showdown__bet--active]="option === bet()"
+                  [attr.aria-pressed]="option === bet()"
+                  [disabled]="!betAffordable(option)"
+                  (click)="setBet(option)"
+                >
+                  {{ option }}
+                </button>
+              }
+            </div>
+            <p class="showdown__note">
+              {{
+                spots() > 1
+                  ? 'Total at risk this round: ' + chips(bet() * spots())
+                  : 'At risk this round: ' + chips(bet())
+              }}
+            </p>
+            <button type="button" class="showdown__next" (click)="dealAfterBet()">
+              Deal <span class="showdown__hint">[Enter]</span>
+            </button>
+          </div>
+        }
       } @else {
         <div class="showdown__table">
           <section class="showdown__hand" aria-label="Dealer hand">
@@ -115,6 +191,9 @@ function freshHand(
               <h3 class="showdown__label">
                 {{ hands().length > 1 ? 'Hand ' + (i + 1) : 'You' }}
                 <span class="showdown__total">({{ total(h) }})</span>
+                @if (betting()) {
+                  <span class="showdown__stake">{{ chips(stake(h)) }}</span>
+                }
               </h3>
               <div class="showdown__cards">
                 @for (c of h.cards; track $index) {
@@ -130,6 +209,9 @@ function freshHand(
                   role="status"
                 >
                   {{ verdict(h) }}
+                  @if (betting()) {
+                    <span class="showdown__payout">{{ signedChips(payout(h)) }}</span>
+                  }
                 </p>
               }
             </section>
@@ -149,7 +231,12 @@ function freshHand(
         @if (phase() === 'resolved') {
           <section class="showdown__result" role="status">
             @if (roundSummary(); as summary) {
-              <p class="showdown__summary">{{ summary }}</p>
+              <p class="showdown__summary">
+                {{ summary }}
+                @if (betting()) {
+                  <span class="showdown__payout">{{ signedChips(roundNet()) }}</span>
+                }
+              </p>
             }
             <button
               type="button"
@@ -184,6 +271,8 @@ export class ShowdownComponent implements OnInit {
   // Records win/loss tallies under its pre-Flow key even though the Flow UI
   // no longer surfaces them.
   protected readonly stats = inject(ShowdownStatsService);
+  // The persisted chip position, only touched when betting is on.
+  protected readonly bankrollService = inject(BankrollService);
 
   // The persistent shoe the player just counted; the showdown deals from it so
   // its depletion carries back to the counting drill.
@@ -191,6 +280,10 @@ export class ShowdownComponent implements OnInit {
   readonly ruleSet = input.required<RuleSet>();
   // Boxes to occupy on the opening deal (1–3). One dealer plays against all.
   readonly spots = input(1, { transform: clampSpots });
+  // Bet sizing: when on, each round opens on a bet and settles against a
+  // persisted bankroll. Off (the default) the showdown is the pure hand tally it
+  // has always been, and no chip figure is shown.
+  readonly betting = input(false);
 
   // Emitted when the player returns to the counting drill, carrying every card
   // this showdown dealt (in order) so the drill can fold their running-count
@@ -204,6 +297,11 @@ export class ShowdownComponent implements OnInit {
   protected readonly activeIndex = signal(0);
   protected readonly dealerCards = signal<readonly Card[]>([]);
   protected readonly phase = signal<ShowdownPhase>('player-turn');
+  // The bet each box posts for the coming round. Starts at the table minimum so
+  // the spread is the player's decision, not a default.
+  protected readonly bet = signal(MIN_BET);
+  // Net chips of the round just resolved, for the result line.
+  protected readonly roundNet = signal(0);
   // Mirror of the shoe's remaining card count, refreshed after every draw so the
   // "deal another" gate reacts to depletion.
   protected readonly remaining = signal(0);
@@ -212,11 +310,28 @@ export class ShowdownComponent implements OnInit {
     () => this.hands()[this.activeIndex()] ?? null,
   );
 
+  // Chips already committed to the felt this round. Only the bankroll's free
+  // chips can back another bet, so a double or split has to fit inside them.
+  protected readonly committed = computed(() =>
+    this.hands().reduce((sum, h) => sum + stakeFor(h.bet, h.doubled), 0),
+  );
+  private canPostAnotherBet(h: PlayerHand): boolean {
+    if (!this.betting()) return true;
+    return this.bankrollService.bankroll() - this.committed() >= h.bet;
+  }
+
   // Actions apply to the active hand. Double: any fresh two-card hand (including
-  // after a split). Split: a fresh two-card pair, under the four-hand cap.
+  // after a split), if the bankroll can back the second bet. Split: a fresh
+  // two-card pair, under the box's four-hand cap, likewise backed.
   protected readonly canDouble = computed(() => {
     const h = this.activeHand();
-    return this.phase() === 'player-turn' && h !== null && h.cards.length === 2 && !h.isSplitAce;
+    return (
+      this.phase() === 'player-turn' &&
+      h !== null &&
+      h.cards.length === 2 &&
+      !h.isSplitAce &&
+      this.canPostAnotherBet(h)
+    );
   });
   protected readonly canSplit = computed(() => {
     const h = this.activeHand();
@@ -227,7 +342,8 @@ export class ShowdownComponent implements OnInit {
       !h.isSplitAce &&
       isPair(h.cards) &&
       this.handsInBox(h.box) < MAX_HANDS_PER_BOX &&
-      this.remaining() >= 1
+      this.remaining() >= 1 &&
+      this.canPostAnotherBet(h)
     );
   });
   protected readonly playerActions = computed<readonly Action[]>(() => {
@@ -270,6 +386,26 @@ export class ShowdownComponent implements OnInit {
     return handTotal(h.cards);
   }
 
+  protected stake(h: PlayerHand): number {
+    return stakeFor(h.bet, h.doubled);
+  }
+
+  // Chips a settled hand returned. Zero until it settles.
+  protected payout(h: PlayerHand): number {
+    return h.settlement ? handPayout(h.settlement, h.bet, h.doubled) : 0;
+  }
+
+  // Chip figures carry no currency symbol — they are units, and a 3:2 on an odd
+  // bet is a genuine half chip, so only the halves get a decimal.
+  protected chips(value: number): string {
+    return Number.isInteger(value) ? String(value) : value.toFixed(1);
+  }
+
+  protected signedChips(value: number): string {
+    if (value === 0) return 'even';
+    return (value > 0 ? '+' : '−') + this.chips(Math.abs(value));
+  }
+
   // How many hands the given box currently holds — one until it splits.
   private handsInBox(box: number): number {
     return this.hands().filter((h) => h.box === box).length;
@@ -285,7 +421,44 @@ export class ShowdownComponent implements OnInit {
 
   ngOnInit(): void {
     this.remaining.set(this.shoe().cardsRemaining);
+    if (this.betting()) {
+      // Size the bet before seeing a card — the count just practised is the only
+      // information the decision should rest on.
+      this.bet.set(this.clampedBet(MIN_BET));
+      this.phase.set('betting');
+      return;
+    }
     this.dealHand();
+  }
+
+  // Keep a bet inside both the table minimum and what the bankroll can back
+  // across every occupied box.
+  private clampedBet(value: number): number {
+    return clampBet(value, this.bankrollService.bankroll() / this.spots());
+  }
+
+  protected readonly betOptions = BET_OPTIONS;
+
+  // A bet option the bankroll cannot back across every box is offered disabled,
+  // so the ladder stays legible as the stack shrinks.
+  protected betAffordable(option: number): boolean {
+    return option * this.spots() <= this.bankrollService.bankroll();
+  }
+
+  protected setBet(value: number): void {
+    if (this.phase() !== 'betting') return;
+    this.bet.set(this.clampedBet(value));
+  }
+
+  protected dealAfterBet(): void {
+    if (this.phase() !== 'betting') return;
+    this.dealHand();
+  }
+
+  protected resetBankroll(): void {
+    this.bankrollService.reset();
+    this.bet.set(this.clampedBet(MIN_BET));
+    this.phase.set('betting');
   }
 
   protected onAction(action: Action): void {
@@ -295,7 +468,19 @@ export class ShowdownComponent implements OnInit {
     else if (action === 'P') this.split();
   }
 
+  // Between rounds, betting returns to the bet: the count has moved on, so the
+  // spread should be reconsidered rather than silently repeated.
   protected dealAnother(): void {
+    if (this.betting()) {
+      if (this.bankrollService.bustedOut()) return;
+      // Clear the settled round before the next bet, so nothing on the felt (or
+      // in `committed`) belongs to a hand that is already paid.
+      this.hands.set([]);
+      this.dealerCards.set([]);
+      this.bet.set(this.clampedBet(this.bet()));
+      this.phase.set('betting');
+      return;
+    }
     this.dealHand();
   }
 
@@ -314,7 +499,9 @@ export class ShowdownComponent implements OnInit {
     for (const box of boxes) box.push(this.draw()!);
     dealer.push(this.draw()!);
 
-    this.hands.set(boxes.map((cards, box) => freshHand(cards, box)));
+    const bet = this.betting() ? this.bet() : 0;
+    this.roundNet.set(0);
+    this.hands.set(boxes.map((cards, box) => freshHand(cards, { box, bet })));
     this.dealerCards.set(dealer);
     this.activeIndex.set(0);
     this.phase.set('player-turn');
@@ -342,6 +529,11 @@ export class ShowdownComponent implements OnInit {
     const result = settle(hand.cards, dealer, hand.fromSplit ? false : isBlackjack(hand.cards));
     this.updateHand(i, (h) => ({ ...h, done: true, settlement: result }));
     this.stats.record(result.outcome, result.playerBlackjack);
+    if (this.betting()) {
+      const payout = handPayout(result, hand.bet, hand.doubled);
+      this.bankrollService.record(stakeFor(hand.bet, hand.doubled), payout);
+      this.roundNet.update((net) => net + payout);
+    }
   }
 
   private hit(): void {
@@ -382,14 +574,15 @@ export class ShowdownComponent implements OnInit {
   private split(): void {
     if (!this.canSplit()) return;
     const i = this.activeIndex();
-    const { cards, box } = this.hands()[i];
+    const { cards, box, bet } = this.hands()[i];
     const [a, b] = cards;
     const splitAce = isAce(a);
-    // Both halves stay in the box that split, so the box keeps its own cap.
+    // Both halves stay in the box that split, so the box keeps its own cap, and
+    // each carries the box's bet — a split posts a second one.
     this.hands.update((hs) => [
       ...hs.slice(0, i),
-      freshHand([a], box, splitAce, true),
-      freshHand([b], box, splitAce, true),
+      freshHand([a], { box, bet, isSplitAce: splitAce, fromSplit: true }),
+      freshHand([b], { box, bet, isSplitAce: splitAce, fromSplit: true }),
       ...hs.slice(i + 1),
     ]);
     // Deal the active (first) split hand its second card and continue.
@@ -482,8 +675,13 @@ export class ShowdownComponent implements OnInit {
   @HostListener('window:keydown', ['$event'])
   protected onKeyDown(event: KeyboardEvent): void {
     handleTrainerKeydown(event, {
-      canNext: () => this.phase() === 'resolved' && this.canDealAnother(),
-      onNext: () => this.dealAnother(),
+      // Enter deals: from the bet when betting is on, or straight into the next
+      // round when it is off.
+      canNext: () =>
+        this.phase() === 'betting'
+          ? !this.bankrollService.bustedOut()
+          : this.phase() === 'resolved' && this.canDealAnother(),
+      onNext: () => (this.phase() === 'betting' ? this.dealAfterBet() : this.dealAnother()),
       onAction: (action) => {
         if (this.phase() === 'player-turn') this.onAction(action);
       },

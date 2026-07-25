@@ -29,6 +29,81 @@
     font-size: 0.9rem;
   }
 
+  // Chip position, shown only when bet sizing is on.
+  &__bankroll {
+    margin: 0 0 1rem;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__bankroll-net {
+    color: var(--ink-2);
+  }
+
+  &__betting {
+    margin-bottom: 1rem;
+  }
+
+  &__bet-prompt {
+    margin: 0 0 0.6rem;
+    font-size: 0.95rem;
+  }
+
+  &__bets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+  }
+
+  &__bet {
+    min-width: 3rem;
+    background: var(--raised);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    color: var(--ink);
+    padding: 0.5rem 0.9rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--raised-hover);
+    }
+
+    &--active {
+      border-color: var(--accent-edge-strong);
+      background: var(--accent-tint);
+      color: var(--accent-ink);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+  }
+
+  // The chips a hand has up, beside its total.
+  &__stake {
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    background: var(--accent-tint);
+    color: var(--accent-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__payout {
+    margin-left: 0.4rem;
+    font-variant-numeric: tabular-nums;
+  }
+
   &__table {
     display: flex;
     flex-direction: column;

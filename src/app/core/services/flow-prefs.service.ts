@@ -49,6 +49,10 @@ export interface CountingPrefs {
   readonly penetration: number;
   // Boxes the player occupies in the optional post-count showdown (1–3).
   readonly showdownSpots: number;
+  // Bet sizing in the showdown: each round opens on a bet and settles against a
+  // persisted bankroll. Off by default — the showdown stays a pure hand tally
+  // until the player asks to practise spreading.
+  readonly showdownBetting: boolean;
 }
 
 export interface FlowPrefs {
@@ -87,6 +91,7 @@ export const DEFAULT_FLOW_PREFS: FlowPrefs = {
     numberOfDecks: DEFAULT_NUMBER_OF_DECKS,
     penetration: DEFAULT_PENETRATION,
     showdownSpots: 1,
+    showdownBetting: false,
   },
 };
 
@@ -199,6 +204,7 @@ export function mergePrefs(parsed: unknown): FlowPrefs {
       numberOfDecks: num(cnt['numberOfDecks'], d.counting.numberOfDecks),
       penetration: num(cnt['penetration'], d.counting.penetration),
       showdownSpots: clampSpots(num(cnt['showdownSpots'], d.counting.showdownSpots)),
+      showdownBetting: bool(cnt['showdownBetting'], d.counting.showdownBetting),
     },
   };
 }
