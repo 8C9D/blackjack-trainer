@@ -100,8 +100,10 @@ final class CardCountingFlowModel {
         counting.enterShowdown()
     }
 
-    func exitShowdown() {
-        counting.exitShowdown()
+    /// Carries the showdown's dealt cards through so the drill can fold their
+    /// running-count value into its carried count.
+    func exitShowdown(_ dealtCards: [Card]) {
+        counting.exitShowdown(dealtCards)
     }
 
     func exit() {
@@ -236,8 +238,8 @@ struct CardCountingFlowView: View {
                 ruleSet: model.ruleSet,
                 stats: model.counting.showdownStatsStore,
                 spots: model.counting.showdownSpots
-            ) {
-                model.exitShowdown()
+            ) { dealtCards in
+                model.exitShowdown(dealtCards)
             }
         }
     }

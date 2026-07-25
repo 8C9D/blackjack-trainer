@@ -127,6 +127,18 @@ struct ShowdownMultiBoxTests {
         #expect(model.spots == 3)
     }
 
+    @Test func accumulatesEveryDealtCardForTheCountCarryBack() {
+        // The drill folds these cards' running-count value into its carried count
+        // on exit, so the opening round must hand back all six in dealing order.
+        let cards = [
+            card(.nine), card(.eight), card(.ten), card(.seven), card(.four), card(.six)
+        ]
+        let model = ShowdownModel(shoe: stacked(cards), ruleSet: .s17, stats: store(), spots: 2)
+        #expect(model.dealtCards.map(\.rank) == [.nine, .eight, .ten, .seven, .four, .six])
+        model.onAction(.hit) // one more card off the shoe joins the tally
+        #expect(model.dealtCards.count == 7)
+    }
+
     @Test func givesEachBoxItsOwnFourHandSplitCap() {
         // Three boxes each dealt 8,8. Splitting box 1 must not spend box 2's
         // allowance — the cap is four hands per box, not four across the table.

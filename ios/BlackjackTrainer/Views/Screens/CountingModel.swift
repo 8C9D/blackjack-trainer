@@ -200,8 +200,19 @@ final class CountingModel {
         state = .showdown
     }
 
-    func exitShowdown() {
+    /// Return to the count-drill feedback; the shoe keeps whatever depletion the
+    /// showdown caused, so the next round reshuffles if it has crossed the cut.
+    /// The showdown's dealt cards really left the shoe, so fold their
+    /// running-count value into the carried count: otherwise the next round's
+    /// numerator (carried count, missing these cards) and denominator (decks
+    /// remaining, already reduced by them) disagree, and a trainee who counted the
+    /// visible showdown cards is graded wrong. A reshuffle next round resets the
+    /// count to 0 anyway.
+    func exitShowdown(_ showdownCards: [Card]) {
         guard state == .showdown else { return }
+        if !showdownCards.isEmpty {
+            shoeRunningCount += engine.runningCount(showdownCards, system: system)
+        }
         state = .feedback
     }
 

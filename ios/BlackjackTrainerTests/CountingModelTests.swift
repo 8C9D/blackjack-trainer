@@ -72,6 +72,38 @@ struct CountingModelTests {
         model.cancel()
     }
 
+    /// The showdown's cards really leave the shoe, so their running-count value
+    /// has to join the carried count. Otherwise the next round's numerator (the
+    /// carried count, missing them) and denominator (decks remaining, already
+    /// reduced by them) disagree, and a trainee who counted the visible showdown
+    /// cards is graded wrong. Mirrors the web `exitShowdown`.
+    @Test func exitingAShowdownFoldsItsDealtCardsIntoTheCarriedCount() async throws {
+        let model = try make(random: { 0 })
+        model.settings.mode = .trueCount
+        model.settings.trueCountSource = .liveShoe
+        model.settings.numberOfCards = 3
+        model.settings.numberOfDecks = 1
+        model.settings.millisecondsBetweenCards = 100
+
+        model.start()
+        try await waitForState(model, .estimating)
+        model.onEstimate(1.0)
+        model.answer(0)
+        let carried = model.shoeRunningCount
+
+        model.enterShowdown()
+        // Hi-Lo: 5 → +1, 6 → +1, K → −1, so the carried count gains exactly 1.
+        let dealt = [
+            Card(rank: .five, suit: .spades),
+            Card(rank: .six, suit: .hearts),
+            Card(rank: .king, suit: .clubs)
+        ]
+        model.exitShowdown(dealt)
+        #expect(model.state == .feedback)
+        #expect(model.shoeRunningCount == carried + 1)
+        model.cancel()
+    }
+
     @Test func liveShoeRoundEstimatesAnswersAndOffersShowdown() async throws {
         let model = try make(random: { 0 })
         model.settings.mode = .trueCount
@@ -101,7 +133,7 @@ struct CountingModelTests {
         #expect(model.showdownAvailable)
         model.enterShowdown()
         #expect(model.state == .showdown)
-        model.exitShowdown()
+        model.exitShowdown([])
         #expect(model.state == .feedback)
         model.cancel()
     }

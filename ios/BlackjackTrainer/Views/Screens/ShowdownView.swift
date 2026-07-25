@@ -3,12 +3,13 @@ import SwiftUI
 /// The showdown sub-screen, shown after a live-shoe true-count round.
 struct ShowdownView: View {
     @State private var model: ShowdownModel
-    let onExit: () -> Void
+    /// Carries every card this showdown dealt back to the counting drill.
+    let onExit: ([Card]) -> Void
 
     @Environment(\.hasHardwareKeyboard) private var hasHardwareKeyboard
 
     init(shoe: Shoe, ruleSet: RuleSet, stats: ShowdownStatsStore, spots: Int = 1,
-         onExit: @escaping () -> Void) {
+         onExit: @escaping ([Card]) -> Void) {
         _model = State(initialValue: ShowdownModel(
             shoe: shoe, ruleSet: ruleSet, stats: stats, spots: spots
         ))
@@ -43,7 +44,7 @@ struct ShowdownView: View {
                 }
             }
 
-            Button("Back to counting", action: onExit)
+            Button("Back to counting") { onExit(model.dealtCards) }
                 .buttonStyle(.bordered)
                 .tint(Theme.accentInk)
         }
