@@ -105,6 +105,17 @@ describe('FlowPrefsService', () => {
       // Prefs written before the setting existed fall back to a single box.
       expect(mergePrefs({ dailyGoal: 15 }).counting.showdownSpots).toBe(1);
     });
+
+    it('keeps showdown bet sizing off unless it was explicitly turned on', () => {
+      expect(mergePrefs({ counting: { showdownBetting: true } }).counting.showdownBetting).toBe(
+        true,
+      );
+      expect(mergePrefs({ counting: { showdownBetting: 'yes' } }).counting.showdownBetting).toBe(
+        false,
+      );
+      // Prefs written before the setting existed stay on the pure hand tally.
+      expect(mergePrefs({ dailyGoal: 15 }).counting.showdownBetting).toBe(false);
+    });
   });
 
   describe('clampGoal', () => {

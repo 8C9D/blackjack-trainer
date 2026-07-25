@@ -168,9 +168,23 @@ dealer`. There is no next slice; **Next slice** is `none (roadmap complete)`.
 The Slice 9 write-up below deferred **Option B** (multi-hand) and the
 splits/doubles half of **Option C**. Both have since shipped:
 
-- **Doubles and splits** (Option C, minus bankroll/bet sizing, which stays out
-  of scope) — `feat: add showdown doubles and splits, with audit and iOS cleanup
-fixes`.
+- **Doubles and splits** (Option C, minus bankroll/bet sizing) — `feat: add
+showdown doubles and splits, with audit and iOS cleanup fixes`.
+- **Bankroll and bet sizing** (the rest of Option C, 2026-07-25) — the showdown
+  can now be played for chips, behind Settings → Card counting → _Bet sizing
+  (bankroll)_ (**off by default**, so the showdown stays the pure hand tally
+  unless asked). A round opens on a bet before any card is dealt — the count just
+  practised is the only information the decision rests on — every box posts that
+  bet, and a double or split posts a second one. Settlement pays the stake on a
+  win, 3:2 **on the bet** for a natural, returns it on a push, and forfeits it on
+  a loss, against a persisted 500-chip bankroll (`blackjack-showdown-bankroll`).
+  Chips are abstract units, not currency: the drill is the _ratio_ of bet to
+  bankroll. A bet the bankroll cannot back across every box is not offered, a
+  double or split that cannot be backed is withheld, and busting out offers a
+  reset. The payout and bet-clamp math is pure (`core/models/bankroll.model.ts`),
+  ported to `ios/BlackjackTrainer/Engine/Bankroll.swift`, and pinned by new
+  `payoutCases` / `betClampCases` parity vectors (`showdown-vectors/3`).
+  Surrender and insurance remain out of scope.
 - **Multi-hand** (Option B, 2026-07-25) — the showdown now deals **one to three
   simultaneous boxes** against a single dealer, configured by
   `counting.showdownSpots` in flow prefs (Settings → Card counting → _Showdown
@@ -184,6 +198,35 @@ fixes`.
   were the only way to get multiple hands. Multiple boxes break that inference
   (a natural in box 2 would have been denied its 3:2), so the flag is now
   tracked per hand as `fromSplit` on both platforms.
+
+### Bugs found reviewing the multi-box work (2026-07-25)
+
+Three defects surfaced while reviewing and exercising the multi-box showdown.
+Each was reproduced with a failing test (or a render) before the fix, and each
+was fixed on both platforms where it applied.
+
+- **The four-hand split cap counted the whole table, not the box.** `MAX_HANDS`
+  (web) / `maxHands` (Swift) compared against `hands.length`, which was the
+  box's own hand count only while there was one box. With three boxes occupied
+  the table opened at three hands, so a single split exhausted the cap and a
+  fresh 8,8 in box 2 was refused. Hands now carry their `box`, and the cap —
+  renamed `MAX_HANDS_PER_BOX` / `maxHandsPerBox` — counts only the hands sharing
+  that box. A split's two halves stay in the box that split.
+- **iOS never folded the showdown's cards into the carried running count.** The
+  web hands every dealt card back on exit so the next true-count round's
+  numerator and denominator agree; `ShowdownModel` tracked no such list and
+  `CountingModel.exitShowdown()` took no argument, so an iOS trainee who counted
+  the visible showdown cards was graded wrong on the following round. The model
+  now accumulates `dealtCards` and the exit carries them through.
+- **Two contrast failures.** The showdown's `[Enter]` key hint sat at 3.84:1 on
+  the accent fill (AA wants 4.5:1 at that size) — the a11y E2E only measured
+  each route's opening state, so the showdown was never sampled; it now walks
+  into the showdown in both themes. On iOS, `.borderedProminent` was left to
+  pick its own label colour: white on `Theme.raised` (a light surface in the
+  light theme) made every drill's Hit/Stand/Double/Split labels near-invisible,
+  and white on the amber accent fill failed AA in both themes. Filled buttons
+  now state their label colour, via a shared `accentFilledButton()` modifier
+  pairing the accent fill with `onAccent`, exactly as the web does.
 
 What Slice 9 added (Option A, as locked above):
 

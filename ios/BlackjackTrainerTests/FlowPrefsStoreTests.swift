@@ -111,12 +111,23 @@ struct FlowPrefsStoreTests {
         #expect(FlowPrefs.merged(from: ["dailyGoal": 15]).counting.showdownSpots == 1)
     }
 
+    @Test func keepsShowdownBetSizingOffUnlessTurnedOn() {
+        #expect(FlowPrefs.merged(from: ["counting": ["showdownBetting": true]])
+            .counting.showdownBetting)
+        #expect(!FlowPrefs.merged(from: ["counting": ["showdownBetting": "yes"]])
+            .counting.showdownBetting)
+        // Prefs written before the setting existed stay on the pure hand tally.
+        #expect(!FlowPrefs.merged(from: ["dailyGoal": 15]).counting.showdownBetting)
+    }
+
     @Test func roundTripsTheThemeAndBoxCountThroughTheStoredShape() {
         var prefs = FlowPrefs.default
         prefs.theme = .light
         prefs.counting.showdownSpots = 2
+        prefs.counting.showdownBetting = true
         let restored = FlowPrefs.merged(from: prefs.jsonObject)
         #expect(restored.theme == .light)
         #expect(restored.counting.showdownSpots == 2)
+        #expect(restored.counting.showdownBetting)
     }
 }
