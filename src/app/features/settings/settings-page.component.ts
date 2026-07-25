@@ -190,6 +190,7 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
           [penetrationPresets]="penetrationPresets"
           [liveDecksRemaining]="prefs().counting.numberOfDecks"
           [showdownSpots]="prefs().counting.showdownSpots"
+          [showdownBetting]="prefs().counting.showdownBetting"
           [errors]="countingErrors()"
           (systemChange)="onSystemChange($event)"
           (modeChange)="updateCounting({ mode: $event })"
@@ -200,6 +201,7 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
           (numberOfDecksChange)="updateCounting({ numberOfDecks: $event })"
           (penetrationChange)="updateCounting({ penetration: $event })"
           (showdownSpotsChange)="updateCounting({ showdownSpots: $event })"
+          (showdownBettingChange)="updateCounting({ showdownBetting: $event })"
         />
       </section>
     </main>
@@ -308,6 +310,7 @@ export class SettingsPageComponent {
       numberOfDecks: number;
       penetration: number;
       showdownSpots: number;
+      showdownBetting: boolean;
     }>,
   ): void {
     this.prefsService.updateCounting(partial);

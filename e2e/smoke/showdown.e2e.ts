@@ -71,4 +71,45 @@ test.describe('post-count showdown', () => {
     await expect(page.getByRole('region', { name: 'Showdown vs dealer' })).toBeHidden();
     await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1');
   });
+
+  // Bet sizing: the round opens on a bet and settles against a persisted
+  // bankroll. Which hands win is the shoe's business, so these assert the flow
+  // and that the chip figure moves — never a particular result.
+  test('a bet is placed before the deal and settled against the bankroll', async ({ page }) => {
+    await configureCounting(page, '1', true);
+    await runCountingRound(page);
+    await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+
+    // Nothing is dealt until a bet is placed.
+    const bets = page.getByRole('group', { name: 'Bet size' });
+    await expect(bets).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Player actions' })).toBeHidden();
+    await expect(page.locator('.showdown__bankroll')).toContainText('500');
+
+    await bets.getByRole('button', { name: '25', exact: true }).click();
+    await page.getByRole('button', { name: /^Deal/ }).click();
+
+    // The hand is on the felt with its stake shown.
+    await expect(page.getByRole('region', { name: 'Your hand' })).toBeVisible();
+    await expect(page.locator('.showdown__stake').first()).toHaveText('25');
+
+    await standEveryBox(page);
+    await expect(page.getByRole('button', { name: /Deal another hand/ })).toBeVisible();
+    // 25 at risk: the bankroll settled to a win, a loss, or a push.
+    await expect(page.locator('.showdown__bankroll')).toContainText(/500|525|475|537.5/);
+
+    // The next round returns to the bet rather than dealing straight on.
+    await page.getByRole('button', { name: /Deal another hand/ }).click();
+    await expect(page.getByRole('group', { name: 'Bet size' })).toBeVisible();
+  });
+
+  test('betting stays off unless Settings asks for it', async ({ page }) => {
+    await configureCounting(page, '1');
+    await runCountingRound(page);
+    await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+    // Straight to the turn, with no chip figure anywhere.
+    await expect(page.getByRole('group', { name: 'Player actions' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Bet size' })).toBeHidden();
+    await expect(page.locator('.showdown__bankroll')).toHaveCount(0);
+  });
 });

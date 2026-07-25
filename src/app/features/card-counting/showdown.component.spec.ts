@@ -5,12 +5,15 @@ import { Shoe } from '../../core/models/shoe.model';
 import type { Settlement } from '../../core/models/showdown.model';
 import type { Action, RuleSet } from '../../core/models/strategy.model';
 import type { ShowdownStats } from '../../core/services/showdown-stats.service';
+import type { BankrollState } from '../../core/services/bankroll.service';
 import { ShowdownComponent } from './showdown.component';
 
 // Protected signals/methods are plain properties at runtime; this mirror lets
 // the tests drive the hand without scattering `as any`.
 type PlayerHandView = {
   cards: readonly Card[];
+  box: number;
+  bet: number;
   doubled: boolean;
   isSplitAce: boolean;
   fromSplit: boolean;
@@ -19,7 +22,18 @@ type PlayerHandView = {
 };
 
 type Internals = {
-  phase(): 'player-turn' | 'resolved' | 'exhausted';
+  phase(): 'betting' | 'player-turn' | 'resolved' | 'exhausted';
+  bet(): number;
+  roundNet(): number;
+  committed(): number;
+  setBet(v: number): void;
+  dealAfterBet(): void;
+  resetBankroll(): void;
+  betAffordable(option: number): boolean;
+  stake(h: PlayerHandView): number;
+  payout(h: PlayerHandView): number;
+  signedChips(v: number): string;
+  bankrollService: { bankroll(): number; state(): BankrollState; bustedOut(): boolean };
   playerCards(): readonly Card[];
   dealerCards(): readonly Card[];
   settlement(): Settlement | null;
@@ -49,11 +63,13 @@ function createShowdown(
   shoe: Shoe,
   ruleSet: RuleSet = 'S17',
   spots = 1,
+  betting = false,
 ): { fixture: ComponentFixture<ShowdownComponent>; c: Internals } {
   const fixture = TestBed.createComponent(ShowdownComponent);
   fixture.componentRef.setInput('shoe', shoe);
   fixture.componentRef.setInput('ruleSet', ruleSet);
   fixture.componentRef.setInput('spots', spots);
+  fixture.componentRef.setInput('betting', betting);
   fixture.detectChanges();
   return { fixture, c: fixture.componentInstance as unknown as Internals };
 }
@@ -227,6 +243,179 @@ describe('ShowdownComponent', () => {
       c.onAction('P'); // hand 1 draws another 8 → 8,8
       expect(c.playerCards().map((x) => x.rank)).toEqual(['8', '8']);
       expect(c.playerActions()).toContain('P'); // re-split available
+    });
+  });
+
+  // Bet sizing: with betting on, a round opens on a bet and settles against the
+  // persisted bankroll. The default bankroll is 500 and the opening bet the
+  // 1-chip minimum.
+  describe('bet sizing', () => {
+    it('opens on the bet and deals nothing until the bet is placed', () => {
+      const { c } = createShowdown(makeShoe(['9', '10', '7', '6']), 'S17', 1, true);
+      expect(c.phase()).toBe('betting');
+      expect(c.hands().length).toBe(0);
+      expect(c.remaining()).toBe(4);
+      expect(c.bet()).toBe(1);
+    });
+
+    it('posts the chosen bet on the hand it deals', () => {
+      const { c } = createShowdown(makeShoe(['9', '10', '7', '6']), 'S17', 1, true);
+      c.setBet(10);
+      c.dealAfterBet();
+      expect(c.phase()).toBe('player-turn');
+      expect(c.hands()[0].bet).toBe(10);
+      expect(c.committed()).toBe(10);
+    });
+
+    it('posts the bet on every occupied box', () => {
+      const { c } = createShowdown(makeShoe(['9', '8', '10', '7', '4', '6']), 'S17', 2, true);
+      c.setBet(5);
+      c.dealAfterBet();
+      expect(c.hands().map((h) => h.bet)).toEqual([5, 5]);
+      expect(c.committed()).toBe(10);
+    });
+
+    it('credits a win and debits a loss', () => {
+      // player [10,9]=19 beats dealer [10,8]=18.
+      const { c } = createShowdown(makeShoe(['10', '10', '9', '8']), 'S17', 1, true);
+      c.setBet(10);
+      c.dealAfterBet();
+      c.onAction('S');
+      expect(c.hands()[0].settlement!.outcome).toBe('win');
+      expect(c.bankrollService.bankroll()).toBe(510);
+      expect(c.bankrollService.state()).toEqual({ bankroll: 510, wagered: 10, net: 10 });
+      expect(c.roundNet()).toBe(10);
+    });
+
+    it('pays a natural 3:2 on the bet', () => {
+      const { c } = createShowdown(makeShoe(['A', '9', 'K', '7']), 'S17', 1, true);
+      c.setBet(10);
+      c.dealAfterBet();
+      expect(c.phase()).toBe('resolved');
+      expect(c.bankrollService.bankroll()).toBe(515);
+      expect(c.roundNet()).toBe(15);
+    });
+
+    it('returns the stake on a push', () => {
+      // player [10,9]=19, dealer [10,9]=19.
+      const { c } = createShowdown(makeShoe(['10', '10', '9', '9']), 'S17', 1, true);
+      c.setBet(25);
+      c.dealAfterBet();
+      c.onAction('S');
+      expect(c.hands()[0].settlement!.outcome).toBe('push');
+      expect(c.bankrollService.state()).toEqual({ bankroll: 500, wagered: 25, net: 0 });
+    });
+
+    it('risks and settles both bets on a double', () => {
+      // player [5,6]=11 doubles into a 10 → 21 vs dealer [10,8]=18.
+      const { c } = createShowdown(makeShoe(['5', '10', '6', '8', '10']), 'S17', 1, true);
+      c.setBet(10);
+      c.dealAfterBet();
+      c.onAction('D');
+      expect(c.hands()[0].doubled).toBe(true);
+      expect(c.stake(c.hands()[0])).toBe(20);
+      expect(c.bankrollService.state()).toEqual({ bankroll: 520, wagered: 20, net: 20 });
+    });
+
+    it('posts a second bet when a pair is split', () => {
+      // [8,8] split; each hand draws a ten → 18 apiece vs dealer [10,7]=17.
+      const { c } = createShowdown(makeShoe(['8', '10', '8', '7', '10', '10']), 'S17', 1, true);
+      c.setBet(10);
+      c.dealAfterBet();
+      c.onAction('P');
+      expect(c.hands().map((h) => h.bet)).toEqual([10, 10]);
+      expect(c.committed()).toBe(20);
+      c.onAction('S');
+      c.onAction('S');
+      // Both 18s beat 17: two bets won.
+      expect(c.bankrollService.state()).toEqual({ bankroll: 520, wagered: 20, net: 20 });
+    });
+
+    it('withholds a double the bankroll cannot back', () => {
+      // Bet the whole bankroll on the only box: no chips left for a second bet.
+      const { c } = createShowdown(makeShoe(['5', '10', '6', '8', '10']), 'S17', 1, true);
+      c.setBet(500);
+      c.dealAfterBet();
+      expect(c.hands()[0].bet).toBe(500);
+      expect(c.playerActions()).toEqual(['H', 'S']);
+    });
+
+    it('offers only the bet sizes every box can cover', () => {
+      const { c } = createShowdown(makeShoe(['9', '8', '9', '10', '7', '4', '6', '5']), 'S17', 3);
+      // 3 boxes × 25 = 75, well inside 500.
+      expect(c.betAffordable(25)).toBe(true);
+    });
+
+    it('returns to the bet between rounds rather than dealing straight on', () => {
+      const { c } = createShowdown(makeShoe(['10', '10', '9', '8', '9', '10', '7', '6']));
+      // Betting off: the next round deals immediately (existing behaviour).
+      c.onAction('S');
+      c.dealAnother();
+      expect(c.phase()).toBe('player-turn');
+
+      const betting = createShowdown(
+        makeShoe(['10', '10', '9', '8', '9', '10', '7', '6']),
+        'S17',
+        1,
+        true,
+      ).c;
+      betting.setBet(5);
+      betting.dealAfterBet();
+      betting.onAction('S');
+      expect(betting.phase()).toBe('resolved');
+      betting.dealAnother();
+      expect(betting.phase()).toBe('betting');
+      expect(betting.hands().length).toBe(0);
+    });
+
+    it('clamps a bet to what the bankroll can cover across the boxes', () => {
+      const { c } = createShowdown(
+        makeShoe(['9', '8', '9', '10', '7', '4', '6', '5']),
+        'S17',
+        3,
+        true,
+      );
+      c.setBet(500);
+      // 500 across three boxes is not payable; the per-box bet caps at a third.
+      expect(c.bet()).toBe(166);
+    });
+
+    it('offers a reset once the chips are gone, and restores the bankroll', () => {
+      // Lose the whole bankroll on one hand: player [10,6]=16 hits into a bust.
+      const { c } = createShowdown(makeShoe(['10', '10', '6', '2', 'K']), 'S17', 1, true);
+      c.setBet(500);
+      c.dealAfterBet();
+      c.onAction('H');
+      expect(c.bankrollService.bankroll()).toBe(0);
+      expect(c.bankrollService.bustedOut()).toBe(true);
+      c.dealAnother();
+      // Busted out: no further round is dealt until the bankroll is reset.
+      expect(c.phase()).toBe('resolved');
+      c.resetBankroll();
+      expect(c.bankrollService.bankroll()).toBe(500);
+      expect(c.phase()).toBe('betting');
+    });
+
+    it('shows the chip position and the round result', () => {
+      const { fixture, c } = createShowdown(makeShoe(['10', '10', '9', '8']), 'S17', 1, true);
+      c.setBet(10);
+      c.dealAfterBet();
+      c.onAction('S');
+      fixture.detectChanges();
+      const text = fixture.nativeElement.textContent as string;
+      expect(text).toContain('Bankroll');
+      expect(text).toContain('510');
+      expect(c.signedChips(10)).toBe('+10');
+      expect(c.signedChips(-10)).toBe('−10');
+      expect(c.signedChips(0)).toBe('even');
+    });
+
+    it('leaves the bankroll untouched when betting is off', () => {
+      const { fixture, c } = createShowdown(makeShoe(['10', '10', '9', '8']));
+      c.onAction('S');
+      expect(c.hands()[0].bet).toBe(0);
+      expect(c.bankrollService.state()).toEqual({ bankroll: 500, wagered: 0, net: 0 });
+      expect(fixture.nativeElement.textContent).not.toContain('Bankroll');
     });
   });
 
