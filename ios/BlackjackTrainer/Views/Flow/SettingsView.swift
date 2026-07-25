@@ -187,6 +187,7 @@ struct SettingsView: View {
                             Text("\(spots)").tag(spots)
                         }
                     }
+                    Toggle("Bet sizing (bankroll)", isOn: showdownBettingBinding)
                 }
             }
 
@@ -326,6 +327,15 @@ extension SettingsView {
             get: { prefs.counting.showdownSpots },
             set: { value in
                 model.flowPrefs.updateCounting { $0.showdownSpots = Showdown.clampSpots(value) }
+            }
+        )
+    }
+
+    private var showdownBettingBinding: Binding<Bool> {
+        Binding(
+            get: { prefs.counting.showdownBetting },
+            set: { value in
+                model.flowPrefs.updateCounting { $0.showdownBetting = value }
             }
         )
     }

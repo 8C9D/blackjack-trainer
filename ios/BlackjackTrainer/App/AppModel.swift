@@ -20,6 +20,7 @@ final class AppModel {
     let deviationStats: SessionStatsStore
     let deckEstimationStats: SessionStatsStore
     let showdownStats: ShowdownStatsStore
+    let showdownBankroll: BankrollStore
 
     /// Flow redesign stores: the pre-made decisions, the daily-goal/streak
     /// history, and the per-scenario weak-spot tallies.
@@ -59,12 +60,14 @@ final class AppModel {
         let deviationStats = SessionStatsStore(key: StatsKeys.deviation, cloud: cloud)
         let deckEstimationStats = SessionStatsStore(key: StatsKeys.deckEstimation, cloud: cloud)
         let showdownStats = ShowdownStatsStore(key: StatsKeys.showdown, cloud: cloud)
+        let showdownBankroll = BankrollStore(key: StatsKeys.showdownBankroll, cloud: cloud)
         self.basicStrategyStats = basicStrategyStats
         self.runningCountStats = runningCountStats
         self.trueCountStats = trueCountStats
         self.deviationStats = deviationStats
         self.deckEstimationStats = deckEstimationStats
         self.showdownStats = showdownStats
+        self.showdownBankroll = showdownBankroll
 
         let flowPrefs = FlowPrefsStore(cloud: cloud)
         let practiceHistory = PracticeHistoryStore(cloud: cloud)
@@ -75,7 +78,7 @@ final class AppModel {
 
         cloudSync = StatsCloudSync(cloud: cloud, stores: [
             basicStrategyStats, runningCountStats, trueCountStats,
-            deviationStats, deckEstimationStats, showdownStats,
+            deviationStats, deckEstimationStats, showdownStats, showdownBankroll,
             flowPrefs, practiceHistory, missTally
         ])
         // Built after cloud adoption so the seeded snapshot reflects any value

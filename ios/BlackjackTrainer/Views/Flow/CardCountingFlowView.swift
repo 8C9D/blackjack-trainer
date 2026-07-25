@@ -12,18 +12,26 @@ final class CardCountingFlowModel {
     @ObservationIgnored let counting: CountingModel
     @ObservationIgnored private let prefs: FlowPrefsStore
     @ObservationIgnored private let history: PracticeHistoryStore
+    @ObservationIgnored let showdownBankroll: BankrollStore
     let session = DrillSession()
     private(set) var target = 0
     private(set) var done = false
 
-    init(counting: CountingModel, prefs: FlowPrefsStore, history: PracticeHistoryStore) {
+    init(
+        counting: CountingModel,
+        prefs: FlowPrefsStore,
+        history: PracticeHistoryStore,
+        bankroll: BankrollStore = BankrollStore()
+    ) {
         self.counting = counting
         self.prefs = prefs
         self.history = history
+        showdownBankroll = bankroll
         prefs.setLastTrainer(.cardCounting)
         // Configure the drill entirely from the pre-made decisions.
         counting.settings = prefs.prefs.counting.drillSettings
         counting.showdownSpots = prefs.prefs.counting.showdownSpots
+        counting.showdownBetting = prefs.prefs.counting.showdownBetting
         if let system = counting.systems.first(where: { $0.id == prefs.prefs.counting.systemId }) {
             counting.system = system
         }
@@ -39,7 +47,12 @@ final class CardCountingFlowModel {
             deckEstimationStore: app.deckEstimationStats,
             showdownStatsStore: app.showdownStats
         )
-        self.init(counting: counting, prefs: app.flowPrefs, history: app.practiceHistory)
+        self.init(
+            counting: counting,
+            prefs: app.flowPrefs,
+            history: app.practiceHistory,
+            bankroll: app.showdownBankroll
+        )
     }
 
     var state: CountingModel.DrillState {
@@ -236,7 +249,9 @@ struct CardCountingFlowView: View {
                 shoe: shoe,
                 ruleSet: model.ruleSet,
                 stats: model.counting.showdownStatsStore,
-                spots: model.counting.showdownSpots
+                spots: model.counting.showdownSpots,
+                betting: model.counting.showdownBetting,
+                bankroll: model.showdownBankroll
             ) { dealtCards in
                 model.exitShowdown(dealtCards)
             }

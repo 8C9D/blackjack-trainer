@@ -9,9 +9,11 @@ struct ShowdownView: View {
     @Environment(\.hasHardwareKeyboard) private var hasHardwareKeyboard
 
     init(shoe: Shoe, ruleSet: RuleSet, stats: ShowdownStatsStore, spots: Int = 1,
+         betting: Bool = false, bankroll: BankrollStore = BankrollStore(),
          onExit: @escaping ([Card]) -> Void) {
         _model = State(initialValue: ShowdownModel(
-            shoe: shoe, ruleSet: ruleSet, stats: stats, spots: spots
+            shoe: shoe, ruleSet: ruleSet, stats: stats, spots: spots,
+            betting: betting, bankroll: bankroll
         ))
         self.onExit = onExit
     }
@@ -31,9 +33,15 @@ struct ShowdownView: View {
                 .font(.headline)
                 .foregroundStyle(Theme.ink)
 
+            if model.betting {
+                bankrollLine
+            }
+
             if model.phase == .exhausted {
                 Text("The shoe is too low to deal a hand. Return to counting to reshuffle.")
                     .foregroundStyle(Theme.muted)
+            } else if model.phase == .betting {
+                bettingStage
             } else {
                 table
                 if model.phase == .playerTurn {
@@ -78,11 +86,15 @@ struct ShowdownView: View {
     private func playerHandRow(index: Int, hand: PlayerHand) -> some View {
         let isActive = model.phase == .playerTurn && index == model.activeIndex
         let total = Hand.total(hand.cards)
-        let label = model.hands.count > 1 ? "Hand \(index + 1) (\(total))" : "You (\(total))"
+        let stakeSuffix = model.betting ? "  ·  \(Chips.format(model.stake(hand)))" : ""
+        let label = (model.hands.count > 1 ? "Hand \(index + 1) (\(total))" : "You (\(total))")
+            + stakeSuffix
         return VStack(spacing: 6) {
             handRow(label: label, cards: hand.cards, showHole: false)
             if let settlement = hand.settlement {
-                Text(model.verdict(hand))
+                Text(model.betting
+                    ? "\(model.verdict(hand))  \(Chips.signed(model.payout(hand)))"
+                    : model.verdict(hand))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(verdictColor(settlement.outcome))
             }
@@ -120,7 +132,9 @@ struct ShowdownView: View {
         let noun = model.spots > 1 ? "round" : "hand"
         return VStack(alignment: .leading, spacing: 10) {
             if !model.roundSummary.isEmpty {
-                Text(model.roundSummary)
+                Text(model.betting
+                    ? "\(model.roundSummary)  \(Chips.signed(model.roundNet))"
+                    : model.roundSummary)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Theme.ink)
             }
@@ -139,5 +153,74 @@ struct ShowdownView: View {
                     .foregroundStyle(Theme.muted)
             }
         }
+    }
+
+    private var bankrollLine: some View {
+        let state = model.bankrollStore.state
+        return Text(state.wagered > 0
+            ? "Bankroll \(Chips.format(state.bankroll))  ·  wagered "
+            + "\(Chips.format(state.wagered)), net \(Chips.signed(state.net))"
+            : "Bankroll \(Chips.format(state.bankroll))")
+            .font(.footnote)
+            .foregroundStyle(Theme.midInk)
+    }
+
+    @ViewBuilder private var bettingStage: some View {
+        if model.bankrollStore.bustedOut {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Out of chips. Reset the bankroll to keep practising.")
+                    .foregroundStyle(Theme.muted)
+                Button { model.resetBankroll() } label: {
+                    Text("Reset bankroll").frame(maxWidth: .infinity, minHeight: 30)
+                }
+                .accentFilledButton()
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(model.spots > 1
+                    ? "Size the bet for each of the \(model.spots) boxes."
+                    : "Size the bet before the deal.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.ink)
+                HStack(spacing: 8) {
+                    ForEach(model.betOptions, id: \.self) { option in
+                        Button { model.setBet(option) } label: {
+                            Text(Chips.format(option))
+                                .frame(minWidth: 40, minHeight: 30)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(option == model.bet ? Theme.accentInk : Theme.midInk)
+                        .disabled(!model.betAffordable(option))
+                        .accessibilityLabel("Bet \(Chips.format(option))")
+                        .accessibilityAddTraits(option == model.bet ? [.isSelected] : [])
+                    }
+                }
+                Text(model.spots > 1
+                    ? "Total at risk this round: \(Chips.format(model.bet * Double(model.spots)))"
+                    : "At risk this round: \(Chips.format(model.bet))")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.muted)
+                Button { model.dealAfterBet() } label: {
+                    Text(hasHardwareKeyboard ? "Deal  [Enter]" : "Deal")
+                        .frame(maxWidth: .infinity, minHeight: 30)
+                }
+                .accentFilledButton()
+                .keyboardShortcut(.return, modifiers: [])
+            }
+        }
+    }
+}
+
+/// Chip figures carry no currency symbol — they are units, and a 3:2 on an odd bet
+/// is a genuine half chip, so only the halves get a decimal. Mirrors the web
+/// `chips` / `signedChips` helpers.
+enum Chips {
+    static func format(_ value: Double) -> String {
+        value == value.rounded() ? String(Int(value)) : String(format: "%.1f", value)
+    }
+
+    static func signed(_ value: Double) -> String {
+        guard value != 0 else { return "even" }
+        return (value > 0 ? "+" : "\u{2212}") + format(abs(value))
     }
 }

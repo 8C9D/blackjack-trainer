@@ -1,7 +1,7 @@
 {
-  "schema": "showdown-vectors/2",
+  "schema": "showdown-vectors/3",
   "generatedBy": "tools/export-parity-fixtures.ts",
-  "description": "Pure dealer-play and settlement cases: dealerShouldHit (H17/S17 soft-17), playDealerHand draw loops, settle() outcomes (3:2 naturals, bust ordering, totals, pushes), and the multi-box spot clamp / opening-round card requirement. Suits are arbitrary.",
+  "description": "Pure dealer-play and settlement cases: dealerShouldHit (H17/S17 soft-17), playDealerHand draw loops, settle() outcomes (3:2 naturals, bust ordering, totals, pushes), the multi-box spot clamp / opening-round card requirement, and the betting math (payouts and bet clamping). Suits are arbitrary.",
   "dealerShouldHitCases": [
     {
       "hand": [
@@ -650,6 +650,118 @@
       "spots": 99,
       "clamped": 3,
       "minCards": 8
+    }
+  ],
+  "payoutCases": [
+    {
+      "label": "win-pays-the-stake",
+      "outcome": "win",
+      "playerBlackjack": false,
+      "bet": 10,
+      "doubled": false,
+      "stake": 10,
+      "payout": 10
+    },
+    {
+      "label": "natural-pays-3-2",
+      "outcome": "win",
+      "playerBlackjack": true,
+      "bet": 10,
+      "doubled": false,
+      "stake": 10,
+      "payout": 15
+    },
+    {
+      "label": "natural-on-odd-bet-pays-a-half",
+      "outcome": "win",
+      "playerBlackjack": true,
+      "bet": 5,
+      "doubled": false,
+      "stake": 5,
+      "payout": 7.5
+    },
+    {
+      "label": "doubled-win-pays-both-bets",
+      "outcome": "win",
+      "playerBlackjack": false,
+      "bet": 10,
+      "doubled": true,
+      "stake": 20,
+      "payout": 20
+    },
+    {
+      "label": "push-returns-the-stake",
+      "outcome": "push",
+      "playerBlackjack": false,
+      "bet": 10,
+      "doubled": false,
+      "stake": 10,
+      "payout": 0
+    },
+    {
+      "label": "doubled-push-returns-both",
+      "outcome": "push",
+      "playerBlackjack": false,
+      "bet": 10,
+      "doubled": true,
+      "stake": 20,
+      "payout": 0
+    },
+    {
+      "label": "loss-forfeits-the-stake",
+      "outcome": "lose",
+      "playerBlackjack": false,
+      "bet": 10,
+      "doubled": false,
+      "stake": 10,
+      "payout": -10
+    },
+    {
+      "label": "doubled-loss-forfeits-both",
+      "outcome": "lose",
+      "playerBlackjack": false,
+      "bet": 10,
+      "doubled": true,
+      "stake": 20,
+      "payout": -20
+    }
+  ],
+  "betClampCases": [
+    {
+      "bet": 10,
+      "bankroll": 500,
+      "clamped": 10,
+      "largestAffordable": 25
+    },
+    {
+      "bet": 0,
+      "bankroll": 500,
+      "clamped": 1,
+      "largestAffordable": 25
+    },
+    {
+      "bet": -5,
+      "bankroll": 500,
+      "clamped": 1,
+      "largestAffordable": 25
+    },
+    {
+      "bet": 25,
+      "bankroll": 7,
+      "clamped": 7,
+      "largestAffordable": 5
+    },
+    {
+      "bet": 5,
+      "bankroll": 0,
+      "clamped": 1,
+      "largestAffordable": 1
+    },
+    {
+      "bet": 500,
+      "bankroll": 500,
+      "clamped": 500,
+      "largestAffordable": 25
     }
   ]
 }

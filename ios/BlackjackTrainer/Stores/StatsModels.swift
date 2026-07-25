@@ -9,6 +9,7 @@ enum StatsKeys {
     static let deviation = "blackjack-deviation-stats"
     static let deckEstimation = "blackjack-deck-estimation-stats"
     static let showdown = "blackjack-showdown-stats"
+    static let showdownBankroll = "blackjack-showdown-bankroll"
 
     // Flow redesign stores (additive; mirror the web's new localStorage keys).
     static let flowPrefs = "blackjack-flow-prefs"
@@ -41,8 +42,23 @@ struct SessionStats: Codable, Equatable {
     }
 }
 
+/// The showdown's chip position when bet sizing is on. `wagered` is the total put
+/// at risk and `net` the running result, so a session reads as "risked 320, up
+/// 45" — the figures a bet-sizing drill is judged on. Mirrors `BankrollState`.
+struct BankrollState: Codable, Equatable {
+    var bankroll: Double
+    var wagered: Double
+    var net: Double
+
+    static let empty = BankrollState(bankroll: Bankroll.defaultBankroll, wagered: 0, net: 0)
+
+    func recording(stake: Double, payout: Double) -> BankrollState {
+        BankrollState(bankroll: bankroll + payout, wagered: wagered + stake, net: net + payout)
+    }
+}
+
 /// Post-count showdown tally (win/lose/push + player naturals). Its own shape,
-/// mirroring `ShowdownStats`. No money or bet sizing is tracked.
+/// mirroring `ShowdownStats`. Chips live in `BankrollState`, alongside it.
 struct ShowdownStats: Codable, Equatable {
     var hands: Int
     var wins: Int

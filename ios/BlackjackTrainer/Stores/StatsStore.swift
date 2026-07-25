@@ -139,6 +139,78 @@ final class ShowdownStatsStore: CloudSyncable {
     }
 }
 
+/// Persists the showdown bankroll under its own key, alongside (not inside) the
+/// hand tally: the tally is meaningful with betting off, so the two stay
+/// separable. Mirrors the web `BankrollService`.
+@Observable
+final class BankrollStore: CloudSyncable {
+    @ObservationIgnored let key: String
+    @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored private let cloud: CloudKeyValueStore?
+    private(set) var state: BankrollState
+
+    init(
+        key: String = StatsKeys.showdownBankroll,
+        defaults: UserDefaults = .standard,
+        cloud: CloudKeyValueStore? = nil
+    ) {
+        self.key = key
+        self.defaults = defaults
+        self.cloud = cloud
+        state = StatsPersistence.load(
+            BankrollState.self,
+            key: key,
+            defaults: defaults,
+            empty: .empty
+        )
+    }
+
+    var bankroll: Double {
+        state.bankroll
+    }
+
+    /// Out of chips: the caller offers a reset instead of another round.
+    var bustedOut: Bool {
+        state.bankroll < Bankroll.minBet
+    }
+
+    /// Settle one hand: `stake` is what it risked and `payout` the net chips it
+    /// returned (negative on a loss). Recorded together so `wagered` counts a
+    /// doubled second bet too.
+    func record(stake: Double, payout: Double) {
+        state = state.recording(stake: stake, payout: payout)
+        persist()
+    }
+
+    func reset() {
+        state = .empty
+        persist()
+    }
+
+    private func persist() {
+        StatsPersistence.save(state, key: key, defaults: defaults)
+        pushToCloud()
+    }
+
+    // MARK: CloudSyncable
+
+    var cloudKey: String {
+        key
+    }
+
+    func adoptFromCloud() {
+        guard let cloud, let data = cloud.data(forKey: key),
+              let value = try? JSONDecoder().decode(BankrollState.self, from: data) else { return }
+        state = value
+        StatsPersistence.save(state, key: key, defaults: defaults)
+    }
+
+    func pushToCloud() {
+        guard let cloud, let data = try? JSONEncoder().encode(state) else { return }
+        cloud.set(data, forKey: key)
+    }
+}
+
 /// Wipes stat keys from earlier versions. Call once at launch.
 func cleanupLegacyStatsKeys(defaults: UserDefaults = .standard) {
     for key in StatsKeys.legacy {

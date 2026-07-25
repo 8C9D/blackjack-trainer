@@ -114,6 +114,25 @@ struct ShowdownVectorsFile: Decodable {
     let playCases: [PlayCase]
     let settleCases: [SettleCase]
     let spotsCases: [SpotsCase]
+    let payoutCases: [PayoutCase]
+    let betClampCases: [BetClampCase]
+}
+
+struct PayoutCase: Decodable {
+    let label: String
+    let outcome: String
+    let playerBlackjack: Bool
+    let bet: Double
+    let doubled: Bool
+    let stake: Double
+    let payout: Double
+}
+
+struct BetClampCase: Decodable {
+    let bet: Double
+    let bankroll: Double
+    let clamped: Double
+    let largestAffordable: Double
 }
 
 struct SpotsCase: Decodable {
