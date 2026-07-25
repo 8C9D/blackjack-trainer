@@ -19,7 +19,7 @@ import {
   isSoftHand,
   normalizeUpcardKey,
 } from '../../core/services/basic-strategy-engine.service';
-import type { ScenarioRef } from '../../core/services/miss-tally.service';
+import type { ScenarioRef, WeakSpot } from '../../core/services/miss-tally.service';
 
 // Parts of the computed question line, e.g. "Hard 10 vs 6" (recognition over
 // recall: the total is computed for the user). Pairs have no prefix: "8,8 vs 10".
@@ -67,6 +67,35 @@ export function legalActionsFor(
 export function nextSessionTarget(handsToday: number, goal: number): number {
   const safeGoal = Math.max(1, goal);
   return (Math.floor(Math.max(0, handsToday) / safeGoal) + 1) * safeGoal;
+}
+
+// Share of an ordinary round's hands drawn from the user's weak spots. High
+// enough that a weakness gets real repetition inside one session, low enough
+// that the round still feels like practice rather than a loop of three hands
+// — and the rest of the chart keeps getting rehearsed.
+export const WEAK_SPOT_SHARE = 0.4;
+
+// Choose the next hand's source: a weak spot, or null meaning "deal a fresh
+// random hand". Weak spots compete in proportion to their miss counts, so the
+// scenario a user misses most comes back most. `share` is the probability of
+// drawing from the weak list at all — review rounds pass 1.
+export function pickWeakSpot(
+  weakSpots: readonly WeakSpot[],
+  random: () => number,
+  share: number = WEAK_SPOT_SHARE,
+): WeakSpot | null {
+  if (weakSpots.length === 0) return null;
+  if (random() >= share) return null;
+  const total = weakSpots.reduce((sum, spot) => sum + spot.misses, 0);
+  if (total <= 0) return null;
+  let ticket = random() * total;
+  for (const spot of weakSpots) {
+    ticket -= spot.misses;
+    if (ticket < 0) return spot;
+  }
+  // Only reachable if `random()` returns exactly 1 (or floating-point error
+  // eats the last slice); the final spot is the right answer either way.
+  return weakSpots[weakSpots.length - 1];
 }
 
 // Build a concrete deal matching a recorded weak-spot ref, so a session can

@@ -23,6 +23,9 @@ final class BasicStrategyDrillModel {
     private(set) var target = 0
     let session = DrillSession()
 
+    /// A review round drills only the weak list; an ordinary round mixes it in.
+    @ObservationIgnored private var reviewing = false
+
     init(
         engine: BasicStrategyEngine,
         generator: CardGenerator = CardGenerator(),
@@ -90,8 +93,16 @@ final class BasicStrategyDrillModel {
         handsToday >= prefs.prefs.dailyGoal
     }
 
+    var weakSpots: [WeakSpot] {
+        missTally.weakSpots(.basicStrategy)
+    }
+
     var weakSpot: WeakSpot? {
-        missTally.weakSpotFor(.basicStrategy)
+        weakSpots.first
+    }
+
+    var clearedSpots: [WeakSpot] {
+        missTally.clearedSpots(.basicStrategy)
     }
 
     func answer(_ action: Action) {
@@ -129,7 +140,19 @@ final class BasicStrategyDrillModel {
     }
 
     func oneMoreRound() {
+        startRound(reviewing: false)
+    }
+
+    /// "Drill my misses": the same round, but every hand comes from the weak list
+    /// (falling back to fresh hands once it empties mid-round).
+    func reviewMisses() {
+        guard missTally.weakSpotFor(.basicStrategy) != nil else { return }
+        startRound(reviewing: true)
+    }
+
+    private func startRound(reviewing: Bool) {
         guard phase == .done else { return }
+        self.reviewing = reviewing
         session.reset()
         target = nextSessionTarget(handsToday: history.handsToday(), goal: prefs.prefs.dailyGoal)
         deal(firstScenario())
@@ -147,7 +170,19 @@ final class BasicStrategyDrillModel {
             phase = .done
             return
         }
-        deal(generator.generate())
+        deal(nextScenario())
+    }
+
+    /// Every later hand: weighted toward the scenarios being missed, so a weakness
+    /// gets repetition inside the session that surfaced it. A review round draws
+    /// from the weak list every time. Mirrors the web page's `nextScenario`.
+    private func nextScenario() -> Scenario {
+        let share = reviewing ? 1 : weakSpotShare
+        let source = { Double.random(in: 0 ..< 1) }
+        if let weak = pickWeakSpot(weakSpots, random: source, share: share) {
+            return scenarioFromRef(weak.ref, random: source)
+        }
+        return generator.generate()
     }
 
     /// Load a scenario and reset to the question phase. A transition step and a
@@ -193,7 +228,10 @@ struct BasicStrategyDrillView: View {
                     bestStreak: model.session.bestStreak,
                     accuracy: model.session.accuracy,
                     weakSpot: model.weakSpot,
+                    weakSpots: model.weakSpots,
+                    cleared: model.clearedSpots,
                     onAgain: { model.oneMoreRound() },
+                    onReview: { model.reviewMisses() },
                     onExit: leave
                 )
             } else {

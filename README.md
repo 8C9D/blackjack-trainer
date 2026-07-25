@@ -19,9 +19,9 @@ A frontend-only Angular app for practicing four blackjack skills:
    against basic strategy + the deviation overlay, plus an insurance
    overlay when the dealer shows an Ace.
 
-All four modes persist independent session stats to `localStorage` and reuse
-the same card model + cardsJS images. The layout is responsive (desktop top
-nav, phone bottom tab bar) with PWA-ready metadata.
+All four modes persist independent session stats to `localStorage` and reuse the same card model + cardsJS images.
+The web app runs as a **Flow shell**: it launches into a one-action home screen (Continue the last trainer, a daily-goal ring, and a 7-day streak strip), drills run full screen and auto-advance on correct answers, adapt to the scenarios you keep missing, and all configuration lives on a dedicated Settings screen.
+A native iOS SwiftUI mirror (with a home-screen widget, iCloud sync, and App Store metadata) lives under `ios/`, kept in lockstep with the web engines by exported parity fixtures (see [iOS app](#ios-app)).
 
 ## Quick start
 
@@ -32,37 +32,37 @@ required too. From the repo root:
 npm install
 npm start          # dev server at http://127.0.0.1:4200/
 npm test           # vitest, single run in CI / watch in TTY
+npm run test:coverage  # tests + v8 coverage, gated by vitest.config.ts thresholds
 npm run typecheck  # tsc --noEmit on the app sources
 npm run lint       # typecheck + prettier --check
 npm run build      # production bundle in dist/blackjack-trainer/
+npm run e2e        # Playwright smoke suite (starts its own dev server)
 ```
 
-GitHub Actions runs `npm ci`, `npm run lint`, `CI=true npm test`, and
-`npm run build` on every push and pull request to `main`
-(`.github/workflows/ci.yml`).
+Before the first `npm run e2e`, install the Playwright browser with `npm run e2e:install`.
 
-Navigate to `/basic-strategy`, `/card-counting`, or `/deviations` (top nav
-links).
+GitHub Actions (`.github/workflows/ci.yml`) runs two jobs on every push and pull request to `main`: **validate** (`npm run lint`, `CI=true npm run test:coverage` — which enforces the coverage thresholds in `vitest.config.ts` — `npm run build`, plus an anti-drift check that the exported iOS parity fixtures are up to date) and **e2e** (the Playwright smoke suite run against the production bundle, with the browser install cached and the HTML report uploaded as an artifact).
+
+The app launches into the Flow home at `/`.
+Drills live at `/drill/basic-strategy`, `/drill/card-counting`, and `/drill/deviations`; configuration lives at `/settings`.
+The pre-Flow trainer URLs (`/basic-strategy`, `/card-counting`, `/deviations`) redirect into the flow.
+
+Adding `?seed=<integer>` to any URL (e.g. `/drill/basic-strategy?seed=42`) pins every draw the app makes — hands, card streams, shoe shuffles, true counts, weak-spot picks — so a practice session replays exactly.
+It exists so the E2E suite can assert real outcomes rather than only that the flow advanced, and it is useful for reproducing a specific hand by hand. Without the parameter nothing changes.
 
 ## Features
 
 ### Basic Strategy Trainer (v1)
 
-- **H17 and S17 rule sets** — toggle which dealer rule to practice against.
-- **Toggleable Double After Split (DAS) and Late Surrender** — exercises the
-  parts of the chart that vary with table rules.
-- **Insurance is always wrong** — clicking the Insurance button is flagged
-  with an explanation that basic strategy never takes the side bet.
-- **Per-attempt feedback** with the canonical hand label (e.g. `Soft 18
-(A, 7)`, `Hard 16`, `Pair of 8s`), the correct action, and a one-line
-  rationale.
-- **Keyboard shortcuts** — `H` / `S` / `D` / `P` / `R` (surrender) /
-  `I` (insurance) for actions, `Enter` to deal the next hand.
+- **H17 and S17 rule sets** — toggle which dealer rule to practice against (set on the Settings screen; shared with the Deviations trainer and the showdown dealer).
+- **Toggleable Double After Split (DAS) and Late Surrender** — exercises the parts of the chart that vary with table rules.
+- **Insurance is always wrong** — picking Insurance is flagged with an explanation that basic strategy never takes the side bet.
+- **Flow grading** — a correct answer flashes in place and auto-advances; a miss is the loop's only pause, showing the correct action and a one-line rationale until you tap or press any key.
+- **Keyboard shortcuts** — `H` / `S` / `D` / `P` / `R` (surrender) / `I` (insurance) for actions.
 
 ### Card Counting Trainer (v2 + v3, plus live shoe & showdown)
 
-The card counting page hosts two drill modes that share the same flow. A
-mode selector switches between them at drill setup.
+The card counting page hosts two drill modes that share the same flow; the mode (like the rest of the counting configuration) is chosen on the Settings screen.
 
 **Running count mode (v2)** — user watches a card stream and submits the
 running count at the end of the stream.
@@ -108,17 +108,12 @@ families, and more) — see the in-app picker for the full list:
 
 #### Shared mechanics
 
-- **Configurable drill** — number of cards (1–200) and time between cards
-  (≥ 100ms).
-- **State machine** — settings → start → cards stream → answer prompt →
-  feedback with optional card-by-card breakdown. (Live-shoe true count inserts
-  a deck-estimate step before the answer; see below.)
-- **Validation** — invalid settings disable the Start button with inline
-  errors; the answer field only enables Submit on valid input.
-- **Keyboard shortcut** — `Enter` starts a drill from idle / restarts after
-  feedback. The answer form has its own native Enter-to-submit.
-- **Card-by-card breakdown** — expandable view shows each card's count
-  delta and the running total at that point.
+- **Configurable drill** — number of cards (1–200) and time between cards (≥ 100ms), set on the Settings screen (the drill pages host no configuration).
+- **State machine** — start → cards stream → answer prompt → feedback with optional card-by-card breakdown. (Live-shoe true count inserts a deck-estimate step before the answer; see below.)
+- **Validation** — drill settings validate on the Settings screen; the answer field only enables Submit on valid input.
+- **Keyboard shortcuts** — `Enter` starts a drill from idle or continues after feedback; `Escape` exits to home. The answer form has its own native Enter-to-submit.
+- **Card-by-card breakdown** — expandable view shows each card's count delta and the running total at that point.
+- **Flow session** — graded reps count toward the daily goal; the top bar shows today's count, the session target, and the current streak, and a Done screen summarizes the round.
 
 #### True count: classic preset vs live shoe
 
@@ -136,8 +131,8 @@ True count mode has two sources for "decks remaining":
 
   The running count and decks remaining **carry across rounds** of the same
   shoe; crossing the cut card triggers a reshuffle (running count resets to 0
-  with a visible notice). Live-shoe rounds show two stats panels — **True
-  count** and **Deck estimation (±0.5)**.
+  with a visible notice). Live-shoe rounds grade both answers, persisting the
+  true count and the ±0.5-deck estimate to separate stats stores.
 
 **Truncation toward zero** — examples: `5 / 2 = 2`, `-5 / 2 = -2`,
 `3 / 0.5 = 6`. This app uses truncation toward zero; other references may round
@@ -151,14 +146,9 @@ After a live-shoe true-count round, a **"Play a hand vs the dealer"** option
 appears (when the shoe has at least four cards). It deals one player hand from
 the **same persistent shoe**, depleting it further:
 
-- **Hit/stand only** — no doubles, splits, surrender, or insurance.
-- **Dealer auto-plays** the active rule set: stand on hard 17+, hit soft 17
-  only under H17 (an H17/S17 toggle lives inside the showdown).
-- **Settlement** — win / lose / push; a player natural pays 3:2; a dealer
-  natural beats any non-natural; two naturals push; a player bust loses
-  immediately even if the dealer later busts. There is **no bankroll or
-  betting** — the "3:2" is flavor; the showdown keeps a win/lose/push (plus
-  blackjacks) tally under its own `localStorage` key.
+- **Hit, stand, double, and split** — doubling takes exactly one card; pairs re-split up to four hands; split aces take one card each and stand; a 21 made after splitting is not a natural. No surrender or insurance.
+- **Dealer auto-plays** the rule set from the shared table rules: stand on hard 17+, hit soft 17 only under H17.
+- **Settlement** — each hand settles win / lose / push independently; a player natural pays 3:2; a dealer natural beats any non-natural; two naturals push; a player bust loses immediately even if the dealer later busts. There is **no bankroll or betting** — the "3:2" is flavor; the showdown keeps a win/lose/push (plus blackjacks) tally under its own `localStorage` key.
 
 Returning from the showdown keeps the depletion it caused, so the next count
 round may reshuffle past the cut card.
@@ -170,21 +160,16 @@ of basic strategy. Each scenario presents a random two-card player hand,
 random dealer upcard, and a random integer true count, and the user picks
 one of Hit / Stand / Double / Split / Surrender / Insurance.
 
-- **H17 or S17 rule set** — toggle which dealer rule (and which deviation
-  chart) to practice against.
-- **Toggleable Double After Split (DAS) and Late Surrender (LS)** — the
-  evaluator's live basic-strategy call honors both toggles, so deviations
-  resolve on top of the same basic-strategy answer the trainer would give
-  in v1.
-- **True count source — Random or Manual.**
+- **H17 or S17 rule set** — toggle which dealer rule (and which deviation chart) to practice against.
+- **Toggleable Double After Split (DAS) and Late Surrender (LS)** — the evaluator's live basic-strategy call honors both toggles, so deviations resolve on top of the same basic-strategy answer the trainer would give in v1.
+- **True count source — Random or Manual** (chosen on the Settings screen, like the rest of the deviation options).
   - **Random** (default) — each hand draws a fresh uniform integer in
     `[-5, +8]`. Wide enough to exercise both negative- and positive-side
     deviations from the BJA chart.
-  - **Manual** — type an integer in `[-20, +20]` and every dealt hand
-    uses that count until you change it. Useful for drilling exact
+  - **Manual** — set an integer in `[-20, +20]` in Settings and every dealt
+    hand uses that count until you change it. Useful for drilling exact
     thresholds (e.g. `16 v 10` at `0`, insurance at `+3`, `15 v 10` at
-    `+4`, `13 v 2` at `-1`). Invalid input blocks the next-hand button
-    until corrected.
+    `+4`, `13 v 2` at `-1`).
 - **Practice mode — All hands or Deviation-only.**
   - **All hands** (default) — random player hand, dealer upcard, and
     true count. Most dealt hands are ordinary basic-strategy hands.
@@ -200,9 +185,7 @@ one of Hit / Stand / Double / Split / Surrender / Insurance.
 - **Six action choices** — Hit, Stand, Double, Split, Surrender, Insurance.
   Insurance is treated as a single action choice rather than a separate
   pre-decision prompt.
-- **Keyboard shortcuts** — same bindings as the basic strategy page:
-  `H` / `S` / `D` / `P` / `R` (surrender) / `I` (insurance), `Enter` to
-  deal the next hand after feedback.
+- **Keyboard shortcuts** — same bindings as the basic strategy drill: `H` / `S` / `D` / `P` / `R` (surrender) / `I` (insurance); correct answers auto-advance and any key continues after a miss.
 
 #### Final-action evaluation
 
@@ -272,23 +255,28 @@ are encoded for chart faithfulness even though basic strategy already
 returns SUR for the same hand when LS is enabled. These entries are
 no-ops at runtime but document the chart cell.
 
-### Shared
+### Shared (the Flow shell)
 
-- **Persistent session stats per trainer** — attempts, correct count,
-  accuracy, current streak, longest streak. Each trainer stores under its
-  own `localStorage` key, with a per-trainer reset button.
+- **Flow home** — one loud primary action ("Continue — last trainer", `Enter`), the other two trainers on stable cards with lifetime-accuracy chips (keys `2` / `3`), Settings (`,`), a daily-goal ring, and a 7-day streak strip.
+- **Daily goal & practice history** — every graded rep records to a per-day hands count; the goal ring, streak dots, and each drill's session target derive from it. The daily goal (1–200, default 20) is set in Settings.
+- **Adaptive weak-spot practice** — Basic Strategy and Deviations misses are tallied per scenario over a rolling 7-day window. Every round opens on the worst outstanding scenario and then draws ~40% of its hands from the weak list, weighted by miss count, so what you keep missing keeps coming back. A scenario retires from the list once you answer it correctly three times running, and the Done screen names the week's cleared spots.
+- **Review rounds** — the Done screen's queued weakness is a button (`R`): it starts a round drawn entirely from the weak list, falling back to fresh hands if you clear it mid-round.
+- **Flow drill shell** — shared top bar (today's count, session target, current streak, exit), full-screen stage, action buttons with key hints, and a Done screen with the round's accuracy and best streak.
+- **Settings screen** — daily goal, appearance, table rules (H17/S17, DAS, LS), deviation options, and the full counting-drill configuration all live here; the drill pages host no configuration.
+- **Light and dark themes** — one semantic token set in two palettes (`src/styles.scss`). The palette follows `prefers-color-scheme`; Settings → Appearance pins it, which `ThemeService` applies as `data-theme` on `<html>` and mirrors into the `theme-color` meta so the browser chrome matches.
+- **Accessibility** — grading is announced through a live region (the action grid conveys it with color and position alone), the Done screen takes focus when it replaces the drill, every screen carries a level-1 heading, focus rings clear 3:1 in both themes, and `prefers-reduced-motion` is honored.
+- **Persistent lifetime stats per trainer** — attempts, correct count, accuracy, current streak, longest streak, each under its own `localStorage` key.
 - **Real card images** — 52 SVGs + face-down back from
   [richardschneider/cardsJS](https://github.com/richardschneider/cardsJS).
-- **Routing + responsive nav** — switch trainers via the top nav on desktop
-  or a fixed bottom tab bar on phones (`max-width: 600px`); both render from
-  one shared links array. Each route's component is destroyed and recreated by
-  Angular's router, so in-memory drill state (current cards, in-progress
-  answer, current hand, the live shoe) is reset on navigation. Only persisted
-  session stats survive route changes, since they're rehydrated from
-  `localStorage` on component reinit.
-- **PWA-ready metadata** — `manifest.webmanifest`, theme color, and iOS
-  add-to-home-screen hints ship as static assets. There is **no** service
-  worker, so the app is not offline-capable / installable as a full PWA yet.
+- **Routing** — `/` (home), `/drill/*`, `/settings`; pre-Flow trainer URLs redirect into the flow. Each route's component is destroyed and recreated by Angular's router, so in-memory drill state (current cards, in-progress answer, the live shoe) resets on navigation; persisted state is rehydrated from `localStorage` on reinit.
+- **Installable PWA** — production builds ship the Angular service worker (`ngsw-config.json`; registered when the app goes stable), so the app works offline and installs from the browser. The manifest carries 192/512 maskable icons derived from the iOS app icon, plus an `apple-touch-icon`; the page shells pad both safe-area insets so the top bars stay clear of the status bar in iOS standalone mode.
+
+## iOS app
+
+`ios/` hosts a native SwiftUI mirror of the trainer (app + home-screen widget), generated with XcodeGen from `ios/project.yml`.
+It ports the Flow shell (home, drills, settings, showdown) and the pure engines to Swift, syncs stats through iCloud Key-Value Store, and offers an optional daily practice reminder.
+Engine parity with the web app is enforced by fixtures: `npm run export:fixtures` (`tools/export-parity-fixtures.ts`) emits `ios/Fixtures/*.json` from the TypeScript engines, the Swift parity tests replay those vectors, and CI fails if the exported fixtures drift from the committed ones.
+`ios/AppStore/` holds submission collateral (privacy policy, support page, 6.9″ screenshots); the submission runbook is `docs/app-store-submission.md` and the iOS roadmap is `docs/ios-app-roadmap.md`.
 
 ## Tech stack
 
@@ -297,6 +285,7 @@ no-ops at runtime but document the chart cell.
 - **TypeScript 5.9**, strict mode
 - **SCSS** for styles
 - **Vitest 4** with `jsdom` for unit tests
+- **Playwright** for the Chromium E2E smoke suite (`e2e/`)
 - **No backend** — `localStorage` is the only persistence layer
 
 ## Project structure
@@ -306,9 +295,9 @@ below for brevity.
 
 ```
 src/app/
-├── app.ts, app.config.ts, app.routes.ts        bootstrap + lazy routes + responsive nav
+├── app.ts, app.config.ts, app.routes.ts        bootstrap + lazy routes (home / drills / settings)
 ├── core/
-│   ├── keyboard.ts                              action hotkeys + shared trainer-keydown helper
+│   ├── keyboard.ts                              action hotkeys + shared keydown helpers
 │   ├── models/
 │   │   ├── card.model.ts                        Rank, Suit, Card, hand/card helpers
 │   │   ├── strategy.model.ts                    Action, RuleSet, chart cell types
@@ -325,6 +314,9 @@ src/app/
 │       ├── deviation-evaluator.service.ts       combines basic strategy + deviation + insurance
 │       ├── card-generator.service.ts            random card + sequence generator (RNG seam)
 │       ├── shoe.service.ts                      builds + shuffles a finite Shoe
+│       ├── flow-prefs.service.ts                last trainer, daily goal, table rules, drill settings
+│       ├── practice-history.service.ts          per-day hands → goal ring / streak dots
+│       ├── miss-tally.service.ts                7-day per-scenario miss tally → weak spots
 │       ├── stats-store.ts                       parameterized correct/incorrect stats container
 │       ├── basic-strategy-stats.service.ts      Basic strategy StatsStore
 │       ├── card-counting-stats.service.ts       Running count StatsStore
@@ -339,30 +331,37 @@ src/app/
 │   ├── h17-deviations.ts                        BJA H17 deviation chart (PDF linked)
 │   └── s17-deviations.ts                        BJA S17 deviation chart (PDF linked)
 ├── features/
-│   ├── basic-strategy/
-│   │   ├── basic-strategy-page.component.ts     thin orchestrator
-│   │   └── feedback-panel.component.ts          result + rationale
-│   ├── card-counting/
-│   │   ├── card-counting-page.component.ts      state-machine orchestrator (drill + shoe + showdown)
-│   │   ├── counting-settings.component.ts       system / mode / cards / ms / shoe inputs
-│   │   ├── card-stream.component.ts             current card + progress
-│   │   ├── count-answer-form.component.ts       integer/decimal input + submit
-│   │   ├── deck-estimate-form.component.ts      half-deck estimate stepper
-│   │   ├── count-feedback-panel.component.ts    verdict + breakdown
-│   │   └── showdown.component.ts                hit/stand showdown vs dealer
-│   └── deviations/
-│       ├── deviations-page.component.ts         orchestrator (hand + TC + action eval)
-│       ├── deviation-settings.component.ts      rule set + DAS + LS + TC source + practice mode
-│       ├── deviation-feedback-panel.component.ts  result + deviation rationale
-│       └── scenario-generators.ts              pure helpers for Deviation-only mode
+│   ├── home/
+│   │   └── home-page.component.ts               Flow home (continue, goal ring, streak)
+│   ├── settings/
+│   │   └── settings-page.component.ts           all configuration (goal, rules, drill settings)
+│   ├── drill/
+│   │   ├── basic-strategy-drill-page.component.ts  Basic Strategy in the Flow loop
+│   │   ├── deviations-drill-page.component.ts   Deviations in the Flow loop
+│   │   ├── drill-session.ts                     per-round answer counters
+│   │   ├── drill-hand.ts                        question labels, legal actions, weak-spot deals
+│   │   ├── drill-timing.ts                      flash auto-advance delay token
+│   │   ├── flow-stage.component.ts              full-screen dealer/player stage
+│   │   └── scenario-generators.ts               pure helpers for Deviation-only mode
+│   └── card-counting/
+│       ├── card-counting-page.component.ts      state-machine orchestrator (drill + shoe + showdown)
+│       ├── counting-settings.component.ts       counting config (hosted by the Settings page)
+│       ├── card-stream.component.ts             current card + progress
+│       ├── count-answer-form.component.ts       integer/decimal input + submit
+│       ├── deck-estimate-form.component.ts      half-deck estimate stepper
+│       ├── count-feedback-panel.component.ts    verdict + breakdown
+│       └── showdown.component.ts                hit/stand/double/split showdown vs dealer
 └── shared/
-    ├── blackjack-table.component.ts            dealer / player layout
-    ├── action-buttons.component.ts             action buttons (subsettable)
     ├── card-image.component.ts                 face-up/face-down card
-    ├── feedback-shell.component.ts             shared feedback container
-    ├── rule-controls.component.ts              H17/S17 + DAS + LS toggles
-    └── stats-panel.component.ts                stats + reset
+    ├── flow-topbar.component.ts                in-drill top bar (count / target / streak / exit)
+    ├── flow-actions.component.ts               action buttons + key hints
+    ├── flow-done.component.ts                  session-end summary (+ weak spot)
+    ├── goal-ring.component.ts                  daily-goal progress ring
+    └── streak-dots.component.ts                7-day streak strip
 
+e2e/                                            Playwright smoke suite (*.e2e.ts)
+tools/export-parity-fixtures.ts                 emits ios/Fixtures/*.json from the TS engines
+ios/                                            SwiftUI iOS app + widget (see iOS app)
 public/cards/                                   52 SVGs + BLUE_BACK + LGPL notices
 ```
 
@@ -485,11 +484,16 @@ different tally and does **not** extend `StatsStore`:
 | Deck estimation | `blackjack-deck-estimation-stats` | StatsStore (±0.5-deck hit = "correct")        |
 | Showdown        | `blackjack-showdown-stats`        | `{ hands, wins, losses, pushes, blackjacks }` |
 
-The stats panel on the card counting page reflects the currently selected
-mode, and each **Reset** button only resets that store — the other keys are
-untouched. Switching modes mid-drill is blocked (the selector is disabled
-while a drill or showdown is in flight). Live-shoe true count shows two panels
-(True count + Deck estimation); the showdown has its own tally.
+The Flow shell adds three keys of its own:
+
+| Store            | Key                          | Shape                                                                             |
+| ---------------- | ---------------------------- | --------------------------------------------------------------------------------- |
+| Flow prefs       | `blackjack-flow-prefs`       | last trainer, daily goal, theme, table rules, per-trainer drill settings          |
+| Practice history | `blackjack-practice-history` | per-day hands counts (local calendar dates, pruned past ~400 days)                |
+| Miss tally       | `blackjack-miss-tally`       | per-scenario attempt/miss day tallies + clear streak (Basic Strategy, Deviations) |
+
+Every store loads tolerantly (a malformed or partial payload degrades to defaults field by field) and persists silently through quota / private-browsing errors.
+The home screen's accuracy chips read the lifetime stats stores; the card-counting card combines the running-count and true-count stores.
 
 Note: v2 dropped the v1 key (`blackjack-trainer:stats:v1`); `main.ts` runs
 `cleanupLegacyStatsKeys()` on boot to wipe it. If you were running v1 locally,
@@ -559,21 +563,30 @@ and the cursor/handoff log in
   data (Hi-Opt I/II, Zen, Revere Point Count, Mentor, the Griffin / Uston / EBJ
   families, the color-dependent Red Seven and KISS 2/3, and the computer-only /
   inverted novelties), on a color-aware counting model — 58 systems in all.
+- **Flow redesign** — the one-action home (continue, daily-goal ring, 7-day streak), full-screen auto-advancing drills, the weak-spot "Drill next" loop, and a dedicated Settings screen replacing all in-drill configuration.
+- **Playwright E2E smoke suite** — navigation, drill flows (basic strategy, card counting, deviations), persistence, responsive, theme, seeded-determinism, and review-round specs in `e2e/`, with a CI job uploading the HTML report.
+- **Showdown doubles and splits** — double takes one card; pairs re-split to four hands; split aces take one card; split 21s pay even money.
+- **iOS SwiftUI app** — the Flow shell mirrored natively (widget, iCloud sync, daily reminder), with fixture-enforced engine parity and App Store collateral prepared. Adaptive weak-spot practice and review rounds are mirrored too; the light theme is web-only so far (the iOS app pins the dark palette at its root).
+- **Real PWA install** — Angular service worker for offline use, maskable 192/512 icons, apple-touch-icon, and top safe-area handling for iOS standalone.
+- **Coverage gate + deeper E2E** — enforced coverage thresholds (`vitest.config.ts`, run in CI), counting/deviation drill e2e specs, and a value-by-value audit (2026-07-24) of all four chart data files against the published BJA PDFs — every cell matched.
+- **Seeded sessions** — a `?seed=` hook behind one injection token makes every draw reproducible, which is what lets the E2E suite assert exact outcomes instead of only that the flow advanced.
+- **Light theme + accessibility pass** — a second palette over one semantic token set, selectable in Settings or left to the OS, plus live-region grading announcements, Done-screen focus handling, per-screen headings, and reduced-motion support.
+- **Adaptive weak-spot practice** — weighted scenario selection across the whole round, a three-in-a-row clear-streak threshold that retires a scenario, `R` review rounds drawn entirely from the weak list, and the week's cleared spots on the Done screen.
 
 ### Future (not yet implemented)
 
 Deferred follow-ons, documented in `docs/roadmap-progress.md` and
-`docs/manual-testing-guide.md`:
+`docs/ios-app-roadmap.md`:
 
-- **True multi-hand showdowns** (Option B) and **bankroll / betting / splits /
-  doubles / surrender** (Option C) — the current showdown is single-hand,
-  hit/stand, no money.
+- **Showdown bankroll / betting / surrender** — the showdown now plays doubles
+  and splits, but still has no money, bets, or surrender.
 - **KO true count** — IRC / key-count math so unbalanced systems get a true
   count (KO is running-count only today).
 - **Deviation charts for KO / Omega II / Wong Halves** — deviations are Hi-Lo
   only.
-- **End-to-end tests** — a Playwright smoke layer (plan in
-  [`docs/e2e-testing-plan.md`](docs/e2e-testing-plan.md)), plus an enforced
-  coverage threshold and a value-by-value chart check against the BJA PDFs.
-- **Real PWA install** — service worker + maskable icons (and a light theme);
-  see [`docs/mobile-mirror.md`](docs/mobile-mirror.md).
+- **Light theme on iOS** — the web app ships both palettes; the SwiftUI app still
+  pins `.preferredColorScheme(.dark)` at its root and reads a fixed `Theme`, so
+  supporting light there means making those colors trait-aware first.
+- **App Store submission** — the human/Apple steps in
+  [`docs/app-store-submission.md`](docs/app-store-submission.md): hosting the
+  privacy/support pages, App Store Connect setup, TestFlight, and review.

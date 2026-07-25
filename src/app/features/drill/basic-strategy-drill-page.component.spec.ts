@@ -4,10 +4,16 @@ import { Router, provideRouter } from '@angular/router';
 import type { Card, Rank, Scenario, Suit } from '../../core/models/card.model';
 import type { Action, EvaluationResult } from '../../core/models/strategy.model';
 import { BASIC_STRATEGY_STATS_KEY } from '../../core/services/basic-strategy-stats.service';
+import { CardGeneratorService } from '../../core/services/card-generator.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
-import { MissTallyService } from '../../core/services/miss-tally.service';
+import {
+  CLEAR_STREAK,
+  MissTallyService,
+  type ScenarioRef,
+} from '../../core/services/miss-tally.service';
 import { PracticeHistoryService } from '../../core/services/practice-history.service';
 import { BasicStrategyDrillPageComponent } from './basic-strategy-drill-page.component';
+import { handQuestion } from './drill-hand';
 import { FLOW_ADVANCE_DELAY_MS } from './drill-timing';
 
 const ADVANCE_MS = 50;
@@ -152,6 +158,50 @@ describe('BasicStrategyDrillPageComponent', () => {
       c.answer('H');
       c.answer('S');
       expect(c.handsToday()).toBe(1);
+    });
+  });
+
+  // Grading is conveyed by color and position on the action grid, neither of
+  // which a screen reader can report. The live region is the only channel
+  // that carries the verdict, so it has to hold the whole sentence.
+  describe('grading announcement', () => {
+    function liveRegion(fixture: ComponentFixture<BasicStrategyDrillPageComponent>): HTMLElement {
+      return fixture.nativeElement.querySelector('[role="status"]') as HTMLElement;
+    }
+
+    it('is silent while a hand is unanswered', () => {
+      const { fixture } = createPage();
+      expect(liveRegion(fixture).textContent).toBe('');
+    });
+
+    it('names the correct action on a hit', () => {
+      const { fixture, c } = createPage();
+      c.scenario.set(HIT_SCENARIO);
+      fixture.detectChanges();
+      actionButton(fixture, 'Hit').click();
+      fixture.detectChanges();
+      expect(liveRegion(fixture).textContent).toBe('Correct: Hit.');
+    });
+
+    it('names the verdict, the correct action, and the reason on a miss', () => {
+      const { fixture, c } = createPage();
+      c.scenario.set(HIT_SCENARIO);
+      fixture.detectChanges();
+      actionButton(fixture, 'Stand').click();
+      fixture.detectChanges();
+      const text = liveRegion(fixture).textContent!;
+      expect(text).toContain('Incorrect. Correct: Hit.');
+      expect(text).toContain('Hard 7 vs dealer 6 under S17: hit.');
+    });
+
+    it('clears on the next hand so the following verdict is a fresh change', () => {
+      const { fixture, c } = createPage();
+      c.scenario.set(HIT_SCENARIO);
+      fixture.detectChanges();
+      actionButton(fixture, 'Hit').click();
+      vi.advanceTimersByTime(ADVANCE_MS);
+      fixture.detectChanges();
+      expect(liveRegion(fixture).textContent).toBe('');
     });
   });
 
@@ -328,6 +378,90 @@ describe('BasicStrategyDrillPageComponent', () => {
       expect(
         (fixture.nativeElement.querySelector('.topbar__count') as HTMLElement).textContent,
       ).toBe('2/4');
+    });
+
+    it('names every outstanding weakness and what the week cleared', () => {
+      const tally = TestBed.inject(MissTallyService);
+      tally.record('basic-strategy', { kind: 'hard', hand: '16', dealer: '10' }, false);
+      tally.record('basic-strategy', { kind: 'pair', hand: '8', dealer: '10' }, false);
+      // A third scenario missed once, then answered right three times running.
+      const cleared: ScenarioRef = { kind: 'soft', hand: '18', dealer: '9' };
+      tally.record('basic-strategy', cleared, false);
+      for (let i = 0; i < CLEAR_STREAK; i++) tally.record('basic-strategy', cleared, true);
+
+      TestBed.inject(FlowPrefsService).setDailyGoal(1);
+      const { fixture, c } = createPage();
+      drillToTarget(fixture, c, 1);
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('.done__next')!.textContent).toContain('+1 more');
+      expect(el.querySelector('.done__cleared')!.textContent).toContain('A,7 vs 9');
+    });
+
+    // The queued weakness promises the next round drills it. A review round
+    // makes that every hand; an ordinary round only weights toward it.
+    describe('review rounds', () => {
+      const PAIR_8S: ScenarioRef = { kind: 'pair', hand: '8', dealer: '10' };
+      const PAIR_8S_QUESTION = { prefix: '', value: '8,8', dealer: '10' };
+
+      // Both sources of randomness pinned, so which hand is dealt is a fact
+      // about the round's mode and nothing else. Math.random at 0.99 fails an
+      // ordinary round's 0.4 share roll but never a review round's roll of 1.
+      function pinRandomness(): void {
+        vi.spyOn(Math, 'random').mockReturnValue(0.99);
+        TestBed.inject(CardGeneratorService).setRandomSource(() => 0);
+      }
+
+      function startedReviewRound(): {
+        fixture: ComponentFixture<BasicStrategyDrillPageComponent>;
+        c: Internals;
+      } {
+        TestBed.inject(MissTallyService).record('basic-strategy', PAIR_8S, false);
+        TestBed.inject(FlowPrefsService).setDailyGoal(10);
+        const { fixture, c } = createPage();
+        drillToTarget(fixture, c, 10);
+        expect(c.phase()).toBe('done');
+        (fixture.nativeElement.querySelector('.done__next') as HTMLButtonElement).click();
+        fixture.detectChanges();
+        return { fixture, c };
+      }
+
+      it('deals the weak spot on every hand, not just the first', () => {
+        const { fixture, c } = startedReviewRound();
+        expect(c.phase()).toBe('question');
+        expect(c.target()).toBe(20);
+
+        pinRandomness();
+        for (let i = 0; i < 3; i++) {
+          expect(handQuestion(c.scenario().player, c.scenario().dealerUpcard)).toEqual(
+            PAIR_8S_QUESTION,
+          );
+          c.answer('P');
+          vi.advanceTimersByTime(ADVANCE_MS);
+          fixture.detectChanges();
+        }
+      });
+
+      it('"One more round" afterwards goes back to weighting, not forcing', () => {
+        const { fixture, c } = startedReviewRound();
+        drillToTarget(fixture, c, 10);
+        (fixture.nativeElement.querySelector('.done__again') as HTMLButtonElement).click();
+        fixture.detectChanges();
+
+        // Hand one still opens on the weak spot — that promise is unchanged.
+        expect(handQuestion(c.scenario().player, c.scenario().dealerUpcard)).toEqual(
+          PAIR_8S_QUESTION,
+        );
+
+        // Hand two takes the share roll, which now fails: a fresh hand.
+        pinRandomness();
+        c.answer('P');
+        vi.advanceTimersByTime(ADVANCE_MS);
+        fixture.detectChanges();
+        expect(handQuestion(c.scenario().player, c.scenario().dealerUpcard)).not.toEqual(
+          PAIR_8S_QUESTION,
+        );
+      });
     });
   });
 

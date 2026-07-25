@@ -213,6 +213,67 @@ struct BasicStrategyDrillModelTests {
         #expect(h.model.phase == .question)
         #expect(h.model.target == 4)
     }
+
+    // MARK: review rounds
+
+    /// The queued weakness promises the next round drills it. A review round makes
+    /// that every hand, not just the first.
+    @Test func reviewRoundsDealTheWeakSpotOnEveryHand() {
+        let pair8s = ScenarioRef(kind: "pair", hand: "8", dealer: "10")
+        let h = makeHarness(dailyGoal: 10, seedWeak: pair8s)
+        for _ in 0 ..< 10 {
+            h.model.deal(hitScenario)
+            h.model.answer(.hit)
+            h.scheduler.fire()
+        }
+        #expect(h.model.phase == .done)
+
+        h.model.reviewMisses()
+        #expect(h.model.phase == .question)
+        #expect(h.model.target == 20)
+
+        // Hands answered without ever seeding a scenario: in a review round every
+        // one has to be the recorded weak spot, whatever the RNG does. Splitting
+        // 8,8 is correct, so this also walks the spot to cleared — which takes it
+        // out of the weak list on the hand after the last correct answer.
+        for _ in 0 ..< clearStreak {
+            #expect(h.model.question == HandQuestion(prefix: "", value: "8,8", dealer: "10"))
+            h.model.answer(.split)
+            h.scheduler.fire()
+        }
+
+        // Weak list now empty: the round falls back to fresh hands rather than
+        // stalling. (Asserting the hand *isn't* 8,8 vs 10 would flake — a random
+        // deal can land on it — so assert the round still makes progress.)
+        #expect(h.model.weakSpots.isEmpty)
+        #expect(h.model.clearedSpots.map(\.label) == ["8,8 vs 10"])
+        #expect(h.model.phase == .question)
+        let before = h.model.handsToday
+        h.model.answer(h.model.legalActions[0])
+        #expect(h.model.handsToday == before + 1)
+    }
+
+    @Test func reviewRoundsAreDeclinedWithNothingToReview() {
+        let h = makeHarness(dailyGoal: 1)
+        h.model.deal(hitScenario)
+        h.model.answer(.hit)
+        h.scheduler.fire()
+        #expect(h.model.phase == .done)
+        #expect(h.model.weakSpot == nil)
+
+        h.model.reviewMisses()
+        #expect(h.model.phase == .done)
+    }
+
+    @Test func aClearedScenarioLeavesTheWeakList() {
+        let pair8s = ScenarioRef(kind: "pair", hand: "8", dealer: "10")
+        let h = makeHarness(dailyGoal: 40, seedWeak: pair8s)
+        for _ in 0 ..< clearStreak {
+            h.missTally.record(.basicStrategy, ref: pair8s, correct: true)
+        }
+        #expect(h.model.weakSpots.isEmpty)
+        #expect(h.model.clearedSpots.map(\.label) == ["8,8 vs 10"])
+    }
 }
 
 /// Shared engines built once from the bundled data for the drill-model tests.

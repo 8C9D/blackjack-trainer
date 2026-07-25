@@ -27,7 +27,7 @@
     font-size: 0.9rem;
 
     input[type='radio'] {
-      accent-color: var(--accent);
+      accent-color: var(--accent-ink);
     }
   }
 
@@ -59,13 +59,17 @@
       font-size: 1rem;
 
       &:focus-visible {
-        outline: 2px solid var(--accent);
+        outline: 2px solid var(--focus);
         outline-offset: 2px;
       }
     }
 
+    // Some platforms render the dropdown list with the page's own colors
+    // rather than the UA's; pin it to the palette so it can't inherit light
+    // text onto a light popup (or the reverse) as the theme changes.
     select option {
-      color: black;
+      background: var(--surface);
+      color: var(--ink);
     }
   }
 

@@ -22,10 +22,17 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    // Bind ng serve to IPv4 explicitly: its default host resolves to ::1
-    // (IPv6) on macOS, but the readiness check and baseURL below use 127.0.0.1,
-    // and a mismatch makes Playwright wait forever for a server that is up.
-    command: 'npm start -- --host 127.0.0.1',
+    // Which server backs the suite is its own switch, not conflated with CI's
+    // retries/workers/reporter knobs: E2E_SERVER=dist serves the production
+    // bundle (requires a prior `npm run build`) via the dependency-free static
+    // server; CI defaults to dist. Locally the default is ng serve, bound to
+    // IPv4 explicitly: its default host resolves to ::1 (IPv6) on macOS, but
+    // the readiness check and baseURL use 127.0.0.1, and a mismatch makes
+    // Playwright wait forever for a server that is up.
+    command:
+      (process.env.E2E_SERVER ?? (process.env.CI ? 'dist' : 'serve')) === 'dist'
+        ? `PORT=${PORT} node tools/serve-dist.mjs`
+        : 'npm start -- --host 127.0.0.1',
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

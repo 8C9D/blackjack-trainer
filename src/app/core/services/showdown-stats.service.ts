@@ -1,6 +1,7 @@
 import { Injectable, signal, type Signal } from '@angular/core';
 
 import type { ShowdownOutcome } from '../models/showdown.model';
+import { readJson, writeJson } from './storage';
 
 export const SHOWDOWN_STATS_KEY = 'blackjack-showdown-stats';
 
@@ -50,11 +51,8 @@ export class ShowdownStatsService {
   }
 
   private load(): ShowdownStats {
-    if (typeof localStorage === 'undefined') return EMPTY_STATS;
-    try {
-      const raw = localStorage.getItem(SHOWDOWN_STATS_KEY);
-      if (!raw) return EMPTY_STATS;
-      const parsed = JSON.parse(raw) as Partial<ShowdownStats>;
+    return readJson(SHOWDOWN_STATS_KEY, EMPTY_STATS, (raw) => {
+      const parsed = raw as Partial<ShowdownStats>;
       if (
         typeof parsed.hands === 'number' &&
         typeof parsed.wins === 'number' &&
@@ -70,18 +68,11 @@ export class ShowdownStatsService {
           blackjacks: parsed.blackjacks,
         };
       }
-    } catch {
-      // Malformed payload — fall through to empty.
-    }
-    return EMPTY_STATS;
+      return EMPTY_STATS;
+    });
   }
 
   private persist(stats: ShowdownStats): void {
-    if (typeof localStorage === 'undefined') return;
-    try {
-      localStorage.setItem(SHOWDOWN_STATS_KEY, JSON.stringify(stats));
-    } catch {
-      // localStorage can throw on quota / private browsing; tolerate silently.
-    }
+    writeJson(SHOWDOWN_STATS_KEY, stats);
   }
 }

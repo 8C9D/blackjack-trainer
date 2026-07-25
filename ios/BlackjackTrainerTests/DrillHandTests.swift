@@ -148,4 +148,79 @@ struct DrillHandTests {
         )
         #expect(aces.player.cards.map(\.rank) == [.ace, .ace])
     }
+
+    // MARK: pickWeakSpot
+
+    private func weak(_ label: String, _ misses: Int) -> WeakSpot {
+        WeakSpot(
+            ref: ScenarioRef(kind: "hard", hand: label, dealer: "10"),
+            label: label,
+            misses: misses,
+            attempts: misses * 2,
+            streak: 0
+        )
+    }
+
+    /// Feeds the two `random()` calls in order: the share roll, then the weighted
+    /// draw.
+    private func rolls(_ values: [Double]) -> () -> Double {
+        let box = RollBox(values)
+        return { box.next() }
+    }
+
+    @Test func dealsAFreshHandWhenNothingHasBeenMissed() {
+        #expect(pickWeakSpot([], random: rolls([0])) == nil)
+    }
+
+    @Test func dealsAFreshHandWhenTheShareRollMisses() {
+        let spots = [weak("16", 3)]
+        #expect(pickWeakSpot(spots, random: rolls([weakSpotShare])) == nil)
+        #expect(pickWeakSpot(spots, random: rolls([0.99])) == nil)
+    }
+
+    @Test func drawsFromTheWeakListWhenTheShareRollHits() {
+        #expect(pickWeakSpot([weak("16", 3)], random: rolls([0, 0]))?.label == "16")
+    }
+
+    @Test func weightsTheDrawByMissCount() {
+        // Weights 3 and 1 over a total of 4: the first spot owns [0, 0.75).
+        let spots = [weak("16", 3), weak("12", 1)]
+        #expect(pickWeakSpot(spots, random: rolls([0, 0]))?.label == "16")
+        #expect(pickWeakSpot(spots, random: rolls([0, 0.74]))?.label == "16")
+        #expect(pickWeakSpot(spots, random: rolls([0, 0.76]))?.label == "12")
+        // A share of 1 makes every hand a weak spot — the review round.
+        #expect(pickWeakSpot(spots, random: rolls([0.99, 0.9]), share: 1)?.label == "12")
+    }
+
+    @Test func landsOnTheLastSpotWhenTheDrawRoundsPastTheEnd() {
+        let spots = [weak("16", 3), weak("12", 1)]
+        #expect(pickWeakSpot(spots, random: rolls([0, 1]))?.label == "12")
+    }
+
+    @Test func holdsTheShareItAdvertisesOverManyDraws() {
+        let spots = [weak("16", 1)]
+        var hits = 0
+        for _ in 0 ..< 10000 where pickWeakSpot(spots, random: { .random(in: 0 ..< 1) }) != nil {
+            hits += 1
+        }
+        // ±4 points is far outside sampling noise at n = 10,000 but immune to an
+        // unlucky seed.
+        #expect(abs(Double(hits) / 10000 - weakSpotShare) < 0.04)
+    }
+}
+
+/// A mutable cursor over a fixed roll sequence, so the closure handed to
+/// `pickWeakSpot` can stay non-escaping and non-mutating.
+private final class RollBox {
+    private let values: [Double]
+    private var index = 0
+
+    init(_ values: [Double]) {
+        self.values = values
+    }
+
+    func next() -> Double {
+        defer { index += 1 }
+        return values[index]
+    }
 }

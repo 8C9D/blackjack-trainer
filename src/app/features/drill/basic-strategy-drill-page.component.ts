@@ -13,13 +13,20 @@ import { BasicStrategyStatsService } from '../../core/services/basic-strategy-st
 import { CardGeneratorService } from '../../core/services/card-generator.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
 import { MissTallyService, scenarioRefFor } from '../../core/services/miss-tally.service';
+import { RANDOM_SOURCE } from '../../core/services/random-source';
 import { PracticeHistoryService } from '../../core/services/practice-history.service';
 import { FlowActionsComponent } from '../../shared/flow-actions.component';
 import { FlowDoneComponent } from '../../shared/flow-done.component';
 import { FlowTopbarComponent } from '../../shared/flow-topbar.component';
 import { DrillSession } from './drill-session';
 import { FLOW_ADVANCE_DELAY_MS } from './drill-timing';
-import { handQuestion, legalActionsFor, nextSessionTarget, scenarioFromRef } from './drill-hand';
+import {
+  handQuestion,
+  legalActionsFor,
+  nextSessionTarget,
+  pickWeakSpot,
+  scenarioFromRef,
+} from './drill-hand';
 import { FlowStageComponent } from './flow-stage.component';
 
 // The drill loop's only states. A correct answer flashes in place and
@@ -31,6 +38,11 @@ type DrillPhase = 'question' | 'flash' | 'miss' | 'done';
   imports: [FlowTopbarComponent, FlowStageComponent, FlowActionsComponent, FlowDoneComponent],
   template: `
     <div class="drill">
+      <!-- Grading shows as color and position on the action grid, which
+           announces as nothing. This node stays mounted across every phase so
+           the region is already live when its text changes. -->
+      <p class="sr-only" role="status">{{ verdict() }}</p>
+
       @if (phase() !== 'done') {
         <app-flow-topbar
           name="Basic Strategy"
@@ -74,7 +86,10 @@ type DrillPhase = 'question' | 'flash' | 'miss' | 'done';
           [bestStreak]="session.bestStreak()"
           [accuracy]="session.accuracy()"
           [weakSpot]="weakSpot()"
+          [weakSpots]="weakSpots()"
+          [cleared]="clearedSpots()"
           (again)="oneMoreRound()"
+          (review)="reviewMisses()"
           (exit)="exitToHome()"
         />
       }
@@ -91,6 +106,8 @@ export class BasicStrategyDrillPageComponent {
   private readonly missTally = inject(MissTallyService);
   private readonly router = inject(Router);
   private readonly advanceDelayMs = inject(FLOW_ADVANCE_DELAY_MS);
+  // Injected, not Math.random, so a ?seed= session is reproducible end to end.
+  private readonly random = inject(RANDOM_SOURCE);
 
   protected readonly session = new DrillSession();
 
@@ -120,10 +137,28 @@ export class BasicStrategyDrillPageComponent {
   protected readonly correctAction = computed<Action | null>(() => this.result()?.action ?? null);
   protected readonly goalMet = computed(() => this.handsToday() >= this.prefs.prefs().dailyGoal);
 
-  protected readonly weakSpot = computed(() => {
+  protected readonly weakSpots = computed(() => {
     this.missTally.state();
-    return this.missTally.weakSpotFor('basic-strategy');
+    return this.missTally.weakSpots('basic-strategy');
   });
+
+  protected readonly weakSpot = computed(() => this.weakSpots()[0] ?? null);
+
+  protected readonly clearedSpots = computed(() => {
+    this.missTally.state();
+    return this.missTally.clearedSpots('basic-strategy');
+  });
+
+  protected readonly verdict = computed(() => {
+    const result = this.result();
+    if (result === null) return '';
+    const correctAction = ACTION_LABELS[result.action];
+    if (result.correct) return `Correct: ${correctAction}.`;
+    return `Incorrect. Correct: ${correctAction}. ${result.reason}`;
+  });
+
+  // A review round drills only the weak list; an ordinary round mixes it in.
+  private readonly reviewing = signal(false);
 
   private advanceTimer: ReturnType<typeof setTimeout> | null = null;
   // Swallows the click that graded the miss so it doesn't also continue.
@@ -176,7 +211,19 @@ export class BasicStrategyDrillPageComponent {
   }
 
   protected oneMoreRound(): void {
+    this.startRound(false);
+  }
+
+  // "Drill my misses": the same round, but every hand comes from the weak
+  // list (falling back to fresh hands once it empties mid-round).
+  protected reviewMisses(): void {
+    if (this.missTally.weakSpotFor('basic-strategy') === null) return;
+    this.startRound(true);
+  }
+
+  private startRound(reviewing: boolean): void {
     if (this.phase() !== 'done') return;
+    this.reviewing.set(reviewing);
     this.session.reset();
     this.target.set(nextSessionTarget(this.handsToday(), this.prefs.prefs().dailyGoal));
     this.dealNext(this.firstScenario());
@@ -196,7 +243,7 @@ export class BasicStrategyDrillPageComponent {
       this.phase.set('done');
       return;
     }
-    this.dealNext(this.generator.generate());
+    this.dealNext(this.nextScenario());
   }
 
   private dealNext(scenario: Scenario): void {
@@ -206,10 +253,20 @@ export class BasicStrategyDrillPageComponent {
   }
 
   // Sessions open on the current weak spot when one exists — the Done
-  // screen's "Drill next" is a promise the next round keeps.
+  // screen's queued weakness is a promise the next round keeps.
   private firstScenario(): Scenario {
     const weak = this.missTally.weakSpotFor('basic-strategy');
-    if (weak) return scenarioFromRef(weak.ref, Math.random);
+    if (weak) return scenarioFromRef(weak.ref, this.random);
+    return this.generator.generate();
+  }
+
+  // Every later hand: weighted toward the scenarios being missed, so a
+  // weakness gets repetition inside the session that surfaced it. A review
+  // round draws from the weak list every time.
+  private nextScenario(): Scenario {
+    const share = this.reviewing() ? 1 : undefined;
+    const weak = pickWeakSpot(this.weakSpots(), this.random, share);
+    if (weak) return scenarioFromRef(weak.ref, this.random);
     return this.generator.generate();
   }
 

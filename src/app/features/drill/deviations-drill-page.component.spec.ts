@@ -7,6 +7,7 @@ import type { Action } from '../../core/models/strategy.model';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
 import { MissTallyService } from '../../core/services/miss-tally.service';
 import { DeviationsDrillPageComponent } from './deviations-drill-page.component';
+import { handQuestion } from './drill-hand';
 import { FLOW_ADVANCE_DELAY_MS } from './drill-timing';
 
 const ADVANCE_MS = 50;
@@ -71,6 +72,35 @@ describe('DeviationsDrillPageComponent', () => {
   it('records itself as the last trainer for Continue', () => {
     createPage();
     expect(TestBed.inject(FlowPrefsService).prefs().lastTrainer).toBe('deviations');
+  });
+
+  // Same reasoning as the Basic Strategy drill: the action grid's colors are
+  // the only on-screen verdict, so the live region carries it for screen
+  // readers — here including the deviation explanation.
+  it('announces the verdict, the expected action, and the deviation reason', () => {
+    const { fixture, c } = createPage();
+    const live = () =>
+      (fixture.nativeElement.querySelector('[role="status"]') as HTMLElement).textContent!;
+    expect(live()).toBe('');
+
+    c.scenario.set(SIXTEEN_V_TEN_TC0);
+    fixture.detectChanges();
+    c.answer('S');
+    fixture.detectChanges();
+    expect(live()).toBe('Correct: Stand.');
+
+    // Clearing between hands is what makes the next verdict a change the
+    // live region will actually announce.
+    vi.advanceTimersByTime(ADVANCE_MS);
+    fixture.detectChanges();
+    expect(live()).toBe('');
+
+    c.scenario.set(SIXTEEN_V_TEN_TC_NEG);
+    fixture.detectChanges();
+    c.answer('S');
+    fixture.detectChanges();
+    expect(live()).toContain('Incorrect. Correct: Hit.');
+    expect(live().length).toBeGreaterThan('Incorrect. Correct: Hit.'.length);
   });
 
   it('joins the true count to the question line', () => {
@@ -178,6 +208,41 @@ describe('DeviationsDrillPageComponent', () => {
       (fixture.nativeElement.querySelector('.done__again') as HTMLButtonElement).click();
       expect(c.phase()).toBe('question');
       expect(c.target()).toBe(4);
+    });
+
+    // A review round rebuilds the hand from the recorded scenario, which
+    // carries no true count of its own — the round's true-count source still
+    // has to supply one.
+    it('"Drill my misses" deals weak spots carrying a live true count', () => {
+      TestBed.inject(FlowPrefsService).updateDeviations({
+        trueCountSource: 'manual',
+        manualTrueCount: 5,
+      });
+      TestBed.inject(FlowPrefsService).setDailyGoal(4);
+      const { fixture, c } = createPage();
+      for (let i = 0; i < 4; i++) {
+        c.scenario.set(SIXTEEN_V_TEN_TC0);
+        c.answer('H'); // wrong at TC 0 — records 16 vs 10 as the weak spot
+        c.onKeyDown(new KeyboardEvent('keydown', { key: ' ' }));
+      }
+      fixture.detectChanges();
+      expect(c.phase()).toBe('done');
+
+      (fixture.nativeElement.querySelector('.done__next') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      vi.spyOn(Math, 'random').mockReturnValue(0.99);
+      for (let i = 0; i < 3; i++) {
+        expect(handQuestion(c.scenario().player, c.scenario().dealerUpcard)).toEqual({
+          prefix: 'Hard',
+          value: '16',
+          dealer: '10',
+        });
+        expect(c.scenario().trueCount).toBe(5);
+        c.answer('S');
+        vi.advanceTimersByTime(ADVANCE_MS);
+        fixture.detectChanges();
+      }
     });
   });
 

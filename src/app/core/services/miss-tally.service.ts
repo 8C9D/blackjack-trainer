@@ -4,11 +4,17 @@ import { cardHighValue, softNonAceValue, type Card } from '../models/card.model'
 import type { DealerUpcard } from '../models/strategy.model';
 import { classifyAsPair, isSoftHand, normalizeUpcardKey } from './basic-strategy-engine.service';
 import { localDateKey } from './practice-history.service';
+import { readJson, writeJson } from './storage';
 
 export const MISS_TALLY_KEY = 'blackjack-miss-tally';
 
 // Rolling window for weak-spot selection ("missed 3 of 7 this week").
 const WINDOW_DAYS = 7;
+
+// Consecutive correct answers that retire a scenario from the weak list.
+// Three is enough to distinguish "learned it" from "guessed it once": at six
+// answerable actions a lucky run of three is a 1-in-216 accident.
+export const CLEAR_STREAK = 3;
 
 // Trainers that produce per-scenario tallies. Card counting has no scenario
 // identity per rep, so it never records here.
@@ -28,6 +34,8 @@ export interface WeakSpot {
   readonly label: string;
   readonly misses: number;
   readonly attempts: number;
+  // Consecutive correct answers since this scenario was last missed.
+  readonly streak: number;
 }
 
 interface DayTally {
@@ -39,6 +47,9 @@ interface DayTally {
 interface ScenarioTally {
   readonly ref: ScenarioRef;
   readonly days: readonly DayTally[];
+  // Consecutive correct answers since the last miss. Unlike `days` this is
+  // not windowed: it is the live clear-streak signal, reset by any miss.
+  readonly streak: number;
 }
 
 type TallyState = Partial<Record<TalliedTrainer, Record<string, ScenarioTally>>>;
@@ -97,7 +108,7 @@ export class MissTallyService {
     const key = scenarioKey(ref);
     const state = this._state();
     const forTrainer = { ...(state[trainer] ?? {}) };
-    const existing = forTrainer[key] ?? { ref, days: [] };
+    const existing = forTrainer[key] ?? { ref, days: [], streak: 0 };
     const day = existing.days.find((d) => d.date === today);
     const days = day
       ? existing.days.map((d) =>
@@ -106,19 +117,51 @@ export class MissTallyService {
             : d,
         )
       : [...existing.days, { date: today, attempts: 1, misses: correct ? 0 : 1 }];
-    forTrainer[key] = { ref, days: this.pruneDays(days) };
+    forTrainer[key] = {
+      ref,
+      days: this.pruneDays(days),
+      streak: correct ? existing.streak + 1 : 0,
+    };
     const next: TallyState = { ...state, [trainer]: this.pruneScenarios(forTrainer) };
     this._state.set(next);
     this.persist(next);
   }
 
-  // The scenario with the most misses in the window (tiebreak: higher miss
-  // rate), or null when nothing was missed this week.
+  // Scenarios missed inside the window and not yet cleared, worst first
+  // (most misses, then highest miss rate, then scenario key so the order is
+  // stable). This is what adaptive selection draws from.
+  weakSpots(trainer: TalliedTrainer): readonly WeakSpot[] {
+    return this.windowed(trainer)
+      .filter((spot) => spot.streak < CLEAR_STREAK)
+      .sort(
+        (a, b) =>
+          b.misses - a.misses ||
+          b.misses / b.attempts - a.misses / a.attempts ||
+          scenarioKey(a.ref).localeCompare(scenarioKey(b.ref)),
+      );
+  }
+
+  // The counterpart: scenarios that were missed this week and have since been
+  // answered correctly CLEAR_STREAK times running. They no longer get extra
+  // practice, and the Done screen names them as the week's wins.
+  clearedSpots(trainer: TalliedTrainer): readonly WeakSpot[] {
+    return this.windowed(trainer)
+      .filter((spot) => spot.streak >= CLEAR_STREAK)
+      .sort((a, b) => b.streak - a.streak || scenarioKey(a.ref).localeCompare(scenarioKey(b.ref)));
+  }
+
+  // The worst outstanding scenario, or null when nothing is outstanding.
   weakSpotFor(trainer: TalliedTrainer): WeakSpot | null {
+    return this.weakSpots(trainer)[0] ?? null;
+  }
+
+  // Every scenario with at least one miss inside the window, with its
+  // in-window attempt/miss totals. Unsorted; the callers above rank it.
+  private windowed(trainer: TalliedTrainer): WeakSpot[] {
     const forTrainer = this._state()[trainer];
-    if (!forTrainer) return null;
+    if (!forTrainer) return [];
     const cutoff = this.cutoffDate();
-    let best: WeakSpot | null = null;
+    const spots: WeakSpot[] = [];
     for (const tally of Object.values(forTrainer)) {
       let attempts = 0;
       let misses = 0;
@@ -129,21 +172,15 @@ export class MissTallyService {
         }
       }
       if (misses === 0) continue;
-      const candidate: WeakSpot = {
+      spots.push({
         ref: tally.ref,
         label: scenarioLabel(tally.ref),
         misses,
         attempts,
-      };
-      if (
-        best === null ||
-        misses > best.misses ||
-        (misses === best.misses && misses / attempts > best.misses / best.attempts)
-      ) {
-        best = candidate;
-      }
+        streak: tally.streak,
+      });
     }
-    return best;
+    return spots;
   }
 
   private cutoffDate(): string {
@@ -164,17 +201,14 @@ export class MissTallyService {
     const out: Record<string, ScenarioTally> = {};
     for (const [key, tally] of Object.entries(forTrainer)) {
       const days = this.pruneDays(tally.days);
-      if (days.length > 0) out[key] = { ref: tally.ref, days };
+      if (days.length > 0) out[key] = { ref: tally.ref, days, streak: tally.streak };
     }
     return out;
   }
 
   private load(): TallyState {
-    if (typeof localStorage === 'undefined') return {};
-    try {
-      const raw = localStorage.getItem(MISS_TALLY_KEY);
-      if (!raw) return {};
-      const parsed = JSON.parse(raw) as TallyState;
+    return readJson(MISS_TALLY_KEY, {} as TallyState, (raw) => {
+      const parsed = raw as TallyState;
       if (typeof parsed !== 'object' || parsed === null) return {};
       const out: TallyState = {};
       for (const trainer of ['basic-strategy', 'deviations'] as const) {
@@ -182,25 +216,24 @@ export class MissTallyService {
         if (typeof forTrainer !== 'object' || forTrainer === null) continue;
         const valid: Record<string, ScenarioTally> = {};
         for (const [key, tally] of Object.entries(forTrainer)) {
-          if (isScenarioTally(tally))
-            valid[key] = { ref: tally.ref, days: this.pruneDays(tally.days) };
+          if (isScenarioTally(tally)) {
+            valid[key] = {
+              ref: tally.ref,
+              days: this.pruneDays(tally.days),
+              // Payloads written before clear-streak tracking have no streak; a
+              // fresh 0 just means those scenarios must earn it again.
+              streak: typeof tally.streak === 'number' && tally.streak >= 0 ? tally.streak : 0,
+            };
+          }
         }
         out[trainer] = this.pruneScenarios(valid);
       }
       return out;
-    } catch {
-      // Malformed payload — start empty.
-      return {};
-    }
+    });
   }
 
   private persist(state: TallyState): void {
-    if (typeof localStorage === 'undefined') return;
-    try {
-      localStorage.setItem(MISS_TALLY_KEY, JSON.stringify(state));
-    } catch {
-      // localStorage can throw on quota / private browsing; tolerate silently.
-    }
+    writeJson(MISS_TALLY_KEY, state);
   }
 }
 

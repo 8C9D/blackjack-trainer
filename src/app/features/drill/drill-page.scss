@@ -6,15 +6,18 @@
   min-height: 100dvh;
   max-width: 720px;
   margin: 0 auto;
+  // Keep the top bar clear of the status bar in iOS standalone; zero
+  // elsewhere. box-sizing: border-box keeps the shell exactly viewport-sized.
+  padding-top: env(safe-area-inset-top, 0);
 }
 
 .drill__question {
   margin: 1.4rem 0 0;
   font-size: 1.05rem;
-  color: #c6cad3;
+  color: var(--ink-2);
 
   b {
-    color: #fff;
+    color: var(--ink-strong);
   }
 }
 
@@ -22,7 +25,7 @@
   color: var(--muted);
 
   b {
-    color: var(--accent);
+    color: var(--accent-ink);
   }
 }
 
@@ -30,12 +33,12 @@
   margin: 1.4rem 0 0;
   text-align: center;
   font-size: 0.95rem;
-  color: #c6cad3;
+  color: var(--ink-2);
   line-height: 1.5;
   max-width: 42ch;
 
   b {
-    color: var(--accent);
+    color: var(--accent-ink);
   }
 }
 

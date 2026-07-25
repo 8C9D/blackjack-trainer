@@ -18,6 +18,7 @@ import {
   MIN_DAILY_GOAL,
   type DeviationPracticeMode,
   type DeviationTrueCountSource,
+  type ThemePref,
 } from '../../core/services/flow-prefs.service';
 import { CountingSettingsComponent } from '../card-counting/counting-settings.component';
 
@@ -25,6 +26,12 @@ import { CountingSettingsComponent } from '../card-counting/counting-settings.co
 // rejects obvious garbage while covering any plausible drill).
 export const MIN_MANUAL_TRUE_COUNT = -20;
 export const MAX_MANUAL_TRUE_COUNT = 20;
+
+export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
+  { value: 'system', label: 'Match system' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'light', label: 'Light' },
+];
 
 // The one home for every pre-made decision: daily goal, table rules, and the
 // per-trainer drill configuration. Drill screens never show any of this.
@@ -55,6 +62,21 @@ export const MAX_MANUAL_TRUE_COUNT = 20;
             (change)="onGoalChange($event)"
           />
         </label>
+      </section>
+
+      <section class="settings__group" aria-label="Appearance">
+        <h2 class="settings__heading">Appearance</h2>
+        @for (option of themeOptions; track option.value) {
+          <label>
+            <input
+              type="radio"
+              name="theme"
+              [checked]="prefs().theme === option.value"
+              (change)="setTheme(option.value)"
+            />
+            {{ option.label }}
+          </label>
+        }
       </section>
 
       <section class="settings__group" aria-label="Table rules">
@@ -192,6 +214,7 @@ export class SettingsPageComponent {
   protected readonly MIN_TC = MIN_MANUAL_TRUE_COUNT;
   protected readonly MAX_TC = MAX_MANUAL_TRUE_COUNT;
 
+  protected readonly themeOptions = THEME_OPTIONS;
   protected readonly systems = COUNTING_SYSTEMS;
   protected readonly decksRemainingPresets = DECKS_REMAINING_PRESETS;
   protected readonly deckOptions = SHOE_DECK_OPTIONS;
@@ -228,6 +251,10 @@ export class SettingsPageComponent {
       // sits empty and out of sync (mirrors onManualTrueCountChange).
       input.value = String(this.prefs().dailyGoal);
     }
+  }
+
+  protected setTheme(theme: ThemePref): void {
+    this.prefsService.setTheme(theme);
   }
 
   protected setRuleSet(ruleSet: RuleSet): void {

@@ -82,11 +82,13 @@ struct MissTallyStoreTests {
 
     @Test func accumulatesAttemptsAndMissesForAScenario() {
         let s = store(freshDefaults(), now: { Self.base() })
-        for correct in [false, true, false, false, true, true, true] {
+        // Ends on a single correct answer, short of the clear streak that would
+        // retire this scenario from the weak list.
+        for correct in [false, true, false, true, true, false, true] {
             s.record(.basicStrategy, ref: hard16v10, correct: correct)
         }
         #expect(s.weakSpotFor(.basicStrategy)
-            == WeakSpot(ref: hard16v10, label: "16 vs 10", misses: 3, attempts: 7))
+            == WeakSpot(ref: hard16v10, label: "16 vs 10", misses: 3, attempts: 7, streak: 1))
     }
 
     @Test func picksTheScenarioWithTheMostMissesTiebreakingOnMissRate() {
@@ -142,5 +144,86 @@ struct MissTallyStoreTests {
         #expect(s.weakSpotFor(.basicStrategy) == nil)
         s.record(.basicStrategy, ref: hard16v10, correct: false)
         #expect(s.weakSpotFor(.basicStrategy) != nil)
+    }
+
+    // MARK: clear streak
+
+    @Test func retiresAScenarioAfterTheClearStreak() {
+        let s = store(freshDefaults(), now: { Self.base() })
+        s.record(.basicStrategy, ref: hard16v10, correct: false)
+        for _ in 0 ..< (clearStreak - 1) {
+            s.record(.basicStrategy, ref: hard16v10, correct: true)
+            #expect(s.weakSpotFor(.basicStrategy) != nil)
+        }
+        s.record(.basicStrategy, ref: hard16v10, correct: true)
+
+        #expect(s.weakSpots(.basicStrategy).isEmpty)
+        #expect(s.weakSpotFor(.basicStrategy) == nil)
+        #expect(s.clearedSpots(.basicStrategy).map(\.label) == ["16 vs 10"])
+    }
+
+    @Test func aSingleMissUnclearsAClearedScenario() {
+        let s = store(freshDefaults(), now: { Self.base() })
+        s.record(.basicStrategy, ref: hard16v10, correct: false)
+        for _ in 0 ..< clearStreak {
+            s.record(.basicStrategy, ref: hard16v10, correct: true)
+        }
+        #expect(s.clearedSpots(.basicStrategy).count == 1)
+
+        s.record(.basicStrategy, ref: hard16v10, correct: false)
+        #expect(s.clearedSpots(.basicStrategy).isEmpty)
+        #expect(s.weakSpotFor(.basicStrategy)?.streak == 0)
+    }
+
+    @Test func neverCountsAScenarioAnsweredCorrectlyFromTheStart() {
+        let s = store(freshDefaults(), now: { Self.base() })
+        for _ in 0 ..< (clearStreak + 2) {
+            s.record(.basicStrategy, ref: hard16v10, correct: true)
+        }
+        // Clearing is only meaningful for something that was missed this week.
+        #expect(s.clearedSpots(.basicStrategy).isEmpty)
+        #expect(s.weakSpots(.basicStrategy).isEmpty)
+    }
+
+    @Test func survivesAPayloadWrittenBeforeClearStreakTracking() throws {
+        let defaults = freshDefaults()
+        let legacy: [String: Any] = [
+            "basic-strategy": [
+                scenarioKey(hard16v10): [
+                    "ref": ["kind": "hard", "hand": "16", "dealer": "10"],
+                    "days": [["date": localDateKey(Self.base()), "attempts": 4, "misses": 2]]
+                ]
+            ]
+        ]
+        try defaults.set(
+            JSONSerialization.data(withJSONObject: legacy),
+            forKey: StatsKeys.missTally
+        )
+
+        let s = store(defaults, now: { Self.base() })
+        let weak = try #require(s.weakSpotFor(.basicStrategy))
+        #expect(weak.misses == 2)
+        #expect(weak.streak == 0)
+    }
+
+    // MARK: weakSpots ranking
+
+    @Test func ordersWeakSpotsByMissesThenRateThenAStableKey() {
+        let s = store(freshDefaults(), now: { Self.base() })
+        let pair8v10 = ScenarioRef(kind: "pair", hand: "8", dealer: "10")
+        // 16v10: 2 of 4. A,7v9: 2 of 2 — same misses, higher rate, so first.
+        s.record(.basicStrategy, ref: hard16v10, correct: false)
+        s.record(.basicStrategy, ref: hard16v10, correct: false)
+        s.record(.basicStrategy, ref: hard16v10, correct: true)
+        s.record(.basicStrategy, ref: hard16v10, correct: true)
+        s.record(.basicStrategy, ref: soft18v9, correct: false)
+        s.record(.basicStrategy, ref: soft18v9, correct: false)
+        // Pair 8s: 3 misses — the most, so it leads.
+        s.record(.basicStrategy, ref: pair8v10, correct: false)
+        s.record(.basicStrategy, ref: pair8v10, correct: false)
+        s.record(.basicStrategy, ref: pair8v10, correct: false)
+
+        #expect(s.weakSpots(.basicStrategy).map(\.label)
+            == ["8,8 vs 10", "A,7 vs 9", "16 vs 10"])
     }
 }

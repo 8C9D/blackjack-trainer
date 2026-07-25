@@ -26,6 +26,7 @@ describe('FlowPrefsService', () => {
     s.setLastTrainer('deviations');
     s.setDailyGoal(30);
     s.setRuleSet('H17');
+    s.setTheme('light');
     s.setOptions({ doubleAfterSplit: true, lateSurrender: true });
     s.updateDeviations({ practiceMode: 'deviation-only', manualTrueCount: 4 });
     s.updateCounting({ systemId: 'ko', numberOfCards: 40 });
@@ -37,6 +38,7 @@ describe('FlowPrefsService', () => {
     expect(p.lastTrainer).toBe('deviations');
     expect(p.dailyGoal).toBe(30);
     expect(p.ruleSet).toBe('H17');
+    expect(p.theme).toBe('light');
     expect(p.options).toEqual({ doubleAfterSplit: true, lateSurrender: true });
     expect(p.deviations.practiceMode).toBe('deviation-only');
     expect(p.deviations.manualTrueCount).toBe(4);
@@ -86,6 +88,14 @@ describe('FlowPrefsService', () => {
     it('returns defaults for a non-object payload', () => {
       expect(mergePrefs(null)).toEqual(DEFAULT_FLOW_PREFS);
       expect(mergePrefs('x')).toEqual(DEFAULT_FLOW_PREFS);
+    });
+
+    it('keeps only a known theme, defaulting to system', () => {
+      expect(mergePrefs({ theme: 'light' }).theme).toBe('light');
+      expect(mergePrefs({ theme: 'dark' }).theme).toBe('dark');
+      expect(mergePrefs({ theme: 'sepia' }).theme).toBe('system');
+      // Prefs written before the theme existed must not lose it.
+      expect(mergePrefs({ dailyGoal: 15 }).theme).toBe('system');
     });
   });
 

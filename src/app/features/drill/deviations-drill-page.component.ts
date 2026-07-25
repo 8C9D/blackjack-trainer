@@ -16,13 +16,20 @@ import {
 import { DeviationStatsService } from '../../core/services/deviation-stats.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
 import { MissTallyService, scenarioRefFor } from '../../core/services/miss-tally.service';
+import { RANDOM_SOURCE } from '../../core/services/random-source';
 import { PracticeHistoryService } from '../../core/services/practice-history.service';
 import { FlowActionsComponent } from '../../shared/flow-actions.component';
 import { FlowDoneComponent } from '../../shared/flow-done.component';
 import { FlowTopbarComponent } from '../../shared/flow-topbar.component';
 import { DrillSession } from './drill-session';
 import { FLOW_ADVANCE_DELAY_MS } from './drill-timing';
-import { handQuestion, legalActionsFor, nextSessionTarget, scenarioFromRef } from './drill-hand';
+import {
+  handQuestion,
+  legalActionsFor,
+  nextSessionTarget,
+  pickWeakSpot,
+  scenarioFromRef,
+} from './drill-hand';
 import { FlowStageComponent } from './flow-stage.component';
 import {
   generateScenarioForDeviationRule,
@@ -46,6 +53,11 @@ type DrillPhase = 'question' | 'flash' | 'miss' | 'done';
   imports: [FlowTopbarComponent, FlowStageComponent, FlowActionsComponent, FlowDoneComponent],
   template: `
     <div class="drill">
+      <!-- Grading shows as color and position on the action grid, which
+           announces as nothing. This node stays mounted across every phase so
+           the region is already live when its text changes. -->
+      <p class="sr-only" role="status">{{ verdict() }}</p>
+
       @if (phase() !== 'done') {
         <app-flow-topbar
           name="Deviations"
@@ -92,7 +104,10 @@ type DrillPhase = 'question' | 'flash' | 'miss' | 'done';
           [bestStreak]="session.bestStreak()"
           [accuracy]="session.accuracy()"
           [weakSpot]="weakSpot()"
+          [weakSpots]="weakSpots()"
+          [cleared]="clearedSpots()"
           (again)="oneMoreRound()"
+          (review)="reviewMisses()"
           (exit)="exitToHome()"
         />
       }
@@ -109,6 +124,8 @@ export class DeviationsDrillPageComponent {
   private readonly missTally = inject(MissTallyService);
   private readonly router = inject(Router);
   private readonly advanceDelayMs = inject(FLOW_ADVANCE_DELAY_MS);
+  // Injected, not Math.random, so a ?seed= session is reproducible end to end.
+  private readonly random = inject(RANDOM_SOURCE);
 
   protected readonly session = new DrillSession();
 
@@ -145,10 +162,28 @@ export class DeviationsDrillPageComponent {
   );
   protected readonly goalMet = computed(() => this.handsToday() >= this.prefs.prefs().dailyGoal);
 
-  protected readonly weakSpot = computed(() => {
+  protected readonly weakSpots = computed(() => {
     this.missTally.state();
-    return this.missTally.weakSpotFor('deviations');
+    return this.missTally.weakSpots('deviations');
   });
+
+  protected readonly weakSpot = computed(() => this.weakSpots()[0] ?? null);
+
+  protected readonly clearedSpots = computed(() => {
+    this.missTally.state();
+    return this.missTally.clearedSpots('deviations');
+  });
+
+  protected readonly verdict = computed(() => {
+    const result = this.result();
+    if (result === null) return '';
+    const expected = ACTION_LABELS[result.expectedAction];
+    if (result.correct) return `Correct: ${expected}.`;
+    return `Incorrect. Correct: ${expected}. ${result.explanation}`;
+  });
+
+  // A review round drills only the weak list; an ordinary round mixes it in.
+  private readonly reviewing = signal(false);
 
   private advanceTimer: ReturnType<typeof setTimeout> | null = null;
   // Swallows the click that graded the miss so it doesn't also continue.
@@ -197,7 +232,19 @@ export class DeviationsDrillPageComponent {
   }
 
   protected oneMoreRound(): void {
+    this.startRound(false);
+  }
+
+  // "Drill my misses": the same round, but every hand comes from the weak
+  // list (falling back to fresh hands once it empties mid-round).
+  protected reviewMisses(): void {
+    if (this.missTally.weakSpotFor('deviations') === null) return;
+    this.startRound(true);
+  }
+
+  private startRound(reviewing: boolean): void {
     if (this.phase() !== 'done') return;
+    this.reviewing.set(reviewing);
     this.session.reset();
     this.target.set(nextSessionTarget(this.handsToday(), this.prefs.prefs().dailyGoal));
     this.dealNext(this.firstScenario());
@@ -217,7 +264,7 @@ export class DeviationsDrillPageComponent {
       this.phase.set('done');
       return;
     }
-    this.dealNext(this.generateScenario());
+    this.dealNext(this.nextScenario());
   }
 
   private dealNext(scenario: DeviationScenario): void {
@@ -230,7 +277,22 @@ export class DeviationsDrillPageComponent {
   private firstScenario(): DeviationScenario {
     const weak = this.missTally.weakSpotFor('deviations');
     if (weak) {
-      const base = scenarioFromRef(weak.ref, Math.random);
+      const base = scenarioFromRef(weak.ref, this.random);
+      return { ...base, trueCount: this.pickTrueCount() };
+    }
+    return this.generateScenario();
+  }
+
+  // Every later hand: weighted toward the scenarios being missed, so a
+  // weakness gets repetition inside the session that surfaced it. A review
+  // round draws from the weak list every time. This applies in both practice
+  // modes — a weak spot recorded in deviation-only mode is itself a deviation
+  // scenario, and hand one has always been drawn this way.
+  private nextScenario(): DeviationScenario {
+    const share = this.reviewing() ? 1 : undefined;
+    const weak = pickWeakSpot(this.weakSpots(), this.random, share);
+    if (weak) {
+      const base = scenarioFromRef(weak.ref, this.random);
       return { ...base, trueCount: this.pickTrueCount() };
     }
     return this.generateScenario();
@@ -242,10 +304,10 @@ export class DeviationsDrillPageComponent {
   private generateScenario(): DeviationScenario {
     const prefs = this.prefs.prefs();
     if (prefs.deviations.practiceMode === 'deviation-only') {
-      const rule = pickDeviationRule(prefs.ruleSet, Math.random);
+      const rule = pickDeviationRule(prefs.ruleSet, this.random);
       const { player, dealerUpcard } = generateScenarioForDeviationRule({
         rule,
-        random: Math.random,
+        random: this.random,
       });
       return {
         player,
@@ -264,7 +326,7 @@ export class DeviationsDrillPageComponent {
       return prefs.deviations.manualTrueCount;
     }
     const span = MAX_RANDOM_TRUE_COUNT - MIN_RANDOM_TRUE_COUNT + 1;
-    return MIN_RANDOM_TRUE_COUNT + Math.floor(Math.random() * span);
+    return MIN_RANDOM_TRUE_COUNT + Math.floor(this.random() * span);
   }
 
   private pickTrueCountForRule(rule: DeviationRule): number {
@@ -274,7 +336,7 @@ export class DeviationsDrillPageComponent {
     }
     return pickTrueCountForDeviationRule(
       rule,
-      Math.random,
+      this.random,
       MIN_RANDOM_TRUE_COUNT,
       MAX_RANDOM_TRUE_COUNT,
     );

@@ -23,11 +23,11 @@
       opacity 0.12s ease;
 
     &:hover:not(:disabled) {
-      background: #2a2e36;
+      background: var(--raised-hover);
     }
 
     &:focus-visible {
-      outline: 2px solid var(--accent);
+      outline: 2px solid var(--focus);
       outline-offset: 2px;
     }
 
@@ -52,7 +52,7 @@
     &--picked {
       border-color: var(--bad);
       color: var(--bad);
-      background: rgba(229, 102, 95, 0.1);
+      background: var(--bad-tint-soft);
 
       &.acts__btn--off {
         opacity: 1;
@@ -62,8 +62,8 @@
     &--correct {
       border-color: var(--good);
       color: var(--good);
-      background: rgba(76, 195, 138, 0.12);
-      box-shadow: 0 0 16px rgba(76, 195, 138, 0.25);
+      background: var(--good-tint);
+      box-shadow: 0 0 16px var(--good-glow);
       opacity: 1;
     }
 

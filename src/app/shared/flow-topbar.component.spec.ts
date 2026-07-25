@@ -40,6 +40,15 @@ describe('FlowTopbarComponent', () => {
     expect(el.querySelector('.topbar__streak')!.textContent!.trim()).toBe('streak 6');
   });
 
+  // The trainer name is the drill screen's only heading. Phones hide it
+  // visually (see the stylesheet), which is why it must not be hidden by a
+  // structure that would also drop it from the accessibility tree.
+  it('renders the trainer name as the page heading', () => {
+    const { fixture } = create();
+    const heading = fixture.nativeElement.querySelector('h1.topbar__name') as HTMLElement | null;
+    expect(heading?.textContent).toBe('Basic Strategy');
+  });
+
   it('fills the progress bar proportionally and caps at 100%', () => {
     const { fixture, host } = create();
     const fill = () =>

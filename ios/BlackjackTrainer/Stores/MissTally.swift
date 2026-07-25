@@ -4,6 +4,12 @@ import Observation
 /// Rolling window for weak-spot selection ("missed 3 of 7 this week").
 private let missTallyWindowDays = 7
 
+/// Consecutive correct answers that retire a scenario from the weak list. Three
+/// is enough to distinguish "learned it" from "guessed it once": at six
+/// answerable actions a lucky run of three is a 1-in-216 accident. Mirrors the
+/// web `CLEAR_STREAK`.
+let clearStreak = 3
+
 /// Trainers that produce per-scenario tallies. Card counting has no scenario
 /// identity per rep, so it never records here. Raw values are the stored keys.
 enum TalliedTrainer: String {
@@ -27,6 +33,8 @@ struct WeakSpot: Equatable {
     let label: String
     let misses: Int
     let attempts: Int
+    /// Consecutive correct answers since this scenario was last missed.
+    var streak: Int = 0
 }
 
 struct DayTally: Codable, Equatable {
@@ -38,6 +46,24 @@ struct DayTally: Codable, Equatable {
 struct ScenarioTally: Codable, Equatable {
     let ref: ScenarioRef
     let days: [DayTally]
+    /// Consecutive correct answers since the last miss. Unlike `days` this is not
+    /// windowed: it is the live clear-streak signal, reset by any miss.
+    var streak: Int = 0
+
+    init(ref: ScenarioRef, days: [DayTally], streak: Int = 0) {
+        self.ref = ref
+        self.days = days
+        self.streak = streak
+    }
+
+    /// Hand-rolled so payloads written before clear-streak tracking still decode; a
+    /// fresh 0 just means those scenarios must earn it again.
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        ref = try container.decode(ScenarioRef.self, forKey: .ref)
+        days = try container.decode([DayTally].self, forKey: .days)
+        streak = try max(0, container.decodeIfPresent(Int.self, forKey: .streak) ?? 0)
+    }
 }
 
 /// The `ScenarioRef` for a graded hand. Mirrors the web `scenarioRefFor`.
@@ -105,7 +131,7 @@ final class MissTallyStore: CloudSyncable {
         let today = localDateKey(now())
         let key = scenarioKey(ref)
         var forTrainer = state[trainer.rawValue] ?? [:]
-        let existing = forTrainer[key] ?? ScenarioTally(ref: ref, days: [])
+        let existing = forTrainer[key] ?? ScenarioTally(ref: ref, days: [], streak: 0)
         var days = existing.days
         if let index = days.firstIndex(where: { $0.date == today }) {
             let day = days[index]
@@ -117,22 +143,57 @@ final class MissTallyStore: CloudSyncable {
         } else {
             days.append(DayTally(date: today, attempts: 1, misses: correct ? 0 : 1))
         }
-        forTrainer[key] = ScenarioTally(ref: ref, days: pruneDays(days))
+        forTrainer[key] = ScenarioTally(
+            ref: ref,
+            days: pruneDays(days),
+            streak: correct ? existing.streak + 1 : 0
+        )
         state[trainer.rawValue] = pruneScenarios(forTrainer)
         persist()
     }
 
-    /// The scenario with the most misses in the window (tiebreak: higher miss
-    /// rate), or nil when nothing was missed this week. Mirrors `weakSpotFor`.
+    /// Scenarios missed inside the window and not yet cleared, worst first
+    /// (most misses, then highest miss rate, then scenario key so the order is
+    /// stable). This is what adaptive selection draws from. Mirrors `weakSpots`.
+    func weakSpots(_ trainer: TalliedTrainer) -> [WeakSpot] {
+        windowed(trainer)
+            .filter { $0.spot.streak < clearStreak }
+            .sorted { lhs, rhs in
+                if lhs.spot.misses != rhs.spot.misses { return lhs.spot.misses > rhs.spot.misses }
+                let lhsRate = Double(lhs.spot.misses) / Double(lhs.spot.attempts)
+                let rhsRate = Double(rhs.spot.misses) / Double(rhs.spot.attempts)
+                if lhsRate != rhsRate { return lhsRate > rhsRate }
+                return lhs.key < rhs.key
+            }
+            .map(\.spot)
+    }
+
+    /// The counterpart: scenarios that were missed this week and have since been
+    /// answered correctly `clearStreak` times running. Mirrors `clearedSpots`.
+    func clearedSpots(_ trainer: TalliedTrainer) -> [WeakSpot] {
+        windowed(trainer)
+            .filter { $0.spot.streak >= clearStreak }
+            .sorted { lhs, rhs in
+                if lhs.spot.streak != rhs.spot.streak { return lhs.spot.streak > rhs.spot.streak }
+                return lhs.key < rhs.key
+            }
+            .map(\.spot)
+    }
+
+    /// The worst outstanding scenario, or nil when nothing is outstanding.
     func weakSpotFor(_ trainer: TalliedTrainer) -> WeakSpot? {
-        guard let forTrainer = state[trainer.rawValue] else { return nil }
+        weakSpots(trainer).first
+    }
+
+    /// Every scenario with at least one miss inside the window, paired with its
+    /// storage key. Unsorted; the callers above rank it. The key rides along
+    /// because `Dictionary` iteration order is nondeterministic across launches,
+    /// and it is what breaks a tie the same way every time.
+    private func windowed(_ trainer: TalliedTrainer) -> [(key: String, spot: WeakSpot)] {
+        guard let forTrainer = state[trainer.rawValue] else { return [] }
         let cutoff = cutoffDate()
-        var best: WeakSpot?
-        // Iterate in a stable (sorted-key) order: Dictionary.values order is
-        // nondeterministic across launches, which would resolve a miss/rate tie
-        // differently each time. Sorting the scenario keys makes the pick stable.
-        for key in forTrainer.keys.sorted() {
-            let tally = forTrainer[key]!
+        var spots: [(key: String, spot: WeakSpot)] = []
+        for (key, tally) in forTrainer {
             var attempts = 0
             var misses = 0
             for day in tally.days where day.date >= cutoff {
@@ -142,21 +203,18 @@ final class MissTallyStore: CloudSyncable {
             if misses == 0 {
                 continue
             }
-            let candidate = WeakSpot(
-                ref: tally.ref,
-                label: scenarioLabel(tally.ref),
-                misses: misses,
-                attempts: attempts
-            )
-            if best == nil
-                || misses > best!.misses
-                || (misses == best!.misses
-                    && Double(misses) / Double(attempts)
-                    > Double(best!.misses) / Double(best!.attempts)) {
-                best = candidate
-            }
+            spots.append((
+                key: key,
+                spot: WeakSpot(
+                    ref: tally.ref,
+                    label: scenarioLabel(tally.ref),
+                    misses: misses,
+                    attempts: attempts,
+                    streak: tally.streak
+                )
+            ))
         }
-        return best
+        return spots
     }
 
     private func cutoffDate() -> String {
@@ -180,7 +238,7 @@ final class MissTallyStore: CloudSyncable {
         for (key, tally) in forTrainer {
             let days = pruneDays(tally.days)
             if !days.isEmpty {
-                out[key] = ScenarioTally(ref: tally.ref, days: days)
+                out[key] = ScenarioTally(ref: tally.ref, days: days, streak: tally.streak)
             }
         }
         return out
@@ -203,7 +261,11 @@ final class MissTallyStore: CloudSyncable {
             guard let forTrainer = parsed[trainer.rawValue] else { continue }
             var valid: [String: ScenarioTally] = [:]
             for (key, tally) in forTrainer {
-                valid[key] = ScenarioTally(ref: tally.ref, days: pruneDays(tally.days))
+                valid[key] = ScenarioTally(
+                    ref: tally.ref,
+                    days: pruneDays(tally.days),
+                    streak: tally.streak
+                )
             }
             out[trainer.rawValue] = pruneScenarios(valid)
         }

@@ -1,5 +1,7 @@
 import { signal, type Signal } from '@angular/core';
 
+import { readJson, writeJson } from './storage';
+
 // Stats keys from earlier versions that are no longer read. Bootstrap calls
 // cleanupLegacyStatsKeys() once to wipe them so they don't accumulate in
 // localStorage. Drop this list (and the helper below) once no installations
@@ -59,11 +61,8 @@ export class StatsStore {
   }
 
   private load(): SessionStats {
-    if (typeof localStorage === 'undefined') return EMPTY_STATS;
-    try {
-      const raw = localStorage.getItem(this.storageKey);
-      if (!raw) return EMPTY_STATS;
-      const parsed = JSON.parse(raw) as Partial<SessionStats>;
+    return readJson(this.storageKey, EMPTY_STATS, (raw) => {
+      const parsed = raw as Partial<SessionStats>;
       if (
         typeof parsed.attempts === 'number' &&
         typeof parsed.correct === 'number' &&
@@ -77,18 +76,11 @@ export class StatsStore {
           longestStreak: parsed.longestStreak,
         };
       }
-    } catch {
-      // Malformed payload — fall through to empty.
-    }
-    return EMPTY_STATS;
+      return EMPTY_STATS;
+    });
   }
 
   private persist(stats: SessionStats): void {
-    if (typeof localStorage === 'undefined') return;
-    try {
-      localStorage.setItem(this.storageKey, JSON.stringify(stats));
-    } catch {
-      // localStorage can throw on quota / private browsing; tolerate silently.
-    }
+    writeJson(this.storageKey, stats);
   }
 }

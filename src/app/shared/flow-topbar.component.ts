@@ -16,7 +16,7 @@ import { Component, computed, input, output } from '@angular/core';
         ✕
       </button>
       @if (name()) {
-        <span class="topbar__name">{{ name() }}</span>
+        <h1 class="topbar__name">{{ name() }}</h1>
       }
       <div
         class="topbar__bar"
@@ -37,7 +37,8 @@ import { Component, computed, input, output } from '@angular/core';
   styleUrl: './flow-topbar.component.scss',
 })
 export class FlowTopbarComponent {
-  // Trainer name, shown on wide screens only.
+  // Trainer name — the drill screen's page heading. Visible on wide screens;
+  // on phones it stays in the accessibility tree but not on screen.
   readonly name = input<string>('');
   readonly count = input.required<number>();
   readonly target = input.required<number>();

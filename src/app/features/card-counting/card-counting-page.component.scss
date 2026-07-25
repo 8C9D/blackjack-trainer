@@ -9,6 +9,9 @@
   min-height: 100dvh;
   max-width: 720px;
   margin: 0 auto;
+  // Keep the top bar clear of the status bar in iOS standalone; zero
+  // elsewhere. box-sizing: border-box keeps the shell exactly viewport-sized.
+  padding-top: env(safe-area-inset-top, 0);
 
   &__stage {
     flex: 1;
@@ -47,7 +50,7 @@
     gap: 0.8rem;
     min-width: min(300px, 80vw);
     background: var(--accent);
-    color: #1a1408;
+    color: var(--on-accent);
     border: none;
     border-radius: 14px;
     padding: 0.9rem 1.4rem;
@@ -65,9 +68,9 @@
     }
 
     .kcap {
-      background: rgba(26, 20, 8, 0.18);
-      border-color: rgba(26, 20, 8, 0.35);
-      color: #1a1408;
+      background: var(--on-accent-tint);
+      border-color: var(--on-accent-edge);
+      color: var(--on-accent);
     }
   }
 
@@ -78,7 +81,7 @@
   }
 
   &__fix {
-    color: var(--accent);
+    color: var(--accent-ink);
     font-size: 0.9rem;
   }
 
@@ -87,10 +90,10 @@
     padding: 0.5rem 0.85rem;
     text-align: center;
     font-size: 0.85rem;
-    color: var(--accent);
-    border: 1px solid rgba(242, 182, 76, 0.4);
+    color: var(--accent-ink);
+    border: 1px solid var(--accent-edge);
     border-radius: 8px;
-    background: rgba(242, 182, 76, 0.1);
+    background: var(--accent-tint);
   }
 
   &__showdown-cta {
@@ -114,7 +117,7 @@
     }
 
     &:focus-visible {
-      outline: 2px solid var(--accent);
+      outline: 2px solid var(--focus);
       outline-offset: 2px;
     }
   }
