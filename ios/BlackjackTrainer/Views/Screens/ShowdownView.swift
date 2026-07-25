@@ -130,8 +130,7 @@ struct ShowdownView: View {
                     : "Deal another \(noun)")
                     .frame(maxWidth: .infinity, minHeight: 30)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Theme.accent)
+            .accentFilledButton()
             .keyboardShortcut(.return, modifiers: [])
             .disabled(!model.canDealAnother)
             if !model.canDealAnother {

@@ -35,8 +35,7 @@ struct DeckEstimateView: View {
                 Text("Submit estimate")
                     .frame(maxWidth: .infinity, minHeight: 30)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Theme.accent)
+            .accentFilledButton()
             .disabled(!canSubmit)
         }
         .padding()

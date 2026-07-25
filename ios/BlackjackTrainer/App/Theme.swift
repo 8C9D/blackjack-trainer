@@ -76,8 +76,26 @@ struct AppBackground: ViewModifier {
     }
 }
 
+/// The filled amber call-to-action: an accent *fill* carrying `onAccent` text, the
+/// one rule the accent token has. `.borderedProminent` alone leaves the label
+/// white, which reads at roughly 1.9:1 on amber in either theme, so the label
+/// colour is set here rather than left to SwiftUI's default. Mirrors the web
+/// `background: var(--accent); color: var(--on-accent)`.
+struct AccentFilledButton: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .buttonStyle(.borderedProminent)
+            .tint(Theme.accent)
+            .foregroundStyle(Theme.onAccent)
+    }
+}
+
 extension View {
     func appBackground() -> some View {
         modifier(AppBackground())
+    }
+
+    func accentFilledButton() -> some View {
+        modifier(AccentFilledButton())
     }
 }

@@ -41,8 +41,7 @@ struct CountAnswerView: View {
                 Text("Submit")
                     .frame(maxWidth: .infinity, minHeight: 30)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Theme.accent)
+            .accentFilledButton()
             .disabled(!canSubmit)
         }
         .padding()

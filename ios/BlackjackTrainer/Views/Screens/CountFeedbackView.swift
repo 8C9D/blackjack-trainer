@@ -40,8 +40,7 @@ struct CountFeedbackView: View {
                 Text(hasHardwareKeyboard ? "Run again  [Enter]" : "Run again")
                     .frame(maxWidth: .infinity, minHeight: 30)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Theme.accent)
+            .accentFilledButton()
             .keyboardShortcut(.return, modifiers: [])
         }
         .padding()
