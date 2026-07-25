@@ -50,6 +50,10 @@ final class ShowdownModel {
 
     @ObservationIgnored private let shoe: Shoe
     @ObservationIgnored private let stats: ShowdownStatsStore
+    /// Every card this showdown dealt, in order, handed back on exit so the
+    /// counting drill can fold their running-count value into its carried count —
+    /// the cards really left the shoe.
+    @ObservationIgnored private(set) var dealtCards: [Card] = []
 
     init(shoe: Shoe, ruleSet: RuleSet, stats: ShowdownStatsStore, spots: Int = 1) {
         self.shoe = shoe
@@ -295,6 +299,7 @@ final class ShowdownModel {
     private func draw() -> Card? {
         let dealt = shoe.deal(1)
         remaining = shoe.cardsRemaining
+        if let card = dealt.first { dealtCards.append(card) }
         return dealt.first
     }
 
