@@ -36,6 +36,12 @@ import {
   type Rank,
   type Suit,
 } from '../src/app/core/models/card.model';
+import {
+  clampBet,
+  handPayout,
+  largestAffordableBet,
+  stakeFor,
+} from '../src/app/core/models/bankroll.model';
 import { COUNTING_SYSTEMS } from '../src/app/data/counting-systems';
 import { H17_CHART } from '../src/app/data/h17-basic-strategy';
 import { H17_DEVIATIONS } from '../src/app/data/h17-deviations';
@@ -566,18 +572,65 @@ function exportShowdownVectors(): void {
     minCards: minCardsForSpots(spots),
   }));
 
+  // Betting math: what a settled hand returns for a given bet, and how a bet is
+  // clamped to the bankroll. Money is the one place a rounding difference would
+  // be invisible in play and obvious in a session total, so it is pinned here.
+  const payoutCases = [
+    { label: 'win-pays-the-stake', outcome: 'win', bj: false, bet: 10, doubled: false },
+    { label: 'natural-pays-3-2', outcome: 'win', bj: true, bet: 10, doubled: false },
+    { label: 'natural-on-odd-bet-pays-a-half', outcome: 'win', bj: true, bet: 5, doubled: false },
+    { label: 'doubled-win-pays-both-bets', outcome: 'win', bj: false, bet: 10, doubled: true },
+    { label: 'push-returns-the-stake', outcome: 'push', bj: false, bet: 10, doubled: false },
+    { label: 'doubled-push-returns-both', outcome: 'push', bj: false, bet: 10, doubled: true },
+    { label: 'loss-forfeits-the-stake', outcome: 'lose', bj: false, bet: 10, doubled: false },
+    { label: 'doubled-loss-forfeits-both', outcome: 'lose', bj: false, bet: 10, doubled: true },
+  ].map((pc) => {
+    const settlement = {
+      outcome: pc.outcome as 'win' | 'lose' | 'push',
+      playerBlackjack: pc.bj,
+      dealerBlackjack: false,
+    };
+    return {
+      label: pc.label,
+      outcome: pc.outcome,
+      playerBlackjack: pc.bj,
+      bet: pc.bet,
+      doubled: pc.doubled,
+      stake: stakeFor(pc.bet, pc.doubled),
+      payout: handPayout(settlement, pc.bet, pc.doubled),
+    };
+  });
+
+  // Bet clamping against a bankroll, including the sub-minimum and fractional
+  // cases each platform has to reject the same way.
+  const betClampCases = [
+    { bet: 10, bankroll: 500 },
+    { bet: 0, bankroll: 500 },
+    { bet: -5, bankroll: 500 },
+    { bet: 25, bankroll: 7 },
+    { bet: 5, bankroll: 0 },
+    { bet: 500, bankroll: 500 },
+  ].map((bc) => ({
+    ...bc,
+    clamped: clampBet(bc.bet, bc.bankroll),
+    largestAffordable: largestAffordableBet(bc.bankroll),
+  }));
+
   writeJson('showdown-vectors.json', {
-    schema: 'showdown-vectors/2',
+    schema: 'showdown-vectors/3',
     generatedBy: 'tools/export-parity-fixtures.ts',
     description:
       'Pure dealer-play and settlement cases: dealerShouldHit (H17/S17 soft-17), ' +
       'playDealerHand draw loops, settle() outcomes (3:2 naturals, bust ' +
-      'ordering, totals, pushes), and the multi-box spot clamp / opening-round ' +
-      'card requirement. Suits are arbitrary.',
+      'ordering, totals, pushes), the multi-box spot clamp / opening-round ' +
+      'card requirement, and the betting math (payouts and bet clamping). ' +
+      'Suits are arbitrary.',
     dealerShouldHitCases,
     playCases,
     settleCases,
     spotsCases,
+    payoutCases,
+    betClampCases,
   });
 }
 

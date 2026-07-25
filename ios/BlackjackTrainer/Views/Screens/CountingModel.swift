@@ -18,6 +18,8 @@ final class CountingModel {
     /// Boxes the post-count showdown deals to, pushed in from the Settings prefs
     /// alongside `settings` (it configures the showdown, not the count drill).
     var showdownSpots = 1
+    /// Whether the showdown opens each round on a bet, pushed in from prefs.
+    var showdownBetting = false
     private(set) var state: DrillState = .idle
     private(set) var cards: [Card] = []
     private(set) var currentIndex = 0

@@ -17,6 +17,9 @@ struct PlayerHand {
     /// money — tracked per hand rather than inferred from the hand count, because
     /// multiple boxes also produce multiple hands without any split involved.
     var fromSplit = false
+    /// Chips this hand has up. Every box posts the round's bet, and a split puts a
+    /// second bet on the new hand. Zero when betting is off.
+    var bet = 0.0
     /// Finished acting (stood, busted, doubled, or a completed split ace).
     var done = false
     var settlement: Settlement?
@@ -25,13 +28,16 @@ struct PlayerHand {
 /// Post-count showdown: deals a hand from the persistent shoe the player just
 /// counted, plays it hit/stand/double/split (re-splits to four hands; split aces
 /// take one card), auto-plays the dealer by the active rule set, and settles each
-/// hand win/lose/push (3:2 naturals). Mirrors the web `ShowdownComponent`. No
-/// surrender, bankroll, or bets.
+/// hand win/lose/push (3:2 naturals). With bet sizing on, each round opens on a
+/// bet and settles against the persisted bankroll. Mirrors the web
+/// `ShowdownComponent`. No surrender or insurance.
 @MainActor
 @Observable
 final class ShowdownModel {
     enum Phase {
-        case playerTurn, resolved, exhausted
+        /// Only reached when bet sizing is on: the round waits for a bet before
+        /// any card is dealt, which is the point of practising against the count.
+        case betting, playerTurn, resolved, exhausted
     }
 
     /// Most a pair can be split to (3 splits → 4 hands), the common casino cap.
@@ -42,6 +48,14 @@ final class ShowdownModel {
     var ruleSet: RuleSet
     /// Boxes to occupy on the opening deal (1–3). One dealer plays against all.
     let spots: Int
+    /// Bet sizing: when on, each round opens on a bet and settles against the
+    /// persisted bankroll. Off, the showdown is the pure hand tally it has always
+    /// been and no chip figure is shown.
+    let betting: Bool
+    /// The bet each box posts for the coming round.
+    private(set) var bet = Bankroll.minBet
+    /// Net chips of the round just resolved, for the result line.
+    private(set) var roundNet = 0.0
     private(set) var hands: [PlayerHand] = []
     private(set) var activeIndex = 0
     private(set) var dealerCards: [Card] = []
@@ -50,70 +64,72 @@ final class ShowdownModel {
 
     @ObservationIgnored private let shoe: Shoe
     @ObservationIgnored private let stats: ShowdownStatsStore
+    @ObservationIgnored let bankrollStore: BankrollStore
     /// Every card this showdown dealt, in order, handed back on exit so the
     /// counting drill can fold their running-count value into its carried count —
     /// the cards really left the shoe.
     @ObservationIgnored private(set) var dealtCards: [Card] = []
 
-    init(shoe: Shoe, ruleSet: RuleSet, stats: ShowdownStatsStore, spots: Int = 1) {
+    init(
+        shoe: Shoe,
+        ruleSet: RuleSet,
+        stats: ShowdownStatsStore,
+        spots: Int = 1,
+        betting: Bool = false,
+        bankroll: BankrollStore = BankrollStore()
+    ) {
         self.shoe = shoe
         self.ruleSet = ruleSet
         self.stats = stats
         self.spots = Showdown.clampSpots(spots)
+        self.betting = betting
+        bankrollStore = bankroll
         remaining = shoe.cardsRemaining
+        if betting {
+            // Size the bet before seeing a card — the count just practised is the
+            // only information the decision should rest on.
+            bet = clampedBet(Bankroll.minBet)
+            phase = .betting
+        } else {
+            dealHand()
+        }
+    }
+
+    /// Keep a bet inside both the table minimum and what the bankroll can back
+    /// across every occupied box.
+    private func clampedBet(_ value: Double) -> Double {
+        Bankroll.clampBet(value, bankroll: bankrollStore.bankroll / Double(spots))
+    }
+
+    func setBet(_ value: Double) {
+        guard phase == .betting else { return }
+        bet = clampedBet(value)
+    }
+
+    func dealAfterBet() {
+        guard phase == .betting else { return }
         dealHand()
+    }
+
+    func resetBankroll() {
+        bankrollStore.reset()
+        bet = clampedBet(Bankroll.minBet)
+        phase = .betting
     }
 
     var activeHand: PlayerHand? {
         hands.indices.contains(activeIndex) ? hands[activeIndex] : nil
     }
 
-    /// Backward-compatible views of the active/first hand for the single-hand path.
-    var playerCards: [Card] {
-        activeHand?.cards ?? []
-    }
-
-    var playerTotal: Int {
-        Hand.total(playerCards)
-    }
-
-    var settlement: Settlement? {
-        hands.first?.settlement
-    }
-
-    var doubled: Bool {
-        activeHand?.doubled ?? false
-    }
-
-    var dealerTotal: Int {
-        Hand.total(dealerCards)
-    }
-
-    var dealerUpcard: Card? {
-        dealerCards.first
-    }
-
     var canDealAnother: Bool {
         remaining >= Showdown.minCards(forSpots: spots)
-    }
-
-    /// One-line tally of a finished multi-hand round ("2 won, 1 lost"). Empty for
-    /// a single hand, whose own verdict line already says everything.
-    var roundSummary: String {
-        let outcomes = hands.compactMap(\.settlement?.outcome)
-        guard outcomes.count > 1 else { return "" }
-        let count = { (outcome: ShowdownOutcome) in outcomes.filter { $0 == outcome }.count }
-        var parts: [String] = []
-        if count(.win) > 0 { parts.append("\(count(.win)) won") }
-        if count(.lose) > 0 { parts.append("\(count(.lose)) lost") }
-        if count(.push) > 0 { parts.append("\(count(.push)) pushed") }
-        return parts.joined(separator: ", ")
     }
 
     /// Double is offered on any fresh two-card hand (including after a split).
     var canDouble: Bool {
         guard let hand = activeHand else { return false }
         return phase == .playerTurn && hand.cards.count == 2 && !hand.isSplitAce
+            && canPostAnotherBet(hand)
     }
 
     /// Split is offered on a fresh two-card pair, under its box's four-hand cap.
@@ -121,6 +137,7 @@ final class ShowdownModel {
         guard let hand = activeHand else { return false }
         return phase == .playerTurn && hand.cards.count == 2 && !hand.isSplitAce
             && isPair(hand.cards) && handsInBox(hand.box) < Self.maxHandsPerBox && remaining >= 1
+            && canPostAnotherBet(hand)
     }
 
     /// How many hands the given box currently holds — one until it splits.
@@ -148,7 +165,19 @@ final class ShowdownModel {
         }
     }
 
+    /// Between rounds, betting returns to the bet: the count has moved on, so the
+    /// spread should be reconsidered rather than silently repeated.
     func dealAnother() {
+        if betting {
+            guard !bankrollStore.bustedOut else { return }
+            // Clear the settled round before the next bet, so nothing on the felt
+            // (or in `committed`) belongs to a hand that is already paid.
+            hands = []
+            dealerCards = []
+            bet = clampedBet(bet)
+            phase = .betting
+            return
+        }
         dealHand()
     }
 
@@ -171,7 +200,9 @@ final class ShowdownModel {
         }
         dealer.append(contentsOf: [draw()].compactMap(\.self))
 
-        hands = boxes.enumerated().map { PlayerHand(cards: $1, box: $0) }
+        let posted = betting ? bet : 0
+        roundNet = 0
+        hands = boxes.enumerated().map { PlayerHand(cards: $1, box: $0, bet: posted) }
         dealerCards = dealer
         activeIndex = 0
         phase = .playerTurn
@@ -204,6 +235,12 @@ final class ShowdownModel {
         hands[index].settlement = result
         hands[index].done = true
         stats.record(outcome: result.outcome, playerBlackjack: result.playerBlackjack)
+        if betting {
+            let hand = hands[index]
+            let chips = Bankroll.payout(settlement: result, bet: hand.bet, doubled: hand.doubled)
+            bankrollStore.record(stake: stake(hand), payout: chips)
+            roundNet += chips
+        }
     }
 
     private func hit() {
@@ -238,11 +275,17 @@ final class ShowdownModel {
         let index = activeIndex
         let pair = hands[index].cards
         let box = hands[index].box
+        let posted = hands[index].bet
         let splitAce = pair[0].isAce
-        // Both halves stay in the box that split, so the box keeps its own cap.
+        // Both halves stay in the box that split, so the box keeps its own cap, and
+        // each carries the box's bet — a split posts a second one.
         hands.replaceSubrange(index ... index, with: [
-            PlayerHand(cards: [pair[0]], box: box, isSplitAce: splitAce, fromSplit: true),
-            PlayerHand(cards: [pair[1]], box: box, isSplitAce: splitAce, fromSplit: true)
+            PlayerHand(
+                cards: [pair[0]], box: box, isSplitAce: splitAce, fromSplit: true, bet: posted
+            ),
+            PlayerHand(
+                cards: [pair[1]], box: box, isSplitAce: splitAce, fromSplit: true, bet: posted
+            )
         ])
         dealToFreshHand(index)
     }
@@ -305,25 +348,6 @@ final class ShowdownModel {
 
     private func isPair(_ cards: [Card]) -> Bool {
         cards.count == 2 && cards[0].highValue == cards[1].highValue
-    }
-
-    func verdict(_ hand: PlayerHand) -> String {
-        guard let result = hand.settlement else { return "" }
-        let doubledSuffix = hand.doubled ? " (doubled)" : ""
-        switch result.outcome {
-        case .win:
-            let base = result.playerBlackjack ? "Blackjack! You win (pays 3:2)." : "You win!"
-            return base + doubledSuffix
-        case .lose:
-            if Hand.isBust(hand.cards) { return "Bust — dealer wins." + doubledSuffix }
-            return result.dealerBlackjack
-                ? "Dealer blackjack — dealer wins."
-                : "Dealer wins." + doubledSuffix
-        case .push:
-            let base = result.playerBlackjack && result.dealerBlackjack
-                ? "Push — both blackjack." : "Push."
-            return base + doubledSuffix
-        }
     }
 
     func resetStats() {

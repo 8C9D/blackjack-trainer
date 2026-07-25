@@ -52,6 +52,38 @@ struct ShowdownParityTests {
         }
     }
 
+    @Test func payoutsMatch() throws {
+        for testCase in try file().payoutCases {
+            let outcome = try #require(ShowdownOutcome(rawValue: testCase.outcome))
+            let settlement = Settlement(
+                outcome: outcome,
+                playerBlackjack: testCase.playerBlackjack,
+                dealerBlackjack: false
+            )
+            #expect(
+                Bankroll.stake(bet: testCase.bet, doubled: testCase.doubled) == testCase.stake,
+                "stake for \(testCase.label)"
+            )
+            let payout = Bankroll.payout(
+                settlement: settlement, bet: testCase.bet, doubled: testCase.doubled
+            )
+            #expect(payout == testCase.payout, "payout for \(testCase.label)")
+        }
+    }
+
+    @Test func betClampingMatches() throws {
+        for testCase in try file().betClampCases {
+            #expect(
+                Bankroll.clampBet(testCase.bet, bankroll: testCase.bankroll) == testCase.clamped,
+                "clampBet(\(testCase.bet), bankroll: \(testCase.bankroll))"
+            )
+            #expect(
+                Bankroll.largestAffordableBet(testCase.bankroll) == testCase.largestAffordable,
+                "largestAffordableBet(\(testCase.bankroll))"
+            )
+        }
+    }
+
     // MARK: shoe (independent of the parity vectors)
 
     @Test func shoeComposesAndDepletesWithoutReplacement() {

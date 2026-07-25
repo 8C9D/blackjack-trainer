@@ -62,6 +62,9 @@ struct CountingPrefs: Equatable {
     var penetration: Double
     /// Boxes the player occupies in the optional post-count showdown (1–3).
     var showdownSpots: Int
+    /// Bet sizing in the showdown: each round opens on a bet and settles against a
+    /// persisted bankroll. Off by default.
+    var showdownBetting: Bool
 
     /// The `CountingDrillSettings` the drill/engine consume (systemId stripped,
     /// mirroring the web's `const { systemId, ...settings } = counting`).
@@ -116,7 +119,8 @@ extension FlowPrefs {
             trueCountSource: .liveShoe,
             numberOfDecks: ShoeConstants.defaultNumberOfDecks,
             penetration: ShoeConstants.defaultPenetration,
-            showdownSpots: 1
+            showdownSpots: 1,
+            showdownBetting: false
         )
     )
 }
@@ -195,7 +199,8 @@ extension FlowPrefs {
                 penetration: numberValue(cnt["penetration"]) ?? d.counting.penetration,
                 showdownSpots: Showdown.clampSpots(
                     intValue(cnt["showdownSpots"]) ?? d.counting.showdownSpots
-                )
+                ),
+                showdownBetting: boolValue(cnt["showdownBetting"]) ?? d.counting.showdownBetting
             )
         )
     }
@@ -225,7 +230,8 @@ extension FlowPrefs {
                 "trueCountSource": counting.trueCountSource.rawValue,
                 "numberOfDecks": counting.numberOfDecks,
                 "penetration": counting.penetration,
-                "showdownSpots": counting.showdownSpots
+                "showdownSpots": counting.showdownSpots,
+                "showdownBetting": counting.showdownBetting
             ]
         ]
     }
