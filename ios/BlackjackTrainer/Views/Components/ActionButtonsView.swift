@@ -32,6 +32,10 @@ struct ActionButtonsView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.raised)
+                // `raised` is a light surface in the light theme, where
+                // `.borderedProminent`'s default white label all but vanishes.
+                // The web sets this explicitly too (`color: var(--ink)`).
+                .foregroundStyle(Theme.ink)
                 .keyboardShortcut(KeyEquivalent(action.hotkey), modifiers: [])
                 .accessibilityLabel(action.label)
             }

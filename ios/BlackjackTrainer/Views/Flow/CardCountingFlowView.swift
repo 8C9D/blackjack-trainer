@@ -201,8 +201,7 @@ struct CardCountingFlowView: View {
                     Text("Start counting")
                         .frame(maxWidth: .infinity, minHeight: 30)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Theme.accent)
+                .accentFilledButton()
             } else {
                 Text("The drill settings need attention before this drill can start.")
                     .font(.subheadline)
