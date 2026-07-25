@@ -128,8 +128,11 @@
     border-color: var(--good-edge-soft);
   }
 
+  // `--muted` on `--raised` lands at 4.33:1 in the light theme, just under the
+  // 4.5 this chip's 0.72rem text needs. The base `--ink-2` clears it in both.
   &--new {
-    color: var(--muted);
+    color: var(--ink-2);
+    opacity: 0.85;
   }
 }
 

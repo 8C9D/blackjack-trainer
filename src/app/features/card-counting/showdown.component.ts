@@ -14,10 +14,12 @@ import { cardHighValue, isAce, type Card } from '../../core/models/card.model';
 import { handTotal, isBlackjack, isBust } from '../../core/models/hand.model';
 import { Shoe } from '../../core/models/shoe.model';
 import {
-  MIN_SHOWDOWN_CARDS,
+  clampSpots,
+  minCardsForSpots,
   playDealerHand,
   settle,
   type Settlement,
+  type ShowdownOutcome,
 } from '../../core/models/showdown.model';
 import { ACTION_LABELS, type Action, type RuleSet } from '../../core/models/strategy.model';
 import { CardImageComponent } from '../../shared/card-image.component';
@@ -27,38 +29,56 @@ import { ShowdownStatsService } from '../../core/services/showdown-stats.service
 // is settled and the dealer hand revealed. 'exhausted': the shoe ran too low.
 type ShowdownPhase = 'player-turn' | 'resolved' | 'exhausted';
 
-// Most a pair can be split to (3 splits → 4 hands), the common casino cap.
-const MAX_HANDS = 4;
+// Most a pair can be split to (3 splits → 4 hands), the common casino cap. The
+// cap is per box: occupying three boxes does not shrink any one box's splits.
+const MAX_HANDS_PER_BOX = 4;
 
-// One player hand in the showdown. Splitting a pair turns one hand into several,
-// each played and settled independently.
+// One player hand in the showdown. Hands come from two places: the opening deal
+// gives one per occupied box, and splitting a pair turns one hand into several.
+// Either way each is played and settled independently against the one dealer.
 interface PlayerHand {
   readonly cards: readonly Card[];
+  // Which box (0-based) this hand belongs to. Splits stay in their box, so the
+  // four-hand cap counts only the hands sharing a box.
+  readonly box: number;
   // Doubled: took exactly one card at a doubled stake.
   readonly doubled: boolean;
   // A split-ace hand takes exactly one card, then stands (no hit/double/re-split).
   readonly isSplitAce: boolean;
+  // Came out of a split. A 21 on such a hand is not a natural and pays even
+  // money — tracked per hand rather than inferred from the hand count, because
+  // multiple boxes also produce multiple hands without any split involved.
+  readonly fromSplit: boolean;
   // Finished acting (stood, busted, doubled, or a completed split ace).
   readonly done: boolean;
   readonly settlement: Settlement | null;
 }
 
-function freshHand(cards: readonly Card[], isSplitAce = false): PlayerHand {
-  return { cards, doubled: false, isSplitAce, done: false, settlement: null };
+function freshHand(
+  cards: readonly Card[],
+  box: number,
+  isSplitAce = false,
+  fromSplit = false,
+): PlayerHand {
+  return { cards, box, doubled: false, isSplitAce, fromSplit, done: false, settlement: null };
 }
 
-// Post-count showdown: deals a hand from the persistent shoe the player just
-// counted, plays it hit/stand/double/split (re-splits to four hands; split aces
-// take one card), auto-plays the dealer by the active RuleSet (from the shared
-// table rules), and settles each hand win/lose/push (3:2 naturals). No surrender,
-// bankroll, or bets.
+// Post-count showdown: deals one to three boxes from the persistent shoe the
+// player just counted, plays each hit/stand/double/split in turn (re-splits to
+// four hands; split aces take one card), auto-plays the dealer once by the
+// active RuleSet (from the shared table rules), and settles every hand
+// win/lose/push (3:2 naturals). No surrender, bankroll, or bets.
 @Component({
   selector: 'app-showdown',
   imports: [CardImageComponent],
   template: `
     <section class="showdown" aria-label="Showdown vs dealer">
       <header class="showdown__header">
-        <h2 class="showdown__heading">Play a hand vs the dealer</h2>
+        <h2 class="showdown__heading">
+          {{
+            spots() > 1 ? 'Play ' + spots() + ' hands vs the dealer' : 'Play a hand vs the dealer'
+          }}
+        </h2>
       </header>
 
       @if (phase() === 'exhausted') {
@@ -128,17 +148,25 @@ function freshHand(cards: readonly Card[], isSplitAce = false): PlayerHand {
 
         @if (phase() === 'resolved') {
           <section class="showdown__result" role="status">
+            @if (roundSummary(); as summary) {
+              <p class="showdown__summary">{{ summary }}</p>
+            }
             <button
               type="button"
               class="showdown__next"
               [disabled]="!canDealAnother()"
               (click)="dealAnother()"
             >
-              Deal another hand <span class="showdown__hint">[Enter]</span>
+              {{ spots() > 1 ? 'Deal another round' : 'Deal another hand' }}
+              <span class="showdown__hint">[Enter]</span>
             </button>
             @if (!canDealAnother()) {
               <p class="showdown__note">
-                Shoe too low for another hand — return to counting to reshuffle.
+                {{
+                  spots() > 1
+                    ? 'Shoe too low for another round — return to counting to reshuffle.'
+                    : 'Shoe too low for another hand — return to counting to reshuffle.'
+                }}
               </p>
             }
           </section>
@@ -161,6 +189,8 @@ export class ShowdownComponent implements OnInit {
   // its depletion carries back to the counting drill.
   readonly shoe = input.required<Shoe>();
   readonly ruleSet = input.required<RuleSet>();
+  // Boxes to occupy on the opening deal (1–3). One dealer plays against all.
+  readonly spots = input(1, { transform: clampSpots });
 
   // Emitted when the player returns to the counting drill, carrying every card
   // this showdown dealt (in order) so the drill can fold their running-count
@@ -196,7 +226,7 @@ export class ShowdownComponent implements OnInit {
       h.cards.length === 2 &&
       !h.isSplitAce &&
       isPair(h.cards) &&
-      this.hands().length < MAX_HANDS &&
+      this.handsInBox(h.box) < MAX_HANDS_PER_BOX &&
       this.remaining() >= 1
     );
   });
@@ -209,7 +239,9 @@ export class ShowdownComponent implements OnInit {
 
   protected readonly dealerTotal = computed(() => handTotal(this.dealerCards()));
   protected readonly dealerUpcard = computed<Card | null>(() => this.dealerCards()[0] ?? null);
-  protected readonly canDealAnother = computed(() => this.remaining() >= MIN_SHOWDOWN_CARDS);
+  protected readonly canDealAnother = computed(
+    () => this.remaining() >= minCardsForSpots(this.spots()),
+  );
 
   // Backward-compatible views of the active/first hand for the single-hand path.
   protected readonly playerCards = computed<readonly Card[]>(() => this.activeHand()?.cards ?? []);
@@ -219,8 +251,28 @@ export class ShowdownComponent implements OnInit {
   );
   protected readonly doubled = computed(() => this.activeHand()?.doubled ?? false);
 
+  // One-line tally of a finished multi-hand round ('2 won, 1 lost'). Empty for a
+  // single hand, whose own verdict line already says everything.
+  protected readonly roundSummary = computed(() => {
+    const outcomes = this.hands()
+      .map((h) => h.settlement?.outcome)
+      .filter((o): o is ShowdownOutcome => o !== undefined);
+    if (outcomes.length < 2) return '';
+    const count = (o: ShowdownOutcome) => outcomes.filter((x) => x === o).length;
+    const parts: string[] = [];
+    if (count('win')) parts.push(`${count('win')} won`);
+    if (count('lose')) parts.push(`${count('lose')} lost`);
+    if (count('push')) parts.push(`${count('push')} pushed`);
+    return parts.join(', ');
+  });
+
   protected total(h: PlayerHand): number {
     return handTotal(h.cards);
+  }
+
+  // How many hands the given box currently holds — one until it splits.
+  private handsInBox(box: number): number {
+    return this.hands().filter((h) => h.box === box).length;
   }
 
   protected labelFor(a: Action): string {
@@ -247,32 +299,49 @@ export class ShowdownComponent implements OnInit {
     this.dealHand();
   }
 
-  // Deal a fresh opening hand (player, dealer, player, dealer). A two-card
-  // natural on either side resolves immediately.
+  // Deal a fresh opening round to every occupied box in casino order: one card
+  // to each box, the dealer's upcard, a second card to each box, the dealer's
+  // hole card. Naturals on either side resolve without any player action.
   private dealHand(): void {
-    if (this.shoe().cardsRemaining < MIN_SHOWDOWN_CARDS) {
+    const spots = this.spots();
+    if (this.shoe().cardsRemaining < minCardsForSpots(spots)) {
       this.phase.set('exhausted');
       return;
     }
-    const p1 = this.draw()!;
-    const d1 = this.draw()!;
-    const p2 = this.draw()!;
-    const d2 = this.draw()!;
-    const player = [p1, p2];
-    const dealer = [d1, d2];
-    this.hands.set([freshHand(player)]);
-    this.activeIndex.set(0);
+    const boxes: Card[][] = Array.from({ length: spots }, () => []);
+    for (const box of boxes) box.push(this.draw()!);
+    const dealer: Card[] = [this.draw()!];
+    for (const box of boxes) box.push(this.draw()!);
+    dealer.push(this.draw()!);
+
+    this.hands.set(boxes.map((cards, box) => freshHand(cards, box)));
     this.dealerCards.set(dealer);
-    if (isBlackjack(player) || isBlackjack(dealer)) {
-      // Opening natural: settle the single hand against the dealer's two cards
-      // (3:2 to a player natural, push on two naturals) — no dealer draw.
-      const result = settle(player, dealer);
-      this.updateHand(0, (h) => ({ ...h, settlement: result, done: true }));
-      this.stats.record(result.outcome, result.playerBlackjack);
+    this.activeIndex.set(0);
+    this.phase.set('player-turn');
+
+    if (isBlackjack(dealer)) {
+      // A dealer natural ends every box at once — no player action, no draw.
+      this.hands().forEach((_, i) => this.settleHandAt(i, dealer));
       this.phase.set('resolved');
-    } else {
-      this.phase.set('player-turn');
+      return;
     }
+    // A box holding a natural is paid straight away (3:2) and sits out the
+    // rest of the round; the remaining boxes are played in order.
+    this.hands().forEach((h, i) => {
+      if (isBlackjack(h.cards)) this.settleHandAt(i, dealer);
+    });
+    this.activateNextOrResolve();
+  }
+
+  // Settle one hand against the dealer's final cards and record it. Idempotent:
+  // a hand that already carries a settlement (an opening natural) is left alone
+  // so its tally is never double-counted.
+  private settleHandAt(i: number, dealer: readonly Card[]): void {
+    const hand = this.hands()[i];
+    if (hand.settlement) return;
+    const result = settle(hand.cards, dealer, hand.fromSplit ? false : isBlackjack(hand.cards));
+    this.updateHand(i, (h) => ({ ...h, done: true, settlement: result }));
+    this.stats.record(result.outcome, result.playerBlackjack);
   }
 
   private hit(): void {
@@ -313,12 +382,14 @@ export class ShowdownComponent implements OnInit {
   private split(): void {
     if (!this.canSplit()) return;
     const i = this.activeIndex();
-    const [a, b] = this.hands()[i].cards;
+    const { cards, box } = this.hands()[i];
+    const [a, b] = cards;
     const splitAce = isAce(a);
+    // Both halves stay in the box that split, so the box keeps its own cap.
     this.hands.update((hs) => [
       ...hs.slice(0, i),
-      freshHand([a], splitAce),
-      freshHand([b], splitAce),
+      freshHand([a], box, splitAce, true),
+      freshHand([b], box, splitAce, true),
       ...hs.slice(i + 1),
     ]);
     // Deal the active (first) split hand its second card and continue.
@@ -343,12 +414,14 @@ export class ShowdownComponent implements OnInit {
 
   private finishHand(i: number): void {
     this.updateHand(i, (h) => ({ ...h, done: true }));
-    this.advanceOrResolve();
+    this.activateNextOrResolve();
   }
 
-  private advanceOrResolve(): void {
-    const cur = this.activeIndex();
-    const nextIndex = this.hands().findIndex((h, i) => i > cur && !h.done);
+  // Hand play to the earliest hand still owed a decision, or resolve the round
+  // when every hand is finished. Hands are always completed front to back, so
+  // the first not-done hand is the next one to act.
+  private activateNextOrResolve(): void {
+    const nextIndex = this.hands().findIndex((h) => !h.done);
     if (nextIndex === -1) {
       this.resolveAll();
       return;
@@ -359,25 +432,17 @@ export class ShowdownComponent implements OnInit {
   }
 
   // Reveal the dealer's hole card, play it out once (only if a hand can still
-  // win — every hand busted means no draw), then settle each hand. A split hand
-  // never counts as a natural, so its two-card 21 pays even money.
+  // win — every hand busted or already settled means no draw), then settle the
+  // hands still open. A split hand never counts as a natural, so its two-card
+  // 21 pays even money.
   private resolveAll(): void {
-    const anyLive = this.hands().some((h) => !isBust(h.cards));
+    const anyLive = this.hands().some((h) => !h.settlement && !isBust(h.cards));
     let dealer = this.dealerCards();
     if (anyLive) {
       dealer = playDealerHand(dealer, this.ruleSet(), () => this.draw());
       this.dealerCards.set(dealer);
     }
-    const isSplit = this.hands().length > 1;
-    this.hands.update((hs) =>
-      hs.map((h) => ({
-        ...h,
-        settlement: settle(h.cards, dealer, isSplit ? false : isBlackjack(h.cards)),
-      })),
-    );
-    for (const h of this.hands()) {
-      if (h.settlement) this.stats.record(h.settlement.outcome, h.settlement.playerBlackjack);
-    }
+    this.hands().forEach((_, i) => this.settleHandAt(i, dealer));
     this.phase.set('resolved');
   }
 

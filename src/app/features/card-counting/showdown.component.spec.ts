@@ -13,6 +13,7 @@ type PlayerHandView = {
   cards: readonly Card[];
   doubled: boolean;
   isSplitAce: boolean;
+  fromSplit: boolean;
   done: boolean;
   settlement: Settlement | null;
 };
@@ -31,6 +32,8 @@ type Internals = {
   playerActions(): readonly Action[];
   doubled(): boolean;
   verdict(h: PlayerHandView): string;
+  roundSummary(): string;
+  spots(): number;
   stats: { stats(): ShowdownStats; reset(): void };
 };
 
@@ -45,10 +48,12 @@ function makeShoe(ranks: readonly Rank[]): Shoe {
 function createShowdown(
   shoe: Shoe,
   ruleSet: RuleSet = 'S17',
+  spots = 1,
 ): { fixture: ComponentFixture<ShowdownComponent>; c: Internals } {
   const fixture = TestBed.createComponent(ShowdownComponent);
   fixture.componentRef.setInput('shoe', shoe);
   fixture.componentRef.setInput('ruleSet', ruleSet);
+  fixture.componentRef.setInput('spots', spots);
   fixture.detectChanges();
   return { fixture, c: fixture.componentInstance as unknown as Internals };
 }
@@ -261,5 +266,145 @@ describe('ShowdownComponent', () => {
     c.onAction('S');
     expect(c.stats.stats().hands).toBe(1);
     expect(localStorage.getItem('blackjack-showdown-stats')).not.toBeNull();
+  });
+
+  // Multiple boxes: one dealer plays against every occupied box. Opening deal
+  // order is one card to each box, the dealer upcard, a second to each box,
+  // then the dealer hole card.
+  describe('multiple boxes', () => {
+    it('deals one two-card hand per box against a single dealer hand', () => {
+      // boxes [9,7]=16 and [8,4]=12; dealer [10,6].
+      const { c } = createShowdown(makeShoe(['9', '8', '10', '7', '4', '6']), 'S17', 2);
+      expect(c.hands().length).toBe(2);
+      expect(c.hands()[0].cards.map((x) => x.rank)).toEqual(['9', '7']);
+      expect(c.hands()[1].cards.map((x) => x.rank)).toEqual(['8', '4']);
+      expect(c.dealerCards().map((x) => x.rank)).toEqual(['10', '6']);
+      expect(c.activeIndex()).toBe(0);
+    });
+
+    it('settles each box independently against the same dealer hand', () => {
+      // box1 [10,10]=20 wins, box2 [9,6]=15 loses, dealer [10,9]=19 stands.
+      const { c } = createShowdown(makeShoe(['10', '9', '10', '10', '6', '9']), 'S17', 2);
+      c.onAction('S');
+      c.onAction('S');
+      expect(c.phase()).toBe('resolved');
+      expect(c.hands()[0].settlement!.outcome).toBe('win');
+      expect(c.hands()[1].settlement!.outcome).toBe('lose');
+    });
+
+    it('pays a natural in a later box at 3:2 rather than treating it as a split', () => {
+      // box1 [9,7]=16, box2 [A,K] natural; dealer [10,6] — no dealer natural.
+      const { c } = createShowdown(makeShoe(['9', 'A', '10', '7', 'K', '6']), 'S17', 2);
+      const box2 = c.hands()[1];
+      expect(box2.settlement!.outcome).toBe('win');
+      expect(box2.settlement!.playerBlackjack).toBe(true);
+      // The natural sits out; play falls to the box that still owes a decision.
+      expect(box2.done).toBe(true);
+      expect(c.activeIndex()).toBe(0);
+      expect(c.phase()).toBe('player-turn');
+    });
+
+    it('a dealer natural ends every box at once with no player turn', () => {
+      const { c } = createShowdown(makeShoe(['9', '9', 'A', '7', '7', 'K']), 'S17', 2);
+      expect(c.phase()).toBe('resolved');
+      expect(c.hands().map((h) => h.settlement!.outcome)).toEqual(['lose', 'lose']);
+      expect(c.hands().every((h) => h.settlement!.dealerBlackjack)).toBe(true);
+    });
+
+    it('records exactly one tally entry per box', () => {
+      const { c } = createShowdown(makeShoe(['10', '9', '10', '10', '6', '9']), 'S17', 2);
+      c.onAction('S');
+      c.onAction('S');
+      expect(c.stats.stats().hands).toBe(2);
+      expect(c.stats.stats().wins).toBe(1);
+      expect(c.stats.stats().losses).toBe(1);
+    });
+
+    it('does not double-count a box settled early by an opening natural', () => {
+      const { c } = createShowdown(makeShoe(['9', 'A', '10', '7', 'K', '6', '5']), 'S17', 2);
+      c.onAction('S'); // stand box1 on 16; dealer 16 draws the 5 → 21.
+      expect(c.phase()).toBe('resolved');
+      expect(c.stats.stats().hands).toBe(2);
+      expect(c.stats.stats().blackjacks).toBe(1);
+    });
+
+    it('skips the dealer draw when no box is still live', () => {
+      // Both boxes bust; the dealer should never take a card on 16.
+      const { c } = createShowdown(makeShoe(['10', '10', '10', '9', '9', '6', '5', '5']), 'S17', 2);
+      c.onAction('H'); // box1 19 + 5 = 24 bust → moves to box2
+      c.onAction('H'); // box2 19 + 5 = 24 bust
+      expect(c.phase()).toBe('resolved');
+      expect(c.dealerCards().length).toBe(2);
+      expect(c.hands().map((h) => h.settlement!.outcome)).toEqual(['lose', 'lose']);
+    });
+
+    it('requires enough cards for every box before offering another round', () => {
+      // 6 cards deal the opening round for two boxes; 0 remain afterwards.
+      const { c } = createShowdown(makeShoe(['10', '9', '10', '10', '6', '9']), 'S17', 2);
+      c.onAction('S');
+      c.onAction('S');
+      expect(c.remaining()).toBe(0);
+      expect(c.canDealAnother()).toBe(false);
+    });
+
+    it('summarizes a finished multi-box round', () => {
+      const { c } = createShowdown(makeShoe(['10', '9', '10', '10', '6', '9']), 'S17', 2);
+      c.onAction('S');
+      c.onAction('S');
+      expect(c.roundSummary()).toBe('1 won, 1 lost');
+    });
+
+    it('leaves a single-box round without a summary line', () => {
+      const { c } = createShowdown(makeShoe(['10', '10', '9', '8', '2']));
+      c.onAction('S');
+      expect(c.roundSummary()).toBe('');
+    });
+
+    it('clamps the spots input to the supported range', () => {
+      const { c } = createShowdown(makeShoe(['9', '8', '10', '7', '4', '6']), 'S17', 99);
+      expect(c.spots()).toBe(3);
+    });
+
+    it('gives each box its own four-hand split cap', () => {
+      // Three boxes each dealt 8,8. Splitting box 1 to its own two hands must
+      // not spend box 2's allowance — the cap is four hands per box, as at a
+      // real table, not four across the table.
+      const { c } = createShowdown(
+        makeShoe(['8', '8', '8', '10', '8', '8', '8', '6', '3', '3', '4', '4', '5']),
+        'S17',
+        3,
+      );
+      c.onAction('P'); // split box 1 → two hands, the first drawing a 3 → 11
+      c.onAction('S'); // stand box 1 hand 1
+      c.onAction('S'); // stand box 1 hand 2 (drew the second 3)
+      expect(c.hands().length).toBe(4);
+      // Play is now on box 2, a fresh 8,8 pair that has never been split.
+      expect(c.hands()[c.activeIndex()].cards.map((x) => x.rank)).toEqual(['8', '8']);
+      expect(c.playerActions()).toContain('P');
+    });
+
+    it('still caps one box at four hands however many boxes are in play', () => {
+      // Two boxes; box 1 keeps pairing 8s. It may split three times (four hands)
+      // and no more, regardless of box 2 sitting alongside it.
+      const { c } = createShowdown(
+        makeShoe(['8', '9', '10', '8', '9', '6', '8', '8', '8', '8', '5', '5', '5']),
+        'S17',
+        2,
+      );
+      c.onAction('P'); // box 1 → 2 hands, active draws an 8 → 8,8
+      c.onAction('P'); // box 1 → 3 hands, active draws an 8 → 8,8
+      c.onAction('P'); // box 1 → 4 hands, active draws an 8 → 8,8
+      expect(c.hands()[c.activeIndex()].cards.map((x) => x.rank)).toEqual(['8', '8']);
+      expect(c.playerActions()).not.toContain('P');
+    });
+
+    it('marks split hands so a split 21 is not paid as a natural', () => {
+      // Single box [A,A]; split, each ace draws a ten → 21 apiece, dealer 20.
+      const { c } = createShowdown(makeShoe(['A', '10', 'A', '10', 'K', 'Q']));
+      c.onAction('P');
+      expect(c.hands().every((h) => h.fromSplit)).toBe(true);
+      expect(c.phase()).toBe('resolved');
+      expect(c.hands().every((h) => h.settlement!.playerBlackjack)).toBe(false);
+    });
   });
 });

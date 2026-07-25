@@ -1,6 +1,6 @@
 import { signal, type Signal } from '@angular/core';
 
-import { readJson, writeJson } from './storage';
+import { coerceNumericRecord, readJson, writeJson } from './storage';
 
 // Stats keys from earlier versions that are no longer read. Bootstrap calls
 // cleanupLegacyStatsKeys() once to wipe them so they don't accumulate in
@@ -61,23 +61,7 @@ export class StatsStore {
   }
 
   private load(): SessionStats {
-    return readJson(this.storageKey, EMPTY_STATS, (raw) => {
-      const parsed = raw as Partial<SessionStats>;
-      if (
-        typeof parsed.attempts === 'number' &&
-        typeof parsed.correct === 'number' &&
-        typeof parsed.streak === 'number' &&
-        typeof parsed.longestStreak === 'number'
-      ) {
-        return {
-          attempts: parsed.attempts,
-          correct: parsed.correct,
-          streak: parsed.streak,
-          longestStreak: parsed.longestStreak,
-        };
-      }
-      return EMPTY_STATS;
-    });
+    return readJson(this.storageKey, EMPTY_STATS, (raw) => coerceNumericRecord(raw, EMPTY_STATS));
   }
 
   private persist(stats: SessionStats): void {

@@ -31,7 +31,7 @@ interface TrainerCard {
   selector: 'app-home-page',
   imports: [GoalRingComponent, StreakDotsComponent],
   template: `
-    <div class="home">
+    <main class="home">
       <!-- The design has no visible title — the primary action is the screen.
            Screen readers still need one heading to anchor the page. -->
       <h1 class="sr-only">Blackjack Trainer</h1>
@@ -71,7 +71,7 @@ interface TrainerCard {
           Settings
         </button>
       </div>
-    </div>
+    </main>
   `,
   styleUrl: './home-page.component.scss',
 })

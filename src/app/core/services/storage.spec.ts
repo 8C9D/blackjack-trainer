@@ -1,4 +1,4 @@
-import { readJson, writeJson } from './storage';
+import { coerceNumericRecord, readJson, writeJson } from './storage';
 
 const KEY = 'storage-spec-key';
 
@@ -27,6 +27,35 @@ describe('storage helpers', () => {
       expect(readJson(KEY, 'fallback', (raw) => (raw as { days: string[] }).days.join())).toBe(
         'fallback',
       );
+    });
+  });
+
+  describe('coerceNumericRecord', () => {
+    const EMPTY = { hands: 0, wins: 0 } as const;
+
+    it('picks exactly the fallback keys when all are numbers', () => {
+      expect(coerceNumericRecord({ hands: 3, wins: 2 }, EMPTY)).toEqual({ hands: 3, wins: 2 });
+    });
+
+    it('ignores extra keys the shape does not declare', () => {
+      expect(coerceNumericRecord({ hands: 3, wins: 2, bogus: 'x' }, EMPTY)).toEqual({
+        hands: 3,
+        wins: 2,
+      });
+    });
+
+    it('rejects the whole payload when a field is missing', () => {
+      expect(coerceNumericRecord({ hands: 3 }, EMPTY)).toBe(EMPTY);
+    });
+
+    it('rejects the whole payload when a field is not a number', () => {
+      expect(coerceNumericRecord({ hands: 3, wins: '2' }, EMPTY)).toBe(EMPTY);
+    });
+
+    it('throws on a null payload so readJson falls back', () => {
+      expect(() => coerceNumericRecord(null, EMPTY)).toThrow();
+      localStorage.setItem(KEY, 'null');
+      expect(readJson(KEY, EMPTY, (raw) => coerceNumericRecord(raw, EMPTY))).toBe(EMPTY);
     });
   });
 

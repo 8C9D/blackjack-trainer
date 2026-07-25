@@ -337,17 +337,17 @@ struct DeviationsDrillView: View {
     private var stageLine: Text {
         if model.phase == .miss, let result = model.result {
             return Text("Correct: \(result.expectedAction.label). ").bold()
-                .foregroundStyle(Theme.accent)
+                .foregroundStyle(Theme.accentInk)
                 + Text(model.explanation).foregroundStyle(Theme.midInk)
         }
         let question = model.question
         let prefix = question.prefix.isEmpty ? Text("") : Text("\(question.prefix) ")
         return prefix
-            + Text(question.value).bold().foregroundStyle(.white)
+            + Text(question.value).bold().foregroundStyle(Theme.inkStrong)
             + Text(" vs ")
-            + Text(question.dealer).bold().foregroundStyle(.white)
+            + Text(question.dealer).bold().foregroundStyle(Theme.inkStrong)
             + Text(" · TC ").foregroundStyle(Theme.muted)
-            + Text(model.trueCountLabel).bold().foregroundStyle(Theme.accent)
+            + Text(model.trueCountLabel).bold().foregroundStyle(Theme.accentInk)
     }
 
     private func leave() {

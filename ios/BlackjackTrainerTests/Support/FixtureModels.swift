@@ -113,6 +113,13 @@ struct ShowdownVectorsFile: Decodable {
     let dealerShouldHitCases: [DealerShouldHitCase]
     let playCases: [PlayCase]
     let settleCases: [SettleCase]
+    let spotsCases: [SpotsCase]
+}
+
+struct SpotsCase: Decodable {
+    let spots: Int
+    let clamped: Int
+    let minCards: Int
 }
 
 struct DealerShouldHitCase: Decodable {

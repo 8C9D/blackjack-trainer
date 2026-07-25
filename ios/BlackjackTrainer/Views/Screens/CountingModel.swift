@@ -15,6 +15,9 @@ final class CountingModel {
 
     var system: CountingSystem
     var settings = CountingDrillSettings()
+    /// Boxes the post-count showdown deals to, pushed in from the Settings prefs
+    /// alongside `settings` (it configures the showdown, not the count drill).
+    var showdownSpots = 1
     private(set) var state: DrillState = .idle
     private(set) var cards: [Card] = []
     private(set) var currentIndex = 0
@@ -114,9 +117,11 @@ final class CountingModel {
         deckEstimationStore.stats
     }
 
+    /// Whether the post-count showdown has enough cards left to deal an opening
+    /// round to every configured box.
     var showdownAvailable: Bool {
         guard let shoe else { return false }
-        return shoe.cardsRemaining >= Showdown.minShowdownCards
+        return shoe.cardsRemaining >= Showdown.minCards(forSpots: showdownSpots)
     }
 
     /// Begin a drill (no-op while one is active or settings are invalid).

@@ -91,4 +91,32 @@ struct FlowPrefsStoreTests {
         #expect(clampGoal(-3) == FlowPrefsConstants.minDailyGoal)
         #expect(clampGoal(.infinity) == FlowPrefs.default.dailyGoal)
     }
+
+    @Test func keepsOnlyAKnownThemeDefaultingToSystem() {
+        #expect(FlowPrefs.merged(from: ["theme": "light"]).theme == .light)
+        #expect(FlowPrefs.merged(from: ["theme": "dark"]).theme == .dark)
+        #expect(FlowPrefs.merged(from: ["theme": "sepia"]).theme == .system)
+        // Prefs written before the theme existed must not lose it.
+        #expect(FlowPrefs.merged(from: ["dailyGoal": 15]).theme == .system)
+    }
+
+    @Test func clampsTheShowdownBoxCountIntoItsSupportedRange() {
+        #expect(FlowPrefs.merged(from: ["counting": ["showdownSpots": 3]])
+            .counting.showdownSpots == 3)
+        #expect(FlowPrefs.merged(from: ["counting": ["showdownSpots": 9]])
+            .counting.showdownSpots == 3)
+        #expect(FlowPrefs.merged(from: ["counting": ["showdownSpots": 0]])
+            .counting.showdownSpots == 1)
+        // Prefs written before the setting existed fall back to a single box.
+        #expect(FlowPrefs.merged(from: ["dailyGoal": 15]).counting.showdownSpots == 1)
+    }
+
+    @Test func roundTripsTheThemeAndBoxCountThroughTheStoredShape() {
+        var prefs = FlowPrefs.default
+        prefs.theme = .light
+        prefs.counting.showdownSpots = 2
+        let restored = FlowPrefs.merged(from: prefs.jsonObject)
+        #expect(restored.theme == .light)
+        #expect(restored.counting.showdownSpots == 2)
+    }
 }

@@ -97,6 +97,14 @@ describe('FlowPrefsService', () => {
       // Prefs written before the theme existed must not lose it.
       expect(mergePrefs({ dailyGoal: 15 }).theme).toBe('system');
     });
+
+    it('clamps the showdown box count into its supported range', () => {
+      expect(mergePrefs({ counting: { showdownSpots: 3 } }).counting.showdownSpots).toBe(3);
+      expect(mergePrefs({ counting: { showdownSpots: 9 } }).counting.showdownSpots).toBe(3);
+      expect(mergePrefs({ counting: { showdownSpots: 0 } }).counting.showdownSpots).toBe(1);
+      // Prefs written before the setting existed fall back to a single box.
+      expect(mergePrefs({ dailyGoal: 15 }).counting.showdownSpots).toBe(1);
+    });
   });
 
   describe('clampGoal', () => {

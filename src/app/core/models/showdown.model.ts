@@ -6,11 +6,31 @@ import type { RuleSet } from './strategy.model';
 // source is injected as a `draw` callback so the same shoe the player just
 // counted can deal the hand, while the rules stay trivially unit-testable.
 
-// Fewest cards needed to deal a showdown's opening hand (two player + two
-// dealer). The page only offers a showdown, and the component only enables
+// Fewest cards needed to deal a single-box showdown's opening hand (two player +
+// two dealer). The page only offers a showdown, and the component only enables
 // "deal another", when at least this many cards remain; hits beyond the opening
 // deal are handled gracefully if the shoe runs out.
 export const MIN_SHOWDOWN_CARDS = 4;
+
+// How many simultaneous boxes the player may occupy. One dealer plays against
+// all of them from the same shoe.
+export const MIN_SHOWDOWN_SPOTS = 1;
+export const MAX_SHOWDOWN_SPOTS = 3;
+
+// Selectable box counts, for the settings dropdown.
+export const SHOWDOWN_SPOT_OPTIONS: readonly number[] = [1, 2, 3];
+
+export function clampSpots(spots: number): number {
+  if (!Number.isFinite(spots)) return MIN_SHOWDOWN_SPOTS;
+  return Math.min(MAX_SHOWDOWN_SPOTS, Math.max(MIN_SHOWDOWN_SPOTS, Math.round(spots)));
+}
+
+// Cards consumed by the opening deal for `spots` boxes: two per box plus the
+// dealer's two. Splits and hits draw beyond this and are handled gracefully if
+// the shoe runs dry mid-hand.
+export function minCardsForSpots(spots: number): number {
+  return clampSpots(spots) * 2 + 2;
+}
 
 export type ShowdownOutcome = 'win' | 'lose' | 'push';
 

@@ -30,7 +30,7 @@ struct CountFeedbackView: View {
                 Text((showBreakdown ? "Hide" : "Show") + " card-by-card breakdown")
             }
             .buttonStyle(.bordered)
-            .tint(Theme.accent)
+            .tint(Theme.accentInk)
 
             if showBreakdown {
                 breakdown

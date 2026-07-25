@@ -279,15 +279,15 @@ struct BasicStrategyDrillView: View {
     /// computed for the user, e.g. "Hard 16 vs 10".
     private var stageLine: Text {
         if model.phase == .miss, let result = model.result {
-            return Text("Correct: \(result.action.label). ").bold().foregroundStyle(Theme.accent)
+            return Text("Correct: \(result.action.label). ").bold().foregroundStyle(Theme.accentInk)
                 + Text(result.reason).foregroundStyle(Theme.midInk)
         }
         let question = model.question
         let prefix = question.prefix.isEmpty ? Text("") : Text("\(question.prefix) ")
         return prefix
-            + Text(question.value).bold().foregroundStyle(.white)
+            + Text(question.value).bold().foregroundStyle(Theme.inkStrong)
             + Text(" vs ")
-            + Text(question.dealer).bold().foregroundStyle(.white)
+            + Text(question.dealer).bold().foregroundStyle(Theme.inkStrong)
     }
 
     private func leave() {

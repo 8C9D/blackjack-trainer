@@ -142,6 +142,14 @@
     }
   }
 
+  // Round tally above the deal-another button, shown only for multi-hand rounds.
+  &__summary {
+    margin: 0 0 0.6rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
   &__note {
     margin: 0.5rem 0 0;
     font-size: 0.8rem;

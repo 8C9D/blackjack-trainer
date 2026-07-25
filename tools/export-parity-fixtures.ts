@@ -41,7 +41,13 @@ import { H17_CHART } from '../src/app/data/h17-basic-strategy';
 import { H17_DEVIATIONS } from '../src/app/data/h17-deviations';
 import { S17_CHART } from '../src/app/data/s17-basic-strategy';
 import { S17_DEVIATIONS } from '../src/app/data/s17-deviations';
-import { dealerShouldHit, playDealerHand, settle } from '../src/app/core/models/showdown.model';
+import {
+  clampSpots,
+  dealerShouldHit,
+  minCardsForSpots,
+  playDealerHand,
+  settle,
+} from '../src/app/core/models/showdown.model';
 import type { EngineOptions, RuleSet } from '../src/app/core/models/strategy.model';
 import { BasicStrategyEngineService } from '../src/app/core/services/basic-strategy-engine.service';
 import { CountingEngineService } from '../src/app/core/services/counting-engine.service';
@@ -552,16 +558,26 @@ function exportShowdownVectors(): void {
     };
   });
 
+  // Box-count clamping and the opening-round card requirement, so the two
+  // implementations of the multi-box gate cannot drift.
+  const spotsCases = [-1, 0, 1, 2, 3, 4, 99].map((spots) => ({
+    spots,
+    clamped: clampSpots(spots),
+    minCards: minCardsForSpots(spots),
+  }));
+
   writeJson('showdown-vectors.json', {
-    schema: 'showdown-vectors/1',
+    schema: 'showdown-vectors/2',
     generatedBy: 'tools/export-parity-fixtures.ts',
     description:
       'Pure dealer-play and settlement cases: dealerShouldHit (H17/S17 soft-17), ' +
-      'playDealerHand draw loops, and settle() outcomes (3:2 naturals, bust ' +
-      'ordering, totals, pushes). Suits are arbitrary.',
+      'playDealerHand draw loops, settle() outcomes (3:2 naturals, bust ' +
+      'ordering, totals, pushes), and the multi-box spot clamp / opening-round ' +
+      'card requirement. Suits are arbitrary.',
     dealerShouldHitCases,
     playCases,
     settleCases,
+    spotsCases,
   });
 }
 

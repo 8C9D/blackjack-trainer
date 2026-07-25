@@ -28,7 +28,7 @@ struct GoalRingView: View {
             Circle()
                 .trim(from: 0, to: met ? 1 : fraction)
                 .stroke(
-                    met ? Theme.good : Theme.accent,
+                    met ? Theme.good : Theme.accentInk,
                     style: StrokeStyle(lineWidth: ringWidth, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
@@ -37,7 +37,7 @@ struct GoalRingView: View {
                 Text("\(value)/\(goal)")
                     .font(.system(size: 23, weight: .semibold))
                     .monospacedDigit()
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.inkStrong)
                 Text(label)
                     .font(.system(size: 11))
                     .foregroundStyle(Theme.muted)

@@ -37,7 +37,7 @@ type DrillPhase = 'question' | 'flash' | 'miss' | 'done';
   selector: 'app-basic-strategy-drill-page',
   imports: [FlowTopbarComponent, FlowStageComponent, FlowActionsComponent, FlowDoneComponent],
   template: `
-    <div class="drill">
+    <main class="drill">
       <!-- Grading shows as color and position on the action grid, which
            announces as nothing. This node stays mounted across every phase so
            the region is already live when its text changes. -->
@@ -93,7 +93,7 @@ type DrillPhase = 'question' | 'flash' | 'miss' | 'done';
           (exit)="exitToHome()"
         />
       }
-    </div>
+    </main>
   `,
   styleUrl: './drill-page.scss',
 })

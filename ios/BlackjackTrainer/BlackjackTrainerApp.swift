@@ -1,9 +1,10 @@
 import SwiftUI
 import UserNotifications
 
-/// App entry point. Runs in a dark color scheme to mirror the web Flow redesign
-/// and injects the shared `AppModel` (engines + stat stores). The app always
-/// launches into the Open home — no tab bar.
+/// App entry point. Renders in the appearance the user picked in Settings
+/// (system / light / dark, mirroring the web theme preference) and injects the
+/// shared `AppModel` (engines + stat stores). The app always launches into the
+/// Open home — no tab bar.
 @main
 struct BlackjackTrainerApp: App {
     @State private var model = AppModel()
@@ -24,8 +25,8 @@ struct BlackjackTrainerApp: App {
             FlowRootView()
                 .environment(model)
                 .environment(\.hasHardwareKeyboard, keyboard.isConnected)
-                .tint(Theme.accent)
-                .preferredColorScheme(.dark)
+                .tint(Theme.accentInk)
+                .preferredColorScheme(model.flowPrefs.prefs.theme.colorScheme)
         }
     }
 }

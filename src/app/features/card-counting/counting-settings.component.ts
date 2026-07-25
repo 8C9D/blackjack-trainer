@@ -2,6 +2,7 @@ import { Component, input, output } from '@angular/core';
 
 import type { DrillMode, TrueCountSource } from '../../core/models/card-counting.model';
 import type { CountingSystem } from '../../core/models/counting-system.model';
+import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.model';
 
 @Component({
   selector: 'app-counting-settings',
@@ -138,6 +139,18 @@ import type { CountingSystem } from '../../core/models/counting-system.model';
           <p class="settings__readout">
             Decks remaining (live): <strong>{{ formatDecks(liveDecksRemaining()) }}</strong>
           </p>
+          <label class="settings__field">
+            <span>Showdown hands</span>
+            <select
+              class="settings__spots"
+              [value]="showdownSpots()"
+              (change)="onShowdownSpotsChange($event)"
+            >
+              @for (s of spotOptions; track s) {
+                <option [value]="s" [selected]="s === showdownSpots()">{{ s }}</option>
+              }
+            </select>
+          </label>
         }
       }
       @if (errors().length > 0) {
@@ -167,6 +180,9 @@ export class CountingSettingsComponent {
   readonly deckOptions = input.required<readonly number[]>();
   readonly penetrationPresets = input.required<readonly number[]>();
   readonly liveDecksRemaining = input.required<number>();
+  // Boxes the post-count showdown deals to. Only reachable from the live-shoe
+  // true-count path, which is the only place the showdown is offered.
+  readonly showdownSpots = input(1);
   readonly errors = input<readonly string[]>([]);
   readonly disabled = input(false);
 
@@ -178,6 +194,9 @@ export class CountingSettingsComponent {
   readonly trueCountSourceChange = output<TrueCountSource>();
   readonly numberOfDecksChange = output<number>();
   readonly penetrationChange = output<number>();
+  readonly showdownSpotsChange = output<number>();
+
+  protected readonly spotOptions = SHOWDOWN_SPOT_OPTIONS;
 
   protected onSystemChange(event: Event): void {
     this.systemChange.emit((event.target as HTMLSelectElement).value);
@@ -210,6 +229,10 @@ export class CountingSettingsComponent {
 
   protected onPenetrationChange(event: Event): void {
     this.penetrationChange.emit(Number((event.target as HTMLSelectElement).value));
+  }
+
+  protected onShowdownSpotsChange(event: Event): void {
+    this.showdownSpotsChange.emit(clampSpots(Number((event.target as HTMLSelectElement).value)));
   }
 
   // Half-deck presets render as e.g. "0.5"; whole decks render as e.g. "1".

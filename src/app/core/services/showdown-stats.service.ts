@@ -1,7 +1,7 @@
 import { Injectable, signal, type Signal } from '@angular/core';
 
 import type { ShowdownOutcome } from '../models/showdown.model';
-import { readJson, writeJson } from './storage';
+import { coerceNumericRecord, readJson, writeJson } from './storage';
 
 export const SHOWDOWN_STATS_KEY = 'blackjack-showdown-stats';
 
@@ -51,25 +51,9 @@ export class ShowdownStatsService {
   }
 
   private load(): ShowdownStats {
-    return readJson(SHOWDOWN_STATS_KEY, EMPTY_STATS, (raw) => {
-      const parsed = raw as Partial<ShowdownStats>;
-      if (
-        typeof parsed.hands === 'number' &&
-        typeof parsed.wins === 'number' &&
-        typeof parsed.losses === 'number' &&
-        typeof parsed.pushes === 'number' &&
-        typeof parsed.blackjacks === 'number'
-      ) {
-        return {
-          hands: parsed.hands,
-          wins: parsed.wins,
-          losses: parsed.losses,
-          pushes: parsed.pushes,
-          blackjacks: parsed.blackjacks,
-        };
-      }
-      return EMPTY_STATS;
-    });
+    return readJson(SHOWDOWN_STATS_KEY, EMPTY_STATS, (raw) =>
+      coerceNumericRecord(raw, EMPTY_STATS),
+    );
   }
 
   private persist(stats: ShowdownStats): void {

@@ -105,7 +105,7 @@ struct FlowDoneView: View {
     /// screen's one loud action.
     private func weakCard(_ weak: WeakSpot) -> some View {
         VStack(spacing: 3) {
-            (Text("Drill my misses: ") + Text(weak.label).bold().foregroundStyle(Theme.accent))
+            (Text("Drill my misses: ") + Text(weak.label).bold().foregroundStyle(Theme.accentInk))
                 .font(.system(size: 14))
                 .foregroundStyle(Theme.midInk)
             Text("missed \(weak.misses) of \(weak.attempts) this week\(othersLabel)")

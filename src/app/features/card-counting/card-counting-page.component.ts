@@ -9,7 +9,7 @@ import type {
 } from '../../core/models/card-counting.model';
 import type { CountingSystem } from '../../core/models/counting-system.model';
 import { type Shoe } from '../../core/models/shoe.model';
-import { MIN_SHOWDOWN_CARDS } from '../../core/models/showdown.model';
+import { minCardsForSpots } from '../../core/models/showdown.model';
 import { COUNTING_SYSTEMS, HI_LO } from '../../data/counting-systems';
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
 import { CardGeneratorService } from '../../core/services/card-generator.service';
@@ -59,7 +59,7 @@ type DrillState =
     ShowdownComponent,
   ],
   template: `
-    <div class="count">
+    <main class="count">
       @if (state() !== 'done') {
         <app-flow-topbar
           name="Card Counting"
@@ -78,7 +78,8 @@ type DrillState =
 
           @if (state() === 'idle') {
             <div class="count__idle">
-              <h1 class="count__system">{{ system().name }}</h1>
+              <!-- h2: the top bar's trainer name is this screen's h1. -->
+              <h2 class="count__system">{{ system().name }}</h2>
               <p class="count__desc">{{ system().description }}</p>
               @if (isValid()) {
                 <button type="button" class="count__start" (click)="start()">
@@ -119,14 +120,23 @@ type DrillState =
             @if (liveShoeTrueCount() && showdownAvailable()) {
               <div class="count__showdown-cta">
                 <button type="button" class="count__showdown-button" (click)="enterShowdown()">
-                  Play a hand vs the dealer
+                  {{
+                    showdownSpots() > 1
+                      ? 'Play ' + showdownSpots() + ' hands vs the dealer'
+                      : 'Play a hand vs the dealer'
+                  }}
                 </button>
               </div>
             }
           }
 
           @if (state() === 'showdown') {
-            <app-showdown [shoe]="shoe!" [ruleSet]="ruleSet()" (exit)="exitShowdown($event)" />
+            <app-showdown
+              [shoe]="shoe!"
+              [ruleSet]="ruleSet()"
+              [spots]="showdownSpots()"
+              (exit)="exitShowdown($event)"
+            />
           }
         </div>
       } @else {
@@ -140,7 +150,7 @@ type DrillState =
           (exit)="exitToHome()"
         />
       }
-    </div>
+    </main>
   `,
   styleUrl: './card-counting-page.component.scss',
 })
@@ -169,9 +179,16 @@ export class CardCountingPageComponent {
   // Drill configuration comes from the Settings screen via prefs; the page
   // itself hosts none of it.
   protected readonly settings = computed<CountingDrillSettings>(() => {
-    const { systemId: _systemId, ...settings } = this.prefs.prefs().counting;
+    const {
+      systemId: _systemId,
+      showdownSpots: _showdownSpots,
+      ...settings
+    } = this.prefs.prefs().counting;
     return settings;
   });
+
+  // Boxes the post-count showdown deals to, from the Settings screen.
+  protected readonly showdownSpots = computed(() => this.prefs.prefs().counting.showdownSpots);
 
   protected readonly system = computed<CountingSystem>(
     () => COUNTING_SYSTEMS.find((s) => s.id === this.prefs.prefs().counting.systemId) ?? HI_LO,
@@ -396,11 +413,11 @@ export class CardCountingPageComponent {
   }
 
   // Whether a post-count showdown can be offered: a live shoe exists with
-  // enough cards to deal an opening hand. (`shoe` is mutated in place, so
-  // this is a method, re-read each change-detection pass rather than a
-  // memoized computed.)
+  // enough cards to deal an opening round to every configured box. (`shoe` is
+  // mutated in place, so this is a method, re-read each change-detection pass
+  // rather than a memoized computed.)
   protected showdownAvailable(): boolean {
-    return this.shoe !== null && this.shoe.cardsRemaining >= MIN_SHOWDOWN_CARDS;
+    return this.shoe !== null && this.shoe.cardsRemaining >= minCardsForSpots(this.showdownSpots());
   }
 
   // Enter the showdown off the persistent live shoe after a true-count round.

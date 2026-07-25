@@ -54,7 +54,10 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: 'YES'
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: 'YES'
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon # app icon set added in 4.1
-        INFOPLIST_KEY_UIUserInterfaceStyle: Dark # dark color scheme (mirrors the web)
+        # No UIUserInterfaceStyle: the app follows the Appearance preference in
+        # Settings (system/light/dark) via `preferredColorScheme`, mirroring the
+        # web theme token. Forcing Dark here would override that at the plist
+        # level and SwiftUI could never lighten it.
         INFOPLIST_KEY_CFBundleDisplayName: Blackjack Trainer
         INFOPLIST_KEY_UISupportedInterfaceOrientations: 'UIInterfaceOrientationPortrait'
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: 'UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight'
