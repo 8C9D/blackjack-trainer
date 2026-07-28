@@ -9,12 +9,18 @@ import {
   signal,
 } from '@angular/core';
 
-import { ACTION_KEY_HINTS, handleTrainerKeydown } from '../../core/keyboard';
+import {
+  ACTION_KEY_HINTS,
+  handleTrainerKeydown,
+  shouldIgnoreKeyboardEvent,
+} from '../../core/keyboard';
 import {
   BET_OPTIONS,
   MIN_BET,
   clampBet,
   handPayout,
+  insuranceCost,
+  insurancePayout,
   stakeFor,
 } from '../../core/models/bankroll.model';
 import { cardHighValue, isAce, type Card } from '../../core/models/card.model';
@@ -35,9 +41,11 @@ import { ShowdownStatsService } from '../../core/services/showdown-stats.service
 
 // 'player-turn': the player is acting on the active hand. 'resolved': every hand
 // is settled and the dealer hand revealed. 'exhausted': the shoe ran too low.
-// 'betting' only occurs when bet sizing is on: the round waits for a bet before
-// any card is dealt, which is the whole point of practising against the count.
-type ShowdownPhase = 'betting' | 'player-turn' | 'resolved' | 'exhausted';
+// 'betting' and 'insurance' only occur when bet sizing is on: the round waits
+// for a bet before any card is dealt (the whole point of practising against the
+// count), and a dealer ace pauses the deal on the insurance decision before the
+// hole card is checked.
+type ShowdownPhase = 'betting' | 'insurance' | 'player-turn' | 'resolved' | 'exhausted';
 
 // Most a pair can be split to (3 splits → 4 hands), the common casino cap. The
 // cap is per box: occupying three boxes does not shrink any one box's splits.
@@ -88,7 +96,9 @@ function freshHand(
 // player just counted, plays each hit/stand/double/split in turn (re-splits to
 // four hands; split aces take one card), auto-plays the dealer once by the
 // active RuleSet (from the shared table rules), and settles every hand
-// win/lose/push (3:2 naturals). No surrender, bankroll, or bets.
+// win/lose/push (3:2 naturals). With bet sizing on, a dealer ace also offers
+// insurance (half each bet, pays 2:1) before the hole card is checked — the
+// classic count-driven side bet. No surrender.
 @Component({
   selector: 'app-showdown',
   imports: [CardImageComponent],
@@ -218,6 +228,30 @@ function freshHand(
           }
         </div>
 
+        @if (phase() === 'insurance') {
+          <div class="showdown__insurance" role="group" aria-label="Insurance">
+            <p class="showdown__bet-prompt">
+              Dealer shows an ace. Insurance costs {{ chips(insuranceTotal()) }} (half
+              {{ hands().length > 1 ? 'each bet' : 'the bet' }}) and pays 2:1 on a dealer blackjack.
+            </p>
+            <div class="showdown__actions">
+              <button type="button" class="showdown__action" (click)="takeInsurance()">
+                Take insurance <kbd class="kcap">I</kbd>
+              </button>
+              <button type="button" class="showdown__action" (click)="declineInsurance()">
+                No insurance <kbd class="kcap">N</kbd>
+              </button>
+            </div>
+          </div>
+        }
+
+        @if (insuranceNet() !== null) {
+          <p class="showdown__note" role="status">
+            {{ insuranceNet()! > 0 ? 'Insurance paid 2:1' : 'Insurance lost' }}
+            <span class="showdown__payout">{{ signedChips(insuranceNet()!) }}</span>
+          </p>
+        }
+
         @if (phase() === 'player-turn') {
           <div class="showdown__actions" role="group" aria-label="Player actions">
             @for (a of playerActions(); track a) {
@@ -302,6 +336,9 @@ export class ShowdownComponent implements OnInit {
   protected readonly bet = signal(MIN_BET);
   // Net chips of the round just resolved, for the result line.
   protected readonly roundNet = signal(0);
+  // Net chips the round's insurance bet returned, or null when no insurance was
+  // taken. Settled the moment the hole card is checked, before play continues.
+  protected readonly insuranceNet = signal<number | null>(null);
   // Mirror of the shoe's remaining card count, refreshed after every draw so the
   // "deal another" gate reacts to depletion.
   protected readonly remaining = signal(0);
@@ -318,6 +355,16 @@ export class ShowdownComponent implements OnInit {
   private canPostAnotherBet(h: PlayerHand): boolean {
     if (!this.betting()) return true;
     return this.bankrollService.bankroll() - this.committed() >= h.bet;
+  }
+
+  // What insuring every box costs: half of each box's bet.
+  protected readonly insuranceTotal = computed(() =>
+    this.hands().reduce((sum, h) => sum + insuranceCost(h.bet), 0),
+  );
+  // Insurance is only offered when the bankroll's free chips can back it, the
+  // same rule a double or split follows.
+  private canAffordInsurance(): boolean {
+    return this.bankrollService.bankroll() - this.committed() >= this.insuranceTotal();
   }
 
   // Actions apply to the active hand. Double: any fresh two-card hand (including
@@ -501,23 +548,60 @@ export class ShowdownComponent implements OnInit {
 
     const bet = this.betting() ? this.bet() : 0;
     this.roundNet.set(0);
+    this.insuranceNet.set(null);
     this.hands.set(boxes.map((cards, box) => freshHand(cards, { box, bet })));
     this.dealerCards.set(dealer);
     this.activeIndex.set(0);
     this.phase.set('player-turn');
 
+    // A dealer ace pauses on the insurance decision before the peek — but only
+    // with chips in play (insurance is purely a money bet) that can back it.
+    if (this.betting() && isAce(dealer[0]) && this.canAffordInsurance()) {
+      this.phase.set('insurance');
+      return;
+    }
+    this.peekAndContinue();
+  }
+
+  // Check the hole card and continue the round: a dealer natural ends every box
+  // at once, an opening player natural is paid 3:2 and sits out, and the
+  // remaining boxes are played in order.
+  private peekAndContinue(): void {
+    const dealer = this.dealerCards();
     if (isBlackjack(dealer)) {
       // A dealer natural ends every box at once — no player action, no draw.
       this.hands().forEach((_, i) => this.settleHandAt(i, dealer));
       this.phase.set('resolved');
       return;
     }
-    // A box holding a natural is paid straight away (3:2) and sits out the
-    // rest of the round; the remaining boxes are played in order.
     this.hands().forEach((h, i) => {
       if (isBlackjack(h.cards)) this.settleHandAt(i, dealer);
     });
     this.activateNextOrResolve();
+  }
+
+  // Insure every box for half its bet: the side bets settle against the hole
+  // card immediately — paid 2:1 on a dealer natural, forfeited otherwise — and
+  // then the round continues exactly as an uninsured one.
+  protected takeInsurance(): void {
+    if (this.phase() !== 'insurance') return;
+    const dealerBlackjack = isBlackjack(this.dealerCards());
+    let net = 0;
+    for (const h of this.hands()) {
+      const payout = insurancePayout(h.bet, dealerBlackjack);
+      this.bankrollService.record(insuranceCost(h.bet), payout);
+      net += payout;
+    }
+    this.insuranceNet.set(net);
+    this.roundNet.update((total) => total + net);
+    this.phase.set('player-turn');
+    this.peekAndContinue();
+  }
+
+  protected declineInsurance(): void {
+    if (this.phase() !== 'insurance') return;
+    this.phase.set('player-turn');
+    this.peekAndContinue();
   }
 
   // Settle one hand against the dealer's final cards and record it. Idempotent:
@@ -674,6 +758,20 @@ export class ShowdownComponent implements OnInit {
 
   @HostListener('window:keydown', ['$event'])
   protected onKeyDown(event: KeyboardEvent): void {
+    // The insurance decision has its own two keys and swallows everything else,
+    // so a buffered Enter or action letter can't decide a side bet by accident.
+    if (this.phase() === 'insurance') {
+      if (shouldIgnoreKeyboardEvent(event)) return;
+      const key = event.key.toLowerCase();
+      if (key === 'i') {
+        event.preventDefault();
+        this.takeInsurance();
+      } else if (key === 'n') {
+        event.preventDefault();
+        this.declineInsurance();
+      }
+      return;
+    }
     handleTrainerKeydown(event, {
       // Enter deals: from the bet when betting is on, or straight into the next
       // round when it is off.

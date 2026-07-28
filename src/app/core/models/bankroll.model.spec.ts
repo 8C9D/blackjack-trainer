@@ -4,6 +4,8 @@ import {
   MIN_BET,
   clampBet,
   handPayout,
+  insuranceCost,
+  insurancePayout,
   largestAffordableBet,
   stakeFor,
 } from './bankroll.model';
@@ -100,6 +102,25 @@ describe('bankroll model', () => {
 
     it('pays a half chip on an odd bet, as a real 3:2 does', () => {
       expect(handPayout(settlement('win', true), 5, false)).toBe(7.5);
+    });
+  });
+
+  describe('insurance', () => {
+    it('costs half the bet, down to a half chip on an odd bet', () => {
+      expect(insuranceCost(10)).toBe(5);
+      expect(insuranceCost(5)).toBe(2.5);
+      expect(insuranceCost(1)).toBe(0.5);
+    });
+
+    it('pays 2:1 on a dealer natural — exactly covering the bet', () => {
+      expect(insurancePayout(10, true)).toBe(10);
+      expect(insurancePayout(5, true)).toBe(5);
+      expect(insurancePayout(1, true)).toBe(1);
+    });
+
+    it('is forfeited when the dealer has no natural', () => {
+      expect(insurancePayout(10, false)).toBe(-5);
+      expect(insurancePayout(1, false)).toBe(-0.5);
     });
   });
 });
