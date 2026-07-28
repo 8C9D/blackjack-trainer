@@ -49,6 +49,13 @@ export function handPayout(settlement: Settlement, bet: number, doubled: boolean
   return stake;
 }
 
+// Surrendering forfeits half the bet and returns the rest. It is only ever the
+// single opening bet at stake: surrender is a first decision, so no doubled or
+// split stake can exist behind it.
+export function surrenderForfeit(bet: number): number {
+  return -(bet / 2);
+}
+
 // Insurance is a side bet of half the box's bet, offered when the dealer shows
 // an ace. Half of an odd bet is a genuine half chip, matching the 3:2 payouts.
 export function insuranceCost(bet: number): number {

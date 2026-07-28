@@ -17,6 +17,7 @@ type PlayerHandView = {
   doubled: boolean;
   isSplitAce: boolean;
   fromSplit: boolean;
+  surrendered: boolean;
   done: boolean;
   settlement: Settlement | null;
 };
@@ -181,10 +182,10 @@ describe('ShowdownComponent', () => {
     it('offers Double only on the opening two-card hand', () => {
       // player [9,7]=16 vs dealer 10; hitting draws a 2 → 3-card hand.
       const { c } = createShowdown(makeShoe(['9', '10', '7', '6', '2']));
-      expect(c.playerActions()).toEqual(['H', 'S', 'D']);
+      expect(c.playerActions()).toEqual(['H', 'S', 'D', 'SUR']);
       c.onAction('H');
       expect(c.playerCards().length).toBe(3);
-      expect(c.playerActions()).toEqual(['H', 'S']); // no Double after a hit
+      expect(c.playerActions()).toEqual(['H', 'S']); // no Double or Surrender after a hit
     });
 
     it('takes exactly one card, ends the turn, and marks the win as doubled', () => {
@@ -341,7 +342,8 @@ describe('ShowdownComponent', () => {
       c.setBet(500);
       c.dealAfterBet();
       expect(c.hands()[0].bet).toBe(500);
-      expect(c.playerActions()).toEqual(['H', 'S']);
+      // Surrender stays: it needs no extra chips, unlike the withheld double.
+      expect(c.playerActions()).toEqual(['H', 'S', 'SUR']);
     });
 
     it('offers only the bet sizes every box can cover', () => {
@@ -420,6 +422,63 @@ describe('ShowdownComponent', () => {
       expect(c.hands()[0].bet).toBe(0);
       expect(c.bankrollService.state()).toEqual({ bankroll: 500, wagered: 0, net: 0 });
       expect(fixture.nativeElement.textContent).not.toContain('Bankroll');
+    });
+  });
+
+  // Late surrender: a box's original two cards may be given up for half the
+  // bet. The peek has already settled any dealer natural by the time a hand is
+  // played, which is exactly the "late" in late surrender.
+  describe('surrender', () => {
+    it('settles the hand as an immediate loss and the dealer never draws', () => {
+      // player [10,6]=16, dealer [10,9]=19 would stand anyway; the point is the
+      // dealer takes no card when the only box has surrendered.
+      const { c } = createShowdown(makeShoe(['10', '10', '6', '9', '5']));
+      c.onAction('SUR');
+      expect(c.phase()).toBe('resolved');
+      expect(c.hands()[0].surrendered).toBe(true);
+      expect(c.hands()[0].settlement!.outcome).toBe('lose');
+      expect(c.dealerCards().length).toBe(2); // never drew the spare 5
+      expect(c.stats.stats()).toMatchObject({ hands: 1, losses: 1 });
+      expect(c.verdict(c.hands()[0])).toBe('Surrendered.');
+    });
+
+    it('is not offered once a card has been hit or on a split hand', () => {
+      const { c } = createShowdown(makeShoe(['8', '10', '8', '7', '8', '5', '5', '5']));
+      expect(c.playerActions()).toContain('SUR');
+      c.onAction('P'); // the split halves are fresh two-card hands, but fromSplit
+      expect(c.playerActions()).not.toContain('SUR');
+    });
+
+    it('forfeits half the bet with betting on', () => {
+      const { c } = createShowdown(makeShoe(['10', '10', '6', '9']), 'S17', 1, true);
+      c.setBet(10);
+      c.dealAfterBet();
+      c.onAction('SUR');
+      expect(c.payout(c.hands()[0])).toBe(-5);
+      expect(c.roundNet()).toBe(-5);
+      expect(c.bankrollService.state()).toEqual({ bankroll: 495, wagered: 10, net: -5 });
+      expect(c.verdict(c.hands()[0])).toBe('Surrendered — half the bet back.');
+    });
+
+    it('gives up one box while the others play on', () => {
+      // box1 [9,7]=16 surrenders; box2 [10,9]=19 stands; dealer [J,6]=16 draws
+      // the K for box2's sake and busts.
+      const { c } = createShowdown(makeShoe(['9', '10', 'J', '7', '9', '6', 'K']), 'S17', 2);
+      c.onAction('SUR');
+      expect(c.activeIndex()).toBe(1); // play moved to the second box
+      c.onAction('S');
+      expect(c.phase()).toBe('resolved');
+      expect(c.hands()[0].surrendered).toBe(true);
+      expect(c.hands()[1].settlement!.outcome).toBe('win');
+      expect(c.dealerCards().length).toBe(3);
+      expect(c.roundSummary()).toBe('1 won, 1 lost');
+    });
+
+    it("the 'r' key surrenders", () => {
+      const { c } = createShowdown(makeShoe(['10', '10', '6', '9']));
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' }));
+      expect(c.phase()).toBe('resolved');
+      expect(c.hands()[0].surrendered).toBe(true);
     });
   });
 
@@ -539,13 +598,14 @@ describe('ShowdownComponent', () => {
     expect(fixture.nativeElement.querySelector('input[type=radio]')).toBeNull();
   });
 
-  it('renders Hit, Stand, and Double on the opening hand', () => {
+  it('renders Hit, Stand, Double, and Surrender on the opening hand', () => {
     const { fixture } = createShowdown(makeShoe(['9', '10', '7', '6']));
     const buttons = fixture.nativeElement.querySelectorAll('.showdown__action');
-    expect(buttons.length).toBe(3);
+    expect(buttons.length).toBe(4);
     expect((buttons[0] as HTMLElement).textContent).toContain('Hit');
     expect((buttons[1] as HTMLElement).textContent).toContain('Stand');
     expect((buttons[2] as HTMLElement).textContent).toContain('Double');
+    expect((buttons[3] as HTMLElement).textContent).toContain('Surrender');
   });
 
   it("'s' key stands the hand", () => {

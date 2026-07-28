@@ -43,6 +43,7 @@ import {
   insurancePayout,
   largestAffordableBet,
   stakeFor,
+  surrenderForfeit,
 } from '../src/app/core/models/bankroll.model';
 import { COUNTING_SYSTEMS } from '../src/app/data/counting-systems';
 import { H17_CHART } from '../src/app/data/h17-basic-strategy';
@@ -617,6 +618,13 @@ function exportShowdownVectors(): void {
     }
   }
 
+  // Surrender: half the bet comes back, half is forfeited. The odd bets pin the
+  // half-chip forfeits both platforms must agree on.
+  const surrenderCases = [1, 5, 10, 25].map((bet) => ({
+    bet,
+    forfeit: surrenderForfeit(bet),
+  }));
+
   // Bet clamping against a bankroll, including the sub-minimum and fractional
   // cases each platform has to reject the same way.
   const betClampCases = [
@@ -633,14 +641,14 @@ function exportShowdownVectors(): void {
   }));
 
   writeJson('showdown-vectors.json', {
-    schema: 'showdown-vectors/4',
+    schema: 'showdown-vectors/5',
     generatedBy: 'tools/export-parity-fixtures.ts',
     description:
       'Pure dealer-play and settlement cases: dealerShouldHit (H17/S17 soft-17), ' +
       'playDealerHand draw loops, settle() outcomes (3:2 naturals, bust ' +
       'ordering, totals, pushes), the multi-box spot clamp / opening-round ' +
-      'card requirement, and the betting math (payouts, bet clamping, and ' +
-      'insurance). Suits are arbitrary.',
+      'card requirement, and the betting math (payouts, bet clamping, ' +
+      'insurance, and surrender). Suits are arbitrary.',
     dealerShouldHitCases,
     playCases,
     settleCases,
@@ -648,6 +656,7 @@ function exportShowdownVectors(): void {
     payoutCases,
     betClampCases,
     insuranceCases,
+    surrenderCases,
   });
 }
 

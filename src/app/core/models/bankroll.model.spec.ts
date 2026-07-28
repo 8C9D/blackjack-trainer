@@ -8,6 +8,7 @@ import {
   insurancePayout,
   largestAffordableBet,
   stakeFor,
+  surrenderForfeit,
 } from './bankroll.model';
 import type { Settlement } from './showdown.model';
 
@@ -102,6 +103,14 @@ describe('bankroll model', () => {
 
     it('pays a half chip on an odd bet, as a real 3:2 does', () => {
       expect(handPayout(settlement('win', true), 5, false)).toBe(7.5);
+    });
+  });
+
+  describe('surrenderForfeit', () => {
+    it('gives up half the bet, down to a half chip on an odd bet', () => {
+      expect(surrenderForfeit(10)).toBe(-5);
+      expect(surrenderForfeit(5)).toBe(-2.5);
+      expect(surrenderForfeit(1)).toBe(-0.5);
     });
   });
 
