@@ -22,6 +22,7 @@ import {
   insuranceCost,
   insurancePayout,
   stakeFor,
+  surrenderForfeit,
 } from '../../core/models/bankroll.model';
 import { cardHighValue, isAce, type Card } from '../../core/models/card.model';
 import { handTotal, isBlackjack, isBust } from '../../core/models/hand.model';
@@ -71,6 +72,9 @@ interface PlayerHand {
   // money — tracked per hand rather than inferred from the hand count, because
   // multiple boxes also produce multiple hands without any split involved.
   readonly fromSplit: boolean;
+  // Gave up the hand as a first decision, forfeiting half the bet. The dealer
+  // owes this hand nothing, so it settles as a loss the moment it surrenders.
+  readonly surrendered: boolean;
   // Finished acting (stood, busted, doubled, or a completed split ace).
   readonly done: boolean;
   readonly settlement: Settlement | null;
@@ -87,6 +91,7 @@ function freshHand(
     doubled: false,
     isSplitAce: origin.isSplitAce ?? false,
     fromSplit: origin.fromSplit ?? false,
+    surrendered: false,
     done: false,
     settlement: null,
   };
@@ -96,9 +101,11 @@ function freshHand(
 // player just counted, plays each hit/stand/double/split in turn (re-splits to
 // four hands; split aces take one card), auto-plays the dealer once by the
 // active RuleSet (from the shared table rules), and settles every hand
-// win/lose/push (3:2 naturals). With bet sizing on, a dealer ace also offers
-// insurance (half each bet, pays 2:1) before the hole card is checked — the
-// classic count-driven side bet. No surrender.
+// win/lose/push (3:2 naturals). A box's original two cards may also late-
+// surrender for half the bet (the peek has already settled any dealer natural).
+// With bet sizing on, a dealer ace additionally offers insurance (half each
+// bet, pays 2:1) before the hole card is checked — the classic count-driven
+// side bet.
 @Component({
   selector: 'app-showdown',
   imports: [CardImageComponent],
@@ -393,10 +400,19 @@ export class ShowdownComponent implements OnInit {
       this.canPostAnotherBet(h)
     );
   });
+  // Late surrender: a box's original two cards may be given up for half the
+  // bet. Never after a split, and the option lapses once a card is drawn. By
+  // the time a hand is played the peek has already settled any dealer natural,
+  // which is exactly the "late" in late surrender.
+  protected readonly canSurrender = computed(() => {
+    const h = this.activeHand();
+    return this.phase() === 'player-turn' && h !== null && h.cards.length === 2 && !h.fromSplit;
+  });
   protected readonly playerActions = computed<readonly Action[]>(() => {
     const actions: Action[] = ['H', 'S'];
     if (this.canDouble()) actions.push('D');
     if (this.canSplit()) actions.push('P');
+    if (this.canSurrender()) actions.push('SUR');
     return actions;
   });
 
@@ -437,8 +453,10 @@ export class ShowdownComponent implements OnInit {
     return stakeFor(h.bet, h.doubled);
   }
 
-  // Chips a settled hand returned. Zero until it settles.
+  // Chips a settled hand returned. Zero until it settles. A surrendered hand
+  // gave up half its bet, not the full stake its loss settlement would imply.
   protected payout(h: PlayerHand): number {
+    if (h.surrendered) return surrenderForfeit(h.bet);
     return h.settlement ? handPayout(h.settlement, h.bet, h.doubled) : 0;
   }
 
@@ -513,6 +531,7 @@ export class ShowdownComponent implements OnInit {
     else if (action === 'S') this.stand();
     else if (action === 'D') this.double();
     else if (action === 'P') this.split();
+    else if (action === 'SUR') this.surrender();
   }
 
   // Between rounds, betting returns to the bet: the count has moved on, so the
@@ -618,6 +637,28 @@ export class ShowdownComponent implements OnInit {
       this.bankrollService.record(stakeFor(hand.bet, hand.doubled), payout);
       this.roundNet.update((net) => net + payout);
     }
+  }
+
+  // Give up the hand for half the bet. It settles as a loss on the spot — the
+  // dealer owes it nothing — so `resolveAll`'s any-live check and the tally both
+  // see a finished hand, and the round moves to the next box.
+  private surrender(): void {
+    if (!this.canSurrender()) return;
+    const i = this.activeIndex();
+    const hand = this.hands()[i];
+    const settlement: Settlement = {
+      outcome: 'lose',
+      playerBlackjack: false,
+      dealerBlackjack: false,
+    };
+    this.updateHand(i, (h) => ({ ...h, surrendered: true, done: true, settlement }));
+    this.stats.record('lose', false);
+    if (this.betting()) {
+      const payout = surrenderForfeit(hand.bet);
+      this.bankrollService.record(hand.bet, payout);
+      this.roundNet.update((net) => net + payout);
+    }
+    this.activateNextOrResolve();
   }
 
   private hit(): void {
@@ -744,6 +785,7 @@ export class ShowdownComponent implements OnInit {
   protected verdict(h: PlayerHand): string {
     const s = h.settlement;
     if (!s) return '';
+    if (h.surrendered) return this.betting() ? 'Surrendered — half the bet back.' : 'Surrendered.';
     const doubled = h.doubled ? ' (doubled)' : '';
     if (s.outcome === 'win') {
       return (s.playerBlackjack ? 'Blackjack! You win (pays 3:2).' : 'You win!') + doubled;

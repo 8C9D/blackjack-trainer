@@ -1,7 +1,7 @@
 {
-  "schema": "showdown-vectors/4",
+  "schema": "showdown-vectors/5",
   "generatedBy": "tools/export-parity-fixtures.ts",
-  "description": "Pure dealer-play and settlement cases: dealerShouldHit (H17/S17 soft-17), playDealerHand draw loops, settle() outcomes (3:2 naturals, bust ordering, totals, pushes), the multi-box spot clamp / opening-round card requirement, and the betting math (payouts, bet clamping, and insurance). Suits are arbitrary.",
+  "description": "Pure dealer-play and settlement cases: dealerShouldHit (H17/S17 soft-17), playDealerHand draw loops, settle() outcomes (3:2 naturals, bust ordering, totals, pushes), the multi-box spot clamp / opening-round card requirement, and the betting math (payouts, bet clamping, insurance, and surrender). Suits are arbitrary.",
   "dealerShouldHitCases": [
     {
       "hand": [
@@ -812,6 +812,24 @@
       "dealerBlackjack": true,
       "cost": 12.5,
       "payout": 25
+    }
+  ],
+  "surrenderCases": [
+    {
+      "bet": 1,
+      "forfeit": -0.5
+    },
+    {
+      "bet": 5,
+      "forfeit": -2.5
+    },
+    {
+      "bet": 10,
+      "forfeit": -5
+    },
+    {
+      "bet": 25,
+      "forfeit": -12.5
     }
   ]
 }
