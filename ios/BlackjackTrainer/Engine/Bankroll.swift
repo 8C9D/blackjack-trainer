@@ -48,6 +48,13 @@ enum Bankroll {
         }
     }
 
+    /// Surrendering forfeits half the bet and returns the rest. It is only ever
+    /// the single opening bet at stake: surrender is a first decision, so no
+    /// doubled or split stake can exist behind it.
+    static func surrenderForfeit(bet: Double) -> Double {
+        -(bet / 2)
+    }
+
     /// Insurance is a side bet of half the box's bet, offered when the dealer
     /// shows an ace. Half of an odd bet is a genuine half chip, matching 3:2.
     static func insuranceCost(bet: Double) -> Double {

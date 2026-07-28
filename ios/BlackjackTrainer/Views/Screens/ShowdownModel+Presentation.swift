@@ -45,6 +45,9 @@ extension ShowdownModel {
 
     func verdict(_ hand: PlayerHand) -> String {
         guard let result = hand.settlement else { return "" }
+        if hand.surrendered {
+            return betting ? "Surrendered — half the bet back." : "Surrendered."
+        }
         let doubledSuffix = hand.doubled ? " (doubled)" : ""
         switch result.outcome {
         case .win:

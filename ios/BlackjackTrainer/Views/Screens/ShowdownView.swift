@@ -22,6 +22,7 @@ struct ShowdownView: View {
         var actions: [Action] = [.hit, .stand]
         if model.canDouble { actions.append(.double) }
         if model.canSplit { actions.append(.split) }
+        if model.canSurrender { actions.append(.surrender) }
         return actions
     }
 

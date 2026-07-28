@@ -30,6 +30,15 @@ extension ShowdownModel {
             && canPostAnotherBet(hand)
     }
 
+    /// Late surrender: a box's original two cards may be given up for half the
+    /// bet. Never after a split, and the option lapses once a card is drawn. By
+    /// the time a hand is played the peek has already settled any dealer
+    /// natural, which is exactly the "late" in late surrender.
+    var canSurrender: Bool {
+        guard let hand = activeHand else { return false }
+        return phase == .playerTurn && hand.cards.count == 2 && !hand.fromSplit
+    }
+
     /// How many hands the given box currently holds — one until it splits.
     private func handsInBox(_ box: Int) -> Int {
         hands.filter { $0.box == box }.count
@@ -75,8 +84,10 @@ extension ShowdownModel {
         Bankroll.stake(bet: hand.bet, doubled: hand.doubled)
     }
 
-    /// Chips a settled hand returned. Zero until it settles.
+    /// Chips a settled hand returned. Zero until it settles. A surrendered hand
+    /// gave up half its bet, not the full stake its loss settlement would imply.
     func payout(_ hand: PlayerHand) -> Double {
+        if hand.surrendered { return Bankroll.surrenderForfeit(bet: hand.bet) }
         guard let settlement = hand.settlement else { return 0 }
         return Bankroll.payout(settlement: settlement, bet: hand.bet, doubled: hand.doubled)
     }
