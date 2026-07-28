@@ -181,14 +181,18 @@ struct ShowdownView: View {
                 .foregroundStyle(Theme.ink)
             HStack(spacing: 8) {
                 Button { model.takeInsurance() } label: {
-                    Text("Take insurance").frame(maxWidth: .infinity, minHeight: 30)
+                    Text(hasHardwareKeyboard ? "Take insurance  [I]" : "Take insurance")
+                        .frame(maxWidth: .infinity, minHeight: 30)
                 }
                 .accentFilledButton()
+                .keyboardShortcut("i", modifiers: [])
                 Button { model.declineInsurance() } label: {
-                    Text("No insurance").frame(maxWidth: .infinity, minHeight: 30)
+                    Text(hasHardwareKeyboard ? "No insurance  [N]" : "No insurance")
+                        .frame(maxWidth: .infinity, minHeight: 30)
                 }
                 .buttonStyle(.bordered)
                 .tint(Theme.accentInk)
+                .keyboardShortcut("n", modifiers: [])
             }
         }
     }
