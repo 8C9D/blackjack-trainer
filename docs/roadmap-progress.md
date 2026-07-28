@@ -199,6 +199,36 @@ showdown doubles and splits, with audit and iOS cleanup fixes`.
   (a natural in box 2 would have been denied its 3:2), so the flag is now
   tracked per hand as `fromSplit` on both platforms.
 
+### Post-roadmap continued: insurance and late surrender (2026-07-27)
+
+The last two pieces of showdown scope that had been called out as out of scope
+have now shipped, each on both platforms with parity vectors.
+
+- **Insurance** — with bet sizing on, a dealer ace pauses the deal in a new
+  `insurance` phase before the hole card is checked: one take/skip decision
+  (keys `I` / `N`) insures every box for half its bet, paid 2:1 on a dealer
+  natural and forfeited otherwise. One decision covers all boxes because the
+  count — the only input the drill cares about — is the same for every box. The
+  offer is skipped when the bankroll's free chips cannot back it, and with
+  betting off (insurance is purely a money bet). Pure math in
+  `bankroll.model.ts` (`insuranceCost` / `insurancePayout`), ported to
+  `Bankroll.swift`, pinned by `insuranceCases` (`showdown-vectors/4`).
+- **Late surrender** — a box's original two cards may be given up as a first
+  decision (key `R`), settling the box as an immediate loss; half the bet comes
+  back when betting is on. Never after a split, and the option lapses once a
+  card is drawn. Because the peek already settles any dealer natural before
+  hands are played, the surrender on offer is genuinely _late_. The hand
+  carries a `surrendered` flag so its verdict and payout read half a bet, not
+  the full-stake loss its settlement would imply. `surrenderForfeit` is pinned
+  by `surrenderCases` (`showdown-vectors/5`). Offered with betting off too —
+  unlike insurance it is a playing decision from the charts, not a side bet —
+  and recorded as a loss in the tally.
+
+Both features also forced two structural moves on iOS to stay inside the
+SwiftLint length caps: the play gates (`canDouble` / `canSplit` /
+`canSurrender` and friends) now live in `ShowdownModel+Betting.swift`, and
+`PlayerHand` has its own file.
+
 ### Bugs found reviewing the multi-box work (2026-07-25)
 
 Three defects surfaced while reviewing and exercising the multi-box showdown.
