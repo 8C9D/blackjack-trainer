@@ -18,6 +18,13 @@ struct ShowdownView: View {
         self.onExit = onExit
     }
 
+    /// Wraps an already-driven model, so previews (and render checks) can show a
+    /// mid-round state — the public init always starts a fresh round.
+    init(model: ShowdownModel, onExit: @escaping ([Card]) -> Void) {
+        _model = State(initialValue: model)
+        self.onExit = onExit
+    }
+
     private var playerActions: [Action] {
         var actions: [Action] = [.hit, .stand]
         if model.canDouble { actions.append(.double) }
@@ -240,6 +247,29 @@ struct ShowdownView: View {
             }
         }
     }
+}
+
+#Preview("Insurance decision") {
+    let defaults = UserDefaults(suiteName: "showdown-preview")!
+    let model = ShowdownModel(
+        shoe: Shoe(
+            cards: [
+                Card(rank: .nine, suit: .spades), Card(rank: .ace, suit: .diamonds),
+                Card(rank: .seven, suit: .hearts), Card(rank: .six, suit: .clubs),
+                Card(rank: .five, suit: .clubs), Card(rank: .five, suit: .hearts)
+            ],
+            penetration: 0.9
+        ),
+        ruleSet: .s17,
+        stats: ShowdownStatsStore(key: StatsKeys.showdown, defaults: defaults),
+        betting: true,
+        bankroll: BankrollStore(key: StatsKeys.showdownBankroll, defaults: defaults)
+    )
+    model.setBet(10)
+    model.dealAfterBet()
+    return ShowdownView(model: model) { _ in }
+        .padding()
+        .appBackground()
 }
 
 /// Chip figures carry no currency symbol — they are units, and a 3:2 on an odd bet
