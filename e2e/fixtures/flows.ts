@@ -21,8 +21,12 @@ export async function configureCounting(page: Page, spots: string, betting = fal
 
 // Run one live-shoe true-count rep, ending on the feedback screen where the
 // showdown is offered. The answers need not be correct — this is flow, not math.
-export async function runCountingRound(page: Page): Promise<void> {
-  await page.goto('/drill/card-counting');
+// A `seed` pins the app's randomness (the shoe's shuffle included) via the
+// `?seed=` hook, so a spec can rely on the exact cards the showdown will deal.
+export async function runCountingRound(page: Page, seed?: number): Promise<void> {
+  await page.goto(
+    seed === undefined ? '/drill/card-counting' : `/drill/card-counting?seed=${seed}`,
+  );
   await page.getByRole('button', { name: /Start counting/ }).click();
 
   const estimate = page.getByLabel('How many decks remain?');
@@ -38,16 +42,23 @@ export async function runCountingRound(page: Page): Promise<void> {
 
 // Stand every box that still owes a decision, leaving the round resolved. The
 // number of turns is not fixed: an opening natural settles its box without ever
-// taking one, and a bust ends one early. The loop's exit is the round's own
-// terminal state — the deal-another control — rather than a click timeout, which
-// under parallel workers can expire on a slow render and leave a box unplayed.
+// taking one, and a bust ends one early. With betting on, a dealer ace pauses
+// the round on the insurance decision first — decline it, since these walks
+// assert flow, not the side bet. The loop's exit is the round's own terminal
+// state — the deal-another control — rather than a click timeout, which under
+// parallel workers can expire on a slow render and leave a box unplayed.
 export async function standEveryBox(page: Page): Promise<void> {
+  const noInsurance = page.getByRole('button', { name: 'No insurance' });
   const stand = page
     .getByRole('group', { name: 'Player actions' })
     .getByRole('button', { name: /Stand/ });
   const resolved = page.getByRole('button', { name: /Deal another/ });
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 12; i++) {
     if (await resolved.isVisible()) return;
+    if (await noInsurance.isVisible()) {
+      await noInsurance.click({ timeout: 5000 }).catch(() => undefined);
+      continue;
+    }
     // The stand that resolves the round detaches the button mid-click. That is
     // the loop finishing rather than a failure, so swallow it and let the next
     // pass read the phase from the deal-another control.
