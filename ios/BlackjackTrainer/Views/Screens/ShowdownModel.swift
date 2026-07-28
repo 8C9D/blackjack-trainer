@@ -1,37 +1,15 @@
 import Observation
 import SwiftUI
 
-/// One player hand in the showdown. Hands come from two places: the opening deal
-/// gives one per occupied box, and splitting a pair turns one hand into several.
-/// Either way each is played and settled independently against the one dealer.
-struct PlayerHand {
-    var cards: [Card]
-    /// Which box (0-based) this hand belongs to. Splits stay in their box, so the
-    /// four-hand cap counts only the hands sharing a box.
-    var box = 0
-    /// Doubled: took exactly one card at a doubled stake.
-    var doubled = false
-    /// A split-ace hand takes exactly one card, then stands (no hit/double/re-split).
-    var isSplitAce = false
-    /// Came out of a split. A 21 on such a hand is not a natural and pays even
-    /// money — tracked per hand rather than inferred from the hand count, because
-    /// multiple boxes also produce multiple hands without any split involved.
-    var fromSplit = false
-    /// Chips this hand has up. Every box posts the round's bet, and a split puts a
-    /// second bet on the new hand. Zero when betting is off.
-    var bet = 0.0
-    /// Finished acting (stood, busted, doubled, or a completed split ace).
-    var done = false
-    var settlement: Settlement?
-}
-
 /// Post-count showdown: deals a hand from the persistent shoe the player just
 /// counted, plays it hit/stand/double/split (re-splits to four hands; split aces
 /// take one card), auto-plays the dealer by the active rule set, and settles each
-/// hand win/lose/push (3:2 naturals). With bet sizing on, each round opens on a
-/// bet and settles against the persisted bankroll, and a dealer ace offers
-/// insurance (half each bet, pays 2:1) before the hole card is checked. Mirrors
-/// the web `ShowdownComponent`. No surrender.
+/// hand win/lose/push (3:2 naturals). A box's original two cards may also
+/// late-surrender for half the bet (the peek has already settled any dealer
+/// natural). With bet sizing on, each round opens on a bet and settles against
+/// the persisted bankroll, and a dealer ace offers insurance (half each bet,
+/// pays 2:1) before the hole card is checked. Mirrors the web
+/// `ShowdownComponent`.
 @MainActor
 @Observable
 final class ShowdownModel {
@@ -139,8 +117,30 @@ final class ShowdownModel {
         case .stand: stand()
         case .double: double()
         case .split: split()
+        case .surrender: surrender()
         default: break
         }
+    }
+
+    /// Give up the hand for half the bet. It settles as a loss on the spot — the
+    /// dealer owes it nothing — so `resolveAll`'s any-live check and the tally
+    /// both see a finished hand, and the round moves to the next box.
+    private func surrender() {
+        guard canSurrender else { return }
+        let index = activeIndex
+        let bet = hands[index].bet
+        hands[index].surrendered = true
+        hands[index].done = true
+        hands[index].settlement = Settlement(
+            outcome: .lose, playerBlackjack: false, dealerBlackjack: false
+        )
+        stats.record(outcome: .lose, playerBlackjack: false)
+        if betting {
+            let payout = Bankroll.surrenderForfeit(bet: bet)
+            bankrollStore.record(stake: bet, payout: payout)
+            roundNet += payout
+        }
+        activateNextOrResolve()
     }
 
     /// Between rounds, betting returns to the bet: the count has moved on, so the
@@ -213,30 +213,6 @@ final class ShowdownModel {
             settleHand(at: index, dealer: dealer)
         }
         activateNextOrResolve()
-    }
-
-    /// Insure every box for half its bet: the side bets settle against the hole
-    /// card immediately — paid 2:1 on a dealer natural, forfeited otherwise —
-    /// and the round then continues exactly as an uninsured one.
-    func takeInsurance() {
-        guard phase == .insurance else { return }
-        let dealerBlackjack = Hand.isBlackjack(dealerCards)
-        var net = 0.0
-        for hand in hands {
-            let payout = Bankroll.insurancePayout(bet: hand.bet, dealerBlackjack: dealerBlackjack)
-            bankrollStore.record(stake: Bankroll.insuranceCost(bet: hand.bet), payout: payout)
-            net += payout
-        }
-        insuranceNet = net
-        roundNet += net
-        phase = .playerTurn
-        peekAndContinue()
-    }
-
-    func declineInsurance() {
-        guard phase == .insurance else { return }
-        phase = .playerTurn
-        peekAndContinue()
     }
 
     /// Settle one hand against the dealer's final cards and record it. Idempotent:
@@ -364,5 +340,35 @@ final class ShowdownModel {
 
     func resetStats() {
         stats.reset()
+    }
+}
+
+/// The insurance decision. Same file as the model — the mutators drive the
+/// file-scoped `private(set)` state — but outside the class body to respect the
+/// repo's type-length limit.
+@MainActor
+extension ShowdownModel {
+    /// Insure every box for half its bet: the side bets settle against the hole
+    /// card immediately — paid 2:1 on a dealer natural, forfeited otherwise —
+    /// and the round then continues exactly as an uninsured one.
+    func takeInsurance() {
+        guard phase == .insurance else { return }
+        let dealerBlackjack = Hand.isBlackjack(dealerCards)
+        var net = 0.0
+        for hand in hands {
+            let payout = Bankroll.insurancePayout(bet: hand.bet, dealerBlackjack: dealerBlackjack)
+            bankrollStore.record(stake: Bankroll.insuranceCost(bet: hand.bet), payout: payout)
+            net += payout
+        }
+        insuranceNet = net
+        roundNet += net
+        phase = .playerTurn
+        peekAndContinue()
+    }
+
+    func declineInsurance() {
+        guard phase == .insurance else { return }
+        phase = .playerTurn
+        peekAndContinue()
     }
 }

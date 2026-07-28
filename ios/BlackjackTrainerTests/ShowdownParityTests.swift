@@ -87,6 +87,15 @@ struct ShowdownParityTests {
         }
     }
 
+    @Test func surrenderForfeitsMatch() throws {
+        for testCase in try file().surrenderCases {
+            #expect(
+                Bankroll.surrenderForfeit(bet: testCase.bet) == testCase.forfeit,
+                "surrenderForfeit(\(testCase.bet))"
+            )
+        }
+    }
+
     @Test func betClampingMatches() throws {
         for testCase in try file().betClampCases {
             #expect(

@@ -49,11 +49,13 @@
 		53E0D784E52D67FE0E0D7D30 /* CardGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2705BBD8AAF017C2486055AE /* CardGenerator.swift */; };
 		55C4A5D71E0995E7E51A7E45 /* CardHandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22F61940A575094590E7A1D7 /* CardHandTests.swift */; };
 		56400A2A2343C8F479E57FD0 /* PracticeHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1588690973F4837FE94A0FA0 /* PracticeHistory.swift */; };
+		58D31F29B256153DF8C5FD3A /* ShowdownSurrenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A69D4776F718FC0DBD87AC1 /* ShowdownSurrenderTests.swift */; };
 		58FA482974AB94147769C875 /* WidgetSnapshotPublisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = B811CD0544E24B677EDAFD49 /* WidgetSnapshotPublisher.swift */; };
 		5ACE6A73BE71B4664EF7B2BD /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CDF8C0414B1B8AF850B0DF5 /* SmokeTests.swift */; };
 		5AF9B9674E93ACAEF2C9D226 /* Deviation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0896F4168F59A3A9EBFF7CDE /* Deviation.swift */; };
 		5CA5173D12D8A87017D4B99E /* ShowdownInsuranceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C574B4537F0D533478F29ED /* ShowdownInsuranceTests.swift */; };
 		5DB30E135B7A136CDC249DC4 /* CountingSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12BE32AD13FB36B33BAA1B8A /* CountingSystem.swift */; };
+		5F8498BABF2D152C9679928E /* PlayerHand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A576A159E244EEAB02C8B93 /* PlayerHand.swift */; };
 		5FE3CA2FA3F64B9184E87603 /* WidgetSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137C79C4AEE66B4C6F08DD6F /* WidgetSnapshotTests.swift */; };
 		6233AA0E43B7287043B90CE3 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA7773071A88011CBC0C77FF /* WidgetSnapshot.swift */; };
 		650C300DD2E06F00A261366D /* BankrollTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D00C6D052C93224128C4A71 /* BankrollTests.swift */; };
@@ -163,6 +165,7 @@
 		063271D90DDF91F490DF21C5 /* BlackjackStatsWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlackjackStatsWidget.swift; sourceTree = "<group>"; };
 		0896F4168F59A3A9EBFF7CDE /* Deviation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Deviation.swift; sourceTree = "<group>"; };
 		09C557C64B5EC75385C98395 /* Fixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fixtures.swift; sourceTree = "<group>"; };
+		0A69D4776F718FC0DBD87AC1 /* ShowdownSurrenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownSurrenderTests.swift; sourceTree = "<group>"; };
 		0B1F3C9E741253484F3D5474 /* RemindersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemindersTests.swift; sourceTree = "<group>"; };
 		0CDF8C0414B1B8AF850B0DF5 /* SmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeTests.swift; sourceTree = "<group>"; };
 		0E938F0CC74CC666924D7E3E /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
@@ -237,6 +240,7 @@
 		98AC306A85F2BCC5BE60F1E3 /* BlackjackTrainer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = BlackjackTrainer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		98EFDB01E654E3C42D38A419 /* FlowPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowPrefs.swift; sourceTree = "<group>"; };
 		999CBB4ECACD7CAF358DC9B6 /* FlowRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowRouter.swift; sourceTree = "<group>"; };
+		9A576A159E244EEAB02C8B93 /* PlayerHand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerHand.swift; sourceTree = "<group>"; };
 		A039C5E6271C7F1C7AFECA72 /* counting-vectors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "counting-vectors.json"; sourceTree = "<group>"; };
 		A6556669B8FAFE12C55367F9 /* charts.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = charts.json; sourceTree = "<group>"; };
 		AA7773071A88011CBC0C77FF /* WidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
@@ -349,6 +353,7 @@
 				58E087668BAE429A0E764D17 /* CountingModel.swift */,
 				70E0FD3BB6A069CD721C48F8 /* CountStreamView.swift */,
 				501FF9BB16087E1BE634AD19 /* DeckEstimateView.swift */,
+				9A576A159E244EEAB02C8B93 /* PlayerHand.swift */,
 				980E7AECAB91B60175930CD3 /* RemindersView.swift */,
 				F34FE14AC0C70AE7B5CDF936 /* ShowdownModel.swift */,
 				49128EEDAC42BC0E08AA8E55 /* ShowdownModel+Betting.swift */,
@@ -392,6 +397,7 @@
 				B1A14FE863E2084BF0AC794D /* ShowdownModelTests.swift */,
 				57A574AA683108F8EF54F104 /* ShowdownMultiBoxTests.swift */,
 				786E4951CEEAFF7A09457F30 /* ShowdownParityTests.swift */,
+				0A69D4776F718FC0DBD87AC1 /* ShowdownSurrenderTests.swift */,
 				0CDF8C0414B1B8AF850B0DF5 /* SmokeTests.swift */,
 				40DA33CFF9EA9742E7504A05 /* StatsStoreTests.swift */,
 				137C79C4AEE66B4C6F08DD6F /* WidgetSnapshotTests.swift */,
@@ -724,6 +730,7 @@
 				A92CDBEB90E70B6B983D8C5D /* Keyboard.swift in Sources */,
 				94A043188027320FBD0E92AB /* MissTally.swift in Sources */,
 				11B4EF92A5EE8846F8C72873 /* NotificationCoordinator.swift in Sources */,
+				5F8498BABF2D152C9679928E /* PlayerHand.swift in Sources */,
 				56400A2A2343C8F479E57FD0 /* PracticeHistory.swift in Sources */,
 				1545392CB4419FD4C62C30D3 /* PracticeReminders.swift in Sources */,
 				457BD2A5B549C7C4D08A030F /* RemindersModel.swift in Sources */,
@@ -793,6 +800,7 @@
 				D2AB7ED7BE3625300AACE48F /* ShowdownModelTests.swift in Sources */,
 				E89681A0A7CDFDB53BD9F974 /* ShowdownMultiBoxTests.swift in Sources */,
 				EE1BBDF8E6F169D9A24CDA81 /* ShowdownParityTests.swift in Sources */,
+				58D31F29B256153DF8C5FD3A /* ShowdownSurrenderTests.swift in Sources */,
 				5ACE6A73BE71B4664EF7B2BD /* SmokeTests.swift in Sources */,
 				EEAEAB42B68664042D826147 /* StatsStoreTests.swift in Sources */,
 				5FE3CA2FA3F64B9184E87603 /* WidgetSnapshotTests.swift in Sources */,
