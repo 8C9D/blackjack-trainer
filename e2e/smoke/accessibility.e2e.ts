@@ -172,6 +172,38 @@ test.describe('accessibility', () => {
     });
   }
 
+  // The walk above plays with betting off, so the chip surfaces — the bet
+  // ladder, the bankroll line, the stake chips, the insurance decision and its
+  // settled note, the per-hand payouts — are never measured by it. Seed 41
+  // deals a dealer ace over a safe hole card under these settings, reaching
+  // every one of those states deterministically.
+  for (const scheme of ['dark', 'light'] as const) {
+    test(`the betting and insurance surfaces meet WCAG AA in the ${scheme} theme`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await configureCounting(page, '1', true);
+      await runCountingRound(page, 41);
+      await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+
+      await expect(page.getByRole('group', { name: 'Bet size' })).toBeVisible();
+      expect(await contrastFailures(page), `bet stage (${scheme})`).toEqual([]);
+
+      await page.getByRole('button', { name: '10', exact: true }).click();
+      await page.getByRole('button', { name: /^Deal/ }).click();
+      await expect(page.getByRole('group', { name: 'Insurance' })).toBeVisible();
+      expect(await contrastFailures(page), `insurance decision (${scheme})`).toEqual([]);
+
+      await page.getByRole('button', { name: 'Take insurance' }).click();
+      await expect(page.getByRole('group', { name: 'Player actions' })).toBeVisible();
+      expect(await contrastFailures(page), `insurance settled (${scheme})`).toEqual([]);
+
+      await standEveryBox(page);
+      await expect(page.getByRole('button', { name: /Deal another hand/ })).toBeVisible();
+      expect(await contrastFailures(page), `betting resolved (${scheme})`).toEqual([]);
+    });
+  }
+
   test('a drill is fully playable from the keyboard', async ({ page }) => {
     await page.goto('/drill/basic-strategy');
     // The key handler is attached on render; pressing earlier is dropped.

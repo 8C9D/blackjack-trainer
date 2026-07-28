@@ -103,6 +103,65 @@ test.describe('post-count showdown', () => {
     await expect(page.getByRole('group', { name: 'Bet size' })).toBeVisible();
   });
 
+  // Insurance rides on a dealer ace, so these walks pin the shuffle with the
+  // `?seed=` hook: under these exact settings (1 box, betting, 3-card rep),
+  // seed 14 deals an ace over a dealer natural and seed 41 an ace over a safe
+  // hole card. If the offer assertion itself ever fails, the dealing order or
+  // settings changed and the seeds need re-probing.
+  test('insurance pays 2:1 into a seeded dealer natural', async ({ page }) => {
+    await configureCounting(page, '1', true);
+    await runCountingRound(page, 14);
+    await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+    await page.getByRole('button', { name: '10', exact: true }).click();
+    await page.getByRole('button', { name: /^Deal/ }).click();
+
+    // The round pauses on the decision before the hole card turns.
+    await expect(page.getByRole('group', { name: 'Insurance' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Player actions' })).toBeHidden();
+
+    await page.getByRole('button', { name: 'Take insurance' }).click();
+    await expect(page.locator('.showdown__note[role=status]')).toHaveText(
+      /Insurance paid 2:1\s*\+10/,
+    );
+    // The dealer natural ended the box at once; the 2:1 covers the lost bet.
+    await expect(page.locator('.showdown__verdict')).toHaveText(/blackjack/);
+    await expect(page.locator('.showdown__bankroll')).toContainText('wagered 15');
+  });
+
+  test('insurance is forfeited into a seeded safe hole card', async ({ page }) => {
+    await configureCounting(page, '1', true);
+    await runCountingRound(page, 41);
+    await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+    await page.getByRole('button', { name: '10', exact: true }).click();
+    await page.getByRole('button', { name: /^Deal/ }).click();
+
+    await page.getByRole('button', { name: 'Take insurance' }).click();
+    // No dealer natural: the premium is gone and the hand plays on.
+    await expect(page.locator('.showdown__note[role=status]')).toHaveText(/Insurance lost\s*−5/);
+    await expect(page.getByRole('group', { name: 'Player actions' })).toBeVisible();
+    await expect(page.locator('.showdown__bankroll')).toContainText('495');
+  });
+
+  test('a hand can be surrendered for an immediate loss', async ({ page }) => {
+    await configureCounting(page, '1');
+    await runCountingRound(page);
+    await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+
+    // An opening natural resolves without a turn; deal again until a decision
+    // is owed. Surrender is always offered on a box's original two cards.
+    const surrender = page
+      .getByRole('group', { name: 'Player actions' })
+      .getByRole('button', { name: /Surrender/ });
+    const dealAnother = page.getByRole('button', { name: /Deal another hand/ });
+    for (let i = 0; i < 10 && !(await surrender.isVisible()); i++) {
+      await dealAnother.click({ timeout: 5000 }).catch(() => undefined);
+    }
+
+    await surrender.click();
+    await expect(page.locator('.showdown__verdict')).toHaveText('Surrendered.');
+    await expect(dealAnother).toBeVisible();
+  });
+
   test('betting stays off unless Settings asks for it', async ({ page }) => {
     await configureCounting(page, '1');
     await runCountingRound(page);
