@@ -22,7 +22,11 @@ type PlayerHandView = {
 };
 
 type Internals = {
-  phase(): 'betting' | 'player-turn' | 'resolved' | 'exhausted';
+  phase(): 'betting' | 'insurance' | 'player-turn' | 'resolved' | 'exhausted';
+  insuranceNet(): number | null;
+  insuranceTotal(): number;
+  takeInsurance(): void;
+  declineInsurance(): void;
   bet(): number;
   roundNet(): number;
   committed(): number;
@@ -416,6 +420,106 @@ describe('ShowdownComponent', () => {
       expect(c.hands()[0].bet).toBe(0);
       expect(c.bankrollService.state()).toEqual({ bankroll: 500, wagered: 0, net: 0 });
       expect(fixture.nativeElement.textContent).not.toContain('Bankroll');
+    });
+  });
+
+  // Insurance: with betting on, a dealer ace pauses the round on the take/skip
+  // decision before the hole card is checked. Half each bet, pays 2:1.
+  describe('insurance', () => {
+    // player [9,7]=16, dealer shows an ace with a 6 in the hole — no natural.
+    const noNatural: readonly Rank[] = ['9', 'A', '7', '6'];
+    // Same upcard, but a K in the hole: a dealer natural.
+    const natural: readonly Rank[] = ['9', 'A', '7', 'K'];
+
+    function dealtWithBet(ranks: readonly Rank[], bet: number, spots = 1) {
+      const created = createShowdown(makeShoe(ranks), 'S17', spots, true);
+      created.c.setBet(bet);
+      created.c.dealAfterBet();
+      return created;
+    }
+
+    it('pauses on the insurance decision when the dealer shows an ace', () => {
+      const { fixture, c } = dealtWithBet(noNatural, 10);
+      expect(c.phase()).toBe('insurance');
+      expect(c.insuranceTotal()).toBe(5);
+      // No settlement yet — the hole card has not been checked.
+      expect(c.hands()[0].settlement).toBeNull();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('Take insurance');
+    });
+
+    it('is never offered with betting off — insurance is purely a money bet', () => {
+      const { c } = createShowdown(makeShoe(noNatural));
+      expect(c.phase()).toBe('player-turn');
+    });
+
+    it('is not offered on a non-ace upcard', () => {
+      const { c } = dealtWithBet(['9', '10', '7', '6'], 10);
+      expect(c.phase()).toBe('player-turn');
+    });
+
+    it('taking it against a dealer natural pays 2:1, covering the lost hand', () => {
+      const { c } = dealtWithBet(natural, 10);
+      c.takeInsurance();
+      expect(c.phase()).toBe('resolved');
+      expect(c.insuranceNet()).toBe(10);
+      expect(c.hands()[0].settlement!.outcome).toBe('lose');
+      // The insurance win exactly covers the hand's loss.
+      expect(c.roundNet()).toBe(0);
+      expect(c.bankrollService.state()).toEqual({ bankroll: 500, wagered: 15, net: 0 });
+    });
+
+    it('taking it against a no-natural forfeits the premium and play continues', () => {
+      const { c } = dealtWithBet(noNatural, 10);
+      c.takeInsurance();
+      expect(c.phase()).toBe('player-turn');
+      expect(c.insuranceNet()).toBe(-5);
+      expect(c.bankrollService.bankroll()).toBe(495);
+      c.onAction('S'); // 16 stands; dealer soft 17 stands under S17 → lose.
+      expect(c.bankrollService.state()).toEqual({ bankroll: 485, wagered: 15, net: -15 });
+      expect(c.roundNet()).toBe(-15);
+    });
+
+    it('declining leaves the bankroll untouched and checks the hole card', () => {
+      const { c } = dealtWithBet(natural, 10);
+      c.declineInsurance();
+      expect(c.phase()).toBe('resolved');
+      expect(c.insuranceNet()).toBeNull();
+      expect(c.hands()[0].settlement!.outcome).toBe('lose');
+      expect(c.bankrollService.state()).toEqual({ bankroll: 490, wagered: 10, net: -10 });
+    });
+
+    it('is skipped when the free chips cannot back it', () => {
+      // The whole bankroll is on the box: nothing left for the side bet.
+      const { c } = dealtWithBet(noNatural, 500);
+      expect(c.phase()).toBe('player-turn');
+    });
+
+    it('covers every occupied box at half its bet', () => {
+      // boxes [9,7] and [8,4]; dealer [A,6] — no natural.
+      const { c } = dealtWithBet(['9', '8', 'A', '7', '4', '6'], 10, 2);
+      expect(c.phase()).toBe('insurance');
+      expect(c.insuranceTotal()).toBe(10);
+      c.takeInsurance();
+      expect(c.insuranceNet()).toBe(-10);
+      expect(c.bankrollService.bankroll()).toBe(490);
+    });
+
+    it("keys 'i' and 'n' decide, and action keys are swallowed meanwhile", () => {
+      const take = dealtWithBet(noNatural, 10).c;
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 's' }));
+      expect(take.phase()).toBe('insurance'); // Stand must not leak through
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'i' }));
+      expect(take.insuranceNet()).toBe(-5);
+      expect(take.phase()).toBe('player-turn');
+    });
+
+    it('resets between rounds', () => {
+      const { c } = dealtWithBet([...natural, '9', '10', '7', '6'], 10);
+      c.takeInsurance();
+      c.dealAnother();
+      c.dealAfterBet();
+      expect(c.insuranceNet()).toBeNull();
     });
   });
 

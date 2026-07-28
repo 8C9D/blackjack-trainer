@@ -48,3 +48,17 @@ export function handPayout(settlement: Settlement, bet: number, doubled: boolean
   if (settlement.playerBlackjack) return bet * 1.5;
   return stake;
 }
+
+// Insurance is a side bet of half the box's bet, offered when the dealer shows
+// an ace. Half of an odd bet is a genuine half chip, matching the 3:2 payouts.
+export function insuranceCost(bet: number): number {
+  return bet / 2;
+}
+
+// Net chips an insurance bet returns: it pays 2:1 when the dealer turns over a
+// natural (so it exactly covers the bet the hand is about to lose), and is
+// forfeited otherwise.
+export function insurancePayout(bet: number, dealerBlackjack: boolean): number {
+  const cost = insuranceCost(bet);
+  return dealerBlackjack ? cost * 2 : -cost;
+}

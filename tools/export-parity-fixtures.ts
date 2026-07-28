@@ -39,6 +39,8 @@ import {
 import {
   clampBet,
   handPayout,
+  insuranceCost,
+  insurancePayout,
   largestAffordableBet,
   stakeFor,
 } from '../src/app/core/models/bankroll.model';
@@ -601,6 +603,20 @@ function exportShowdownVectors(): void {
     };
   });
 
+  // Insurance: half each bet at 2:1, so a dealer natural is exactly covered.
+  // The odd bets pin the half-chip premiums both platforms must agree on.
+  const insuranceCases: unknown[] = [];
+  for (const bet of [1, 5, 10, 25]) {
+    for (const dealerBlackjack of BOOLS) {
+      insuranceCases.push({
+        bet,
+        dealerBlackjack,
+        cost: insuranceCost(bet),
+        payout: insurancePayout(bet, dealerBlackjack),
+      });
+    }
+  }
+
   // Bet clamping against a bankroll, including the sub-minimum and fractional
   // cases each platform has to reject the same way.
   const betClampCases = [
@@ -617,20 +633,21 @@ function exportShowdownVectors(): void {
   }));
 
   writeJson('showdown-vectors.json', {
-    schema: 'showdown-vectors/3',
+    schema: 'showdown-vectors/4',
     generatedBy: 'tools/export-parity-fixtures.ts',
     description:
       'Pure dealer-play and settlement cases: dealerShouldHit (H17/S17 soft-17), ' +
       'playDealerHand draw loops, settle() outcomes (3:2 naturals, bust ' +
       'ordering, totals, pushes), the multi-box spot clamp / opening-round ' +
-      'card requirement, and the betting math (payouts and bet clamping). ' +
-      'Suits are arbitrary.',
+      'card requirement, and the betting math (payouts, bet clamping, and ' +
+      'insurance). Suits are arbitrary.',
     dealerShouldHitCases,
     playCases,
     settleCases,
     spotsCases,
     payoutCases,
     betClampCases,
+    insuranceCases,
   });
 }
 
