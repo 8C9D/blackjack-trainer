@@ -29,15 +29,18 @@ struct PlayerHand {
 /// counted, plays it hit/stand/double/split (re-splits to four hands; split aces
 /// take one card), auto-plays the dealer by the active rule set, and settles each
 /// hand win/lose/push (3:2 naturals). With bet sizing on, each round opens on a
-/// bet and settles against the persisted bankroll. Mirrors the web
-/// `ShowdownComponent`. No surrender or insurance.
+/// bet and settles against the persisted bankroll, and a dealer ace offers
+/// insurance (half each bet, pays 2:1) before the hole card is checked. Mirrors
+/// the web `ShowdownComponent`. No surrender.
 @MainActor
 @Observable
 final class ShowdownModel {
     enum Phase {
-        /// Only reached when bet sizing is on: the round waits for a bet before
-        /// any card is dealt, which is the point of practising against the count.
-        case betting, playerTurn, resolved, exhausted
+        /// `betting` and `insurance` are only reached when bet sizing is on: the
+        /// round waits for a bet before any card is dealt (the point of
+        /// practising against the count), and a dealer ace pauses the deal on
+        /// the insurance decision before the hole card is checked.
+        case betting, insurance, playerTurn, resolved, exhausted
     }
 
     /// Most a pair can be split to (3 splits → 4 hands), the common casino cap.
@@ -56,6 +59,9 @@ final class ShowdownModel {
     private(set) var bet = Bankroll.minBet
     /// Net chips of the round just resolved, for the result line.
     private(set) var roundNet = 0.0
+    /// Net chips the round's insurance bet returned, or nil when no insurance
+    /// was taken. Settled the moment the hole card is checked.
+    private(set) var insuranceNet: Double?
     private(set) var hands: [PlayerHand] = []
     private(set) var activeIndex = 0
     private(set) var dealerCards: [Card] = []
@@ -117,34 +123,6 @@ final class ShowdownModel {
         phase = .betting
     }
 
-    var activeHand: PlayerHand? {
-        hands.indices.contains(activeIndex) ? hands[activeIndex] : nil
-    }
-
-    var canDealAnother: Bool {
-        remaining >= Showdown.minCards(forSpots: spots)
-    }
-
-    /// Double is offered on any fresh two-card hand (including after a split).
-    var canDouble: Bool {
-        guard let hand = activeHand else { return false }
-        return phase == .playerTurn && hand.cards.count == 2 && !hand.isSplitAce
-            && canPostAnotherBet(hand)
-    }
-
-    /// Split is offered on a fresh two-card pair, under its box's four-hand cap.
-    var canSplit: Bool {
-        guard let hand = activeHand else { return false }
-        return phase == .playerTurn && hand.cards.count == 2 && !hand.isSplitAce
-            && isPair(hand.cards) && handsInBox(hand.box) < Self.maxHandsPerBox && remaining >= 1
-            && canPostAnotherBet(hand)
-    }
-
-    /// How many hands the given box currently holds — one until it splits.
-    private func handsInBox(_ box: Int) -> Int {
-        hands.filter { $0.box == box }.count
-    }
-
     var showdownStats: ShowdownStats {
         stats.stats
     }
@@ -202,11 +180,27 @@ final class ShowdownModel {
 
         let posted = betting ? bet : 0
         roundNet = 0
+        insuranceNet = nil
         hands = boxes.enumerated().map { PlayerHand(cards: $1, box: $0, bet: posted) }
         dealerCards = dealer
         activeIndex = 0
         phase = .playerTurn
 
+        // A dealer ace pauses on the insurance decision before the peek — but
+        // only with chips in play (insurance is purely a money bet) that can
+        // back the side bet.
+        if betting, dealer.first?.isAce == true, canAffordInsurance {
+            phase = .insurance
+            return
+        }
+        peekAndContinue()
+    }
+
+    /// Check the hole card and continue the round: a dealer natural ends every
+    /// box at once, an opening player natural is paid 3:2 and sits out, and the
+    /// remaining boxes are played in order.
+    private func peekAndContinue() {
+        let dealer = dealerCards
         if Hand.isBlackjack(dealer) {
             // A dealer natural ends every box at once — no player action, no draw.
             for index in hands.indices {
@@ -215,12 +209,34 @@ final class ShowdownModel {
             phase = .resolved
             return
         }
-        // A box holding a natural is paid straight away (3:2) and sits out the
-        // rest of the round; the remaining boxes are played in order.
         for index in hands.indices where Hand.isBlackjack(hands[index].cards) {
             settleHand(at: index, dealer: dealer)
         }
         activateNextOrResolve()
+    }
+
+    /// Insure every box for half its bet: the side bets settle against the hole
+    /// card immediately — paid 2:1 on a dealer natural, forfeited otherwise —
+    /// and the round then continues exactly as an uninsured one.
+    func takeInsurance() {
+        guard phase == .insurance else { return }
+        let dealerBlackjack = Hand.isBlackjack(dealerCards)
+        var net = 0.0
+        for hand in hands {
+            let payout = Bankroll.insurancePayout(bet: hand.bet, dealerBlackjack: dealerBlackjack)
+            bankrollStore.record(stake: Bankroll.insuranceCost(bet: hand.bet), payout: payout)
+            net += payout
+        }
+        insuranceNet = net
+        roundNet += net
+        phase = .playerTurn
+        peekAndContinue()
+    }
+
+    func declineInsurance() {
+        guard phase == .insurance else { return }
+        phase = .playerTurn
+        peekAndContinue()
     }
 
     /// Settle one hand against the dealer's final cards and record it. Idempotent:
@@ -344,10 +360,6 @@ final class ShowdownModel {
         remaining = shoe.cardsRemaining
         if let card = dealt.first { dealtCards.append(card) }
         return dealt.first
-    }
-
-    private func isPair(_ cards: [Card]) -> Bool {
-        cards.count == 2 && cards[0].highValue == cards[1].highValue
     }
 
     func resetStats() {

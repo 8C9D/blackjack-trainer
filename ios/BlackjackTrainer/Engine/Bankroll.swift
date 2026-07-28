@@ -47,4 +47,18 @@ enum Bankroll {
         case .win: return settlement.playerBlackjack ? bet * 1.5 : atRisk
         }
     }
+
+    /// Insurance is a side bet of half the box's bet, offered when the dealer
+    /// shows an ace. Half of an odd bet is a genuine half chip, matching 3:2.
+    static func insuranceCost(bet: Double) -> Double {
+        bet / 2
+    }
+
+    /// Net chips an insurance bet returns: it pays 2:1 when the dealer turns over
+    /// a natural (so it exactly covers the bet the hand is about to lose), and is
+    /// forfeited otherwise.
+    static func insurancePayout(bet: Double, dealerBlackjack: Bool) -> Double {
+        let cost = insuranceCost(bet: bet)
+        return dealerBlackjack ? cost * 2 : -cost
+    }
 }
