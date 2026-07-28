@@ -28,6 +28,10 @@ struct ActionButtonsView: View {
                                 .opacity(0.7)
                         }
                     }
+                    // "Surrender" is wider than the grid's minimum column; shrink
+                    // a long label slightly rather than hyphenating it mid-word.
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
                     .frame(maxWidth: .infinity, minHeight: 30)
                 }
                 .buttonStyle(.borderedProminent)
