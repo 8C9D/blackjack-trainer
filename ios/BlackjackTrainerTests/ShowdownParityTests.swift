@@ -71,6 +71,22 @@ struct ShowdownParityTests {
         }
     }
 
+    @Test func insuranceMatches() throws {
+        for testCase in try file().insuranceCases {
+            #expect(
+                Bankroll.insuranceCost(bet: testCase.bet) == testCase.cost,
+                "insuranceCost(\(testCase.bet))"
+            )
+            let payout = Bankroll.insurancePayout(
+                bet: testCase.bet, dealerBlackjack: testCase.dealerBlackjack
+            )
+            #expect(
+                payout == testCase.payout,
+                "insurancePayout(\(testCase.bet), dealerBlackjack: \(testCase.dealerBlackjack))"
+            )
+        }
+    }
+
     @Test func betClampingMatches() throws {
         for testCase in try file().betClampCases {
             #expect(

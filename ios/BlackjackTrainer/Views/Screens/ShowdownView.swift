@@ -44,6 +44,15 @@ struct ShowdownView: View {
                 bettingStage
             } else {
                 table
+                if model.phase == .insurance {
+                    insuranceStage
+                }
+                if let net = model.insuranceNet {
+                    Text((net > 0 ? "Insurance paid 2:1" : "Insurance lost")
+                        + "  \(Chips.signed(net))")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.muted)
+                }
                 if model.phase == .playerTurn {
                     ActionButtonsView(actions: playerActions) { model.onAction($0) }
                 }
@@ -151,6 +160,27 @@ struct ShowdownView: View {
                 Text("Shoe too low for another \(noun) — return to counting to reshuffle.")
                     .font(.footnote)
                     .foregroundStyle(Theme.muted)
+            }
+        }
+    }
+
+    private var insuranceStage: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Dealer shows an ace. Insurance costs \(Chips.format(model.insuranceTotal)) "
+                + "(half \(model.hands.count > 1 ? "each bet" : "the bet")) and pays 2:1 "
+                + "on a dealer blackjack.")
+                .font(.subheadline)
+                .foregroundStyle(Theme.ink)
+            HStack(spacing: 8) {
+                Button { model.takeInsurance() } label: {
+                    Text("Take insurance").frame(maxWidth: .infinity, minHeight: 30)
+                }
+                .accentFilledButton()
+                Button { model.declineInsurance() } label: {
+                    Text("No insurance").frame(maxWidth: .infinity, minHeight: 30)
+                }
+                .buttonStyle(.bordered)
+                .tint(Theme.accentInk)
             }
         }
     }

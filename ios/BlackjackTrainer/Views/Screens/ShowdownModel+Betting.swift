@@ -1,11 +1,44 @@
 import Foundation
 
-/// Bet sizing for the showdown, read side: the bet ladder, what a hand has at risk,
-/// and what it returned. Split from `ShowdownModel` so neither file outgrows the
-/// repo's length limits. The state and the mutators stay with the model — `bet` and
-/// `phase` are `private(set)`, which is file-scoped.
+/// The showdown's read side: the bet ladder, what a hand has at risk and what it
+/// returned, and the gates on the player's next move. Split from `ShowdownModel`
+/// so neither file outgrows the repo's length limits. The state and the mutators
+/// stay with the model — `bet` and `phase` are `private(set)`, which is
+/// file-scoped.
 @MainActor
 extension ShowdownModel {
+    var activeHand: PlayerHand? {
+        hands.indices.contains(activeIndex) ? hands[activeIndex] : nil
+    }
+
+    var canDealAnother: Bool {
+        remaining >= Showdown.minCards(forSpots: spots)
+    }
+
+    /// Double is offered on any fresh two-card hand (including after a split).
+    var canDouble: Bool {
+        guard let hand = activeHand else { return false }
+        return phase == .playerTurn && hand.cards.count == 2 && !hand.isSplitAce
+            && canPostAnotherBet(hand)
+    }
+
+    /// Split is offered on a fresh two-card pair, under its box's four-hand cap.
+    var canSplit: Bool {
+        guard let hand = activeHand else { return false }
+        return phase == .playerTurn && hand.cards.count == 2 && !hand.isSplitAce
+            && isPair(hand.cards) && handsInBox(hand.box) < Self.maxHandsPerBox && remaining >= 1
+            && canPostAnotherBet(hand)
+    }
+
+    /// How many hands the given box currently holds — one until it splits.
+    private func handsInBox(_ box: Int) -> Int {
+        hands.filter { $0.box == box }.count
+    }
+
+    private func isPair(_ cards: [Card]) -> Bool {
+        cards.count == 2 && cards[0].highValue == cards[1].highValue
+    }
+
     var betOptions: [Double] {
         Bankroll.betOptions
     }
@@ -25,6 +58,17 @@ extension ShowdownModel {
     func canPostAnotherBet(_ hand: PlayerHand) -> Bool {
         guard betting else { return true }
         return bankrollStore.bankroll - committed >= hand.bet
+    }
+
+    /// What insuring every box costs: half of each box's bet.
+    var insuranceTotal: Double {
+        hands.reduce(0) { $0 + Bankroll.insuranceCost(bet: $1.bet) }
+    }
+
+    /// Insurance is only offered when the bankroll's free chips can back it, the
+    /// same rule a double or split follows.
+    var canAffordInsurance: Bool {
+        bankrollStore.bankroll - committed >= insuranceTotal
     }
 
     func stake(_ hand: PlayerHand) -> Double {
