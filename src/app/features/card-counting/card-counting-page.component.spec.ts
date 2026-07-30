@@ -7,7 +7,7 @@ import type {
   CountingDrillSettings,
 } from '../../core/models/card-counting.model';
 import type { CountingSystem } from '../../core/models/counting-system.model';
-import type { Shoe } from '../../core/models/shoe.model';
+import { Shoe } from '../../core/models/shoe.model';
 import { HI_LO } from '../../data/counting-systems';
 import { CountingEngineService } from '../../core/services/counting-engine.service';
 import { FlowPrefsService, type CountingPrefs } from '../../core/services/flow-prefs.service';
@@ -250,6 +250,24 @@ describe('CardCountingPageComponent', () => {
       expect(c.cards()).toBe(cardsRef);
     });
 
+    it('start() cannot bypass the Done screen', () => {
+      TestBed.inject(FlowPrefsService).setDailyGoal(1);
+      updateSetting('numberOfCards', 1);
+      updateSetting('millisecondsBetweenCards', 100);
+      const { c } = createPage();
+      c.start();
+      vi.advanceTimersByTime(100);
+      c.onAnswer(0);
+      c.runAgain();
+      expect(c.state()).toBe('done');
+
+      const cards = c.cards();
+      c.start();
+
+      expect(c.state()).toBe('done');
+      expect(c.cards()).toBe(cards);
+    });
+
     it('onAnswer is ignored when state is idle', () => {
       const { c } = createPage();
       c.onAnswer(5);
@@ -282,6 +300,13 @@ describe('CardCountingPageComponent', () => {
       expect(c.result()).toBe(firstResult);
     });
 
+    it('onEstimate is ignored outside the estimating state', () => {
+      const { c } = createPage();
+      c.onEstimate(3.5);
+      expect(c.state()).toBe('idle');
+      expect(c.deckEstimate()).toBeNull();
+    });
+
     it('clears the pending timeout on destroy', () => {
       updateSetting('numberOfCards', 10);
       updateSetting('millisecondsBetweenCards', 100);
@@ -298,6 +323,17 @@ describe('CardCountingPageComponent', () => {
       c.start();
       expect(c.state()).toBe('idle');
       expect(c.cards().length).toBe(0);
+    });
+
+    it('ignores keyboard shortcuts from editable controls', () => {
+      const { c } = createPage();
+      const input = document.createElement('input');
+      document.body.append(input);
+
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      input.remove();
+
+      expect(c.state()).toBe('idle');
     });
   });
 
@@ -731,6 +767,18 @@ describe('CardCountingPageComponent', () => {
       expect(c.state()).toBe('feedback');
     });
 
+    it('ignores stale showdown exits after the page has already left the showdown', () => {
+      configureLiveShoe({ numberOfDecks: 6, numberOfCards: 10 });
+      const { c } = createPage();
+      toLiveShoeFeedback(c);
+      const before = c.shoeRunningCount();
+
+      c.exitShowdown([{ rank: '5', suit: 'hearts' }]);
+
+      expect(c.state()).toBe('feedback');
+      expect(c.shoeRunningCount()).toBe(before);
+    });
+
     it('exitShowdown folds the showdown cards into the carried running count', () => {
       // The showdown depletes the shared shoe (shrinking the next round's
       // decks-remaining denominator), so its cards' running-count value must be
@@ -757,6 +805,21 @@ describe('CardCountingPageComponent', () => {
       c.start(); // streaming
       c.enterShowdown();
       expect(c.state()).toBe('streaming');
+    });
+
+    it('requires enough opening cards for every configured showdown spot', () => {
+      configureLiveShoe();
+      updateSetting('showdownSpots', 3);
+      const { c } = createPage();
+      c.shoe = new Shoe(
+        Array.from({ length: 7 }, (_, i) => ({
+          rank: (i % 2 === 0 ? '5' : '10') as Card['rank'],
+          suit: 'spades' as Card['suit'],
+        })),
+        1,
+      );
+
+      expect(c.showdownAvailable()).toBe(false);
     });
 
     it('does not offer a showdown in classic preset true-count mode (no live shoe)', () => {
