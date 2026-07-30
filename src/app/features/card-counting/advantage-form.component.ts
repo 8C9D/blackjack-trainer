@@ -20,10 +20,10 @@ import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
       <p class="advantage__question">Do you have the advantage?</p>
       <div class="advantage__actions">
         <button #yes type="button" class="advantage__button" (click)="answer.emit(true)">
-          Yes <kbd class="kcap">Y</kbd>
+          Yes <kbd class="kcap kcap--on-accent">Y</kbd>
         </button>
         <button type="button" class="advantage__button" (click)="answer.emit(false)">
-          No <kbd class="kcap">N</kbd>
+          No <kbd class="kcap kcap--on-accent">N</kbd>
         </button>
       </div>
       <p class="advantage__note">Yes when the running count has reached this shoe's key count.</p>

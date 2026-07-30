@@ -19,6 +19,19 @@ export async function configureCounting(page: Page, spots: string, betting = fal
   if (betting) await page.getByLabel('Bet sizing (bankroll)').check();
 }
 
+// Shrink the counting drill to a fast KO key-count rep. The Settings walk is
+// shared by the drill and a11y specs so the control labels live in one place.
+export async function configureKeyCount(page: Page): Promise<void> {
+  await page.goto('/settings');
+  await page.getByLabel('Number of cards').fill('3');
+  await page.getByLabel('Time between cards (ms)').fill('100');
+  await page.getByLabel('Counting system').selectOption('ko');
+  await page
+    .getByRole('radiogroup', { name: 'Drill mode' })
+    .getByRole('radio', { name: 'Key count', exact: true })
+    .check();
+}
+
 // Run one live-shoe true-count rep, ending on the feedback screen where the
 // showdown is offered. The answers need not be correct — this is flow, not math.
 // A `seed` pins the app's randomness (the shoe's shuffle included) via the

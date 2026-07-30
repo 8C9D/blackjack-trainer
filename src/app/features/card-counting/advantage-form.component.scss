@@ -30,14 +30,6 @@
       outline: 2px solid var(--ink);
       outline-offset: 2px;
     }
-
-    // Keycap hints sit on the accent fill here, so they use the on-accent
-    // palette to keep AA contrast in both themes (same as the start button).
-    .kcap {
-      background: var(--on-accent-tint);
-      border-color: var(--on-accent-edge);
-      color: var(--on-accent);
-    }
   }
 
   &__note {

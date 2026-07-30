@@ -992,14 +992,15 @@ describe('CardCountingPageComponent', () => {
       expect(fixture.nativeElement.querySelector('.count__showdown-button')).not.toBeNull();
       c.enterShowdown();
       expect(c.state()).toBe('showdown');
-      // Exiting folds the showdown's cards into the carried count.
+      // Exiting folds the showdown's cards into the carried count: 5 and 6 are
+      // both +1 under KO, so the deltas cannot cancel.
       const before = c.shoeRunningCount();
       c.exitShowdown([
         { rank: '5', suit: 'spades' },
-        { rank: '10', suit: 'hearts' },
+        { rank: '6', suit: 'hearts' },
       ]);
       expect(c.state()).toBe('feedback');
-      expect(c.shoeRunningCount()).toBe(before + 1 - 1);
+      expect(c.shoeRunningCount()).toBe(before + 2);
     });
 
     it('ignores an advantage call outside the advantage state', () => {

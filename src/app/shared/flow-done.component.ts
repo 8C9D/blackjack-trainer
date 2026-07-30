@@ -46,7 +46,7 @@ const CLEARED_SHOWN = 3;
         </p>
       }
       <button type="button" class="done__again" (click)="again.emit()">
-        One more round <kbd class="kcap">⏎</kbd>
+        One more round <kbd class="kcap kcap--on-accent">⏎</kbd>
       </button>
       <button type="button" class="done__exit" (click)="exit.emit()">
         <kbd class="kcap">esc</kbd> Done for today

@@ -151,7 +151,7 @@ struct CountingModelTests {
 
     @Test func keyCountModeIsRecognizedAndValidOnlyForKO() throws {
         let model = try makeKeyCount()
-        #expect(model.keyCountAvailable)
+        #expect(model.system.allows(.keyCount))
         #expect(model.keyCountDrill)
         #expect(model.usesLiveShoe)
         #expect(!model.liveShoeTrueCount)

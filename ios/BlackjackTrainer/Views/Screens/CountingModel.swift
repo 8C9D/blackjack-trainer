@@ -75,11 +75,6 @@ final class CountingModel {
         system.balanced
     }
 
-    /// Key-count mode needs a published IRC/key-count schedule (KO only).
-    var keyCountAvailable: Bool {
-        system.keyCounts != nil
-    }
-
     /// The system's schedule resolved for the configured shoe, or nil when the
     /// drill is not in key-count mode or the system/deck pairing has no
     /// published values (an invalid configuration; `validation` blocks it).
@@ -271,16 +266,13 @@ final class CountingModel {
     }
 
     /// Switch system; a different system means a different running count, so the
-    /// live shoe restarts fresh. True count needs a balanced system and key
-    /// count a published schedule; coerce a mode the new system cannot host.
+    /// live shoe restarts fresh. A mode the new system cannot host coerces back
+    /// to running count.
     func changeSystem(_ id: String) {
         guard let next = systems.first(where: { $0.id == id }) else { return }
         system = next
         invalidateShoe()
-        if !next.balanced, settings.mode == .trueCount {
-            settings.mode = .runningCount
-        }
-        if next.keyCounts == nil, settings.mode == .keyCount {
+        if !next.allows(settings.mode) {
             settings.mode = .runningCount
         }
     }

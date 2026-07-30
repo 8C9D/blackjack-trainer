@@ -20,14 +20,12 @@ struct SettingsView: View {
     }
 
     private var keyCountAvailable: Bool {
-        selectedSystem?.keyCounts != nil
+        selectedSystem?.allows(.keyCount) ?? false
     }
 
-    /// The shoe-driven modes: live-shoe true count, and key count (which always
-    /// reads a live shoe). Drives the shoe pickers and showdown settings.
+    /// Drives the shoe pickers and showdown settings.
     private var usesLiveShoe: Bool {
-        prefs.counting.mode == .keyCount
-            || (prefs.counting.mode == .trueCount && prefs.counting.trueCountSource == .liveShoe)
+        prefs.counting.mode.usesLiveShoe(source: prefs.counting.trueCountSource)
     }
 
     private var countingErrors: [String] {
@@ -295,13 +293,10 @@ extension SettingsView {
             get: { prefs.counting.systemId },
             set: { id in
                 model.flowPrefs.updateCounting { $0.systemId = id }
-                // True count needs a balanced system, key count a published
-                // schedule; coerce a mode the new system cannot host back so
-                // the drill never starts impossible.
+                // Coerce a mode the new system cannot host back so the drill
+                // never starts impossible.
                 let system = model.countingSystems.first { $0.id == id }
-                let stale = (prefs.counting.mode == .trueCount && system?.balanced != true)
-                    || (prefs.counting.mode == .keyCount && system?.keyCounts == nil)
-                if stale {
+                if let system, !system.allows(prefs.counting.mode) {
                     model.flowPrefs.updateCounting { $0.mode = .runningCount }
                 }
             }

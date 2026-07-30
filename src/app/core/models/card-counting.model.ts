@@ -12,6 +12,20 @@ export type DrillMode = 'running-count' | 'true-count' | 'key-count';
 // player picks before each drill ('classic', the original behavior).
 export type TrueCountSource = 'live-shoe' | 'classic';
 
+// The shoe-driven modes: key count always reads a live shoe; true count only
+// with the live-shoe source. The one predicate behind the settings fields, the
+// prefs clamp, and the engine's shoe checks.
+export function usesLiveShoe(mode: DrillMode, trueCountSource: TrueCountSource): boolean {
+  return mode === 'key-count' || (mode === 'true-count' && trueCountSource === 'live-shoe');
+}
+
+// Signed count rendering ("+2", "-4", "0") — the web mirror of the Swift
+// CountFormat.signedCount, shared by the feedback panel and the reshuffle
+// notice.
+export function formatSignedCount(value: number): string {
+  return value > 0 ? `+${value}` : String(value);
+}
+
 export interface CountingDrillSettings {
   readonly mode: DrillMode;
   readonly numberOfCards: number;

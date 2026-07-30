@@ -51,14 +51,6 @@
     }
   }
 
-  &__hint {
-    margin-left: 0.3rem;
-    font-size: 0.75rem;
-    // 0.6 read as only 3.84:1 against the accent fill — under AA for 12px text.
-    opacity: 0.75;
-    font-weight: 400;
-  }
-
   &__note {
     margin: 0;
     max-width: 22rem;
@@ -88,11 +80,6 @@
       max-width: 12rem;
       min-height: 3rem;
       font-size: 1rem;
-    }
-
-    // The drill is touch-driven on phones; the [Enter] hint is desktop-only.
-    &__hint {
-      display: none;
     }
   }
 }

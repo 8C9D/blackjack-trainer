@@ -181,7 +181,7 @@ function freshHand(
               }}
             </p>
             <button type="button" class="showdown__next" (click)="dealAfterBet()">
-              Deal <span class="showdown__hint">[Enter]</span>
+              Deal <span class="accent-hint">[Enter]</span>
             </button>
           </div>
         }
@@ -293,7 +293,7 @@ function freshHand(
               (click)="dealAnother()"
             >
               {{ spots() > 1 ? 'Deal another round' : 'Deal another hand' }}
-              <span class="showdown__hint">[Enter]</span>
+              <span class="accent-hint">[Enter]</span>
             </button>
             @if (!canDealAnother()) {
               <p class="showdown__note">

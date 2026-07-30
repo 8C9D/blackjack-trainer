@@ -35,7 +35,7 @@ import { CountingEngineService } from '../../core/services/counting-engine.servi
         </p>
       }
       <button type="submit" class="answer__submit" [disabled]="!canSubmit()">
-        Submit <span class="answer__hint">[Enter]</span>
+        Submit <span class="accent-hint">[Enter]</span>
       </button>
     </form>
   `,

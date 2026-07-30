@@ -34,7 +34,7 @@ import { CountingEngineService } from '../../core/services/counting-engine.servi
         Estimate to the nearest half-deck — within <code>±0.5</code> counts as good.
       </p>
       <button type="submit" class="estimate__submit" [disabled]="!canSubmit()">
-        Submit estimate <span class="estimate__hint">[Enter]</span>
+        Submit estimate <span class="accent-hint">[Enter]</span>
       </button>
     </form>
   `,
