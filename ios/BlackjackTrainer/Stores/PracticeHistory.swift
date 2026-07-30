@@ -1,9 +1,11 @@
 import Foundation
 import Observation
 
-/// How many days of per-day hand counts to retain (7-day streak dots plus
-/// headroom). Older entries are pruned on every write.
-private let maxHistoryDays = 30
+/// How many days of per-day hand counts to retain. The 7-day dot strip needs
+/// only a week, but `streak` walks backward without another bound: a 30-day
+/// window silently capped longer streaks. Match the web's 400-day window so a
+/// year-long streak remains accurate while the stored array stays small.
+private let maxHistoryDays = 400
 
 /// One day's hands-practiced count. Mirrors the web `PracticeDay`.
 struct PracticeDay: Equatable {
@@ -29,7 +31,7 @@ func localDateKey(_ date: Date) -> String {
 }
 
 /// Per-day hands-practiced history backing the daily-goal ring and streak dots.
-/// Mirrors `PracticeHistoryService`: tolerant load, 30-day prune on write, and
+/// Mirrors `PracticeHistoryService`: tolerant load, 400-day prune on write, and
 /// the stat-store iCloud pattern. The stored key is additive.
 @Observable
 final class PracticeHistoryStore: CloudSyncable {

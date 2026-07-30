@@ -133,142 +133,6 @@ func clampGoal(_ goal: Double) -> Int {
     return min(FlowPrefsConstants.maxDailyGoal, max(FlowPrefsConstants.minDailyGoal, rounded))
 }
 
-// MARK: - Web-string mapping for the deviation practice mode
-
-private enum PracticeModeCoding {
-    static func string(_ mode: DeviationPracticeMode) -> String {
-        mode == .deviationOnly ? "deviation-only" : "all-hands"
-    }
-
-    static func mode(_ raw: String?,
-                     default fallback: DeviationPracticeMode) -> DeviationPracticeMode {
-        switch raw {
-        case "deviation-only": .deviationOnly
-        case "all-hands": .allHands
-        default: fallback
-        }
-    }
-}
-
-// MARK: - Tolerant field-by-field decode / encode (mirrors mergePrefs)
-
-extension FlowPrefs {
-    /// Field-by-field merge of an untrusted parsed payload over the defaults, so
-    /// a stale or partly-corrupt stored shape degrades per field rather than
-    /// discarding everything. Mirrors the web `mergePrefs`.
-    static func merged(from parsed: Any?) -> FlowPrefs {
-        let d = FlowPrefs.default
-        guard let p = parsed as? [String: Any] else { return d }
-        let dev = p["deviations"] as? [String: Any] ?? [:]
-        let cnt = p["counting"] as? [String: Any] ?? [:]
-        let opts = p["options"] as? [String: Any] ?? [:]
-        return FlowPrefs(
-            lastTrainer: oneOf(p["lastTrainer"], TrainerId.self, d.lastTrainer),
-            dailyGoal: numberValue(p["dailyGoal"]).map { clampGoal($0) } ?? d.dailyGoal,
-            theme: oneOf(p["theme"], ThemePref.self, d.theme),
-            ruleSet: oneOf(p["ruleSet"], RuleSet.self, d.ruleSet),
-            options: EngineOptions(
-                doubleAfterSplit: boolValue(opts["doubleAfterSplit"]) ?? d.options.doubleAfterSplit,
-                lateSurrender: boolValue(opts["lateSurrender"]) ?? d.options.lateSurrender
-            ),
-            deviations: DeviationPrefs(
-                practiceMode: PracticeModeCoding.mode(
-                    dev["practiceMode"] as? String,
-                    default: d.deviations.practiceMode
-                ),
-                trueCountSource: oneOf(
-                    dev["trueCountSource"],
-                    DeviationTrueCountSource.self,
-                    d.deviations.trueCountSource
-                ),
-                manualTrueCount: intValue(dev["manualTrueCount"]) ?? d.deviations.manualTrueCount
-            ),
-            counting: CountingPrefs(
-                systemId: (cnt["systemId"] as? String) ?? d.counting.systemId,
-                mode: oneOf(cnt["mode"], DrillMode.self, d.counting.mode),
-                numberOfCards: intValue(cnt["numberOfCards"]) ?? d.counting.numberOfCards,
-                millisecondsBetweenCards: intValue(cnt["millisecondsBetweenCards"])
-                    ?? d.counting.millisecondsBetweenCards,
-                decksRemaining: numberValue(cnt["decksRemaining"]) ?? d.counting.decksRemaining,
-                trueCountSource: oneOf(
-                    cnt["trueCountSource"],
-                    TrueCountSource.self,
-                    d.counting.trueCountSource
-                ),
-                numberOfDecks: intValue(cnt["numberOfDecks"]) ?? d.counting.numberOfDecks,
-                penetration: numberValue(cnt["penetration"]) ?? d.counting.penetration,
-                showdownSpots: Showdown.clampSpots(
-                    intValue(cnt["showdownSpots"]) ?? d.counting.showdownSpots
-                ),
-                showdownBetting: boolValue(cnt["showdownBetting"]) ?? d.counting.showdownBetting
-            )
-        )
-    }
-
-    /// The stored JSON shape (matching the web's key/value forms).
-    var jsonObject: [String: Any] {
-        [
-            "lastTrainer": lastTrainer.rawValue,
-            "dailyGoal": dailyGoal,
-            "theme": theme.rawValue,
-            "ruleSet": ruleSet.rawValue,
-            "options": [
-                "doubleAfterSplit": options.doubleAfterSplit,
-                "lateSurrender": options.lateSurrender
-            ],
-            "deviations": [
-                "practiceMode": PracticeModeCoding.string(deviations.practiceMode),
-                "trueCountSource": deviations.trueCountSource.rawValue,
-                "manualTrueCount": deviations.manualTrueCount
-            ],
-            "counting": [
-                "systemId": counting.systemId,
-                "mode": counting.mode.rawValue,
-                "numberOfCards": counting.numberOfCards,
-                "millisecondsBetweenCards": counting.millisecondsBetweenCards,
-                "decksRemaining": counting.decksRemaining,
-                "trueCountSource": counting.trueCountSource.rawValue,
-                "numberOfDecks": counting.numberOfDecks,
-                "penetration": counting.penetration,
-                "showdownSpots": counting.showdownSpots,
-                "showdownBetting": counting.showdownBetting
-            ]
-        ]
-    }
-}
-
-/// A JSON string in an enum's vocabulary, else the fallback. Mirrors `oneOf`.
-private func oneOf<T: RawRepresentable>(
-    _ value: Any?,
-    _: T.Type,
-    _ fallback: T
-) -> T where T.RawValue == String {
-    guard let raw = value as? String, let parsed = T(rawValue: raw) else { return fallback }
-    return parsed
-}
-
-/// A JSON number as Double, rejecting JSON booleans (which bridge to NSNumber).
-private func numberValue(_ value: Any?) -> Double? {
-    guard let number = value as? NSNumber, !isBoolNumber(number) else { return nil }
-    let d = number.doubleValue
-    return d.isFinite ? d : nil
-}
-
-/// A JSON integer (rejects non-integers, mirroring the web `int()`).
-private func intValue(_ value: Any?) -> Int? {
-    guard let d = numberValue(value), d == d.rounded() else { return nil }
-    return Int(d)
-}
-
-private func boolValue(_ value: Any?) -> Bool? {
-    guard let number = value as? NSNumber, isBoolNumber(number) else { return nil }
-    return number.boolValue
-}
-
-private func isBoolNumber(_ number: NSNumber) -> Bool {
-    CFGetTypeID(number) == CFBooleanGetTypeID()
-}
-
 /// The user's pre-made decisions under a single localStorage-parity key. Mirrors
 /// `FlowPrefsService`: tolerant field-by-field load over defaults, write-through
 /// to iCloud KVS following the stat-store pattern.
@@ -277,6 +141,7 @@ final class FlowPrefsStore: CloudSyncable {
     @ObservationIgnored let key: String
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let cloud: CloudKeyValueStore?
+    @ObservationIgnored private let systems: [CountingSystem]
     /// Fired after a local change (so the widget snapshot can refresh).
     @ObservationIgnored var onChange: (() -> Void)?
     private(set) var prefs: FlowPrefs
@@ -284,12 +149,14 @@ final class FlowPrefsStore: CloudSyncable {
     init(
         key: String = StatsKeys.flowPrefs,
         defaults: UserDefaults = .standard,
-        cloud: CloudKeyValueStore? = nil
+        cloud: CloudKeyValueStore? = nil,
+        systems: [CountingSystem]? = nil
     ) {
         self.key = key
         self.defaults = defaults
         self.cloud = cloud
-        prefs = Self.load(key: key, defaults: defaults)
+        self.systems = systems ?? (try? GameData.loadCountingSystems()) ?? []
+        prefs = Self.load(key: key, defaults: defaults, systems: self.systems)
     }
 
     func setLastTrainer(_ trainer: TrainerId) {
@@ -333,9 +200,16 @@ final class FlowPrefsStore: CloudSyncable {
         onChange?()
     }
 
-    private static func load(key: String, defaults: UserDefaults) -> FlowPrefs {
+    private static func load(
+        key: String,
+        defaults: UserDefaults,
+        systems: [CountingSystem]
+    ) -> FlowPrefs {
         guard let data = defaults.data(forKey: key) else { return .default }
-        return FlowPrefs.merged(from: try? JSONSerialization.jsonObject(with: data))
+        return FlowPrefs.merged(
+            from: try? JSONSerialization.jsonObject(with: data),
+            systems: systems
+        )
     }
 
     private static func save(_ prefs: FlowPrefs, key: String, defaults: UserDefaults) {
@@ -352,7 +226,10 @@ final class FlowPrefsStore: CloudSyncable {
 
     func adoptFromCloud() {
         guard let cloud, let data = cloud.data(forKey: key) else { return }
-        prefs = FlowPrefs.merged(from: try? JSONSerialization.jsonObject(with: data))
+        prefs = FlowPrefs.merged(
+            from: try? JSONSerialization.jsonObject(with: data),
+            systems: systems
+        )
         Self.save(prefs, key: key, defaults: defaults)
         // A cross-device sync changed the goal/settings; notify so the widget
         // snapshot republishes (the publisher listens on onChange).

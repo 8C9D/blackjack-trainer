@@ -3,7 +3,7 @@ import Testing
 @testable import BlackjackTrainer
 
 /// Mirrors `practice-history.service.spec.ts`: local date keys, per-day counts,
-/// the 30-day prune, the 7-day dot strip, and streak math.
+/// the 400-day prune, the 7-day dot strip, and streak math.
 struct PracticeHistoryStoreTests {
     /// Fixed local reference date; tests move a mutable `current` around it.
     private static func base() -> Date {
@@ -78,12 +78,12 @@ struct PracticeHistoryStoreTests {
     @Test func prunesEntriesOlderThanTheRetentionWindowOnWrite() {
         let defaults = freshDefaults()
         seed(defaults, days: [
-            ["date": "2026-01-01", "hands": 5],
+            ["date": "2024-01-01", "hands": 5],
             ["date": "2026-07-09", "hands": 2]
         ])
         let s = store(defaults, now: { Self.base() })
         s.recordHand()
-        #expect(!s.days.contains { $0.date == "2026-01-01" })
+        #expect(!s.days.contains { $0.date == "2024-01-01" })
         #expect(s.handsOn("2026-07-09") == 2)
     }
 
@@ -115,6 +115,16 @@ struct PracticeHistoryStoreTests {
     @Test func includesTodayOnceItsGoalIsMet() {
         let s = seededStreakStore([0: 20, 1: 20, 2: 20])
         #expect(s.streak(goal: 20) == 3)
+    }
+
+    @Test func reportsAStreakLongerThanTheOldThirtyDayRetentionCap() {
+        var longRun: [Int: Int] = [:]
+        for back in 0 ..< 40 {
+            longRun[back] = 20
+        }
+        let s = seededStreakStore(longRun)
+        s.recordHand() // Prune on write while keeping every day in the run.
+        #expect(s.streak(goal: 20) == 40)
     }
 
     @Test func breaksOnADayBelowTheGoal() {

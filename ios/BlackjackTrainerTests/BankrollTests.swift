@@ -76,6 +76,14 @@ struct BankrollTests {
         #expect(reloaded.bankroll == 475)
     }
 
+    @Test func impossiblePersistedStateFallsBackToTheDefaultBankroll() throws {
+        let shared = defaults()
+        let impossible = BankrollState(bankroll: 510, wagered: 20, net: 5)
+        try shared.set(JSONEncoder().encode(impossible), forKey: StatsKeys.showdownBankroll)
+        let store = BankrollStore(key: StatsKeys.showdownBankroll, defaults: shared)
+        #expect(store.state == .empty)
+    }
+
     // MARK: the betting path through the showdown
 
     @Test func opensOnTheBetAndDealsNothingUntilItIsPlaced() {

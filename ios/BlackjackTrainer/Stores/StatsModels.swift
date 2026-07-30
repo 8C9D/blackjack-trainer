@@ -30,6 +30,15 @@ struct SessionStats: Codable, Equatable {
 
     static let empty = SessionStats(attempts: 0, correct: 0, streak: 0, longestStreak: 0)
 
+    var isValid: Bool {
+        let values = [attempts, correct, streak, longestStreak]
+        return values.allSatisfy { $0 >= 0 }
+            && correct <= attempts
+            && streak <= correct
+            && longestStreak <= correct
+            && streak <= longestStreak
+    }
+
     /// The next stats after recording an attempt (streak resets on a miss).
     func recording(correct: Bool) -> SessionStats {
         let nextStreak = correct ? streak + 1 : 0
@@ -52,6 +61,15 @@ struct BankrollState: Codable, Equatable {
 
     static let empty = BankrollState(bankroll: Bankroll.defaultBankroll, wagered: 0, net: 0)
 
+    var isValid: Bool {
+        bankroll.isFinite
+            && wagered.isFinite
+            && net.isFinite
+            && bankroll >= 0
+            && wagered >= 0
+            && bankroll == Bankroll.defaultBankroll + net
+    }
+
     func recording(stake: Double, payout: Double) -> BankrollState {
         BankrollState(bankroll: bankroll + payout, wagered: wagered + stake, net: net + payout)
     }
@@ -67,6 +85,13 @@ struct ShowdownStats: Codable, Equatable {
     var blackjacks: Int
 
     static let empty = ShowdownStats(hands: 0, wins: 0, losses: 0, pushes: 0, blackjacks: 0)
+
+    var isValid: Bool {
+        let values = [hands, wins, losses, pushes, blackjacks]
+        return values.allSatisfy { $0 >= 0 }
+            && wins + losses + pushes == hands
+            && blackjacks <= wins
+    }
 
     func recording(outcome: ShowdownOutcome, playerBlackjack: Bool = false) -> ShowdownStats {
         ShowdownStats(

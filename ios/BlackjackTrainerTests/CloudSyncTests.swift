@@ -48,6 +48,19 @@ struct CloudSyncTests {
         #expect(deviceB.stats.correct == 2)
     }
 
+    @Test func corruptCloudStatsDoNotReplaceValidLocalState() throws {
+        let cloud = FakeCloud()
+        let local = SessionStatsStore(key: "k", defaults: suite(), cloud: cloud)
+        local.recordAttempt(correct: true)
+        cloud.storage["k"] = try JSONEncoder().encode(
+            SessionStats(attempts: 1, correct: 2, streak: 0, longestStreak: 0)
+        )
+
+        local.adoptFromCloud()
+
+        #expect(local.stats == SessionStats(attempts: 1, correct: 1, streak: 1, longestStreak: 1))
+    }
+
     @Test func localOnlyWithoutCloudStillWorks() {
         let store = SessionStatsStore(key: "k", defaults: suite()) // cloud nil
         store.recordAttempt(correct: false)
