@@ -134,6 +134,7 @@ type DrillState =
             <app-showdown
               [shoe]="shoe!"
               [ruleSet]="ruleSet()"
+              [options]="tableOptions()"
               [spots]="showdownSpots()"
               [betting]="showdownBetting()"
               (exit)="exitShowdown($event)"
@@ -202,6 +203,9 @@ export class CardCountingPageComponent {
   // Dealer rule for the optional post-count showdown, from the shared table
   // rules.
   protected readonly ruleSet = computed(() => this.prefs.prefs().ruleSet);
+  // DAS and LS govern the showdown's available player actions as well as the
+  // strategy trainers' answers.
+  protected readonly tableOptions = computed(() => this.prefs.prefs().options);
 
   protected readonly handsToday = computed(() => {
     this.history.days();

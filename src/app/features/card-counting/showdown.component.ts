@@ -35,7 +35,13 @@ import {
   type Settlement,
   type ShowdownOutcome,
 } from '../../core/models/showdown.model';
-import { ACTION_LABELS, type Action, type RuleSet } from '../../core/models/strategy.model';
+import {
+  ACTION_LABELS,
+  DEFAULT_ENGINE_OPTIONS,
+  type Action,
+  type EngineOptions,
+  type RuleSet,
+} from '../../core/models/strategy.model';
 import { CardImageComponent } from '../../shared/card-image.component';
 import { BankrollService } from '../../core/services/bankroll.service';
 import { ShowdownStatsService } from '../../core/services/showdown-stats.service';
@@ -102,7 +108,8 @@ function freshHand(
 // four hands; split aces take one card), auto-plays the dealer once by the
 // active RuleSet (from the shared table rules), and settles every hand
 // win/lose/push (3:2 naturals). A box's original two cards may also late-
-// surrender for half the bet (the peek has already settled any dealer natural).
+// surrender for half the bet when the shared LS rule is enabled (the peek has
+// already settled any dealer natural).
 // With bet sizing on, a dealer ace additionally offers insurance (half each
 // bet, pays 2:1) before the hole card is checked — the classic count-driven
 // side bet.
@@ -319,6 +326,10 @@ export class ShowdownComponent implements OnInit {
   // its depletion carries back to the counting drill.
   readonly shoe = input.required<Shoe>();
   readonly ruleSet = input.required<RuleSet>();
+  // Player-action availability follows the same DAS / LS table rules as the
+  // strategy trainers. Initial-hand doubling and splitting remain available;
+  // DAS only gates doubling a hand that came from a split.
+  readonly options = input<EngineOptions>(DEFAULT_ENGINE_OPTIONS);
   // Boxes to occupy on the opening deal (1–3). One dealer plays against all.
   readonly spots = input(1, { transform: clampSpots });
   // Bet sizing: when on, each round opens on a bet and settles against a
@@ -384,6 +395,8 @@ export class ShowdownComponent implements OnInit {
       h !== null &&
       h.cards.length === 2 &&
       !h.isSplitAce &&
+      (!h.fromSplit || this.options().doubleAfterSplit) &&
+      this.remaining() >= 1 &&
       this.canPostAnotherBet(h)
     );
   });
@@ -406,7 +419,13 @@ export class ShowdownComponent implements OnInit {
   // which is exactly the "late" in late surrender.
   protected readonly canSurrender = computed(() => {
     const h = this.activeHand();
-    return this.phase() === 'player-turn' && h !== null && h.cards.length === 2 && !h.fromSplit;
+    return (
+      this.options().lateSurrender &&
+      this.phase() === 'player-turn' &&
+      h !== null &&
+      h.cards.length === 2 &&
+      !h.fromSplit
+    );
   });
   protected readonly playerActions = computed<readonly Action[]>(() => {
     const actions: Action[] = ['H', 'S'];

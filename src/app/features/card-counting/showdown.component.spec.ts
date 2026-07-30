@@ -3,7 +3,7 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import type { Card, Rank, Suit } from '../../core/models/card.model';
 import { Shoe } from '../../core/models/shoe.model';
 import type { Settlement } from '../../core/models/showdown.model';
-import type { Action, RuleSet } from '../../core/models/strategy.model';
+import type { Action, EngineOptions, RuleSet } from '../../core/models/strategy.model';
 import type { ShowdownStats } from '../../core/services/showdown-stats.service';
 import type { BankrollState } from '../../core/services/bankroll.service';
 import { ShowdownComponent } from './showdown.component';
@@ -47,6 +47,7 @@ type Internals = {
   remaining(): number;
   canDealAnother(): boolean;
   onAction(a: Action): void;
+  onKeyDown(event: KeyboardEvent): void;
   dealAnother(): void;
   playerActions(): readonly Action[];
   doubled(): boolean;
@@ -69,10 +70,12 @@ function createShowdown(
   ruleSet: RuleSet = 'S17',
   spots = 1,
   betting = false,
+  options: EngineOptions = { doubleAfterSplit: true, lateSurrender: true },
 ): { fixture: ComponentFixture<ShowdownComponent>; c: Internals } {
   const fixture = TestBed.createComponent(ShowdownComponent);
   fixture.componentRef.setInput('shoe', shoe);
   fixture.componentRef.setInput('ruleSet', ruleSet);
+  fixture.componentRef.setInput('options', options);
   fixture.componentRef.setInput('spots', spots);
   fixture.componentRef.setInput('betting', betting);
   fixture.detectChanges();
@@ -199,6 +202,24 @@ describe('ShowdownComponent', () => {
       expect(c.verdict(c.hands()[0])).toContain('(doubled)');
     });
 
+    it('offers a double after splitting only when DAS is enabled', () => {
+      const cards: readonly Rank[] = ['8', '10', '8', '7', '3', '5'];
+      const withoutDas = createShowdown(makeShoe(cards), 'S17', 1, false, {
+        doubleAfterSplit: false,
+        lateSurrender: false,
+      }).c;
+      withoutDas.onAction('P');
+      expect(withoutDas.playerCards().map((x) => x.rank)).toEqual(['8', '3']);
+      expect(withoutDas.playerActions()).not.toContain('D');
+
+      const withDas = createShowdown(makeShoe(cards), 'S17', 1, false, {
+        doubleAfterSplit: true,
+        lateSurrender: false,
+      }).c;
+      withDas.onAction('P');
+      expect(withDas.playerActions()).toContain('D');
+    });
+
     it('a double that busts loses', () => {
       // player [10,6]=16, dealer [10,7]=17; double draws K → 26 bust.
       const { c } = createShowdown(makeShoe(['10', '10', '6', '7', 'K']));
@@ -206,6 +227,12 @@ describe('ShowdownComponent', () => {
       expect(c.phase()).toBe('resolved');
       expect(c.settlement()!.outcome).toBe('lose');
       expect(c.stats.stats()).toMatchObject({ hands: 1, losses: 1 });
+    });
+
+    it('withholds Double when the shoe has no card left to supply it', () => {
+      const { c } = createShowdown(makeShoe(['5', '10', '6', '8']));
+      expect(c.remaining()).toBe(0);
+      expect(c.playerActions()).not.toContain('D');
     });
   });
 
@@ -270,6 +297,20 @@ describe('ShowdownComponent', () => {
       expect(c.phase()).toBe('player-turn');
       expect(c.hands()[0].bet).toBe(10);
       expect(c.committed()).toBe(10);
+    });
+
+    it('ignores bet changes and duplicate deal requests after play has started', () => {
+      const { c } = createShowdown(makeShoe(['9', '10', '7', '6', '5']), 'S17', 1, true);
+      c.setBet(10);
+      c.dealAfterBet();
+      const remaining = c.remaining();
+
+      c.setBet(25);
+      c.dealAfterBet();
+
+      expect(c.bet()).toBe(10);
+      expect(c.remaining()).toBe(remaining);
+      expect(c.hands()).toHaveLength(1);
     });
 
     it('posts the bet on every occupied box', () => {
@@ -429,6 +470,21 @@ describe('ShowdownComponent', () => {
   // bet. The peek has already settled any dealer natural by the time a hand is
   // played, which is exactly the "late" in late surrender.
   describe('surrender', () => {
+    it('is offered only when the Late Surrender table rule is enabled', () => {
+      const cards: readonly Rank[] = ['10', '10', '6', '9'];
+      const withoutLs = createShowdown(makeShoe(cards), 'S17', 1, false, {
+        doubleAfterSplit: false,
+        lateSurrender: false,
+      }).c;
+      expect(withoutLs.playerActions()).not.toContain('SUR');
+
+      const withLs = createShowdown(makeShoe(cards), 'S17', 1, false, {
+        doubleAfterSplit: false,
+        lateSurrender: true,
+      }).c;
+      expect(withLs.playerActions()).toContain('SUR');
+    });
+
     it('settles the hand as an immediate loss and the dealer never draws', () => {
       // player [10,6]=16, dealer [10,9]=19 would stand anyway; the point is the
       // dealer takes no card when the only box has surrendered.
@@ -548,6 +604,19 @@ describe('ShowdownComponent', () => {
       expect(c.bankrollService.state()).toEqual({ bankroll: 490, wagered: 10, net: -10 });
     });
 
+    it('ignores insurance commands after the decision phase has passed', () => {
+      const { c } = dealtWithBet(noNatural, 10);
+      c.declineInsurance();
+      expect(c.phase()).toBe('player-turn');
+
+      c.takeInsurance();
+      c.declineInsurance();
+
+      expect(c.phase()).toBe('player-turn');
+      expect(c.insuranceNet()).toBeNull();
+      expect(c.bankrollService.state()).toEqual({ bankroll: 500, wagered: 0, net: 0 });
+    });
+
     it('is skipped when the free chips cannot back it', () => {
       // The whole bankroll is on the box: nothing left for the side bet.
       const { c } = dealtWithBet(noNatural, 500);
@@ -571,6 +640,26 @@ describe('ShowdownComponent', () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'i' }));
       expect(take.insuranceNet()).toBe(-5);
       expect(take.phase()).toBe('player-turn');
+    });
+
+    it("the 'n' key declines insurance without posting a side bet", () => {
+      const { c } = dealtWithBet(noNatural, 10);
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
+      expect(c.phase()).toBe('player-turn');
+      expect(c.insuranceNet()).toBeNull();
+      expect(c.bankrollService.state()).toEqual({ bankroll: 500, wagered: 0, net: 0 });
+    });
+
+    it('ignores insurance shortcuts while focus is in an editable control', () => {
+      const { c } = dealtWithBet(noNatural, 10);
+      const input = document.createElement('input');
+      document.body.append(input);
+
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'i', bubbles: true }));
+      input.remove();
+
+      expect(c.phase()).toBe('insurance');
+      expect(c.insuranceNet()).toBeNull();
     });
 
     it('resets between rounds', () => {
@@ -599,7 +688,7 @@ describe('ShowdownComponent', () => {
   });
 
   it('renders Hit, Stand, Double, and Surrender on the opening hand', () => {
-    const { fixture } = createShowdown(makeShoe(['9', '10', '7', '6']));
+    const { fixture } = createShowdown(makeShoe(['9', '10', '7', '6', '2']));
     const buttons = fixture.nativeElement.querySelectorAll('.showdown__action');
     expect(buttons.length).toBe(4);
     expect((buttons[0] as HTMLElement).textContent).toContain('Hit');
