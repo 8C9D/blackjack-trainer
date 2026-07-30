@@ -230,6 +230,42 @@ SwiftLint length caps: the play gates (`canDouble` / `canSplit` /
 `canSurrender` and friends) now live in `ShowdownModel+Betting.swift`, and
 `PlayerHand` has its own file.
 
+### Post-roadmap continued: KO key count (2026-07-30)
+
+The last web-side deferred item — "KO true count (IRC/key count)" — shipped on
+both platforms. KO has no true count; what its book publishes instead is a
+schedule, and that schedule is now a third drill mode, **Key count**, offered
+only for systems that carry one (KO alone today).
+
+- **The schedule** (Vancura & Fuchs, _Knock-Out Blackjack_, K-O Preferred;
+  cross-checked against bonusinsider.com's reference table and
+  blackjackinfo.com forum quotes of the book — sources cited in
+  `data/counting-systems.ts`): IRC = 4 − 4×decks (0 / −4 / −20 / −28 for the
+  shoe's 1/2/6/8 deck options), key counts +2 / +1 / −4 / −6, pivot +4,
+  insurance at +3. Lives on the descriptor as `CountingSystem.keyCounts`
+  (`KeyCountSchedule`), pinned by a golden spec including the
+  IRC-plus-deck-sum-reaches-pivot identity.
+- **The drill**: always a live shoe (deck/penetration settings shared with
+  live-shoe true count), whose carried running count opens at the IRC — and
+  resets to it at the cut-card reshuffle — rather than 0. After the stream the
+  trainee answers the running count as usual, then a second question, "Do you
+  have the advantage?" (Y/N), graded against the key count, which is
+  deliberately not displayed: recalling it is the skill. Feedback cites the
+  key count, IRC, pivot, and — at +3 or above — the insurance trigger. The rep
+  is correct only when both parts are; the count answer feeds the running-count
+  store and the advantage call a new `blackjack-key-count-stats` store. The
+  post-count showdown attaches to the key-count drill exactly as it does to
+  live-shoe true count (bet by the count just practised).
+- **Gating**: mode `'key-count'` joins `DrillMode` on both platforms;
+  `mergePrefs` / `FlowPrefs.merged` coerce it away from systems without a
+  schedule, Settings disables the radio (web) or swaps the segmented picker
+  (iOS), and `validateSettings` shares the live-shoe shoe checks.
+- **Parity**: `counting-systems.json` (schema /2) carries `keyCounts`;
+  `counting-vectors.json` (schema /2) adds `keyCountCases` — per-deck IRC/key
+  rows plus advantage calls probed one either side of each threshold through
+  the web engine — and `CountingParityTests` grades the Swift
+  `evaluateKeyCount` against them.
+
 ### Bugs found reviewing the multi-box work (2026-07-25)
 
 Three defects surfaced while reviewing and exercising the multi-box showdown.

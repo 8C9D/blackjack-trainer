@@ -939,7 +939,10 @@ so they're included above. Each is a clean cut line if timelines tighten.
   not produce an Android app (a factor noted when the approach was chosen).
 - **The web app's own deferred items** carry over: KO true count (IRC/key
   count), deviation charts for KO/Omega II/Wong Halves, and true multi-hand /
-  bankroll showdowns (Option B/C).
+  bankroll showdowns (Option B/C). _(Since shipped on both platforms:
+  multi-box/bankroll showdowns on 2026-07-25, and the KO IRC/key-count drill on
+  2026-07-30 — see `docs/roadmap-progress.md`. Only the extra deviation charts
+  remain deferred.)_
 - **CloudKit / accounts**, interactive widgets / Live Activities, iPad-optimized
   multi-column layouts, and Apple Watch — all deferred.
 
