@@ -273,10 +273,10 @@ export class CardCountingPageComponent {
   }
 
   protected start(): void {
-    // Ignore start while a drill is mid-flight. The UI hides Start outside
-    // 'idle' / 'feedback', but the keyboard listener and programmatic
-    // callers route through here too — this keeps the method safe.
-    if (this.isDrillActive()) return;
+    // Start is only valid from the two states that can begin another drill.
+    // In particular, do not let a programmatic call tear down the Done screen
+    // or an in-progress showdown.
+    if (this.state() !== 'idle' && this.state() !== 'feedback') return;
     if (!this.isValid()) return;
     const seq = this.liveShoeTrueCount()
       ? this.dealLiveShoeRound()
