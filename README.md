@@ -88,9 +88,14 @@ families, and more) — see the in-app picker for the full list:
 | **Omega II**       | 2     | yes                      | 2/3/7 = +1, 4/5/6 = +2, 8/A = 0, 9 = −1, 10–K = −2           |
 | **Wong Halves**    | 3     | yes                      | 2/7 = +0.5, 3/4/6 = +1, 5 = +1.5, 8 = 0, 9 = −0.5, 10–A = −1 |
 
-- **True count is offered only for balanced systems.** KO is unbalanced, so it
-  is trained as a running count only; the true-count radio is disabled with a
-  note. (KO's IRC / key-count true-count math is not implemented.)
+- **True count is offered only for balanced systems.** Unbalanced systems are
+  trained as a running count; the true-count radio is disabled with a note.
+- **KO adds a key-count mode** in place of a true count: the live shoe opens at
+  the book's IRC (0 / −4 / −20 / −28 for 1/2/6/8 decks), the count is answered
+  from that seed, and a second question asks whether the running count has
+  reached the key count (+2 / +1 / −4 / −6) — the advantage threshold from
+  Vancura & Fuchs' "Knock-Out Blackjack". Feedback cites the IRC, the +4 pivot,
+  and the +3 insurance trigger.
 - **Wong Halves uses fractional values.** In running-count mode the answer
   input accepts decimals (step 0.5); true counts are still whole numbers
   (`Math.trunc`).
@@ -586,8 +591,6 @@ and the cursor/handoff log in
 Deferred follow-ons, documented in `docs/roadmap-progress.md` and
 `docs/ios-app-roadmap.md`:
 
-- **KO true count** — IRC / key-count math so unbalanced systems get a true
-  count (KO is running-count only today).
 - **Deviation charts for KO / Omega II / Wong Halves** — deviations are Hi-Lo
   only.
 - **App Store submission** — the human/Apple steps in
