@@ -84,6 +84,12 @@ struct CountingDrillTests {
         #expect(engine.validateSettings(settings).valid)
         settings.numberOfCards = 60 // exceeds a 1-deck (52-card) shoe
         #expect(!engine.validateSettings(settings).valid)
+        // Exactly the whole shoe must be rejected too (web parity): it would
+        // leave 0 decks remaining and the true-count division would trap.
+        settings.numberOfCards = 52
+        #expect(!engine.validateSettings(settings).valid)
+        settings.numberOfCards = 51 // ≥ 1 card remains
+        #expect(engine.validateSettings(settings).valid)
     }
 
     @Test func validateSettingsKeyCountSharesTheLiveShoeChecks() {
