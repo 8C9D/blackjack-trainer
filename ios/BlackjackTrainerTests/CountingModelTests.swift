@@ -20,6 +20,7 @@ struct CountingModelTests {
                 key: StatsKeys.deckEstimation,
                 defaults: defaults
             ),
+            keyCountStore: SessionStatsStore(key: StatsKeys.keyCount, defaults: defaults),
             showdownStatsStore: ShowdownStatsStore(key: StatsKeys.showdown, defaults: defaults),
             generator: CardGenerator(random: random),
             shoeFactory: ShoeFactory(random: random)
@@ -136,5 +137,79 @@ struct CountingModelTests {
         model.exitShowdown([])
         #expect(model.state == .feedback)
         model.cancel()
+    }
+
+    private func makeKeyCount(decks: Int = 6) throws -> CountingModel {
+        let model = try make(random: { 0 })
+        model.changeSystem("ko")
+        model.settings.mode = .keyCount
+        model.settings.numberOfCards = 3
+        model.settings.numberOfDecks = decks
+        model.settings.millisecondsBetweenCards = 100
+        return model
+    }
+
+    @Test func keyCountModeIsRecognizedAndValidOnlyForKO() throws {
+        let model = try makeKeyCount()
+        #expect(model.keyCountAvailable)
+        #expect(model.keyCountDrill)
+        #expect(model.usesLiveShoe)
+        #expect(!model.liveShoeTrueCount)
+        #expect(model.validation.valid)
+        // Hi-Lo has no schedule: the same mode must refuse to start.
+        model.changeSystem("hi-lo")
+        model.settings.mode = .keyCount
+        #expect(!model.keyCountDrill)
+        #expect(!model.validation.valid)
+        model.start()
+        #expect(model.state == .idle)
+    }
+
+    @Test func keyCountRoundSeedsTheIRCAndGradesBothParts() async throws {
+        let model = try makeKeyCount(decks: 6)
+        model.start()
+        // Six decks: the fresh shoe opens at the IRC, −20.
+        #expect(model.shoeRunningCount == -20)
+        try await waitForState(model, .answering)
+        // random == 0 keeps the shoe unshuffled; compute the true answer.
+        let engine = CountingEngine()
+        let correct = -20 + engine.runningCount(model.cards, system: model.system)
+        model.answer(correct)
+        #expect(model.state == .advantage)
+        model.answerAdvantage(correct >= -4)
+        #expect(model.state == .feedback)
+        if case let .keyCount(result) = model.result {
+            #expect(result.priorRunningCount == -20)
+            #expect(result.correctRunningCount == correct)
+            #expect(result.irc == -20)
+            #expect(result.keyCount == -4)
+            #expect(result.isCorrect)
+        } else {
+            Issue.record("expected a key-count result")
+        }
+        // The count answer feeds the running store, the call its own store, and
+        // the graded count carries into the next round.
+        #expect(model.activeStats.attempts == 1)
+        #expect(model.keyCountStats.attempts == 1)
+        #expect(model.trueCountStats.attempts == 0)
+        #expect(model.shoeRunningCount == correct)
+        // The shoe survives for the post-count showdown.
+        #expect(model.showdownAvailable)
+        model.enterShowdown()
+        #expect(model.state == .showdown)
+        model.cancel()
+    }
+
+    @Test func keyCountResetLabelCitesTheIRC() throws {
+        let model = try makeKeyCount(decks: 2)
+        #expect(model.countResetLabel == "-4 (the IRC)")
+        model.settings.mode = .runningCount
+        #expect(model.countResetLabel == "0")
+    }
+
+    @Test func leavingKOCoercesKeyCountModeBack() throws {
+        let model = try makeKeyCount()
+        model.changeSystem("hi-lo")
+        #expect(model.settings.mode == .runningCount)
     }
 }

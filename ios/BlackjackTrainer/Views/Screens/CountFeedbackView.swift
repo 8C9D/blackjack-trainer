@@ -78,6 +78,40 @@ struct CountFeedbackView: View {
             )
             .font(.footnote)
             .foregroundStyle(Theme.muted)
+        case let .keyCount(keyCount):
+            keyCountDetails(keyCount)
+        }
+    }
+
+    @ViewBuilder
+    private func keyCountDetails(_ result: KeyCountDrillResult) -> some View {
+        detailRow("Your count", CountFormat.count(result.userRunningCount))
+        detailRow("Correct count", CountFormat.count(result.correctRunningCount))
+        detailRow("Key count", CountFormat.signedCount(Double(result.keyCount)))
+        detailRow(
+            "Advantage",
+            (result.hasAdvantage ? "Yes" : "No")
+                + " — you said " + (result.userSaidAdvantage ? "yes" : "no")
+        )
+        Text(
+            "Running count \(CountFormat.signedCount(result.correctRunningCount)) is "
+                + (result.hasAdvantage ? "at or above" : "below") + " the key count "
+                + "\(CountFormat.signedCount(Double(result.keyCount))) — "
+                + (result.hasAdvantage ? "the edge is yours" : "no edge yet") + ". "
+                + "The shoe started at the IRC "
+                + "\(CountFormat.signedCount(Double(result.irc))) and a full shoe ends "
+                + "at the pivot \(CountFormat.signedCount(Double(result.pivot)))."
+        )
+        .font(.footnote)
+        .foregroundStyle(Theme.muted)
+        if result.correctRunningCount >= Double(result.insuranceCount) {
+            Text(
+                "Running count \(CountFormat.signedCount(result.correctRunningCount)) has "
+                    + "reached \(CountFormat.signedCount(Double(result.insuranceCount))) — "
+                    + "take insurance when it is offered."
+            )
+            .font(.footnote)
+            .foregroundStyle(Theme.muted)
         }
     }
 

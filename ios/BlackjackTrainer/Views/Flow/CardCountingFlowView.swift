@@ -45,6 +45,7 @@ final class CardCountingFlowModel {
             runningStore: app.runningCountStats,
             trueCountStore: app.trueCountStats,
             deckEstimationStore: app.deckEstimationStats,
+            keyCountStore: app.keyCountStats,
             showdownStatsStore: app.showdownStats
         )
         self.init(
@@ -85,10 +86,21 @@ final class CardCountingFlowModel {
 
     /// Grade a rep, then count it as one hand toward the daily goal and record it
     /// to the session (in addition to the per-trainer stat stores the counting
-    /// model already writes).
+    /// model already writes). In key-count mode the count answer only advances
+    /// to the advantage question — the rep is recorded there.
     func answer(_ value: Double) {
         guard counting.state == .answering else { return }
         counting.answer(value)
+        if let result = counting.result {
+            history.recordHand()
+            session.record(result.isCorrect)
+        }
+    }
+
+    /// The key-count drill's advantage call completes the rep.
+    func advantage(_ saidYes: Bool) {
+        guard counting.state == .advantage else { return }
+        counting.answerAdvantage(saidYes)
         if let result = counting.result {
             history.recordHand()
             session.record(result.isCorrect)
@@ -163,10 +175,13 @@ struct CardCountingFlowView: View {
                     ScrollView {
                         VStack(spacing: 20) {
                             if model.counting.reshuffleNotice, model.state != .idle {
-                                Text("Shoe reshuffled at the cut card — running count reset to 0.")
-                                    .font(.footnote)
-                                    .foregroundStyle(Theme.muted)
-                                    .multilineTextAlignment(.center)
+                                Text(
+                                    "Shoe reshuffled at the cut card — running count reset to "
+                                        + "\(model.counting.countResetLabel)."
+                                )
+                                .font(.footnote)
+                                .foregroundStyle(Theme.muted)
+                                .multilineTextAlignment(.center)
                             }
                             stage
                         }
@@ -197,6 +212,8 @@ struct CardCountingFlowView: View {
                 mode: model.counting.settings.mode,
                 allowFractions: model.counting.fractionalAnswers
             ) { model.answer($0) }
+        case .advantage:
+            AdvantageCallView { model.advantage($0) }
         case .feedback:
             feedbackView
         case .showdown:
@@ -238,7 +255,7 @@ struct CardCountingFlowView: View {
         if let result = model.counting.result {
             CountFeedbackView(result: result, system: model.counting.system) { model.runAgain() }
         }
-        if model.counting.liveShoeTrueCount, model.counting.showdownAvailable {
+        if model.counting.usesLiveShoe, model.counting.showdownAvailable {
             Button(model.counting.showdownSpots > 1
                 ? "Play \(model.counting.showdownSpots) hands vs the dealer"
                 : "Play a hand vs the dealer") { model.enterShowdown() }

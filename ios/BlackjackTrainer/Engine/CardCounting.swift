@@ -1,9 +1,13 @@
 import Foundation
 
-/// What the drill asks for.
+/// What the drill asks for. `keyCount` is the unbalanced-system counterpart of
+/// the live-shoe true-count drill: the shoe's running count starts at the
+/// system's published IRC and the player calls whether it has reached the key
+/// count. Only offered for systems carrying a `KeyCountSchedule` (KO).
 enum DrillMode: String, CaseIterable {
     case runningCount = "running-count"
     case trueCount = "true-count"
+    case keyCount = "key-count"
 }
 
 /// In true-count mode, where the decks-remaining figure comes from: a live,
@@ -51,15 +55,47 @@ struct TrueCountDrillResult: Equatable {
     var deckEstimateWithinBand: Bool?
 }
 
-/// A graded round in either mode (the web's discriminated union).
+/// The player's two-part key-count answer: the running count they read and
+/// their advantage call.
+struct KeyCountAnswer: Equatable {
+    let runningCount: Double
+    let saidAdvantage: Bool
+}
+
+/// Graded key-count round. The counts stay `Double` like the other results
+/// (KO's are always whole); the schedule values are the resolved row for the
+/// shoe's deck count so the feedback can cite them. Mirrors
+/// `KeyCountDrillResult`.
+struct KeyCountDrillResult: Equatable {
+    let cards: [Card]
+    let correctRunningCount: Double
+    let userRunningCount: Double
+    let countCorrect: Bool
+    /// Running count carried into this round (the IRC itself on a fresh shoe).
+    let priorRunningCount: Double
+    let irc: Int
+    let keyCount: Int
+    let pivot: Int
+    let insuranceCount: Int
+    /// The advantage call: the player has the edge at or above the key count.
+    let hasAdvantage: Bool
+    let userSaidAdvantage: Bool
+    let advantageCorrect: Bool
+    /// The rep is correct only when both the count and the call are.
+    let isCorrect: Bool
+}
+
+/// A graded round in any mode (the web's discriminated union).
 enum CountingDrillResult: Equatable {
     case running(RunningCountDrillResult)
     case trueCount(TrueCountDrillResult)
+    case keyCount(KeyCountDrillResult)
 
     var cards: [Card] {
         switch self {
         case let .running(result): result.cards
         case let .trueCount(result): result.cards
+        case let .keyCount(result): result.cards
         }
     }
 
@@ -67,15 +103,17 @@ enum CountingDrillResult: Equatable {
         switch self {
         case let .running(result): result.isCorrect
         case let .trueCount(result): result.isCorrect
+        case let .keyCount(result): result.isCorrect
         }
     }
 
-    /// Running count carried into the round (live-shoe prior; 0 otherwise) — the
-    /// breakdown's starting offset.
+    /// Running count carried into the round (live-shoe prior, the IRC-seeded
+    /// key-count prior; 0 otherwise) — the breakdown's starting offset.
     var priorRunningCount: Double {
         switch self {
         case .running: 0
         case let .trueCount(result): result.priorRunningCount
+        case let .keyCount(result): result.priorRunningCount
         }
     }
 }

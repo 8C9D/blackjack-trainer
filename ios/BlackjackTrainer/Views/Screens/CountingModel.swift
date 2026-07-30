@@ -10,7 +10,7 @@ import SwiftUI
 @Observable
 final class CountingModel {
     enum DrillState {
-        case idle, streaming, estimating, answering, feedback, showdown
+        case idle, streaming, estimating, answering, advantage, feedback, showdown
     }
 
     var system: CountingSystem
@@ -33,6 +33,9 @@ final class CountingModel {
     @ObservationIgnored private(set) var shoe: Shoe?
     @ObservationIgnored private(set) var actualDecksRemaining: Double = 0
     @ObservationIgnored private(set) var deckEstimate: Double?
+    /// Key-count mode: the count answer held while the advantage question is
+    /// up, graded together with the advantage call in `answerAdvantage`.
+    @ObservationIgnored private var pendingUserCount: Double = 0
 
     @ObservationIgnored let systems: [CountingSystem]
     @ObservationIgnored let showdownStatsStore: ShowdownStatsStore
@@ -40,6 +43,7 @@ final class CountingModel {
     @ObservationIgnored private let runningStore: SessionStatsStore
     @ObservationIgnored private let trueCountStore: SessionStatsStore
     @ObservationIgnored private let deckEstimationStore: SessionStatsStore
+    @ObservationIgnored private let keyCountStore: SessionStatsStore
     @ObservationIgnored private let generator: CardGenerator
     @ObservationIgnored let shoeFactory: ShoeFactory
     @ObservationIgnored private var streamTask: Task<Void, Never>?
@@ -50,6 +54,7 @@ final class CountingModel {
         runningStore: SessionStatsStore,
         trueCountStore: SessionStatsStore,
         deckEstimationStore: SessionStatsStore,
+        keyCountStore: SessionStatsStore,
         showdownStatsStore: ShowdownStatsStore,
         generator: CardGenerator = CardGenerator(),
         shoeFactory: ShoeFactory = ShoeFactory()
@@ -59,6 +64,7 @@ final class CountingModel {
         self.runningStore = runningStore
         self.trueCountStore = trueCountStore
         self.deckEstimationStore = deckEstimationStore
+        self.keyCountStore = keyCountStore
         self.showdownStatsStore = showdownStatsStore
         self.generator = generator
         self.shoeFactory = shoeFactory
@@ -67,6 +73,36 @@ final class CountingModel {
 
     var trueCountAvailable: Bool {
         system.balanced
+    }
+
+    /// Key-count mode needs a published IRC/key-count schedule (KO only).
+    var keyCountAvailable: Bool {
+        system.keyCounts != nil
+    }
+
+    /// The system's schedule resolved for the configured shoe, or nil when the
+    /// drill is not in key-count mode or the system/deck pairing has no
+    /// published values (an invalid configuration; `validation` blocks it).
+    var keyCountSchedule: ResolvedKeyCounts? {
+        guard settings.mode == .keyCount else { return nil }
+        return system.keyCounts?.resolved(decks: settings.numberOfDecks)
+    }
+
+    var keyCountDrill: Bool {
+        keyCountSchedule != nil
+    }
+
+    /// The two shoe-driven drills share the persistent live shoe (and the
+    /// post-count showdown that deals from it).
+    var usesLiveShoe: Bool {
+        liveShoeTrueCount || keyCountDrill
+    }
+
+    /// What the carried count resets to on a reshuffle: the IRC in key-count
+    /// mode, 0 otherwise — surfaced in the reshuffle notice.
+    var countResetLabel: String {
+        guard let schedule = keyCountSchedule else { return "0" }
+        return "\(CountFormat.signedCount(Double(schedule.irc))) (the IRC)"
     }
 
     /// Fractional running counts (Wong Halves) need decimal input; true counts
@@ -83,12 +119,23 @@ final class CountingModel {
             && system.balanced
     }
 
+    /// Engine validation plus the schedule gate the settings shape cannot
+    /// express (it carries no system): key-count mode needs a schedule row for
+    /// the configured shoe.
     var validation: SettingsValidation {
-        engine.validateSettings(settings)
+        let v = engine.validateSettings(settings)
+        if settings.mode == .keyCount, keyCountSchedule == nil {
+            return SettingsValidation(
+                valid: false,
+                errors: v.errors + ["This system has no key-count schedule for this shoe."]
+            )
+        }
+        return v
     }
 
     var isDrillActive: Bool {
         state == .streaming || state == .estimating || state == .answering
+            || state == .advantage
     }
 
     var settingsLocked: Bool {
@@ -103,6 +150,8 @@ final class CountingModel {
         shoe?.decksRemaining ?? Double(settings.numberOfDecks)
     }
 
+    /// The key-count drill's count answer is a running-count rep, so it shares
+    /// the running store; only the advantage call has its own store.
     private var activeStore: SessionStatsStore {
         settings.mode == .trueCount ? trueCountStore : runningStore
     }
@@ -119,6 +168,10 @@ final class CountingModel {
         deckEstimationStore.stats
     }
 
+    var keyCountStats: SessionStats {
+        keyCountStore.stats
+    }
+
     /// Whether the post-count showdown has enough cards left to deal an opening
     /// round to every configured box.
     var showdownAvailable: Bool {
@@ -129,7 +182,7 @@ final class CountingModel {
     /// Begin a drill (no-op while one is active or settings are invalid).
     func start() {
         guard !isDrillActive, validation.valid else { return }
-        cards = liveShoeTrueCount
+        cards = usesLiveShoe
             ? dealLiveShoeRound()
             : generator.generateSequence(settings.numberOfCards)
         currentIndex = 0
@@ -165,6 +218,12 @@ final class CountingModel {
     func answer(_ value: Double) {
         guard state == .answering else { return }
         switch settings.mode {
+        case .keyCount:
+            // Hold the count answer and ask for the advantage call; both are
+            // graded together in answerAdvantage.
+            pendingUserCount = value
+            state = .advantage
+            return
         case .trueCount:
             if liveShoeTrueCount {
                 answerLiveShoe(Int(value))
@@ -186,8 +245,34 @@ final class CountingModel {
         state = .feedback
     }
 
+    /// Grade the key-count round: the held count answer against the IRC-seeded
+    /// running count, and the advantage call against the key count. The count
+    /// answer feeds the running store and the advantage call its own store; the
+    /// caller reads `result.isCorrect` (both right) for the session rep. The
+    /// cumulative count then carries into the next round of this shoe.
+    func answerAdvantage(_ userSaidAdvantage: Bool) {
+        guard state == .advantage else { return }
+        let answer = KeyCountAnswer(
+            runningCount: pendingUserCount,
+            saidAdvantage: userSaidAdvantage
+        )
+        guard let evaluated = engine.evaluateKeyCount(
+            cards,
+            answer: answer,
+            system: system,
+            numberOfDecks: settings.numberOfDecks,
+            priorRunningCount: shoeRunningCount
+        ) else { return }
+        result = .keyCount(evaluated)
+        runningStore.recordAttempt(correct: evaluated.countCorrect)
+        keyCountStore.recordAttempt(correct: evaluated.advantageCorrect)
+        shoeRunningCount = evaluated.correctRunningCount
+        state = .feedback
+    }
+
     /// Switch system; a different system means a different running count, so the
-    /// live shoe restarts fresh. Unbalanced systems (KO) are running-count-only.
+    /// live shoe restarts fresh. True count needs a balanced system and key
+    /// count a published schedule; coerce a mode the new system cannot host.
     func changeSystem(_ id: String) {
         guard let next = systems.first(where: { $0.id == id }) else { return }
         system = next
@@ -195,10 +280,13 @@ final class CountingModel {
         if !next.balanced, settings.mode == .trueCount {
             settings.mode = .runningCount
         }
+        if next.keyCounts == nil, settings.mode == .keyCount {
+            settings.mode = .runningCount
+        }
     }
 
     func enterShowdown() {
-        guard state == .feedback, liveShoeTrueCount, showdownAvailable else { return }
+        guard state == .feedback, usesLiveShoe, showdownAvailable else { return }
         state = .showdown
     }
 
@@ -264,7 +352,8 @@ extension CountingModel {
                 numberOfDecks: settings.numberOfDecks,
                 penetration: settings.penetration
             )
-            shoeRunningCount = 0
+            // A fresh key-count shoe opens at the system's IRC, not 0.
+            shoeRunningCount = Double(keyCountSchedule?.irc ?? 0)
             reshuffleNotice = replacing
         } else {
             reshuffleNotice = false

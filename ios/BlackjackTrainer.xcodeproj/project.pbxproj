@@ -124,6 +124,7 @@
 		FB6013BDD0180F75072AE565 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BD423D666F3BBEA240356B18 /* Assets.xcassets */; };
 		FC846BD0CB3A030987224F37 /* DrillSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F8122F7E6CB4CFC71CC7DD1 /* DrillSession.swift */; };
 		FCC977E6B3D658140C018C91 /* Fixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C557C64B5EC75385C98395 /* Fixtures.swift */; };
+		FD62D416A266F14FBFDD08BB /* AdvantageCallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E88F670393606D951F122EFA /* AdvantageCallView.swift */; };
 		FECDA79A9CA43DFD1CAC1855 /* Hand.swift in Sources */ = {isa = PBXBuildFile; fileRef = E94C977CD3606FA31236F02A /* Hand.swift */; };
 /* End PBXBuildFile section */
 
@@ -271,6 +272,7 @@
 		D646C0CD8526C8E211E25C42 /* COPYING.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = COPYING.txt; sourceTree = "<group>"; };
 		D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingParityTests.swift; sourceTree = "<group>"; };
 		D9BB02017204C216ACEDAB62 /* counting-systems.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "counting-systems.json"; sourceTree = "<group>"; };
+		E88F670393606D951F122EFA /* AdvantageCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvantageCallView.swift; sourceTree = "<group>"; };
 		E94C977CD3606FA31236F02A /* Hand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hand.swift; sourceTree = "<group>"; };
 		E96987FAD78F068E0FF56D55 /* showdown-vectors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "showdown-vectors.json"; sourceTree = "<group>"; };
 		EA44A857F312C0801027DE52 /* DrillHand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillHand.swift; sourceTree = "<group>"; };
@@ -350,6 +352,7 @@
 		565A9F075107D402A81A17FB /* Screens */ = {
 			isa = PBXGroup;
 			children = (
+				E88F670393606D951F122EFA /* AdvantageCallView.swift */,
 				232402DABC1D385D19FC8B05 /* CountAnswerView.swift */,
 				3F0F142E7986FA01C30FBDC9 /* CountFeedbackView.swift */,
 				58E087668BAE429A0E764D17 /* CountingModel.swift */,
@@ -692,6 +695,7 @@
 			files = (
 				0C9DCB1AD32F6624AB2541F4 /* AboutView.swift in Sources */,
 				02C134286C4B417D1AF060DF /* ActionButtonsView.swift in Sources */,
+				FD62D416A266F14FBFDD08BB /* AdvantageCallView.swift in Sources */,
 				94843E9634E49F20DAD75618 /* AppModel.swift in Sources */,
 				BD0F595480611F372EDB9D8E /* Bankroll.swift in Sources */,
 				20CA9282665753BDF1BEBD7D /* BasicStrategyDrillView.swift in Sources */,
