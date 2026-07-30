@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 
 import { expect, test } from '../fixtures/app.fixture';
+import { configureKeyCount } from '../fixtures/flows';
 
 // The counting drills are configured on the Settings screen (the drill page
 // hosts no configuration), so each spec walks the real user path: shrink the
@@ -61,12 +62,7 @@ test.describe('card counting drill', () => {
   });
 
   test('a KO key-count round asks for the count, then the advantage call', async ({ page }) => {
-    await shrinkDrill(page);
-    await page.getByLabel('Counting system').selectOption('ko');
-    await page
-      .getByRole('radiogroup', { name: 'Drill mode' })
-      .getByRole('radio', { name: 'Key count', exact: true })
-      .check();
+    await configureKeyCount(page);
 
     await page.goto('/drill/card-counting');
     await expect(page.getByRole('heading', { name: 'KO' })).toBeVisible();

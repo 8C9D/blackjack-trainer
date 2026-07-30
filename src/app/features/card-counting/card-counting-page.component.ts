@@ -3,11 +3,12 @@ import { Router, RouterLink } from '@angular/router';
 
 import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
 import type { Card } from '../../core/models/card.model';
-import type {
-  CountingDrillResult,
-  CountingDrillSettings,
+import {
+  formatSignedCount,
+  type CountingDrillResult,
+  type CountingDrillSettings,
 } from '../../core/models/card-counting.model';
-import type { CountingSystem } from '../../core/models/counting-system.model';
+import { resolveKeyCounts, type CountingSystem } from '../../core/models/counting-system.model';
 import { type Shoe } from '../../core/models/shoe.model';
 import { minCardsForSpots } from '../../core/models/showdown.model';
 import { COUNTING_SYSTEMS, HI_LO } from '../../data/counting-systems';
@@ -88,7 +89,7 @@ type DrillState =
               <p class="count__desc">{{ system().description }}</p>
               @if (isValid()) {
                 <button type="button" class="count__start" (click)="start()">
-                  Start counting <kbd class="kcap">⏎</kbd>
+                  Start counting <kbd class="kcap kcap--on-accent">⏎</kbd>
                 </button>
               } @else {
                 <p class="count__invalid" role="alert">
@@ -245,16 +246,11 @@ export class CardCountingPageComponent {
   // null when the drill is not in key-count mode or the system/deck pairing
   // has no published values. Null while in key-count mode means the settings
   // are invalid; isValid() blocks the start.
-  protected readonly keyCountSchedule = computed(() => {
-    if (this.settings().mode !== 'key-count') return null;
-    const schedule = this.system().keyCounts;
-    if (!schedule) return null;
-    const decks = this.settings().numberOfDecks;
-    const irc = schedule.irc[decks];
-    const keyCount = schedule.keyCount[decks];
-    if (irc === undefined || keyCount === undefined) return null;
-    return { irc, keyCount, pivot: schedule.pivot, insuranceCount: schedule.insuranceCount };
-  });
+  protected readonly keyCountSchedule = computed(() =>
+    this.settings().mode === 'key-count'
+      ? resolveKeyCounts(this.system(), this.settings().numberOfDecks)
+      : null,
+  );
 
   protected readonly keyCountDrill = computed(() => this.keyCountSchedule() !== null);
 
@@ -268,9 +264,7 @@ export class CardCountingPageComponent {
   // mode, 0 otherwise — surfaced in the reshuffle notice.
   protected readonly countResetLabel = computed(() => {
     const schedule = this.keyCountSchedule();
-    if (!schedule) return '0';
-    const irc = schedule.irc;
-    return `${irc > 0 ? `+${irc}` : irc} (the IRC)`;
+    return schedule ? `${formatSignedCount(schedule.irc)} (the IRC)` : '0';
   });
 
   protected readonly currentCard = computed<Card | null>(() => {

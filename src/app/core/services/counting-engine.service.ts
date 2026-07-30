@@ -4,13 +4,18 @@ import { ALL_RANKS, type Card } from '../models/card.model';
 import {
   MAX_CARDS_PER_DRILL,
   MIN_MILLISECONDS_BETWEEN_CARDS,
+  usesLiveShoe,
   type CountingDrillSettings,
   type KeyCountDrillResult,
   type RunningCountDrillResult,
   type SettingsValidation,
   type TrueCountDrillResult,
 } from '../models/card-counting.model';
-import { cardCountValue, type CountingSystem } from '../models/counting-system.model';
+import {
+  cardCountValue,
+  resolveKeyCounts,
+  type CountingSystem,
+} from '../models/counting-system.model';
 import {
   CARDS_PER_DECK,
   MAX_PENETRATION,
@@ -95,14 +100,12 @@ export class CountingEngineService {
     numberOfDecks: number,
     priorRunningCount: number,
   ): KeyCountDrillResult {
-    const schedule = system.keyCounts;
-    const irc = schedule?.irc[numberOfDecks];
-    const keyCount = schedule?.keyCount[numberOfDecks];
-    if (!schedule || irc === undefined || keyCount === undefined) {
+    const row = resolveKeyCounts(system, numberOfDecks);
+    if (!row) {
       throw new Error(`${system.name} has no key-count schedule for ${numberOfDecks} decks.`);
     }
     const correctRunningCount = priorRunningCount + this.runningCount(cards, system);
-    const hasAdvantage = correctRunningCount >= keyCount;
+    const hasAdvantage = correctRunningCount >= row.keyCount;
     const countCorrect = userRunningCount === correctRunningCount;
     const advantageCorrect = userSaidAdvantage === hasAdvantage;
     return {
@@ -112,10 +115,7 @@ export class CountingEngineService {
       userRunningCount,
       countCorrect,
       priorRunningCount,
-      irc,
-      keyCount,
-      pivot: schedule.pivot,
-      insuranceCount: schedule.insuranceCount,
+      ...row,
       hasAdvantage,
       userSaidAdvantage,
       advantageCorrect,
@@ -153,40 +153,38 @@ export class CountingEngineService {
     // asked for a true count. In running-count mode it has no bearing on the
     // drill, so it is not validated. The key-count drill always reads a live
     // shoe, so it shares the shoe-configuration checks.
-    if (settings.mode === 'true-count' || settings.mode === 'key-count') {
-      if (settings.mode === 'true-count' && settings.trueCountSource === 'classic') {
-        // Classic mode: the user picks a fixed decks-remaining value.
-        if (!Number.isFinite(settings.decksRemaining)) {
-          errors.push('Decks remaining must be a number.');
-        } else if (settings.decksRemaining <= 0) {
-          errors.push('Decks remaining must be greater than 0.');
-        }
-      } else {
-        // Live-shoe mode: validate the shoe configuration instead.
-        const deckOptions = SHOE_DECK_OPTIONS as readonly number[];
-        if (!deckOptions.includes(settings.numberOfDecks)) {
-          errors.push('Number of decks must be 1, 2, 6, or 8.');
-        }
-        if (
-          !Number.isFinite(settings.penetration) ||
-          settings.penetration < MIN_PENETRATION ||
-          settings.penetration > MAX_PENETRATION
-        ) {
-          errors.push(
-            `Penetration must be between ${Math.round(MIN_PENETRATION * 100)}% and ${Math.round(
-              MAX_PENETRATION * 100,
-            )}%.`,
-          );
-        } else if (
-          Number.isInteger(settings.numberOfCards) &&
-          settings.numberOfCards >= 1 &&
-          deckOptions.includes(settings.numberOfDecks) &&
-          settings.numberOfCards >= settings.numberOfDecks * CARDS_PER_DECK
-        ) {
-          // Strictly fewer than the whole shoe: at least one card must remain so
-          // decks-remaining stays positive and the true count never divides by 0.
-          errors.push('Number of cards must be fewer than the shoe size (52 × decks).');
-        }
+    if (usesLiveShoe(settings.mode, settings.trueCountSource)) {
+      // Live-shoe modes: validate the shoe configuration.
+      const deckOptions = SHOE_DECK_OPTIONS as readonly number[];
+      if (!deckOptions.includes(settings.numberOfDecks)) {
+        errors.push('Number of decks must be 1, 2, 6, or 8.');
+      }
+      if (
+        !Number.isFinite(settings.penetration) ||
+        settings.penetration < MIN_PENETRATION ||
+        settings.penetration > MAX_PENETRATION
+      ) {
+        errors.push(
+          `Penetration must be between ${Math.round(MIN_PENETRATION * 100)}% and ${Math.round(
+            MAX_PENETRATION * 100,
+          )}%.`,
+        );
+      } else if (
+        Number.isInteger(settings.numberOfCards) &&
+        settings.numberOfCards >= 1 &&
+        deckOptions.includes(settings.numberOfDecks) &&
+        settings.numberOfCards >= settings.numberOfDecks * CARDS_PER_DECK
+      ) {
+        // Strictly fewer than the whole shoe: at least one card must remain so
+        // decks-remaining stays positive and the true count never divides by 0.
+        errors.push('Number of cards must be fewer than the shoe size (52 × decks).');
+      }
+    } else if (settings.mode === 'true-count') {
+      // Classic mode: the user picks a fixed decks-remaining value.
+      if (!Number.isFinite(settings.decksRemaining)) {
+        errors.push('Decks remaining must be a number.');
+      } else if (settings.decksRemaining <= 0) {
+        errors.push('Decks remaining must be greater than 0.');
       }
     }
 

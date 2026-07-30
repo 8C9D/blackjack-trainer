@@ -8,6 +8,14 @@ enum DrillMode: String, CaseIterable {
     case runningCount = "running-count"
     case trueCount = "true-count"
     case keyCount = "key-count"
+
+    /// The shoe-driven modes: key count always reads a live shoe; true count
+    /// only with the live-shoe source. The one predicate behind the settings
+    /// fields, the prefs clamp, and the engine's shoe checks (mirrors the web
+    /// `usesLiveShoe`).
+    func usesLiveShoe(source: TrueCountSource) -> Bool {
+        self == .keyCount || (self == .trueCount && source == .liveShoe)
+    }
 }
 
 /// In true-count mode, where the decks-remaining figure comes from: a live,

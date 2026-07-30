@@ -1,6 +1,10 @@
 import { Component, computed, input, output } from '@angular/core';
 
-import type { DrillMode, TrueCountSource } from '../../core/models/card-counting.model';
+import {
+  usesLiveShoe,
+  type DrillMode,
+  type TrueCountSource,
+} from '../../core/models/card-counting.model';
 import type { CountingSystem } from '../../core/models/counting-system.model';
 import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.model';
 
@@ -230,13 +234,10 @@ export class CountingSettingsComponent {
 
   protected readonly spotOptions = SHOWDOWN_SPOT_OPTIONS;
 
-  // The shoe-driven modes: live-shoe true count, and key count (which always
-  // reads a live shoe). Drives the deck/penetration fields, the live readout,
-  // and the showdown settings.
-  protected readonly usesLiveShoe = computed(
-    () =>
-      this.mode() === 'key-count' ||
-      (this.mode() === 'true-count' && this.trueCountSource() === 'live-shoe'),
+  // Drives the deck/penetration fields, the live readout, and the showdown
+  // settings.
+  protected readonly usesLiveShoe = computed(() =>
+    usesLiveShoe(this.mode(), this.trueCountSource()),
   );
 
   protected onSystemChange(event: Event): void {

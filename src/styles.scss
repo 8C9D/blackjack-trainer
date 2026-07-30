@@ -154,10 +154,29 @@ body {
   color: var(--muted);
 }
 
-// Keycaps are noise on touch devices; the shortcuts still work if a hardware
-// keyboard is attached.
+// On the accent fill the keycap flips to the on-accent palette — the default
+// ground/muted pair reads under AA there. One rule, so the contrast fix lives
+// next to the keycap it fixes.
+.kcap--on-accent {
+  background: var(--on-accent-tint);
+  border-color: var(--on-accent-edge);
+  color: var(--on-accent);
+}
+
+// Inline "[Enter]"-style hint on an accent-filled button. 0.75 is the AA floor
+// for 12px text on the accent fill (0.6 read as only 3.84:1).
+.accent-hint {
+  margin-left: 0.3rem;
+  font-size: 0.75rem;
+  opacity: 0.75;
+  font-weight: 400;
+}
+
+// Keycaps and key hints are noise on touch devices; the shortcuts still work
+// if a hardware keyboard is attached.
 @media (max-width: 600px) {
-  .kcap {
+  .kcap,
+  .accent-hint {
     display: none;
   }
 }

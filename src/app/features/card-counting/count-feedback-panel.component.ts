@@ -1,10 +1,11 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 
-import type {
-  CountingDrillResult,
-  KeyCountDrillResult,
-  RunningCountDrillResult,
-  TrueCountDrillResult,
+import {
+  formatSignedCount,
+  type CountingDrillResult,
+  type KeyCountDrillResult,
+  type RunningCountDrillResult,
+  type TrueCountDrillResult,
 } from '../../core/models/card-counting.model';
 import { cardCountValue, type CountingSystem } from '../../core/models/counting-system.model';
 import { CardImageComponent } from '../../shared/card-image.component';
@@ -109,7 +110,7 @@ interface BreakdownEntry {
       }
 
       <button type="button" class="feedback__next" (click)="next.emit()">
-        Run again <span class="feedback__hint">[Enter]</span>
+        Run again <span class="accent-hint">[Enter]</span>
       </button>
     </section>
   `,
@@ -153,7 +154,7 @@ export class CountFeedbackPanelComponent {
       return {
         index,
         card,
-        deltaLabel: delta > 0 ? `+${delta}` : String(delta),
+        deltaLabel: formatSignedCount(delta),
         runningTotal: running,
       };
     });
@@ -163,10 +164,10 @@ export class CountFeedbackPanelComponent {
     this.showBreakdown.update((v) => !v);
   }
 
-  // Schedule values read as signed counts ("+2", "−4", "0"), matching how the
+  // Schedule values read as signed counts ("+2", "-4", "0"), matching how the
   // KO tables are written.
   protected formatSigned(value: number): string {
-    return value > 0 ? `+${value}` : String(value);
+    return formatSignedCount(value);
   }
 
   // Whole decks render as "5"; fractional decks as up to two decimals with

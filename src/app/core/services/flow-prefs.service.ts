@@ -4,10 +4,11 @@ import {
   DECKS_REMAINING_PRESETS,
   MAX_CARDS_PER_DRILL,
   MIN_MILLISECONDS_BETWEEN_CARDS,
+  usesLiveShoe,
   type DrillMode,
   type TrueCountSource,
 } from '../models/card-counting.model';
-import type { CountingSystem } from '../models/counting-system.model';
+import { modeAllowedFor, type CountingSystem } from '../models/counting-system.model';
 import {
   CARDS_PER_DECK,
   DEFAULT_NUMBER_OF_DECKS,
@@ -211,10 +212,7 @@ export function mergePrefs(parsed: unknown): FlowPrefs {
     MAX_CARDS_PER_DRILL,
     d.counting.numberOfCards,
   );
-  if (
-    (mode === 'key-count' || (mode === 'true-count' && trueCountSource === 'live-shoe')) &&
-    numberOfCards >= numberOfDecks * CARDS_PER_DECK
-  ) {
+  if (usesLiveShoe(mode, trueCountSource) && numberOfCards >= numberOfDecks * CARDS_PER_DECK) {
     numberOfCards = d.counting.numberOfCards;
   }
   return {
@@ -260,15 +258,6 @@ export function mergePrefs(parsed: unknown): FlowPrefs {
       showdownBetting: bool(cnt['showdownBetting'], d.counting.showdownBetting),
     },
   };
-}
-
-// Whether a system can host the requested drill mode: true count requires a
-// balanced system, the key-count drill a published schedule; running count is
-// always available.
-export function modeAllowedFor(system: CountingSystem, mode: DrillMode): boolean {
-  if (mode === 'true-count') return system.balanced;
-  if (mode === 'key-count') return system.keyCounts !== undefined;
-  return true;
 }
 
 function asRecord(v: unknown): Record<string, unknown> {

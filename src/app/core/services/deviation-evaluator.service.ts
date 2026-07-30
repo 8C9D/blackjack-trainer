@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 
+import { formatSignedCount } from '../models/card-counting.model';
 import { isAce } from '../models/card.model';
 import type {
   DeviationDecision,
@@ -17,9 +18,10 @@ import { DeviationEngineService } from './deviation-engine.service';
 
 // Formats a true count for display: positive values get a '+' prefix, zero
 // and negatives are returned as their plain string. Exported so the trainer
-// page can render the same label format above the table.
+// page can render the same label format above the table. Same convention as
+// every signed count, so it delegates to the shared formatter.
 export function formatTrueCount(tc: number): string {
-  return tc > 0 ? `+${tc}` : String(tc);
+  return formatSignedCount(tc);
 }
 
 // Builds the trainer-result for a single deviation scenario. Orchestrates

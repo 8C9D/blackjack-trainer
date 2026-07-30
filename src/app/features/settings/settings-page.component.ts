@@ -12,11 +12,11 @@ import { PENETRATION_PRESETS, SHOE_DECK_OPTIONS } from '../../core/models/shoe.m
 import type { RuleSet } from '../../core/models/strategy.model';
 import { COUNTING_SYSTEMS } from '../../data/counting-systems';
 import { CountingEngineService } from '../../core/services/counting-engine.service';
+import { modeAllowedFor } from '../../core/models/counting-system.model';
 import {
   FlowPrefsService,
   MAX_DAILY_GOAL,
   MIN_DAILY_GOAL,
-  modeAllowedFor,
   type DeviationPracticeMode,
   type DeviationTrueCountSource,
   type ThemePref,

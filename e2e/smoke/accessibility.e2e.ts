@@ -1,7 +1,12 @@
 import type { Page } from '@playwright/test';
 
 import { expect, test } from '../fixtures/app.fixture';
-import { configureCounting, runCountingRound, standEveryBox } from '../fixtures/flows';
+import {
+  configureCounting,
+  configureKeyCount,
+  runCountingRound,
+  standEveryBox,
+} from '../fixtures/flows';
 
 // Structural accessibility guards. These are the checks that regress silently
 // when markup moves: the landmark a screen-reader user skips to, the single
@@ -77,8 +82,10 @@ async function contrastFailures(page: Page) {
       // Visually-hidden helper text is exposed to assistive tech, not to eyes.
       if (el.classList.contains('sr-only')) continue;
       // WCAG 1.4.3 exempts text in inactive (disabled) controls from the
-      // contrast minimums.
-      if (el.closest(':disabled')) continue;
+      // contrast minimums. Scoped to the controls themselves so prose inside a
+      // disabled fieldset (notes, readouts) stays measured.
+      if (el.closest('button:disabled, input:disabled, select:disabled, textarea:disabled'))
+        continue;
       const fg = parse(cs.color);
       if (!fg) continue;
       const bg = backdrop(el);
@@ -213,14 +220,7 @@ test.describe('accessibility', () => {
   for (const scheme of ['dark', 'light'] as const) {
     test(`the key-count drill meets WCAG AA in the ${scheme} theme`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
-      await page.goto('/settings');
-      await page.getByLabel('Number of cards').fill('3');
-      await page.getByLabel('Time between cards (ms)').fill('100');
-      await page.getByLabel('Counting system').selectOption('ko');
-      await page
-        .getByRole('radiogroup', { name: 'Drill mode' })
-        .getByRole('radio', { name: 'Key count', exact: true })
-        .check();
+      await configureKeyCount(page);
 
       await page.goto('/drill/card-counting');
       await page.getByRole('button', { name: /Start counting/ }).click();

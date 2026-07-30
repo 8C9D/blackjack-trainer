@@ -48,7 +48,7 @@ interface TrainerCard {
             Continue — {{ labelFor(lastTrainer()) }}
             <small>{{ subtext() }}</small>
           </span>
-          <kbd class="kcap">⏎</kbd>
+          <kbd class="kcap kcap--on-accent">⏎</kbd>
         </button>
 
         <div class="home__others">
