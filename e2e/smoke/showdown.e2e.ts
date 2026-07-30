@@ -43,7 +43,10 @@ test.describe('post-count showdown', () => {
 
   test('boxes are played in order and the round ends with a tally', async ({ page }) => {
     await configure(page, '2');
-    await runCountingRound(page);
+    // Pin a non-natural opening (Q+8, 9+A vs dealer 3+8). An unseeded shoe can
+    // legitimately deal a dealer blackjack and resolve both boxes before any
+    // player action, which would make this action-order test probabilistic.
+    await runCountingRound(page, 1);
     await page.getByRole('button', { name: 'Play 2 hands vs the dealer' }).click();
 
     await expect(page.getByRole('group', { name: 'Player actions' })).toBeVisible();
@@ -144,18 +147,16 @@ test.describe('post-count showdown', () => {
 
   test('a hand can be surrendered for an immediate loss', async ({ page }) => {
     await configureCounting(page, '1');
-    await runCountingRound(page);
+    await page.getByLabel('Late Surrender').check();
+    // Seed 1 opens Q+3 vs dealer 9+8: no natural can skip the first decision,
+    // so the surrender assertion never needs a probabilistic deal-again loop.
+    await runCountingRound(page, 1);
     await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
 
-    // An opening natural resolves without a turn; deal again until a decision
-    // is owed. Surrender is always offered on a box's original two cards.
     const surrender = page
       .getByRole('group', { name: 'Player actions' })
       .getByRole('button', { name: /Surrender/ });
     const dealAnother = page.getByRole('button', { name: /Deal another hand/ });
-    for (let i = 0; i < 10 && !(await surrender.isVisible()); i++) {
-      await dealAnother.click({ timeout: 5000 }).catch(() => undefined);
-    }
 
     await surrender.click();
     await expect(page.locator('.showdown__verdict')).toHaveText('Surrendered.');
@@ -164,7 +165,9 @@ test.describe('post-count showdown', () => {
 
   test('betting stays off unless Settings asks for it', async ({ page }) => {
     await configureCounting(page, '1');
-    await runCountingRound(page);
+    // Seed 1 opens Q+3 vs dealer 9+8, guaranteeing a player turn so this test
+    // can distinguish "no betting phase" from an auto-resolved natural.
+    await runCountingRound(page, 1);
     await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
     // Straight to the turn, with no chip figure anywhere.
     await expect(page.getByRole('group', { name: 'Player actions' })).toBeVisible();
