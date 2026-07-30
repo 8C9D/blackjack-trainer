@@ -1,6 +1,7 @@
 import { ALL_RANKS, ALL_SUITS, type Rank } from '../core/models/card.model';
 import type { CountingSystem } from '../core/models/counting-system.model';
-import { COUNTING_SYSTEMS } from './counting-systems';
+import { SHOE_DECK_OPTIONS } from '../core/models/shoe.model';
+import { COUNTING_SYSTEMS, KO } from './counting-systems';
 
 // Sum of every card in a single 52-card deck for the given system: each rank
 // appears once per suit. A balanced system sums to 0; KO (unbalanced) to +4.
@@ -179,6 +180,41 @@ describe('counting systems registry (data-driven golden)', () => {
       for (const r of ALL_RANKS) {
         expect(typeof s.values[r], `${s.id} ${r} type`).toBe('number');
       }
+    }
+  });
+});
+
+// The K-O Preferred schedule (Vancura & Fuchs, "Knock-Out Blackjack"), as
+// cross-checked against the published reference tables cited in the data file.
+describe('KO key-count schedule (golden)', () => {
+  it('KO is the only system carrying a schedule', () => {
+    const carriers = COUNTING_SYSTEMS.filter((s) => s.keyCounts !== undefined);
+    expect(carriers.map((s) => s.id)).toEqual(['ko']);
+  });
+
+  it('matches the book values for every offered shoe size', () => {
+    const schedule = KO.keyCounts!;
+    expect(schedule.irc).toEqual({ 1: 0, 2: -4, 6: -20, 8: -28 });
+    expect(schedule.keyCount).toEqual({ 1: 2, 2: 1, 6: -4, 8: -6 });
+    expect(schedule.pivot).toBe(4);
+    expect(schedule.insuranceCount).toBe(3);
+  });
+
+  it('covers exactly the shoe deck options', () => {
+    const schedule = KO.keyCounts!;
+    const covered = Object.keys(schedule.irc).map(Number).sort();
+    expect(covered).toEqual([...SHOE_DECK_OPTIONS].sort());
+    expect(Object.keys(schedule.keyCount).map(Number).sort()).toEqual(covered);
+  });
+
+  it('is internally consistent: IRC = 4 − 4×decks, so a full shoe ends at the pivot', () => {
+    const schedule = KO.keyCounts!;
+    for (const decks of SHOE_DECK_OPTIONS) {
+      expect(schedule.irc[decks], `${decks}-deck IRC`).toBe(4 - 4 * decks);
+      // KO's full-deck sum is +4 per deck, so IRC + 4×decks is the pivot.
+      expect(schedule.irc[decks] + fullDeckSum(KO) * decks, `${decks}-deck pivot`).toBe(
+        schedule.pivot,
+      );
     }
   });
 });

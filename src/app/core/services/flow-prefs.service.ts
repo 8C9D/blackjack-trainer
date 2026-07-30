@@ -7,6 +7,7 @@ import {
   type DrillMode,
   type TrueCountSource,
 } from '../models/card-counting.model';
+import type { CountingSystem } from '../models/counting-system.model';
 import {
   CARDS_PER_DECK,
   DEFAULT_NUMBER_OF_DECKS,
@@ -186,13 +187,14 @@ export function mergePrefs(parsed: unknown): FlowPrefs {
   const system = COUNTING_SYSTEMS.find((candidate) => candidate.id === systemId)!;
   const requestedMode = oneOf(
     cnt['mode'],
-    ['running-count', 'true-count'] as const,
+    ['running-count', 'true-count', 'key-count'] as const,
     d.counting.mode,
   );
-  // Unbalanced systems do not use the balanced running-count/decks-remaining
-  // conversion. The Settings UI enforces this when changed interactively; the
-  // loader must enforce the same invariant for stale or hand-edited payloads.
-  const mode: DrillMode = system.balanced ? requestedMode : 'running-count';
+  // True count needs a balanced system; the key-count drill needs a published
+  // IRC/key-count schedule (KO). The Settings UI enforces both when changed
+  // interactively; the loader must enforce the same invariants for stale or
+  // hand-edited payloads.
+  const mode: DrillMode = modeAllowedFor(system, requestedMode) ? requestedMode : 'running-count';
   const trueCountSource = oneOf(
     cnt['trueCountSource'],
     ['live-shoe', 'classic'] as const,
@@ -210,8 +212,7 @@ export function mergePrefs(parsed: unknown): FlowPrefs {
     d.counting.numberOfCards,
   );
   if (
-    mode === 'true-count' &&
-    trueCountSource === 'live-shoe' &&
+    (mode === 'key-count' || (mode === 'true-count' && trueCountSource === 'live-shoe')) &&
     numberOfCards >= numberOfDecks * CARDS_PER_DECK
   ) {
     numberOfCards = d.counting.numberOfCards;
@@ -259,6 +260,15 @@ export function mergePrefs(parsed: unknown): FlowPrefs {
       showdownBetting: bool(cnt['showdownBetting'], d.counting.showdownBetting),
     },
   };
+}
+
+// Whether a system can host the requested drill mode: true count requires a
+// balanced system, the key-count drill a published schedule; running count is
+// always available.
+export function modeAllowedFor(system: CountingSystem, mode: DrillMode): boolean {
+  if (mode === 'true-count') return system.balanced;
+  if (mode === 'key-count') return system.keyCounts !== undefined;
+  return true;
 }
 
 function asRecord(v: unknown): Record<string, unknown> {

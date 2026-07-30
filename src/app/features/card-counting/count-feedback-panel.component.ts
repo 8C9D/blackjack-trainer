@@ -2,6 +2,7 @@ import { Component, computed, input, output, signal } from '@angular/core';
 
 import type {
   CountingDrillResult,
+  KeyCountDrillResult,
   RunningCountDrillResult,
   TrueCountDrillResult,
 } from '../../core/models/card-counting.model';
@@ -57,6 +58,33 @@ interface BreakdownEntry {
           Running count {{ tc.correctRunningCount }} ÷ {{ formatDecks(tc.decksRemaining) }} decks =
           true count {{ tc.correctTrueCount }}
         </p>
+      } @else if (keyCountResult(); as kc) {
+        <dl class="feedback__details">
+          <dt>Your count</dt>
+          <dd>{{ kc.userRunningCount }}</dd>
+          <dt>Correct count</dt>
+          <dd>{{ kc.correctRunningCount }}</dd>
+          <dt>Key count</dt>
+          <dd>{{ formatSigned(kc.keyCount) }}</dd>
+          <dt>Advantage</dt>
+          <dd>
+            {{ kc.hasAdvantage ? 'Yes' : 'No' }} — you said
+            {{ kc.userSaidAdvantage ? 'yes' : 'no' }}
+          </dd>
+        </dl>
+        <p class="feedback__formula">
+          Running count {{ formatSigned(kc.correctRunningCount) }} is
+          {{ kc.hasAdvantage ? 'at or above' : 'below' }} the key count
+          {{ formatSigned(kc.keyCount) }} —
+          {{ kc.hasAdvantage ? 'the edge is yours' : 'no edge yet' }}. The shoe started at the IRC
+          {{ formatSigned(kc.irc) }} and a full shoe ends at the pivot {{ formatSigned(kc.pivot) }}.
+        </p>
+        @if (kc.correctRunningCount >= kc.insuranceCount) {
+          <p class="feedback__formula">
+            Running count {{ formatSigned(kc.correctRunningCount) }} has reached
+            {{ formatSigned(kc.insuranceCount) }} — take insurance when it is offered.
+          </p>
+        }
       }
 
       <button
@@ -106,13 +134,19 @@ export class CountFeedbackPanelComponent {
     return r.mode === 'true-count' ? r : null;
   });
 
+  protected readonly keyCountResult = computed<KeyCountDrillResult | null>(() => {
+    const r = this.result();
+    return r.mode === 'key-count' ? r : null;
+  });
+
   protected readonly breakdown = computed<readonly BreakdownEntry[]>(() => {
     const sys = this.system();
     const r = this.result();
-    // Live-shoe rounds carry a running count from earlier rounds; start the
+    // Live-shoe rounds (true-count and key-count) carry a running count from
+    // earlier rounds — the IRC itself on a fresh key-count shoe; start the
     // running total from that offset so it ends at correctRunningCount. Classic
     // and running-count results have no prior, so this is 0.
-    let running = r.mode === 'true-count' ? (r.priorRunningCount ?? 0) : 0;
+    let running = r.mode === 'running-count' ? 0 : (r.priorRunningCount ?? 0);
     return r.cards.map((card, index) => {
       const delta = cardCountValue(sys, card);
       running += delta;
@@ -127,6 +161,12 @@ export class CountFeedbackPanelComponent {
 
   protected toggleBreakdown(): void {
     this.showBreakdown.update((v) => !v);
+  }
+
+  // Schedule values read as signed counts ("+2", "−4", "0"), matching how the
+  // KO tables are written.
+  protected formatSigned(value: number): string {
+    return value > 0 ? `+${value}` : String(value);
   }
 
   // Whole decks render as "5"; fractional decks as up to two decimals with

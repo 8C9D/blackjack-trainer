@@ -16,6 +16,7 @@ import {
   FlowPrefsService,
   MAX_DAILY_GOAL,
   MIN_DAILY_GOAL,
+  modeAllowedFor,
   type DeviationPracticeMode,
   type DeviationTrueCountSource,
   type ThemePref,
@@ -178,6 +179,7 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
           [systems]="systems"
           [systemId]="prefs().counting.systemId"
           [trueCountAvailable]="trueCountAvailable()"
+          [keyCountAvailable]="keyCountAvailable()"
           [mode]="prefs().counting.mode"
           [numberOfCards]="prefs().counting.numberOfCards"
           [millisecondsBetweenCards]="prefs().counting.millisecondsBetweenCards"
@@ -227,6 +229,10 @@ export class SettingsPageComponent {
   protected readonly prefs = this.prefsService.prefs;
 
   protected readonly trueCountAvailable = computed(() => this.selectedSystem()?.balanced ?? false);
+
+  protected readonly keyCountAvailable = computed(
+    () => this.selectedSystem()?.keyCounts !== undefined,
+  );
 
   protected readonly countingErrors = computed(
     () => this.countingEngine.validateSettings(this.countingSettings()).errors,
@@ -292,10 +298,11 @@ export class SettingsPageComponent {
 
   protected onSystemChange(id: string): void {
     this.prefsService.updateCounting({ systemId: id });
-    // Unbalanced systems are running-count-only; coerce a stale true-count
-    // mode back so the drill never starts in an impossible configuration.
+    // True count needs a balanced system; key count needs a published
+    // schedule. Coerce a mode the new system cannot host back to running
+    // count so the drill never starts in an impossible configuration.
     const system = this.systems.find((s) => s.id === id);
-    if (system && !system.balanced && this.prefs().counting.mode === 'true-count') {
+    if (system && !modeAllowedFor(system, this.prefs().counting.mode)) {
       this.prefsService.updateCounting({ mode: 'running-count' });
     }
   }

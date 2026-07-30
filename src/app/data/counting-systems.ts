@@ -49,13 +49,30 @@ export const HI_LO: CountingSystem = {
 // it *unbalanced* (`balanced: false`): a full 52-card deck sums to +4, not 0
 // (twenty-four +1 cards, eight 0 cards, twenty -1 cards). Unbalanced systems
 // are trained and played as a running count rather than converted to a true
-// count the Hi-Lo way, so the trainer restricts KO to running-count mode.
+// count the Hi-Lo way; instead of a true count, KO plays from its published
+// IRC/key-count schedule below (the key-count drill mode).
+//
+// Schedule source: Vancura & Fuchs, "Knock-Out Blackjack" (the K-O Preferred
+// tables). IRC = 4 − (4 × decks), so every shoe fully dealt converges to the
+// +4 pivot; the per-deck key counts are the book's simulation-derived
+// advantage thresholds, and insurance is taken at +3 or higher for any shoe.
+// Cross-checked 2026-07-29 against bonusinsider.com's KO reference table
+// (1 deck: IRC 0 / key +2 · 2: −4 / +1 · 6: −20 / −4 · 8: −28 / −6,
+// insurance +3) and blackjackinfo.com forum quotes of the book (single deck
+// "IRC ... +0 and the Key Count is +2"; double deck "an IRC of -4 ... and the
+// key count is +1").
 export const KO: CountingSystem = {
   id: 'ko',
   name: 'KO',
   description:
-    'Unbalanced level-1 system (Knock-Out). Low cards (2–7) count as +1, neutrals (8–9) as 0, tens and aces as −1. Trained as a running count.',
+    'Unbalanced level-1 system (Knock-Out). Low cards (2–7) count as +1, neutrals (8–9) as 0, tens and aces as −1. Trained as a running count, with the book’s IRC/key-count schedule in place of a true count.',
   balanced: false,
+  keyCounts: {
+    irc: { 1: 0, 2: -4, 6: -20, 8: -28 },
+    keyCount: { 1: 2, 2: 1, 6: -4, 8: -6 },
+    pivot: 4,
+    insuranceCount: 3,
+  },
   values: {
     '2': 1,
     '3': 1,

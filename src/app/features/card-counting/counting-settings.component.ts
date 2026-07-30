@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 
 import type { DrillMode, TrueCountSource } from '../../core/models/card-counting.model';
 import type { CountingSystem } from '../../core/models/counting-system.model';
@@ -39,12 +39,31 @@ import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.mo
           />
           <span>True count</span>
         </label>
+        <label class="settings__mode">
+          <input
+            type="radio"
+            name="drill-mode"
+            value="key-count"
+            [checked]="mode() === 'key-count'"
+            [disabled]="!keyCountAvailable()"
+            (change)="onModeChange('key-count')"
+          />
+          <span>Key count</span>
+        </label>
       </div>
       @if (!trueCountAvailable()) {
-        <p class="settings__note">
-          True count is only trained for balanced systems. This system is unbalanced, so only
-          running count is available.
-        </p>
+        @if (keyCountAvailable()) {
+          <p class="settings__note">
+            This system is unbalanced, so there is no true count. Its published schedule is drilled
+            instead: the shoe starts at the IRC and you call whether the running count has reached
+            the key count.
+          </p>
+        } @else {
+          <p class="settings__note">
+            True count is only trained for balanced systems. This system is unbalanced, so only
+            running count is available.
+          </p>
+        }
       }
       <div class="settings__fields">
         <label class="settings__field">
@@ -85,7 +104,7 @@ import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.mo
             </select>
           </label>
         }
-        @if (mode() === 'true-count' && trueCountSource() === 'live-shoe') {
+        @if (usesLiveShoe()) {
           <label class="settings__field">
             <span>Number of decks</span>
             <select
@@ -135,31 +154,31 @@ import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.mo
             <span>Classic (preset decks)</span>
           </label>
         </div>
-        @if (trueCountSource() === 'live-shoe') {
-          <p class="settings__readout">
-            Decks remaining (live): <strong>{{ formatDecks(liveDecksRemaining()) }}</strong>
-          </p>
-          <label class="settings__field">
-            <span>Showdown hands</span>
-            <select
-              class="settings__spots"
-              [value]="showdownSpots()"
-              (change)="onShowdownSpotsChange($event)"
-            >
-              @for (s of spotOptions; track s) {
-                <option [value]="s" [selected]="s === showdownSpots()">{{ s }}</option>
-              }
-            </select>
-          </label>
-          <label class="settings__check">
-            <input
-              type="checkbox"
-              [checked]="showdownBetting()"
-              (change)="onShowdownBettingChange($event)"
-            />
-            <span>Bet sizing (bankroll)</span>
-          </label>
-        }
+      }
+      @if (usesLiveShoe()) {
+        <p class="settings__readout">
+          Decks remaining (live): <strong>{{ formatDecks(liveDecksRemaining()) }}</strong>
+        </p>
+        <label class="settings__field">
+          <span>Showdown hands</span>
+          <select
+            class="settings__spots"
+            [value]="showdownSpots()"
+            (change)="onShowdownSpotsChange($event)"
+          >
+            @for (s of spotOptions; track s) {
+              <option [value]="s" [selected]="s === showdownSpots()">{{ s }}</option>
+            }
+          </select>
+        </label>
+        <label class="settings__check">
+          <input
+            type="checkbox"
+            [checked]="showdownBetting()"
+            (change)="onShowdownBettingChange($event)"
+          />
+          <span>Bet sizing (bankroll)</span>
+        </label>
       }
       @if (errors().length > 0) {
         <ul class="settings__errors" role="alert">
@@ -176,6 +195,8 @@ export class CountingSettingsComponent {
   readonly systems = input.required<readonly CountingSystem[]>();
   readonly systemId = input.required<string>();
   readonly trueCountAvailable = input(true);
+  // Key-count mode needs a published IRC/key-count schedule (KO only).
+  readonly keyCountAvailable = input(false);
   readonly mode = input.required<DrillMode>();
   readonly numberOfCards = input.required<number>();
   readonly millisecondsBetweenCards = input.required<number>();
@@ -208,6 +229,15 @@ export class CountingSettingsComponent {
   readonly showdownBettingChange = output<boolean>();
 
   protected readonly spotOptions = SHOWDOWN_SPOT_OPTIONS;
+
+  // The shoe-driven modes: live-shoe true count, and key count (which always
+  // reads a live shoe). Drives the deck/penetration fields, the live readout,
+  // and the showdown settings.
+  protected readonly usesLiveShoe = computed(
+    () =>
+      this.mode() === 'key-count' ||
+      (this.mode() === 'true-count' && this.trueCountSource() === 'live-shoe'),
+  );
 
   protected onSystemChange(event: Event): void {
     this.systemChange.emit((event.target as HTMLSelectElement).value);

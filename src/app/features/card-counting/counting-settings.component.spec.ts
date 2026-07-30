@@ -13,6 +13,7 @@ function createSettings(
   overrides: Partial<{
     systemId: string;
     trueCountAvailable: boolean;
+    keyCountAvailable: boolean;
     mode: DrillMode;
     numberOfCards: number;
     millisecondsBetweenCards: number;
@@ -31,6 +32,8 @@ function createSettings(
   ref.setInput('systemId', overrides.systemId ?? 'hi-lo');
   if (overrides.trueCountAvailable !== undefined)
     ref.setInput('trueCountAvailable', overrides.trueCountAvailable);
+  if (overrides.keyCountAvailable !== undefined)
+    ref.setInput('keyCountAvailable', overrides.keyCountAvailable);
   ref.setInput('mode', overrides.mode ?? 'running-count');
   ref.setInput('numberOfCards', overrides.numberOfCards ?? 20);
   ref.setInput('millisecondsBetweenCards', overrides.millisecondsBetweenCards ?? 500);
@@ -104,12 +107,12 @@ describe('CountingSettingsComponent', () => {
     expect(note!.textContent).toContain('running count');
   });
 
-  it('renders both mode radios', () => {
+  it('renders all three mode radios', () => {
     const fixture = createSettings();
     const radios = fixture.nativeElement.querySelectorAll('input[type=radio][name=drill-mode]');
-    expect(radios.length).toBe(2);
+    expect(radios.length).toBe(3);
     const values = Array.from(radios).map((r) => (r as HTMLInputElement).value);
-    expect(values).toEqual(['running-count', 'true-count']);
+    expect(values).toEqual(['running-count', 'true-count', 'key-count']);
   });
 
   it('marks the active mode radio as checked', () => {
@@ -281,6 +284,64 @@ describe('CountingSettingsComponent', () => {
     it('hides the live readout in classic mode', () => {
       const fixture = createSettings({ mode: 'true-count', trueCountSource: 'classic' });
       expect(fixture.nativeElement.querySelector('.settings__readout')).toBeNull();
+    });
+  });
+
+  describe('key-count mode', () => {
+    it('disables the key-count radio when the system has no schedule', () => {
+      const fixture = createSettings({ keyCountAvailable: false });
+      const kc = fixture.nativeElement.querySelector(
+        'input[type=radio][value="key-count"]',
+      ) as HTMLInputElement;
+      expect(kc.disabled).toBe(true);
+    });
+
+    it('enables the key-count radio and emits modeChange when selected', () => {
+      const fixture = createSettings({
+        systemId: 'ko',
+        trueCountAvailable: false,
+        keyCountAvailable: true,
+      });
+      const kc = fixture.nativeElement.querySelector(
+        'input[type=radio][value="key-count"]',
+      ) as HTMLInputElement;
+      expect(kc.disabled).toBe(false);
+      let received: DrillMode | undefined;
+      fixture.componentInstance.modeChange.subscribe((m) => {
+        received = m;
+      });
+      kc.checked = true;
+      kc.dispatchEvent(new Event('change'));
+      expect(received).toBe('key-count');
+    });
+
+    it('explains the schedule instead of the running-count-only note for KO', () => {
+      const fixture = createSettings({
+        systemId: 'ko',
+        trueCountAvailable: false,
+        keyCountAvailable: true,
+      });
+      const note = fixture.nativeElement.querySelector('.settings__note');
+      expect(note).not.toBeNull();
+      expect(note!.textContent).toContain('IRC');
+      expect(note!.textContent).toContain('key count');
+    });
+
+    it('shows the shoe fields, live readout, and showdown settings in key-count mode', () => {
+      const fixture = createSettings({
+        systemId: 'ko',
+        trueCountAvailable: false,
+        keyCountAvailable: true,
+        mode: 'key-count',
+      });
+      expect(fixture.nativeElement.querySelector('.settings__decks')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.settings__penetration')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.settings__readout')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.settings__spots')).not.toBeNull();
+      // No true-count source toggle: key count always reads the live shoe.
+      expect(fixture.nativeElement.querySelector('input[name=tc-source]')).toBeNull();
+      // No classic decks-remaining preset either.
+      expect(fixture.nativeElement.querySelector('.settings__decks-remaining')).toBeNull();
     });
   });
 

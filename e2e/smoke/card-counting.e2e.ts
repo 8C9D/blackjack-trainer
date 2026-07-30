@@ -60,6 +60,32 @@ test.describe('card counting drill', () => {
     await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1');
   });
 
+  test('a KO key-count round asks for the count, then the advantage call', async ({ page }) => {
+    await shrinkDrill(page);
+    await page.getByLabel('Counting system').selectOption('ko');
+    await page
+      .getByRole('radiogroup', { name: 'Drill mode' })
+      .getByRole('radio', { name: 'Key count', exact: true })
+      .check();
+
+    await page.goto('/drill/card-counting');
+    await expect(page.getByRole('heading', { name: 'KO' })).toBeVisible();
+    await page.getByRole('button', { name: /Start counting/ }).click();
+
+    // No deck estimate: the count question comes straight after the stream.
+    const answer = page.getByLabel('What is the running count?');
+    await expect(answer).toBeVisible();
+    await answer.fill('-20');
+    await page.getByRole('button', { name: /Submit/ }).click();
+
+    // The advantage call follows, and feedback cites the key count.
+    await expect(page.getByText('Do you have the advantage?')).toBeVisible();
+    await page.getByRole('button', { name: /^No/ }).click();
+
+    await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1');
+    await expect(page.getByText('Key count', { exact: true })).toBeVisible();
+  });
+
   test('Escape exits the idle drill back to home', async ({ page }) => {
     await page.goto('/drill/card-counting');
     await expect(page.getByRole('heading', { name: 'Hi-Lo' })).toBeVisible();

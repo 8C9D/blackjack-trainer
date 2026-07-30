@@ -3,10 +3,12 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import type { Card, Rank } from '../../core/models/card.model';
 import type {
   CountingDrillResult,
+  KeyCountDrillResult,
   RunningCountDrillResult,
   TrueCountDrillResult,
 } from '../../core/models/card-counting.model';
-import { HI_LO } from '../../data/counting-systems';
+import type { CountingSystem } from '../../core/models/counting-system.model';
+import { HI_LO, KO } from '../../data/counting-systems';
 import { CountFeedbackPanelComponent } from './count-feedback-panel.component';
 
 const card = (rank: Rank): Card => ({ rank, suit: 'spades' });
@@ -38,10 +40,35 @@ function makeTrueCountResult(overrides: Partial<TrueCountDrillResult> = {}): Tru
   };
 }
 
-function createPanel(result: CountingDrillResult): ComponentFixture<CountFeedbackPanelComponent> {
+// A six-deck KO round: prior −6 plus 2..6 (+5) → −5, below the −4 key count,
+// correctly called "no advantage". Overrides carve out the variants.
+function makeKeyCountResult(overrides: Partial<KeyCountDrillResult> = {}): KeyCountDrillResult {
+  return {
+    mode: 'key-count',
+    cards: seq('2', '3', '4', '5', '6'),
+    correctRunningCount: -5,
+    userRunningCount: -5,
+    countCorrect: true,
+    priorRunningCount: -10,
+    irc: -20,
+    keyCount: -4,
+    pivot: 4,
+    insuranceCount: 3,
+    hasAdvantage: false,
+    userSaidAdvantage: false,
+    advantageCorrect: true,
+    isCorrect: true,
+    ...overrides,
+  };
+}
+
+function createPanel(
+  result: CountingDrillResult,
+  system: CountingSystem = HI_LO,
+): ComponentFixture<CountFeedbackPanelComponent> {
   const fixture = TestBed.createComponent(CountFeedbackPanelComponent);
   fixture.componentRef.setInput('result', result);
-  fixture.componentRef.setInput('system', HI_LO);
+  fixture.componentRef.setInput('system', system);
   fixture.detectChanges();
   return fixture;
 }
@@ -152,6 +179,67 @@ describe('CountFeedbackPanelComponent', () => {
         makeTrueCountResult({ userTrueCount: 2, correctTrueCount: 3, isCorrect: false }),
       );
       expect(fixture.nativeElement.textContent).toContain('Incorrect');
+    });
+  });
+
+  describe('key-count mode', () => {
+    it('renders the counts, the key count, and the advantage verdict', () => {
+      const fixture = createPanel(makeKeyCountResult(), KO);
+      const text = fixture.nativeElement.textContent as string;
+      expect(text).toContain('Correct!');
+      expect(text).toContain('Key count');
+      expect(text).toContain('-4');
+      expect(text).toContain('No — you said no');
+    });
+
+    it('explains the threshold and cites the IRC and pivot', () => {
+      const fixture = createPanel(makeKeyCountResult(), KO);
+      const formula = fixture.nativeElement.querySelector('.feedback__formula') as HTMLElement;
+      expect(formula.textContent).toContain('below the key count');
+      expect(formula.textContent).toContain('-20');
+      expect(formula.textContent).toContain('+4');
+    });
+
+    it('flags the insurance trigger only at or above the insurance count', () => {
+      const below = createPanel(makeKeyCountResult(), KO);
+      expect(below.nativeElement.textContent).not.toContain('insurance');
+      const above = createPanel(
+        makeKeyCountResult({
+          correctRunningCount: 3,
+          userRunningCount: 3,
+          hasAdvantage: true,
+          userSaidAdvantage: true,
+        }),
+        KO,
+      );
+      expect(above.nativeElement.textContent).toContain('take insurance');
+    });
+
+    it('renders Incorrect when the advantage call is wrong even with a right count', () => {
+      const fixture = createPanel(
+        makeKeyCountResult({
+          userSaidAdvantage: true,
+          advantageCorrect: false,
+          isCorrect: false,
+        }),
+        KO,
+      );
+      expect(fixture.nativeElement.textContent).toContain('Incorrect');
+      expect(fixture.nativeElement.textContent).toContain('you said yes');
+    });
+
+    it('starts the breakdown running total from the carried (IRC-seeded) prior', () => {
+      const fixture = createPanel(
+        makeKeyCountResult({ cards: seq('2', '3'), priorRunningCount: -20 }),
+        KO,
+      );
+      const toggle = fixture.nativeElement.querySelector('.feedback__toggle') as HTMLButtonElement;
+      toggle.click();
+      fixture.detectChanges();
+      const totals = Array.from(
+        fixture.nativeElement.querySelectorAll('.feedback__running'),
+      ) as HTMLElement[];
+      expect(totals.map((t) => t.textContent?.trim())).toEqual(['→ -19', '→ -18']);
     });
   });
 });

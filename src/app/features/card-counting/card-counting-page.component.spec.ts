@@ -23,7 +23,15 @@ type StatsLike = {
 };
 
 type Internals = {
-  state(): 'idle' | 'streaming' | 'estimating' | 'answering' | 'feedback' | 'showdown' | 'done';
+  state():
+    | 'idle'
+    | 'streaming'
+    | 'estimating'
+    | 'answering'
+    | 'advantage'
+    | 'feedback'
+    | 'showdown'
+    | 'done';
   target(): number;
   handsToday(): number;
   settings(): CountingDrillSettings;
@@ -33,16 +41,21 @@ type Internals = {
   system(): CountingSystem;
   fractionalAnswers(): boolean;
   liveShoeTrueCount(): boolean;
+  keyCountDrill(): boolean;
+  usesLiveShoe(): boolean;
+  countResetLabel(): string;
   isValid(): boolean;
   isDrillActive(): boolean;
   statsService: StatsLike;
   trueCountStatsService: StatsLike;
   deckEstimationStatsService: StatsLike;
+  keyCountStatsService: StatsLike;
   start(): void;
   runAgain(): void;
   oneMoreRound(): void;
   onEstimate(n: number): void;
   onAnswer(n: number): void;
+  onAdvantage(saidYes: boolean): void;
   onKeyDown(e: KeyboardEvent): void;
   shoeRunningCount(): number;
   actualDecksRemaining(): number;
@@ -834,6 +847,168 @@ describe('CardCountingPageComponent', () => {
       c.onAnswer(0);
       expect(c.state()).toBe('feedback');
       expect(c.showdownAvailable()).toBe(false);
+    });
+  });
+
+  describe('key-count drills (KO)', () => {
+    function configureKeyCount(
+      opts: { numberOfCards?: number; numberOfDecks?: number; penetration?: number } = {},
+    ): void {
+      updateSetting('systemId', 'ko');
+      updateSetting('mode', 'key-count');
+      updateSetting('numberOfDecks', opts.numberOfDecks ?? 6);
+      updateSetting('penetration', opts.penetration ?? 0.75);
+      updateSetting('numberOfCards', opts.numberOfCards ?? 10);
+      updateSetting('millisecondsBetweenCards', 100);
+    }
+
+    function streamToEnd(c: Internals): void {
+      vi.advanceTimersByTime(c.cards().length * 100);
+    }
+
+    it('is recognized as a key-count drill, and as a live-shoe drill', () => {
+      configureKeyCount();
+      const { c } = createPage();
+      expect(c.keyCountDrill()).toBe(true);
+      expect(c.usesLiveShoe()).toBe(true);
+      expect(c.liveShoeTrueCount()).toBe(false);
+      expect(c.isValid()).toBe(true);
+    });
+
+    it('is invalid for a system without a schedule, and start() refuses', () => {
+      // updateCounting stores the partial verbatim (no merge pass), so this
+      // impossible pairing can exist in memory; the page must refuse it.
+      updateSetting('systemId', 'hi-lo');
+      updateSetting('mode', 'key-count');
+      const { c } = createPage();
+      expect(c.keyCountDrill()).toBe(false);
+      expect(c.isValid()).toBe(false);
+      c.start();
+      expect(c.state()).toBe('idle');
+    });
+
+    it('runs streaming → answering → advantage → feedback, skipping the deck estimate', () => {
+      configureKeyCount({ numberOfCards: 3 });
+      const { c } = createPage();
+      c.start();
+      expect(c.state()).toBe('streaming');
+      streamToEnd(c);
+      expect(c.state()).toBe('answering');
+      c.onAnswer(-20);
+      expect(c.state()).toBe('advantage');
+      c.onAdvantage(false);
+      expect(c.state()).toBe('feedback');
+    });
+
+    it('seeds a fresh shoe at the IRC and grades the count from it', () => {
+      const engine = new CountingEngineService();
+      configureKeyCount({ numberOfDecks: 6, numberOfCards: 10 });
+      const { c } = createPage();
+      c.start();
+      // Six decks: IRC −20 before any card is counted.
+      expect(c.shoeRunningCount()).toBe(-20);
+      const round = [...c.cards()];
+      const correct = -20 + engine.runningCount(round, c.system());
+      streamToEnd(c);
+      c.onAnswer(correct);
+      c.onAdvantage(correct >= -4);
+      const r = c.result();
+      expect(r).not.toBeNull();
+      if (r && r.mode === 'key-count') {
+        expect(r.priorRunningCount).toBe(-20);
+        expect(r.correctRunningCount).toBe(correct);
+        expect(r.irc).toBe(-20);
+        expect(r.keyCount).toBe(-4);
+        expect(r.isCorrect).toBe(true);
+      }
+      // The graded count carries into the next round of this shoe.
+      expect(c.shoeRunningCount()).toBe(correct);
+    });
+
+    it('carries the count across rounds and resets to the IRC on a reshuffle', () => {
+      // 2-deck shoe (IRC −4), cut at floor(104·0.5) = 52; 30-card rounds cross
+      // the cut on round 2, so round 3 opens on a fresh IRC-seeded shoe.
+      configureKeyCount({ numberOfDecks: 2, penetration: 0.5, numberOfCards: 30 });
+      const { c } = createPage();
+      c.start();
+      expect(c.shoeRunningCount()).toBe(-4);
+      streamToEnd(c);
+      c.onAnswer(0);
+      c.onAdvantage(true);
+      const carried = c.shoeRunningCount();
+      c.runAgain();
+      expect(c.reshuffleNotice()).toBe(false);
+      const r2 = c.result();
+      expect(r2).toBeNull();
+      streamToEnd(c);
+      c.onAnswer(0);
+      c.onAdvantage(true);
+      const r = c.result();
+      if (r && r.mode === 'key-count') {
+        expect(r.priorRunningCount).toBe(carried);
+      }
+      // Round 3 crosses the cut: reshuffle, notice up, count back at the IRC.
+      c.runAgain();
+      expect(c.reshuffleNotice()).toBe(true);
+      expect(c.shoeRunningCount()).toBe(-4);
+      expect(c.countResetLabel()).toBe('-4 (the IRC)');
+    });
+
+    it('routes the count answer and the advantage call to their own stores', () => {
+      const engine = new CountingEngineService();
+      configureKeyCount({ numberOfCards: 5 });
+      const { c } = createPage();
+      c.statsService.reset();
+      c.keyCountStatsService.reset();
+      c.start();
+      const correct = -20 + engine.runningCount([...c.cards()], c.system());
+      streamToEnd(c);
+      // Right count, wrong call: below-the-key "yes".
+      c.onAnswer(correct);
+      c.onAdvantage(correct < -4);
+      expect(c.statsService.stats().attempts).toBe(1);
+      expect(c.statsService.stats().correct).toBe(1);
+      expect(c.keyCountStatsService.stats().attempts).toBe(1);
+      expect(c.keyCountStatsService.stats().correct).toBe(0);
+      expect(c.trueCountStatsService.stats().attempts).toBe(0);
+      // The rep counts toward the goal but not the streak (strict AND).
+      expect(c.handsToday()).toBe(1);
+      const r = c.result();
+      if (r && r.mode === 'key-count') {
+        expect(r.isCorrect).toBe(false);
+      }
+    });
+
+    it('offers the showdown off the same persistent shoe after a key-count round', () => {
+      configureKeyCount({ numberOfCards: 5 });
+      const { fixture, c } = createPage();
+      c.start();
+      streamToEnd(c);
+      c.onAnswer(0);
+      c.onAdvantage(true);
+      expect(c.state()).toBe('feedback');
+      expect(c.showdownAvailable()).toBe(true);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.count__showdown-button')).not.toBeNull();
+      c.enterShowdown();
+      expect(c.state()).toBe('showdown');
+      // Exiting folds the showdown's cards into the carried count.
+      const before = c.shoeRunningCount();
+      c.exitShowdown([
+        { rank: '5', suit: 'spades' },
+        { rank: '10', suit: 'hearts' },
+      ]);
+      expect(c.state()).toBe('feedback');
+      expect(c.shoeRunningCount()).toBe(before + 1 - 1);
+    });
+
+    it('ignores an advantage call outside the advantage state', () => {
+      configureKeyCount({ numberOfCards: 3 });
+      const { c } = createPage();
+      c.start();
+      c.onAdvantage(true);
+      expect(c.state()).toBe('streaming');
+      expect(c.result()).toBeNull();
     });
   });
 });

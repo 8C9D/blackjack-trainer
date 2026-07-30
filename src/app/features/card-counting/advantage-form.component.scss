@@ -1,0 +1,60 @@
+.advantage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1rem 0 1.5rem;
+
+  &__question {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  &__button {
+    background: var(--accent);
+    color: var(--on-accent);
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--ink);
+      outline-offset: 2px;
+    }
+
+    // Keycap hints sit on the accent fill here, so they use the on-accent
+    // palette to keep AA contrast in both themes (same as the start button).
+    .kcap {
+      background: var(--on-accent-tint);
+      border-color: var(--on-accent-edge);
+      color: var(--on-accent);
+    }
+  }
+
+  &__note {
+    margin: 0;
+    max-width: 22rem;
+    text-align: center;
+    font-size: 0.8rem;
+    opacity: 0.75;
+  }
+}
+
+@media (max-width: 600px) {
+  .advantage {
+    &__button {
+      min-height: 3rem;
+      min-width: 6rem;
+      font-size: 1rem;
+    }
+  }
+}

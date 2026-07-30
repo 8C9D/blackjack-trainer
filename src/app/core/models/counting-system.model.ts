@@ -19,6 +19,24 @@ export interface ColorCountValue {
   readonly black: CountValue; // spades, clubs
 }
 
+// Published play schedule for an unbalanced system that is drilled by running
+// count alone: the per-deck initial running count (IRC) the shoe starts at and
+// the per-deck key count at which the player has the advantage, plus the
+// deck-independent pivot and insurance trigger. Only systems whose source
+// publishes such a table carry one (KO); its presence unlocks the key-count
+// drill mode.
+export interface KeyCountSchedule {
+  // Initial running count for a fresh shoe, keyed by number of decks.
+  readonly irc: Readonly<Record<number, number>>;
+  // Running count at or above which the player has the advantage, keyed by
+  // number of decks.
+  readonly keyCount: Readonly<Record<number, number>>;
+  // The count every shoe converges to once fully dealt (IRC + 4 per deck).
+  readonly pivot: number;
+  // Take insurance at or above this running count, regardless of decks.
+  readonly insuranceCount: number;
+}
+
 // Counting system descriptor. New systems (KO, Knock-Out, etc.) can be added
 // as additional entries in data/counting-systems.ts without touching the
 // engine — the engine reads values purely off this object.
@@ -31,6 +49,8 @@ export interface CountingSystem {
   // common case where the count depends on rank alone.
   readonly colorValues?: Readonly<Partial<Record<Rank, ColorCountValue>>>;
   readonly balanced: boolean;
+  // Optional published IRC/key-count schedule (unbalanced systems only).
+  readonly keyCounts?: KeyCountSchedule;
 }
 
 // Per-card count contribution, honoring any color override. Ranks without a
