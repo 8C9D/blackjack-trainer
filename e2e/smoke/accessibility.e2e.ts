@@ -76,6 +76,9 @@ async function contrastFailures(page: Page) {
       if (alpha === 0) continue;
       // Visually-hidden helper text is exposed to assistive tech, not to eyes.
       if (el.classList.contains('sr-only')) continue;
+      // WCAG 1.4.3 exempts text in inactive (disabled) controls from the
+      // contrast minimums.
+      if (el.closest(':disabled')) continue;
       const fg = parse(cs.color);
       if (!fg) continue;
       const bg = backdrop(el);
@@ -201,6 +204,40 @@ test.describe('accessibility', () => {
       await standEveryBox(page);
       await expect(page.getByRole('button', { name: /Deal another hand/ })).toBeVisible();
       expect(await contrastFailures(page), `betting resolved (${scheme})`).toEqual([]);
+    });
+  }
+
+  // The KO key-count drill adds two screens of its own — the advantage call and
+  // a feedback panel with the threshold rationale lines — that the route sweep
+  // never reaches. Walk into both and measure them.
+  for (const scheme of ['dark', 'light'] as const) {
+    test(`the key-count drill meets WCAG AA in the ${scheme} theme`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.goto('/settings');
+      await page.getByLabel('Number of cards').fill('3');
+      await page.getByLabel('Time between cards (ms)').fill('100');
+      await page.getByLabel('Counting system').selectOption('ko');
+      await page
+        .getByRole('radiogroup', { name: 'Drill mode' })
+        .getByRole('radio', { name: 'Key count', exact: true })
+        .check();
+
+      await page.goto('/drill/card-counting');
+      await page.getByRole('button', { name: /Start counting/ }).click();
+      const answer = page.getByLabel('What is the running count?');
+      await expect(answer).toBeVisible();
+      // The answer form (shared with every counting mode) is also unmeasured by
+      // the route sweep — its submit hint sits on the accent fill.
+      expect(await contrastFailures(page), `count answer (${scheme})`).toEqual([]);
+      await answer.fill('-17');
+      await page.getByRole('button', { name: /Submit/ }).click();
+
+      await expect(page.getByText('Do you have the advantage?')).toBeVisible();
+      expect(await contrastFailures(page), `advantage call (${scheme})`).toEqual([]);
+
+      await page.getByRole('button', { name: /^Yes/ }).click();
+      await expect(page.getByText('Key count', { exact: true })).toBeVisible();
+      expect(await contrastFailures(page), `key-count feedback (${scheme})`).toEqual([]);
     });
   }
 

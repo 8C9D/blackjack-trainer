@@ -54,7 +54,8 @@
   &__hint {
     margin-left: 0.3rem;
     font-size: 0.75rem;
-    opacity: 0.6;
+    // 0.6 read as only 3.84:1 against the accent fill — under AA for 12px text.
+    opacity: 0.75;
     font-weight: 400;
   }
 
