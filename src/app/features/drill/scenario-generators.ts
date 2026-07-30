@@ -74,9 +74,9 @@ export function pickTrueCountForDeviationRule(
   const wantMet = random() < 0.5;
   const [lo, hi] = rangeFor(rule, wantMet, minTc, maxTc);
   if (lo <= hi) return pickInt(lo, hi, random);
-  // Empty range — every TC in [minTc, maxTc] satisfies wantMet, so picking
-  // any in-range TC keeps the wantMet semantics. Fall back to the threshold
-  // itself when even that fails (defensive — not reachable for current data).
+  // Empty requested side — the configured interval cannot represent it. Use
+  // the opposite (representable) side rather than emitting an out-of-range
+  // count. Fall back to the clamped threshold only for a malformed interval.
   const [fallbackLo, fallbackHi] = rangeFor(rule, !wantMet, minTc, maxTc);
   if (fallbackLo <= fallbackHi) return pickInt(fallbackLo, fallbackHi, random);
   return clampTc(rule.index, minTc, maxTc);

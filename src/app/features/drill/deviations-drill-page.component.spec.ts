@@ -39,6 +39,7 @@ type Internals = {
   handsToday: () => number;
   legalActions: () => readonly Action[];
   answer(action: Action): void;
+  reviewMisses(): void;
   onKeyDown(event: KeyboardEvent): void;
 };
 
@@ -141,6 +142,18 @@ describe('DeviationsDrillPageComponent', () => {
       expect(rule.textContent).toContain('16 v 10 stand @ 0+');
       expect(fixture.nativeElement.querySelector('.drill__question')).toBeNull();
     });
+
+    it('ignores a second answer after the hand has already been graded', () => {
+      const { c } = createPage();
+      c.scenario.set(SIXTEEN_V_TEN_TC0);
+      c.answer('S');
+      const firstResult = c.result();
+
+      c.answer('H');
+
+      expect(c.result()).toBe(firstResult);
+      expect(c.handsToday()).toBe(1);
+    });
   });
 
   describe('poka-yoke with deviation overlays', () => {
@@ -181,6 +194,18 @@ describe('DeviationsDrillPageComponent', () => {
       expect(c.phase()).toBe('question');
       expect(c.handsToday()).toBe(0);
     });
+
+    it('rejects illegal actions even when called programmatically', () => {
+      const { c } = createPage();
+      c.scenario.set(SIXTEEN_V_TEN_TC0); // hard hand: Split and Insurance are illegal
+
+      c.answer('P');
+      c.answer('INS');
+
+      expect(c.phase()).toBe('question');
+      expect(c.result()).toBeNull();
+      expect(c.handsToday()).toBe(0);
+    });
   });
 
   describe('recording and session lifecycle', () => {
@@ -208,6 +233,20 @@ describe('DeviationsDrillPageComponent', () => {
       (fixture.nativeElement.querySelector('.done__again') as HTMLButtonElement).click();
       expect(c.phase()).toBe('question');
       expect(c.target()).toBe(4);
+    });
+
+    it('keeps "Drill my misses" inert when there is no weak spot to review', () => {
+      TestBed.inject(FlowPrefsService).setDailyGoal(1);
+      const { c } = createPage();
+      c.scenario.set(SIXTEEN_V_TEN_TC0);
+      c.answer('S');
+      vi.advanceTimersByTime(ADVANCE_MS);
+      expect(c.phase()).toBe('done');
+
+      c.reviewMisses();
+
+      expect(c.phase()).toBe('done');
+      expect(TestBed.inject(MissTallyService).weakSpotFor('deviations')).toBeNull();
     });
 
     // A review round rebuilds the hand from the recorded scenario, which
@@ -266,6 +305,31 @@ describe('DeviationsDrillPageComponent', () => {
       prefs.updateDeviations({ practiceMode: 'deviation-only' });
       const { c } = createPage();
       expect(c.scenario().generatedAsDeviationCandidate).toBe(true);
+    });
+  });
+
+  describe('keyboard safety', () => {
+    it('ignores auto-repeated action keys', () => {
+      const { c } = createPage();
+      c.scenario.set(SIXTEEN_V_TEN_TC0);
+
+      c.onKeyDown(new KeyboardEvent('keydown', { key: 's', repeat: true }));
+
+      expect(c.phase()).toBe('question');
+      expect(c.handsToday()).toBe(0);
+    });
+
+    it('ignores action keys from editable controls', () => {
+      const { c } = createPage();
+      c.scenario.set(SIXTEEN_V_TEN_TC0);
+      const input = document.createElement('input');
+      document.body.append(input);
+
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 's', bubbles: true }));
+      input.remove();
+
+      expect(c.phase()).toBe('question');
+      expect(c.handsToday()).toBe(0);
     });
   });
 });
