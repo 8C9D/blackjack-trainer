@@ -178,9 +178,11 @@ function exportCountingSystems(): void {
     isFractional: counting.isFractionalSystem(s),
     values: s.values,
     ...(s.colorValues ? { colorValues: s.colorValues } : {}),
+    // Published IRC/key-count schedule (KO only) — /2 addition.
+    ...(s.keyCounts ? { keyCounts: s.keyCounts } : {}),
   }));
   writeJson('counting-systems.json', {
-    schema: 'counting-systems/1',
+    schema: 'counting-systems/2',
     generatedBy: 'tools/export-parity-fixtures.ts',
     description: `All ${systems.length} counting systems with per-rank and per-color values.`,
     count: systems.length,
@@ -418,14 +420,61 @@ function exportCountingVectors(): void {
         : counting.scoreDeckEstimate(cse.estimate, cse.actual, cse.tolerance),
   }));
 
+  // Key-count schedules (KO): per-deck IRC/key count plus advantage calls
+  // probed one either side of each threshold through the engine, so the Swift
+  // port is pinned to evaluateKeyCount's behavior, not a re-derivation.
+  const keyCountCases = COUNTING_SYSTEMS.filter((s) => s.keyCounts).map((system) => {
+    const schedule = system.keyCounts!;
+    const deckCounts = Object.keys(schedule.irc)
+      .map(Number)
+      .sort((a, b) => a - b);
+    return {
+      systemId: system.id,
+      pivot: schedule.pivot,
+      insuranceCount: schedule.insuranceCount,
+      decks: deckCounts.map((numberOfDecks) => {
+        const keyCount = schedule.keyCount[numberOfDecks];
+        const probes = [
+          keyCount - 1,
+          keyCount,
+          keyCount + 1,
+          schedule.insuranceCount - 1,
+          schedule.insuranceCount,
+        ];
+        return {
+          numberOfDecks,
+          irc: schedule.irc[numberOfDecks],
+          keyCount,
+          advantageCalls: probes.map((runningCount) => {
+            const graded = counting.evaluateKeyCount(
+              [],
+              runningCount,
+              true,
+              system,
+              numberOfDecks,
+              runningCount,
+            );
+            return {
+              runningCount,
+              hasAdvantage: graded.hasAdvantage,
+              takeInsurance: runningCount >= schedule.insuranceCount,
+            };
+          }),
+        };
+      }),
+    };
+  });
+
   writeJson('counting-vectors.json', {
-    schema: 'counting-vectors/1',
+    schema: 'counting-vectors/2',
     generatedBy: 'tools/export-parity-fixtures.ts',
     description:
       'Per-system running/true counts over fixed sequences (color, fractional, ' +
-      'and truncation-toward-zero cases) plus scoreDeckEstimate ±0.5 boundaries.',
+      'and truncation-toward-zero cases), scoreDeckEstimate ±0.5 boundaries, ' +
+      'and key-count schedules with threshold-boundary advantage calls.',
     systems,
     deckEstimateCases: estimateCases,
+    keyCountCases,
   });
 }
 

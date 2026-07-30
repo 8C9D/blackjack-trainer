@@ -126,6 +126,31 @@ describe('SettingsPageComponent', () => {
     expect(prefs.prefs().counting.mode).toBe('running-count');
   });
 
+  it('coerces key-count mode back to running count when leaving KO', () => {
+    const { fixture, prefs } = createPage();
+    prefs.updateCounting({ systemId: 'ko', mode: 'key-count' });
+    fixture.detectChanges();
+
+    const system = fixture.nativeElement.querySelector('.settings__system') as HTMLSelectElement;
+    system.value = 'hi-lo';
+    system.dispatchEvent(new Event('change'));
+
+    expect(prefs.prefs().counting.systemId).toBe('hi-lo');
+    expect(prefs.prefs().counting.mode).toBe('running-count');
+  });
+
+  it('keeps key-count mode when switching to KO itself', () => {
+    const { fixture, prefs } = createPage();
+    prefs.updateCounting({ systemId: 'ko', mode: 'key-count' });
+    fixture.detectChanges();
+
+    const system = fixture.nativeElement.querySelector('.settings__system') as HTMLSelectElement;
+    system.value = 'ko';
+    system.dispatchEvent(new Event('change'));
+
+    expect(prefs.prefs().counting.mode).toBe('key-count');
+  });
+
   it('Escape and the back button return home', () => {
     const { fixture } = createPage();
     const router = TestBed.inject(Router);

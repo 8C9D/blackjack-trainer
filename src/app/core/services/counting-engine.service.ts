@@ -5,6 +5,7 @@ import {
   MAX_CARDS_PER_DRILL,
   MIN_MILLISECONDS_BETWEEN_CARDS,
   type CountingDrillSettings,
+  type KeyCountDrillResult,
   type RunningCountDrillResult,
   type SettingsValidation,
   type TrueCountDrillResult,
@@ -80,6 +81,48 @@ export class CountingEngineService {
     };
   }
 
+  // Grade one round of the key-count drill: the claimed running count against
+  // the IRC-seeded count of every card seen since the shuffle, and the
+  // advantage call against the system's published key count for this shoe.
+  // priorRunningCount carries the count from earlier rounds (the IRC itself on
+  // a fresh shoe). Throws when the system has no schedule or the schedule does
+  // not cover numberOfDecks — both are configuration bugs the UI must gate.
+  evaluateKeyCount(
+    cards: readonly Card[],
+    userRunningCount: number,
+    userSaidAdvantage: boolean,
+    system: CountingSystem,
+    numberOfDecks: number,
+    priorRunningCount: number,
+  ): KeyCountDrillResult {
+    const schedule = system.keyCounts;
+    const irc = schedule?.irc[numberOfDecks];
+    const keyCount = schedule?.keyCount[numberOfDecks];
+    if (!schedule || irc === undefined || keyCount === undefined) {
+      throw new Error(`${system.name} has no key-count schedule for ${numberOfDecks} decks.`);
+    }
+    const correctRunningCount = priorRunningCount + this.runningCount(cards, system);
+    const hasAdvantage = correctRunningCount >= keyCount;
+    const countCorrect = userRunningCount === correctRunningCount;
+    const advantageCorrect = userSaidAdvantage === hasAdvantage;
+    return {
+      mode: 'key-count',
+      cards,
+      correctRunningCount,
+      userRunningCount,
+      countCorrect,
+      priorRunningCount,
+      irc,
+      keyCount,
+      pivot: schedule.pivot,
+      insuranceCount: schedule.insuranceCount,
+      hasAdvantage,
+      userSaidAdvantage,
+      advantageCorrect,
+      isCorrect: countCorrect && advantageCorrect,
+    };
+  }
+
   // Whether a decks-remaining estimate falls within the "good" tolerance band of
   // the actual decks remaining. The default band is ±0.5 deck; a small epsilon
   // absorbs floating-point error from decksRemaining = cardsRemaining / 52.
@@ -108,9 +151,10 @@ export class CountingEngineService {
 
     // The decks-remaining configuration is only relevant when the user is being
     // asked for a true count. In running-count mode it has no bearing on the
-    // drill, so it is not validated.
-    if (settings.mode === 'true-count') {
-      if (settings.trueCountSource === 'classic') {
+    // drill, so it is not validated. The key-count drill always reads a live
+    // shoe, so it shares the shoe-configuration checks.
+    if (settings.mode === 'true-count' || settings.mode === 'key-count') {
+      if (settings.mode === 'true-count' && settings.trueCountSource === 'classic') {
         // Classic mode: the user picks a fixed decks-remaining value.
         if (!Number.isFinite(settings.decksRemaining)) {
           errors.push('Decks remaining must be a number.');

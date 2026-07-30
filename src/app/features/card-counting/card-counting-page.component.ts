@@ -16,6 +16,7 @@ import { CardGeneratorService } from '../../core/services/card-generator.service
 import { CountingEngineService } from '../../core/services/counting-engine.service';
 import { DeckEstimationStatsService } from '../../core/services/deck-estimation-stats.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
+import { KeyCountStatsService } from '../../core/services/key-count-stats.service';
 import { PracticeHistoryService } from '../../core/services/practice-history.service';
 import { ShoeService } from '../../core/services/shoe.service';
 import { TrueCountStatsService } from '../../core/services/true-count-stats.service';
@@ -23,6 +24,7 @@ import { FlowDoneComponent } from '../../shared/flow-done.component';
 import { FlowTopbarComponent } from '../../shared/flow-topbar.component';
 import { DrillSession } from '../drill/drill-session';
 import { nextSessionTarget } from '../drill/drill-hand';
+import { AdvantageFormComponent } from './advantage-form.component';
 import { CardStreamComponent } from './card-stream.component';
 import { CountAnswerFormComponent } from './count-answer-form.component';
 import { CountFeedbackPanelComponent } from './count-feedback-panel.component';
@@ -32,13 +34,15 @@ import { ShowdownComponent } from './showdown.component';
 // The counting drill's internal mechanics are unchanged from the pre-Flow
 // trainer; 'done' is the Flow session end. 'estimating' is the live-shoe-only
 // step where the player guesses the decks remaining before giving the true
-// count. 'showdown' is the optional post-count hand vs the dealer off the
-// same live shoe.
+// count. 'advantage' is the key-count drill's second question (has the running
+// count reached the key count?) after the count answer. 'showdown' is the
+// optional post-count hand vs the dealer off the same live shoe.
 type DrillState =
   | 'idle'
   | 'streaming'
   | 'estimating'
   | 'answering'
+  | 'advantage'
   | 'feedback'
   | 'showdown'
   | 'done';
@@ -52,6 +56,7 @@ type DrillState =
     RouterLink,
     FlowTopbarComponent,
     FlowDoneComponent,
+    AdvantageFormComponent,
     CardStreamComponent,
     DeckEstimateFormComponent,
     CountAnswerFormComponent,
@@ -72,7 +77,7 @@ type DrillState =
         <div class="count__stage">
           @if (reshuffleNotice() && state() !== 'idle') {
             <p class="count__reshuffle" role="status">
-              Shoe reshuffled at the cut card — running count reset to 0.
+              Shoe reshuffled at the cut card — running count reset to {{ countResetLabel() }}.
             </p>
           }
 
@@ -115,9 +120,13 @@ type DrillState =
             />
           }
 
+          @if (state() === 'advantage') {
+            <app-advantage-form (answer)="onAdvantage($event)" />
+          }
+
           @if (state() === 'feedback' && result(); as r) {
             <app-count-feedback-panel [result]="r" [system]="system()" (next)="runAgain()" />
-            @if (liveShoeTrueCount() && showdownAvailable()) {
+            @if (usesLiveShoe() && showdownAvailable()) {
               <div class="count__showdown-cta">
                 <button type="button" class="count__showdown-button" (click)="enterShowdown()">
                   {{
@@ -169,6 +178,8 @@ export class CardCountingPageComponent {
   protected readonly statsService = inject(CardCountingStatsService);
   protected readonly trueCountStatsService = inject(TrueCountStatsService);
   protected readonly deckEstimationStatsService = inject(DeckEstimationStatsService);
+  // Advantage-call accuracy for the key-count drill, its own store.
+  protected readonly keyCountStatsService = inject(KeyCountStatsService);
 
   protected readonly session = new DrillSession();
 
@@ -230,16 +241,58 @@ export class CardCountingPageComponent {
       this.system().balanced,
   );
 
+  // The system's IRC/key-count schedule resolved for the configured shoe, or
+  // null when the drill is not in key-count mode or the system/deck pairing
+  // has no published values. Null while in key-count mode means the settings
+  // are invalid; isValid() blocks the start.
+  protected readonly keyCountSchedule = computed(() => {
+    if (this.settings().mode !== 'key-count') return null;
+    const schedule = this.system().keyCounts;
+    if (!schedule) return null;
+    const decks = this.settings().numberOfDecks;
+    const irc = schedule.irc[decks];
+    const keyCount = schedule.keyCount[decks];
+    if (irc === undefined || keyCount === undefined) return null;
+    return { irc, keyCount, pivot: schedule.pivot, insuranceCount: schedule.insuranceCount };
+  });
+
+  protected readonly keyCountDrill = computed(() => this.keyCountSchedule() !== null);
+
+  // The two shoe-driven drills share the persistent live shoe (and the
+  // post-count showdown that deals from it).
+  protected readonly usesLiveShoe = computed(
+    () => this.liveShoeTrueCount() || this.keyCountDrill(),
+  );
+
+  // What the carried count resets to on a reshuffle: the IRC in key-count
+  // mode, 0 otherwise — surfaced in the reshuffle notice.
+  protected readonly countResetLabel = computed(() => {
+    const schedule = this.keyCountSchedule();
+    if (!schedule) return '0';
+    const irc = schedule.irc;
+    return `${irc > 0 ? `+${irc}` : irc} (the IRC)`;
+  });
+
   protected readonly currentCard = computed<Card | null>(() => {
     const list = this.cards();
     const i = this.currentIndex();
     return i >= 0 && i < list.length ? list[i] : null;
   });
 
-  protected readonly isValid = computed(() => this.engine.validateSettings(this.settings()).valid);
+  // Key-count mode additionally needs a schedule entry for the configured
+  // shoe — validateSettings cannot know that, since the settings shape carries
+  // no system.
+  protected readonly isValid = computed(
+    () =>
+      this.engine.validateSettings(this.settings()).valid &&
+      (this.settings().mode !== 'key-count' || this.keyCountDrill()),
+  );
   protected readonly isDrillActive = computed(
     () =>
-      this.state() === 'streaming' || this.state() === 'estimating' || this.state() === 'answering',
+      this.state() === 'streaming' ||
+      this.state() === 'estimating' ||
+      this.state() === 'answering' ||
+      this.state() === 'advantage',
   );
 
   // Live-shoe state. `shoe` persists across rounds until the cut card; the
@@ -259,6 +312,9 @@ export class CardCountingPageComponent {
   // The player's decks-remaining estimate for the current round, or null
   // before they submit one.
   protected readonly deckEstimate = signal<number | null>(null);
+  // Key-count mode: the count answer held while the advantage question is up,
+  // graded together with the advantage call in onAdvantage.
+  private pendingUserCount = 0;
   // True for the round that began with an at-cut-card reshuffle (drives the
   // visible notice).
   protected readonly reshuffleNotice = signal(false);
@@ -278,7 +334,7 @@ export class CardCountingPageComponent {
     // or an in-progress showdown.
     if (this.state() !== 'idle' && this.state() !== 'feedback') return;
     if (!this.isValid()) return;
-    const seq = this.liveShoeTrueCount()
+    const seq = this.usesLiveShoe()
       ? this.dealLiveShoeRound()
       : this.cardGenerator.generateSequence(this.settings().numberOfCards);
     this.cards.set(seq);
@@ -345,7 +401,8 @@ export class CardCountingPageComponent {
       const replacing = this.shoe !== null && !configStale;
       this.shoe = this.shoeService.create(s.numberOfDecks, s.penetration);
       this.shoeConfig = { numberOfDecks: s.numberOfDecks, penetration: s.penetration, systemId };
-      this.shoeRunningCount.set(0);
+      // A fresh key-count shoe opens at the system's IRC, not 0.
+      this.shoeRunningCount.set(this.keyCountSchedule()?.irc ?? 0);
       this.reshuffleNotice.set(replacing);
     } else {
       this.reshuffleNotice.set(false);
@@ -364,6 +421,13 @@ export class CardCountingPageComponent {
   protected onAnswer(userCount: number): void {
     if (this.state() !== 'answering') return;
     const s = this.settings();
+    // Key-count mode: hold the count answer and ask for the advantage call;
+    // both are graded together in onAdvantage.
+    if (s.mode === 'key-count') {
+      this.pendingUserCount = userCount;
+      this.state.set('advantage');
+      return;
+    }
     let isCorrect: boolean;
     if (s.mode === 'true-count') {
       if (this.liveShoeTrueCount()) {
@@ -388,6 +452,31 @@ export class CardCountingPageComponent {
     // Every graded rep is one hand toward the daily goal.
     this.history.recordHand();
     this.session.record(isCorrect);
+    this.state.set('feedback');
+  }
+
+  // Grade the key-count round: the held count answer against the IRC-seeded
+  // running count, and the advantage call against the key count. The count
+  // answer feeds the running-count store and the advantage call its own store;
+  // the session rep is correct only when both are. The cumulative count then
+  // carries into the next round of this shoe, exactly as in live-shoe
+  // true-count mode.
+  protected onAdvantage(userSaidAdvantage: boolean): void {
+    if (this.state() !== 'advantage') return;
+    const evaluated = this.engine.evaluateKeyCount(
+      this.cards(),
+      this.pendingUserCount,
+      userSaidAdvantage,
+      this.system(),
+      this.settings().numberOfDecks,
+      this.shoeRunningCount(),
+    );
+    this.result.set(evaluated);
+    this.statsService.recordAttempt(evaluated.countCorrect);
+    this.keyCountStatsService.recordAttempt(evaluated.advantageCorrect);
+    this.history.recordHand();
+    this.session.record(evaluated.isCorrect);
+    this.shoeRunningCount.set(evaluated.correctRunningCount);
     this.state.set('feedback');
   }
 
@@ -429,10 +518,11 @@ export class CardCountingPageComponent {
     return this.shoe !== null && this.shoe.cardsRemaining >= minCardsForSpots(this.showdownSpots());
   }
 
-  // Enter the showdown off the persistent live shoe after a true-count round.
+  // Enter the showdown off the persistent live shoe after a shoe-driven
+  // (true-count or key-count) round.
   protected enterShowdown(): void {
     if (this.state() !== 'feedback') return;
-    if (!this.liveShoeTrueCount() || !this.showdownAvailable()) return;
+    if (!this.usesLiveShoe() || !this.showdownAvailable()) return;
     this.state.set('showdown');
   }
 

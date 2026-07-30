@@ -1,6 +1,11 @@
 import type { Card } from './card.model';
 
-export type DrillMode = 'running-count' | 'true-count';
+// 'key-count' is the unbalanced-system counterpart of the live-shoe true-count
+// drill: the shoe's running count starts at the system's published IRC and the
+// player calls whether it has reached the key count (the advantage threshold)
+// instead of converting to a true count. Only offered for systems that carry a
+// KeyCountSchedule (KO).
+export type DrillMode = 'running-count' | 'true-count' | 'key-count';
 
 // In true-count mode the decks-remaining figure can come from a live, depleting
 // shoe the player reads ('live-shoe', the default) or from a fixed preset the
@@ -47,7 +52,34 @@ export interface TrueCountDrillResult {
   readonly deckEstimateWithinBand?: boolean;
 }
 
-export type CountingDrillResult = RunningCountDrillResult | TrueCountDrillResult;
+export interface KeyCountDrillResult {
+  readonly mode: 'key-count';
+  readonly cards: readonly Card[];
+  readonly correctRunningCount: number;
+  readonly userRunningCount: number;
+  readonly countCorrect: boolean;
+  // Running count carried into this round from earlier rounds of the same shoe
+  // (the IRC itself on a fresh shoe). The feedback breakdown starts from this
+  // offset, exactly like the live-shoe true count's priorRunningCount.
+  readonly priorRunningCount: number;
+  // The schedule values the round was judged against, resolved for the shoe's
+  // deck count so the feedback can cite them without re-deriving.
+  readonly irc: number;
+  readonly keyCount: number;
+  readonly pivot: number;
+  readonly insuranceCount: number;
+  // The advantage call: the player has the edge at or above the key count.
+  readonly hasAdvantage: boolean;
+  readonly userSaidAdvantage: boolean;
+  readonly advantageCorrect: boolean;
+  // The rep is correct only when both the count and the advantage call are.
+  readonly isCorrect: boolean;
+}
+
+export type CountingDrillResult =
+  | RunningCountDrillResult
+  | TrueCountDrillResult
+  | KeyCountDrillResult;
 
 export interface SettingsValidation {
   readonly valid: boolean;

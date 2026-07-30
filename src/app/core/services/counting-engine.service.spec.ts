@@ -377,6 +377,65 @@ describe('CountingEngineService', () => {
     });
   });
 
+  describe('evaluateKeyCount()', () => {
+    it('grades the count against the IRC-seeded prior and the call against the key count', () => {
+      // Six decks: IRC -20, key count -4. Prior -10 plus 2..6 (+5) => -5,
+      // still below the key count => no advantage.
+      const cards = seq('2', '3', '4', '5', '6');
+      const result = engine.evaluateKeyCount(cards, -5, false, KO, 6, -10);
+      expect(result.correctRunningCount).toBe(-5);
+      expect(result.countCorrect).toBe(true);
+      expect(result.hasAdvantage).toBe(false);
+      expect(result.advantageCorrect).toBe(true);
+      expect(result.isCorrect).toBe(true);
+      expect(result.irc).toBe(-20);
+      expect(result.keyCount).toBe(-4);
+      expect(result.pivot).toBe(4);
+      expect(result.insuranceCount).toBe(3);
+      expect(result.priorRunningCount).toBe(-10);
+    });
+
+    it('the advantage begins exactly at the key count', () => {
+      // Prior -9 plus 2..6 (+5) => -4, the six-deck key count itself.
+      const atKey = engine.evaluateKeyCount(seq('2', '3', '4', '5', '6'), -4, true, KO, 6, -9);
+      expect(atKey.hasAdvantage).toBe(true);
+      expect(atKey.advantageCorrect).toBe(true);
+      // One below (prior -10) => -5: not yet.
+      const below = engine.evaluateKeyCount(seq('2', '3', '4', '5', '6'), -5, true, KO, 6, -10);
+      expect(below.hasAdvantage).toBe(false);
+      expect(below.advantageCorrect).toBe(false);
+    });
+
+    it('a rep is correct only when both the count and the call are', () => {
+      const cards = seq('2', '7'); // +2 over prior 0 (single deck IRC 0) => +2 = key count
+      const wrongCount = engine.evaluateKeyCount(cards, 3, true, KO, 1, 0);
+      expect(wrongCount.countCorrect).toBe(false);
+      expect(wrongCount.advantageCorrect).toBe(true);
+      expect(wrongCount.isCorrect).toBe(false);
+      const wrongCall = engine.evaluateKeyCount(cards, 2, false, KO, 1, 0);
+      expect(wrongCall.countCorrect).toBe(true);
+      expect(wrongCall.advantageCorrect).toBe(false);
+      expect(wrongCall.isCorrect).toBe(false);
+    });
+
+    it('resolves the schedule per deck count', () => {
+      const oneDeck = engine.evaluateKeyCount([], 0, false, KO, 1, 0);
+      expect(oneDeck.irc).toBe(0);
+      expect(oneDeck.keyCount).toBe(2);
+      const eightDecks = engine.evaluateKeyCount([], -28, false, KO, 8, -28);
+      expect(eightDecks.irc).toBe(-28);
+      expect(eightDecks.keyCount).toBe(-6);
+    });
+
+    it('throws for a system without a schedule', () => {
+      expect(() => engine.evaluateKeyCount([], 0, true, HI_LO, 6, 0)).toThrowError(/schedule/);
+    });
+
+    it('throws for a deck count the schedule does not cover', () => {
+      expect(() => engine.evaluateKeyCount([], 0, true, KO, 4, 0)).toThrowError(/4 decks/);
+    });
+  });
+
   describe('scoreDeckEstimate()', () => {
     it('accepts an exact match', () => {
       expect(engine.scoreDeckEstimate(5, 5)).toBe(true);
@@ -570,6 +629,32 @@ describe('CountingEngineService', () => {
 
     it('live-shoe mode accepts a card count one below the shoe size (≥ 1 card remains)', () => {
       const v = engine.validateSettings(liveSettings({ numberOfDecks: 1, numberOfCards: 51 }));
+      expect(v.valid).toBe(true);
+    });
+
+    it('key-count mode shares the live-shoe checks: valid shoe config accepted', () => {
+      const v = engine.validateSettings(liveSettings({ mode: 'key-count' }));
+      expect(v.valid).toBe(true);
+    });
+
+    it('key-count mode rejects a deck count outside the shoe options', () => {
+      const v = engine.validateSettings(liveSettings({ mode: 'key-count', numberOfDecks: 4 }));
+      expect(v.valid).toBe(false);
+      expect(v.errors.some((e) => e.includes('Number of decks'))).toBe(true);
+    });
+
+    it('key-count mode rejects a card count equal to the whole shoe', () => {
+      const v = engine.validateSettings(
+        liveSettings({ mode: 'key-count', numberOfDecks: 1, numberOfCards: 52 }),
+      );
+      expect(v.valid).toBe(false);
+      expect(v.errors.some((e) => e.includes('shoe size'))).toBe(true);
+    });
+
+    it('key-count mode ignores the classic decks-remaining preset', () => {
+      const v = engine.validateSettings(
+        liveSettings({ mode: 'key-count', decksRemaining: Number.NaN }),
+      );
       expect(v.valid).toBe(true);
     });
   });

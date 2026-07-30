@@ -131,6 +131,35 @@ describe('FlowPrefsService', () => {
       expect(counting.mode).toBe('running-count');
     });
 
+    it('keeps key-count mode for KO (the system with a published schedule)', () => {
+      const counting = mergePrefs({
+        counting: { systemId: 'ko', mode: 'key-count' },
+      }).counting;
+      expect(counting.systemId).toBe('ko');
+      expect(counting.mode).toBe('key-count');
+    });
+
+    it('coerces key-count mode away from systems without a schedule', () => {
+      for (const systemId of ['hi-lo', 'red-seven']) {
+        const counting = mergePrefs({ counting: { systemId, mode: 'key-count' } }).counting;
+        expect(counting.systemId).toBe(systemId);
+        expect(counting.mode).toBe('running-count');
+      }
+    });
+
+    it('rejects a key-count round that would consume the whole shoe', () => {
+      const counting = mergePrefs({
+        counting: {
+          systemId: 'ko',
+          mode: 'key-count',
+          numberOfDecks: 1,
+          numberOfCards: 52,
+        },
+      }).counting;
+      expect(counting.mode).toBe('key-count');
+      expect(counting.numberOfCards).toBe(DEFAULT_FLOW_PREFS.counting.numberOfCards);
+    });
+
     it('falls back field-by-field from unsupported counting numbers', () => {
       const counting = mergePrefs({
         counting: {
