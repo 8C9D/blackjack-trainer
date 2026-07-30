@@ -19,6 +19,17 @@ struct SettingsView: View {
         selectedSystem?.balanced ?? false
     }
 
+    private var keyCountAvailable: Bool {
+        selectedSystem?.keyCounts != nil
+    }
+
+    /// The shoe-driven modes: live-shoe true count, and key count (which always
+    /// reads a live shoe). Drives the shoe pickers and showdown settings.
+    private var usesLiveShoe: Bool {
+        prefs.counting.mode == .keyCount
+            || (prefs.counting.mode == .trueCount && prefs.counting.trueCountSource == .liveShoe)
+    }
+
     private var countingErrors: [String] {
         model.counting.validateSettings(prefs.counting.drillSettings).errors
     }
@@ -131,6 +142,19 @@ struct SettingsView: View {
                     Text("True count").tag(DrillMode.trueCount)
                 }
                 .pickerStyle(.segmented)
+            } else if keyCountAvailable {
+                Picker("Mode", selection: modeBinding) {
+                    Text("Running count").tag(DrillMode.runningCount)
+                    Text("Key count").tag(DrillMode.keyCount)
+                }
+                .pickerStyle(.segmented)
+                Text(
+                    "This system is unbalanced, so there is no true count. Its published "
+                        + "schedule is drilled instead: the shoe starts at the IRC and you "
+                        + "call whether the running count has reached the key count."
+                )
+                .font(.footnote)
+                .foregroundStyle(Theme.muted)
             } else {
                 LabeledContent("Mode", value: "Running count")
                 Text("True count is only trained for balanced systems.")
@@ -171,24 +195,25 @@ struct SettingsView: View {
                             Text(CountFormat.decks(preset)).tag(preset)
                         }
                     }
-                } else {
-                    Picker("Number of decks", selection: numberOfDecksBinding) {
-                        ForEach(ShoeConstants.deckOptions, id: \.self) { decks in
-                            Text("\(decks)").tag(decks)
-                        }
-                    }
-                    Picker("Penetration", selection: penetrationBinding) {
-                        ForEach(ShoeConstants.penetrationPresets, id: \.self) { value in
-                            Text("\(Int((value * 100).rounded()))%").tag(value)
-                        }
-                    }
-                    Picker("Showdown hands", selection: showdownSpotsBinding) {
-                        ForEach(Showdown.showdownSpotOptions, id: \.self) { spots in
-                            Text("\(spots)").tag(spots)
-                        }
-                    }
-                    Toggle("Bet sizing (bankroll)", isOn: showdownBettingBinding)
                 }
+            }
+            if usesLiveShoe {
+                Picker("Number of decks", selection: numberOfDecksBinding) {
+                    ForEach(ShoeConstants.deckOptions, id: \.self) { decks in
+                        Text("\(decks)").tag(decks)
+                    }
+                }
+                Picker("Penetration", selection: penetrationBinding) {
+                    ForEach(ShoeConstants.penetrationPresets, id: \.self) { value in
+                        Text("\(Int((value * 100).rounded()))%").tag(value)
+                    }
+                }
+                Picker("Showdown hands", selection: showdownSpotsBinding) {
+                    ForEach(Showdown.showdownSpotOptions, id: \.self) { spots in
+                        Text("\(spots)").tag(spots)
+                    }
+                }
+                Toggle("Bet sizing (bankroll)", isOn: showdownBettingBinding)
             }
 
             ForEach(countingErrors, id: \.self) { error in
@@ -270,10 +295,13 @@ extension SettingsView {
             get: { prefs.counting.systemId },
             set: { id in
                 model.flowPrefs.updateCounting { $0.systemId = id }
-                // Unbalanced systems are running-count-only; coerce a stale
-                // true-count mode back so the drill never starts impossible.
+                // True count needs a balanced system, key count a published
+                // schedule; coerce a mode the new system cannot host back so
+                // the drill never starts impossible.
                 let system = model.countingSystems.first { $0.id == id }
-                if let system, !system.balanced, prefs.counting.mode == .trueCount {
+                let stale = (prefs.counting.mode == .trueCount && system?.balanced != true)
+                    || (prefs.counting.mode == .keyCount && system?.keyCounts == nil)
+                if stale {
                     model.flowPrefs.updateCounting { $0.mode = .runningCount }
                 }
             }

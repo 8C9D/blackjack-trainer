@@ -98,6 +98,41 @@ struct CountingEngine {
         )
     }
 
+    /// Grade one round of the key-count drill: the claimed running count against
+    /// the IRC-seeded count of every card seen since the shuffle, and the
+    /// advantage call against the system's published key count for this shoe.
+    /// Returns nil when the system has no schedule or the schedule does not
+    /// cover `numberOfDecks` — configuration bugs the UI must gate (the web
+    /// throws here). Mirrors `evaluateKeyCount`.
+    func evaluateKeyCount(
+        _ cards: [Card],
+        answer: KeyCountAnswer,
+        system: CountingSystem,
+        numberOfDecks: Int,
+        priorRunningCount: Double
+    ) -> KeyCountDrillResult? {
+        guard let row = system.keyCounts?.resolved(decks: numberOfDecks) else { return nil }
+        let correct = priorRunningCount + runningCount(cards, system: system)
+        let hasAdvantage = correct >= Double(row.keyCount)
+        let countCorrect = answer.runningCount == correct
+        let advantageCorrect = answer.saidAdvantage == hasAdvantage
+        return KeyCountDrillResult(
+            cards: cards,
+            correctRunningCount: correct,
+            userRunningCount: answer.runningCount,
+            countCorrect: countCorrect,
+            priorRunningCount: priorRunningCount,
+            irc: row.irc,
+            keyCount: row.keyCount,
+            pivot: row.pivot,
+            insuranceCount: row.insuranceCount,
+            hasAdvantage: hasAdvantage,
+            userSaidAdvantage: answer.saidAdvantage,
+            advantageCorrect: advantageCorrect,
+            isCorrect: countCorrect && advantageCorrect
+        )
+    }
+
     /// Validate drill settings, returning every error at once. Mirrors
     /// `validateSettings`; `numberOfCards` is an `Int` here so the "whole number"
     /// guard the web needs for free-form inputs is unnecessary. The decks/shoe
@@ -118,14 +153,14 @@ struct CountingEngine {
             )
         }
 
-        if settings.mode == .trueCount {
-            if settings.trueCountSource == .classic {
-                if settings.decksRemaining <= 0 {
-                    errors.append("Decks remaining must be greater than 0.")
-                }
-            } else {
-                validateLiveShoe(settings, into: &errors)
+        // The key-count drill always reads a live shoe, so it shares the
+        // shoe-configuration checks with live-shoe true count.
+        if settings.mode == .trueCount, settings.trueCountSource == .classic {
+            if settings.decksRemaining <= 0 {
+                errors.append("Decks remaining must be greater than 0.")
             }
+        } else if settings.mode == .trueCount || settings.mode == .keyCount {
+            validateLiveShoe(settings, into: &errors)
         }
 
         return SettingsValidation(valid: errors.isEmpty, errors: errors)

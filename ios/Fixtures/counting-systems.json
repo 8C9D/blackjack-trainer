@@ -1,5 +1,5 @@
 {
-  "schema": "counting-systems/1",
+  "schema": "counting-systems/2",
   "generatedBy": "tools/export-parity-fixtures.ts",
   "description": "All 58 counting systems with per-rank and per-color values.",
   "count": 58,
@@ -29,7 +29,7 @@
     {
       "id": "ko",
       "name": "KO",
-      "description": "Unbalanced level-1 system (Knock-Out). Low cards (2–7) count as +1, neutrals (8–9) as 0, tens and aces as −1. Trained as a running count.",
+      "description": "Unbalanced level-1 system (Knock-Out). Low cards (2–7) count as +1, neutrals (8–9) as 0, tens and aces as −1. Trained as a running count, with the book’s IRC/key-count schedule in place of a true count.",
       "balanced": false,
       "isFractional": false,
       "values": {
@@ -46,6 +46,22 @@
         "Q": -1,
         "K": -1,
         "A": -1
+      },
+      "keyCounts": {
+        "irc": {
+          "1": 0,
+          "2": -4,
+          "6": -20,
+          "8": -28
+        },
+        "keyCount": {
+          "1": 2,
+          "2": 1,
+          "6": -4,
+          "8": -6
+        },
+        "pivot": 4,
+        "insuranceCount": 3
       }
     },
     {

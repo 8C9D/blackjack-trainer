@@ -32,6 +32,27 @@ struct BasicStrategyVector: Decodable {
 struct CountingVectorsFile: Decodable {
     let systems: [CountingVectorSystem]
     let deckEstimateCases: [DeckEstimateCase]
+    let keyCountCases: [KeyCountCaseSystem]
+}
+
+struct KeyCountCaseSystem: Decodable {
+    let systemId: String
+    let pivot: Int
+    let insuranceCount: Int
+    let decks: [KeyCountDeckCase]
+}
+
+struct KeyCountDeckCase: Decodable {
+    let numberOfDecks: Int
+    let irc: Int
+    let keyCount: Int
+    let advantageCalls: [AdvantageCallCase]
+}
+
+struct AdvantageCallCase: Decodable {
+    let runningCount: Double
+    let hasAdvantage: Bool
+    let takeInsurance: Bool
 }
 
 struct CountingVectorSystem: Decodable {

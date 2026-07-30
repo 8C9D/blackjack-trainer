@@ -1,7 +1,7 @@
 {
-  "schema": "counting-vectors/1",
+  "schema": "counting-vectors/2",
   "generatedBy": "tools/export-parity-fixtures.ts",
-  "description": "Per-system running/true counts over fixed sequences (color, fractional, and truncation-toward-zero cases) plus scoreDeckEstimate ±0.5 boundaries.",
+  "description": "Per-system running/true counts over fixed sequences (color, fractional, and truncation-toward-zero cases), scoreDeckEstimate ±0.5 boundaries, and key-count schedules with threshold-boundary advantage calls.",
   "systems": [
     {
       "systemId": "hi-lo",
@@ -19945,6 +19945,143 @@
       "actual": 2,
       "tolerance": 0.25,
       "withinBand": false
+    }
+  ],
+  "keyCountCases": [
+    {
+      "systemId": "ko",
+      "pivot": 4,
+      "insuranceCount": 3,
+      "decks": [
+        {
+          "numberOfDecks": 1,
+          "irc": 0,
+          "keyCount": 2,
+          "advantageCalls": [
+            {
+              "runningCount": 1,
+              "hasAdvantage": false,
+              "takeInsurance": false
+            },
+            {
+              "runningCount": 2,
+              "hasAdvantage": true,
+              "takeInsurance": false
+            },
+            {
+              "runningCount": 3,
+              "hasAdvantage": true,
+              "takeInsurance": true
+            },
+            {
+              "runningCount": 2,
+              "hasAdvantage": true,
+              "takeInsurance": false
+            },
+            {
+              "runningCount": 3,
+              "hasAdvantage": true,
+              "takeInsurance": true
+            }
+          ]
+        },
+        {
+          "numberOfDecks": 2,
+          "irc": -4,
+          "keyCount": 1,
+          "advantageCalls": [
+            {
+              "runningCount": 0,
+              "hasAdvantage": false,
+              "takeInsurance": false
+            },
+            {
+              "runningCount": 1,
+              "hasAdvantage": true,
+              "takeInsurance": false
+            },
+            {
+              "runningCount": 2,
+              "hasAdvantage": true,
+              "takeInsurance": false
+            },
+            {
+              "runningCount": 2,
+              "hasAdvantage": true,
+              "takeInsurance": false
+            },
+            {
+              "runningCount": 3,
+              "hasAdvantage": true,
+              "takeInsurance": true
+            }
+          ]
+        },
+        {
+          "numberOfDecks": 6,
+          "irc": -20,
+          "keyCount": -4,
+          "advantageCalls": [
+            {
+              "runningCount": -5,
+              "hasAdvantage": false,
+              "takeInsurance": false
+            },
+            {
+              "runningCount": -4,
+              "hasAdvantage": true,
+              "takeInsurance": false
+            },
+            {
+              "runningCount": -3,
+              "hasAdvantage": true,
+              "takeInsurance": false
+            },
+            {
+              "runningCount": 2,
+              "hasAdvantage": true,
+              "takeInsurance": false
+            },
+            {
+              "runningCount": 3,
+              "hasAdvantage": true,
+              "takeInsurance": true
+            }
+          ]
+        },
+        {
+          "numberOfDecks": 8,
+          "irc": -28,
+          "keyCount": -6,
+          "advantageCalls": [
+            {
+              "runningCount": -7,
+              "hasAdvantage": false,
+              "takeInsurance": false
+            },
+            {
+              "runningCount": -6,
+              "hasAdvantage": true,
+              "takeInsurance": false
+            },
+            {
+              "runningCount": -5,
+              "hasAdvantage": true,
+              "takeInsurance": false
+            },
+            {
+              "runningCount": 2,
+              "hasAdvantage": true,
+              "takeInsurance": false
+            },
+            {
+              "runningCount": 3,
+              "hasAdvantage": true,
+              "takeInsurance": true
+            }
+          ]
+        }
+      ]
     }
   ]
 }

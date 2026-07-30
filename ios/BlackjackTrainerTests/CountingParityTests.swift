@@ -63,6 +63,47 @@ struct CountingParityTests {
         #expect(engine.trueCount(runningCount: -1, decksRemaining: 2) == 0)
     }
 
+    @Test func keyCountSchedulesMatchTheVectors() throws {
+        // The KO IRC/key-count schedule and its threshold-boundary advantage
+        // calls, pinned to the web engine's evaluateKeyCount via the vectors.
+        let systems = try GameData.loadCountingSystems()
+        let byID = Dictionary(uniqueKeysWithValues: systems.map { ($0.id, $0) })
+        let file = try Fixtures.load(CountingVectorsFile.self, "counting-vectors")
+        #expect(!file.keyCountCases.isEmpty)
+        for systemCase in file.keyCountCases {
+            let system = try #require(byID[systemCase.systemId])
+            let schedule = try #require(system.keyCounts)
+            #expect(schedule.pivot == systemCase.pivot)
+            #expect(schedule.insuranceCount == systemCase.insuranceCount)
+            for deckCase in systemCase.decks {
+                let row = try #require(schedule.resolved(decks: deckCase.numberOfDecks))
+                #expect(row.irc == deckCase.irc, "\(system.id) \(deckCase.numberOfDecks) decks")
+                #expect(row.keyCount == deckCase.keyCount)
+                for call in deckCase.advantageCalls {
+                    let graded = try #require(engine.evaluateKeyCount(
+                        [],
+                        answer: KeyCountAnswer(runningCount: call.runningCount,
+                                               saidAdvantage: true),
+                        system: system,
+                        numberOfDecks: deckCase.numberOfDecks,
+                        priorRunningCount: call.runningCount
+                    ))
+                    #expect(
+                        graded.hasAdvantage == call.hasAdvantage,
+                        "\(system.id) \(deckCase.numberOfDecks) decks rc \(call.runningCount)"
+                    )
+                    let insurance = call.runningCount >= Double(schedule.insuranceCount)
+                    #expect(insurance == call.takeInsurance)
+                }
+            }
+        }
+    }
+
+    @Test func onlyKOCarriesASchedule() throws {
+        let systems = try GameData.loadCountingSystems()
+        #expect(systems.filter { $0.keyCounts != nil }.map(\.id) == ["ko"])
+    }
+
     @Test func koIsUnbalancedAndRunningCountOnly() throws {
         // KO drives the Count screen's running-count-only restriction by being
         // unbalanced (a full deck does not sum to zero).

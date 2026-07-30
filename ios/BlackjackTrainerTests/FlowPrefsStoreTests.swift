@@ -139,6 +139,37 @@ struct FlowPrefsStoreTests {
         #expect(counting.mode == .runningCount)
     }
 
+    @Test func keepsKeyCountModeForKO() {
+        let counting = FlowPrefs.merged(from: [
+            "counting": ["systemId": "ko", "mode": "key-count"]
+        ]).counting
+        #expect(counting.systemId == "ko")
+        #expect(counting.mode == .keyCount)
+    }
+
+    @Test func coercesKeyCountModeAwayFromSystemsWithoutASchedule() {
+        for systemId in ["hi-lo", "red-seven"] {
+            let counting = FlowPrefs.merged(from: [
+                "counting": ["systemId": systemId, "mode": "key-count"]
+            ]).counting
+            #expect(counting.systemId == systemId)
+            #expect(counting.mode == .runningCount)
+        }
+    }
+
+    @Test func rejectsAKeyCountRoundThatWouldConsumeTheWholeShoe() {
+        let counting = FlowPrefs.merged(from: [
+            "counting": [
+                "systemId": "ko",
+                "mode": "key-count",
+                "numberOfDecks": 1,
+                "numberOfCards": 52
+            ]
+        ]).counting
+        #expect(counting.mode == .keyCount)
+        #expect(counting.numberOfCards == FlowPrefs.default.counting.numberOfCards)
+    }
+
     @Test func fallsBackFieldByFieldFromUnsupportedCountingNumbers() {
         let counting = FlowPrefs.merged(from: [
             "counting": [

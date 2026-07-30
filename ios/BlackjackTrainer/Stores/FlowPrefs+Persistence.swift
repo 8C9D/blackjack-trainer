@@ -86,9 +86,13 @@ private func mergedCounting(
     let system = systems.first { $0.id == requestedSystemId }
         ?? systems.first { $0.id == defaults.systemId }
     let requestedMode = oneOf(raw["mode"], DrillMode.self, defaults.mode)
-    // Unbalanced systems use an IRC/key count, not the balanced
-    // running-count/decks-remaining conversion.
-    let mode: DrillMode = system?.balanced == false ? .runningCount : requestedMode
+    // True count needs a balanced system; the key-count drill needs a
+    // published IRC/key-count schedule (KO). Mirrors `modeAllowedFor`.
+    let mode: DrillMode = switch requestedMode {
+    case .runningCount: .runningCount
+    case .trueCount: system?.balanced == true ? .trueCount : .runningCount
+    case .keyCount: system?.keyCounts != nil ? .keyCount : .runningCount
+    }
     let source = oneOf(raw["trueCountSource"], TrueCountSource.self, defaults.trueCountSource)
     let decks = intValue(raw["numberOfDecks"])
         .flatMap { ShoeConstants.deckOptions.contains($0) ? $0 : nil }
@@ -96,8 +100,7 @@ private func mergedCounting(
     var cards = intValue(raw["numberOfCards"])
         .flatMap { (1 ... CountingConstants.maxCardsPerDrill).contains($0) ? $0 : nil }
         ?? defaults.numberOfCards
-    if mode == .trueCount,
-       source == .liveShoe,
+    if mode == .keyCount || (mode == .trueCount && source == .liveShoe),
        cards >= decks * ShoeConstants.cardsPerDeck {
         cards = defaults.numberOfCards
     }

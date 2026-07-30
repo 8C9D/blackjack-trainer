@@ -38,6 +38,7 @@ struct CardCountingFlowModelTests {
                 key: StatsKeys.deckEstimation,
                 defaults: defaults
             ),
+            keyCountStore: SessionStatsStore(key: StatsKeys.keyCount, defaults: defaults),
             showdownStatsStore: ShowdownStatsStore(defaults: defaults)
         )
         let model = CardCountingFlowModel(counting: counting, prefs: prefs, history: history)
@@ -85,5 +86,31 @@ struct CardCountingFlowModelTests {
         #expect(!h.model.done)
         #expect(h.model.target == 2)
         h.model.exit()
+    }
+
+    @Test func keyCountRepIsRecordedAtTheAdvantageCall() async {
+        let h = makeHarness(cards: 3)
+        h.prefs.updateCounting {
+            $0.systemId = "ko"
+            $0.mode = .keyCount
+        }
+        // Rebuild the flow model so its init copies the key-count configuration.
+        let model = CardCountingFlowModel(
+            counting: h.model.counting, prefs: h.prefs, history: h.history
+        )
+        model.start()
+        await waitForAnswering(model)
+        #expect(model.state == .answering)
+        // The count answer only advances to the advantage question — no rep yet.
+        model.answer(0)
+        #expect(model.state == .advantage)
+        #expect(h.history.handsToday() == 0)
+        #expect(model.session.attempts == 0)
+        // The advantage call completes and records the rep.
+        model.advantage(true)
+        #expect(model.state == .feedback)
+        #expect(h.history.handsToday() == 1)
+        #expect(model.session.attempts == 1)
+        model.exit()
     }
 }

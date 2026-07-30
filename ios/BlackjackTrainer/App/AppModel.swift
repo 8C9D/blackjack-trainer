@@ -19,6 +19,7 @@ final class AppModel {
     let trueCountStats: SessionStatsStore
     let deviationStats: SessionStatsStore
     let deckEstimationStats: SessionStatsStore
+    let keyCountStats: SessionStatsStore
     let showdownStats: ShowdownStatsStore
     let showdownBankroll: BankrollStore
 
@@ -59,6 +60,7 @@ final class AppModel {
         let trueCountStats = SessionStatsStore(key: StatsKeys.trueCount, cloud: cloud)
         let deviationStats = SessionStatsStore(key: StatsKeys.deviation, cloud: cloud)
         let deckEstimationStats = SessionStatsStore(key: StatsKeys.deckEstimation, cloud: cloud)
+        let keyCountStats = SessionStatsStore(key: StatsKeys.keyCount, cloud: cloud)
         let showdownStats = ShowdownStatsStore(key: StatsKeys.showdown, cloud: cloud)
         let showdownBankroll = BankrollStore(key: StatsKeys.showdownBankroll, cloud: cloud)
         self.basicStrategyStats = basicStrategyStats
@@ -66,6 +68,7 @@ final class AppModel {
         self.trueCountStats = trueCountStats
         self.deviationStats = deviationStats
         self.deckEstimationStats = deckEstimationStats
+        self.keyCountStats = keyCountStats
         self.showdownStats = showdownStats
         self.showdownBankroll = showdownBankroll
 
@@ -78,7 +81,7 @@ final class AppModel {
 
         cloudSync = StatsCloudSync(cloud: cloud, stores: [
             basicStrategyStats, runningCountStats, trueCountStats,
-            deviationStats, deckEstimationStats, showdownStats, showdownBankroll,
+            deviationStats, deckEstimationStats, keyCountStats, showdownStats, showdownBankroll,
             flowPrefs, practiceHistory, missTally
         ])
         // Built after cloud adoption so the seeded snapshot reflects any value
