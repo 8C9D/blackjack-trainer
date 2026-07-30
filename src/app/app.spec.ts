@@ -1,17 +1,40 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
+import { SwUpdate, type VersionEvent } from '@angular/service-worker';
+import { Subject } from 'rxjs';
 
 import { App } from './app';
 import { APP_ROUTES } from './app.routes';
+import { PAGE_RELOAD } from './core/services/app-update.service';
 
 describe('App', () => {
+  let versionUpdates: Subject<VersionEvent>;
+  let reloadPage: ReturnType<typeof vi.fn>;
+
   beforeEach(async () => {
     localStorage.clear();
+    versionUpdates = new Subject<VersionEvent>();
+    reloadPage = vi.fn();
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideRouter(APP_ROUTES)],
+      providers: [
+        provideRouter(APP_ROUTES),
+        {
+          provide: SwUpdate,
+          useValue: { isEnabled: true, versionUpdates },
+        },
+        { provide: PAGE_RELOAD, useValue: reloadPage },
+      ],
     }).compileComponents();
   });
+
+  function announceUpdate(): void {
+    versionUpdates.next({
+      type: 'VERSION_READY',
+      currentVersion: { hash: 'old' },
+      latestVersion: { hash: 'new' },
+    });
+  }
 
   it('is a bare shell: a router outlet and no navigation chrome', async () => {
     const fixture = TestBed.createComponent(App);
@@ -19,6 +42,33 @@ describe('App', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('router-outlet')).not.toBeNull();
     expect(compiled.querySelector('nav')).toBeNull();
+  });
+
+  it('offers to reload or dismiss when a PWA update is ready', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.update')).toBeNull();
+
+    announceUpdate();
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.update')?.textContent).toContain('Update ready');
+    expect(compiled.querySelector('.update__copy')?.getAttribute('role')).toBe('status');
+
+    (compiled.querySelector('.update__later') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(compiled.querySelector('.update')).toBeNull();
+  });
+
+  it('reloads into an available update from the prompt', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    announceUpdate();
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector('.update__reload') as HTMLButtonElement).click();
+
+    expect(reloadPage).toHaveBeenCalledOnce();
   });
 
   describe('routing', () => {
