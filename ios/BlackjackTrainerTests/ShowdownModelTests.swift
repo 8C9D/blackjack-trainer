@@ -118,6 +118,17 @@ struct ShowdownModelTests {
         #expect(!model.canDouble) // no Double after a hit
     }
 
+    @Test func doubleIsWithheldWhenTheShoeCannotSupplyItsRequiredCard() {
+        let shoe = Shoe(
+            cards: [card(.five), card(.ten, .hearts), card(.six), card(.eight)],
+            penetration: 1
+        )
+        let model = ShowdownModel(shoe: shoe, ruleSet: .s17, stats: store())
+        #expect(model.phase == .playerTurn)
+        #expect(model.remaining == 0)
+        #expect(!model.canDouble)
+    }
+
     @Test func doubleTakesOneCardAndMarksTheWinDoubled() throws {
         let stats = store()
         let shoe = stackedShoe(
@@ -132,6 +143,25 @@ struct ShowdownModelTests {
         #expect(model.phase == .resolved)
         #expect(model.settlement?.outcome == .win)
         #expect(try model.verdict(#require(model.hands.first)).contains("(doubled)"))
+    }
+
+    @Test func doubleAfterSplitFollowsTheDasTableRule() {
+        let cards = [
+            card(.eight), card(.ten, .hearts), card(.eight, .diamonds), card(.seven),
+            card(.three, .clubs), card(.five, .hearts)
+        ]
+        let withoutDas = ShowdownModel(
+            shoe: stacked(cards), ruleSet: .s17, stats: store(), options: .default
+        )
+        withoutDas.onAction(.split)
+        #expect(!withoutDas.canDouble)
+
+        let withDas = ShowdownModel(
+            shoe: stacked(cards), ruleSet: .s17, stats: store(),
+            options: EngineOptions(doubleAfterSplit: true, lateSurrender: false)
+        )
+        withDas.onAction(.split)
+        #expect(withDas.canDouble)
     }
 
     @Test func doubleThatBustsLoses() {

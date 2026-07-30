@@ -37,10 +37,22 @@ struct ShowdownSurrenderTests {
             shoe: stacked(cards),
             ruleSet: .s17,
             stats: ShowdownStatsStore(key: StatsKeys.showdown, defaults: store),
+            options: EngineOptions(doubleAfterSplit: false, lateSurrender: true),
             spots: spots,
             betting: betting,
             bankroll: BankrollStore(key: StatsKeys.showdownBankroll, defaults: store)
         )
+    }
+
+    @Test func followsTheLateSurrenderTableRule() {
+        let store = defaults()
+        let showdown = ShowdownModel(
+            shoe: stacked([card(.ten), card(.ten, .hearts), card(.six), card(.nine)]),
+            ruleSet: .s17,
+            stats: ShowdownStatsStore(key: StatsKeys.showdown, defaults: store),
+            options: .default
+        )
+        #expect(!showdown.canSurrender)
     }
 
     @Test func settlesTheHandAsAnImmediateLossWithoutADealerDraw() {
