@@ -177,8 +177,11 @@ struct CountingEngine {
             let high = Int((ShoeConstants.maxPenetration * 100).rounded())
             errors.append("Penetration must be between \(low)% and \(high)%.")
         } else if settings.numberOfCards >= 1,
-                  settings.numberOfCards > settings.numberOfDecks * ShoeConstants.cardsPerDeck {
-            errors.append("Number of cards must not exceed the shoe size (52 × decks).")
+                  settings.numberOfCards >= settings.numberOfDecks * ShoeConstants.cardsPerDeck {
+            // Strictly fewer than the whole shoe (web parity): at least one card
+            // must remain so decks-remaining stays positive and the true-count
+            // division can never hit zero (which would trap in trueCount).
+            errors.append("Number of cards must be fewer than the shoe size (52 × decks).")
         }
     }
 }
