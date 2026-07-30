@@ -5,6 +5,11 @@ dist/
 # Dependencies
 node_modules/
 
+# Repository-local Codex/agent instructions are maintained as tool metadata,
+# not application source.
+.agents/
+.codex/
+
 # Test coverage
 coverage/
 
