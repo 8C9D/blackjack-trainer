@@ -213,11 +213,12 @@ have now shipped, each on both platforms with parity vectors.
   betting off (insurance is purely a money bet). Pure math in
   `bankroll.model.ts` (`insuranceCost` / `insurancePayout`), ported to
   `Bankroll.swift`, pinned by `insuranceCases` (`showdown-vectors/4`).
-- **Late surrender** — a box's original two cards may be given up as a first
-  decision (key `R`), settling the box as an immediate loss; half the bet comes
-  back when betting is on. Never after a split, and the option lapses once a
-  card is drawn. Because the peek already settles any dealer natural before
-  hands are played, the surrender on offer is genuinely _late_. The hand
+- **Late surrender** — when the shared Late Surrender table rule is enabled, a
+  box's original two cards may be given up as a first decision (key `R`),
+  settling the box as an immediate loss; half the bet comes back when betting
+  is on. Never after a split, and the option lapses once a card is drawn.
+  Because the peek already settles any dealer natural before hands are played,
+  the surrender on offer is genuinely _late_. The hand
   carries a `surrendered` flag so its verdict and payout read half a bet, not
   the full-stake loss its settlement would imply. `surrenderForfeit` is pinned
   by `surrenderCases` (`showdown-vectors/5`). Offered with betting off too —
