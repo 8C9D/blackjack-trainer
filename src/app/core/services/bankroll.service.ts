@@ -21,6 +21,21 @@ const EMPTY_BANKROLL: BankrollState = {
   net: 0,
 };
 
+export function coerceBankrollState(raw: unknown): BankrollState {
+  const state = coerceNumericRecord(raw, EMPTY_BANKROLL);
+  if (
+    !Number.isFinite(state.bankroll) ||
+    !Number.isFinite(state.wagered) ||
+    !Number.isFinite(state.net) ||
+    state.bankroll < 0 ||
+    state.wagered < 0 ||
+    state.bankroll !== DEFAULT_BANKROLL + state.net
+  ) {
+    return EMPTY_BANKROLL;
+  }
+  return state;
+}
+
 // Persists the showdown bankroll under its own localStorage key, alongside (not
 // inside) ShowdownStatsService: the hand tally is meaningful with betting off, so
 // the two stay separable.
@@ -53,9 +68,7 @@ export class BankrollService {
   }
 
   private load(): BankrollState {
-    return readJson(BANKROLL_KEY, EMPTY_BANKROLL, (raw) =>
-      coerceNumericRecord(raw, EMPTY_BANKROLL),
-    );
+    return readJson(BANKROLL_KEY, EMPTY_BANKROLL, coerceBankrollState);
   }
 
   private persist(state: BankrollState): void {

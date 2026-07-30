@@ -24,6 +24,19 @@ const EMPTY_STATS: ShowdownStats = {
   blackjacks: 0,
 };
 
+export function coerceShowdownStats(raw: unknown): ShowdownStats {
+  const stats = coerceNumericRecord(raw, EMPTY_STATS);
+  const values = [stats.hands, stats.wins, stats.losses, stats.pushes, stats.blackjacks];
+  if (
+    values.some((value) => !Number.isSafeInteger(value) || value < 0) ||
+    stats.wins + stats.losses + stats.pushes !== stats.hands ||
+    stats.blackjacks > stats.wins
+  ) {
+    return EMPTY_STATS;
+  }
+  return stats;
+}
+
 // Persists the post-count showdown tally under its own localStorage key, mirror-
 // ing the StatsStore load/persist idioms but tracking win/lose/push (and player
 // naturals) instead of correct/incorrect. No money or bet sizing is tracked.
@@ -51,9 +64,7 @@ export class ShowdownStatsService {
   }
 
   private load(): ShowdownStats {
-    return readJson(SHOWDOWN_STATS_KEY, EMPTY_STATS, (raw) =>
-      coerceNumericRecord(raw, EMPTY_STATS),
-    );
+    return readJson(SHOWDOWN_STATS_KEY, EMPTY_STATS, coerceShowdownStats);
   }
 
   private persist(stats: ShowdownStats): void {

@@ -1,9 +1,22 @@
 import { Injectable, signal, type Signal } from '@angular/core';
 
-import type { DrillMode, TrueCountSource } from '../models/card-counting.model';
-import { DEFAULT_NUMBER_OF_DECKS, DEFAULT_PENETRATION } from '../models/shoe.model';
+import {
+  DECKS_REMAINING_PRESETS,
+  MAX_CARDS_PER_DRILL,
+  MIN_MILLISECONDS_BETWEEN_CARDS,
+  type DrillMode,
+  type TrueCountSource,
+} from '../models/card-counting.model';
+import {
+  CARDS_PER_DECK,
+  DEFAULT_NUMBER_OF_DECKS,
+  DEFAULT_PENETRATION,
+  PENETRATION_PRESETS,
+  SHOE_DECK_OPTIONS,
+} from '../models/shoe.model';
 import { clampSpots } from '../models/showdown.model';
 import { DEFAULT_ENGINE_OPTIONS, type EngineOptions, type RuleSet } from '../models/strategy.model';
+import { COUNTING_SYSTEMS } from '../../data/counting-systems';
 import { readJson, writeJson } from './storage';
 
 export const FLOW_PREFS_KEY = 'blackjack-flow-prefs';
@@ -165,6 +178,44 @@ export function mergePrefs(parsed: unknown): FlowPrefs {
   const dev = asRecord(p['deviations']);
   const cnt = asRecord(p['counting']);
   const opts = asRecord(p['options']);
+  const systemId = oneOf(
+    cnt['systemId'],
+    COUNTING_SYSTEMS.map((system) => system.id),
+    d.counting.systemId,
+  );
+  const system = COUNTING_SYSTEMS.find((candidate) => candidate.id === systemId)!;
+  const requestedMode = oneOf(
+    cnt['mode'],
+    ['running-count', 'true-count'] as const,
+    d.counting.mode,
+  );
+  // Unbalanced systems do not use the balanced running-count/decks-remaining
+  // conversion. The Settings UI enforces this when changed interactively; the
+  // loader must enforce the same invariant for stale or hand-edited payloads.
+  const mode: DrillMode = system.balanced ? requestedMode : 'running-count';
+  const trueCountSource = oneOf(
+    cnt['trueCountSource'],
+    ['live-shoe', 'classic'] as const,
+    d.counting.trueCountSource,
+  );
+  const numberOfDecks = numberOneOf(
+    cnt['numberOfDecks'],
+    SHOE_DECK_OPTIONS,
+    d.counting.numberOfDecks,
+  );
+  let numberOfCards = integerInRange(
+    cnt['numberOfCards'],
+    1,
+    MAX_CARDS_PER_DRILL,
+    d.counting.numberOfCards,
+  );
+  if (
+    mode === 'true-count' &&
+    trueCountSource === 'live-shoe' &&
+    numberOfCards >= numberOfDecks * CARDS_PER_DECK
+  ) {
+    numberOfCards = d.counting.numberOfCards;
+  }
   return {
     lastTrainer: oneOf(p['lastTrainer'], TRAINER_ORDER, d.lastTrainer),
     dailyGoal: typeof p['dailyGoal'] === 'number' ? clampGoal(p['dailyGoal']) : d.dailyGoal,
@@ -188,21 +239,22 @@ export function mergePrefs(parsed: unknown): FlowPrefs {
       manualTrueCount: int(dev['manualTrueCount'], d.deviations.manualTrueCount),
     },
     counting: {
-      systemId: typeof cnt['systemId'] === 'string' ? cnt['systemId'] : d.counting.systemId,
-      mode: oneOf(cnt['mode'], ['running-count', 'true-count'] as const, d.counting.mode),
-      numberOfCards: num(cnt['numberOfCards'], d.counting.numberOfCards),
-      millisecondsBetweenCards: num(
+      systemId,
+      mode,
+      numberOfCards,
+      millisecondsBetweenCards: numberAtLeast(
         cnt['millisecondsBetweenCards'],
+        MIN_MILLISECONDS_BETWEEN_CARDS,
         d.counting.millisecondsBetweenCards,
       ),
-      decksRemaining: num(cnt['decksRemaining'], d.counting.decksRemaining),
-      trueCountSource: oneOf(
-        cnt['trueCountSource'],
-        ['live-shoe', 'classic'] as const,
-        d.counting.trueCountSource,
+      decksRemaining: numberOneOf(
+        cnt['decksRemaining'],
+        DECKS_REMAINING_PRESETS,
+        d.counting.decksRemaining,
       ),
-      numberOfDecks: num(cnt['numberOfDecks'], d.counting.numberOfDecks),
-      penetration: num(cnt['penetration'], d.counting.penetration),
+      trueCountSource,
+      numberOfDecks,
+      penetration: numberOneOf(cnt['penetration'], PENETRATION_PRESETS, d.counting.penetration),
       showdownSpots: clampSpots(num(cnt['showdownSpots'], d.counting.showdownSpots)),
       showdownBetting: bool(cnt['showdownBetting'], d.counting.showdownBetting),
     },
@@ -227,4 +279,26 @@ function num(v: unknown, fallback: number): number {
 
 function int(v: unknown, fallback: number): number {
   return typeof v === 'number' && Number.isInteger(v) ? v : fallback;
+}
+
+function numberOneOf(value: unknown, allowed: readonly number[], fallback: number): number {
+  return typeof value === 'number' && allowed.includes(value) ? value : fallback;
+}
+
+function integerInRange(
+  value: unknown,
+  minimum: number,
+  maximum: number,
+  fallback: number,
+): number {
+  return typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= minimum &&
+    value <= maximum
+    ? value
+    : fallback;
+}
+
+function numberAtLeast(value: unknown, minimum: number, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= minimum ? value : fallback;
 }
