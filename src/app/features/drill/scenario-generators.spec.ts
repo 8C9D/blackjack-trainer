@@ -52,6 +52,11 @@ describe('pickDeviationRule', () => {
     // S17 chart has many rules; expect at least 5 distinct picks in 500 draws.
     expect(seen.size).toBeGreaterThanOrEqual(5);
   });
+
+  it('can select the final rule without stepping past the chart', () => {
+    const rules = deviationRulesFor('S17');
+    expect(pickDeviationRule('S17', () => 0.999_999)).toBe(rules.at(-1));
+  });
 });
 
 describe('makePlayerCardsForDeviationRule', () => {
@@ -106,6 +111,12 @@ describe('makePlayerCardsForDeviationRule', () => {
         expect(klass.category).toBe('hard');
         expect(klass.playerHand).toBe('12');
       }
+    });
+
+    it('uses the same-rank safety fallback for an unusual representable total', () => {
+      const rule = ruleOf({ category: 'hard', playerHand: '4' });
+      const cards = makePlayerCardsForDeviationRule(rule, () => 0);
+      expect(cards.map((c) => c.rank)).toEqual(['2', '2']);
     });
   });
 
@@ -263,6 +274,35 @@ describe('pickTrueCountForDeviationRule', () => {
       const rule = ruleOf({ direction: 'at-or-below', index: -1 });
       const tc = pickTrueCountForDeviationRule(rule, seqRandom([0.9, 0]), MIN, MAX);
       expect(tc).toBeGreaterThan(-1);
+    });
+  });
+
+  describe('sign-only thresholds', () => {
+    it('generates both sides of a positive rule', () => {
+      const rule = ruleOf({ direction: 'positive', index: 1 });
+      const met = pickTrueCountForDeviationRule(rule, seqRandom([0.1, 0]), MIN, MAX);
+      const unmet = pickTrueCountForDeviationRule(rule, seqRandom([0.9, 0]), MIN, MAX);
+      expect(met).toBeGreaterThan(0);
+      expect(unmet).toBeLessThanOrEqual(0);
+    });
+
+    it('generates both sides of a negative rule', () => {
+      const rule = ruleOf({ direction: 'negative', index: -1 });
+      const met = pickTrueCountForDeviationRule(rule, seqRandom([0.1, 0]), MIN, MAX);
+      const unmet = pickTrueCountForDeviationRule(rule, seqRandom([0.9, 0]), MIN, MAX);
+      expect(met).toBeLessThan(0);
+      expect(unmet).toBeGreaterThanOrEqual(0);
+    });
+
+    it('falls back to the representable side when the requested side is outside the range', () => {
+      const positive = ruleOf({ direction: 'positive', index: 1 });
+      const negative = ruleOf({ direction: 'negative', index: -1 });
+      expect(
+        pickTrueCountForDeviationRule(positive, seqRandom([0.1, 0]), -5, 0),
+      ).toBeLessThanOrEqual(0);
+      expect(
+        pickTrueCountForDeviationRule(negative, seqRandom([0.1, 0]), 0, 8),
+      ).toBeGreaterThanOrEqual(0);
     });
   });
 });
