@@ -5,11 +5,11 @@ import SwiftUI
 /// counted, plays it hit/stand/double/split (re-splits to four hands; split aces
 /// take one card), auto-plays the dealer by the active rule set, and settles each
 /// hand win/lose/push (3:2 naturals). A box's original two cards may also
-/// late-surrender for half the bet (the peek has already settled any dealer
-/// natural). With bet sizing on, each round opens on a bet and settles against
-/// the persisted bankroll, and a dealer ace offers insurance (half each bet,
-/// pays 2:1) before the hole card is checked. Mirrors the web
-/// `ShowdownComponent`.
+/// late-surrender for half the bet when the shared LS rule is enabled (the peek
+/// has already settled any dealer natural). With bet sizing on, each round opens
+/// on a bet and settles against the persisted bankroll, and a dealer ace offers
+/// insurance (half each bet, pays 2:1) before the hole card is checked. Mirrors
+/// the web `ShowdownComponent`.
 @MainActor
 @Observable
 final class ShowdownModel {
@@ -27,6 +27,8 @@ final class ShowdownModel {
     static let maxHandsPerBox = 4
 
     var ruleSet: RuleSet
+    /// DAS / LS availability from the shared table rules.
+    let options: EngineOptions
     /// Boxes to occupy on the opening deal (1–3). One dealer plays against all.
     let spots: Int
     /// Bet sizing: when on, each round opens on a bet and settles against the
@@ -58,12 +60,14 @@ final class ShowdownModel {
         shoe: Shoe,
         ruleSet: RuleSet,
         stats: ShowdownStatsStore,
+        options: EngineOptions = .default,
         spots: Int = 1,
         betting: Bool = false,
         bankroll: BankrollStore = BankrollStore()
     ) {
         self.shoe = shoe
         self.ruleSet = ruleSet
+        self.options = options
         self.stats = stats
         self.spots = Showdown.clampSpots(spots)
         self.betting = betting

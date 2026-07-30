@@ -8,11 +8,12 @@ struct ShowdownView: View {
 
     @Environment(\.hasHardwareKeyboard) private var hasHardwareKeyboard
 
-    init(shoe: Shoe, ruleSet: RuleSet, stats: ShowdownStatsStore, spots: Int = 1,
+    init(shoe: Shoe, ruleSet: RuleSet, stats: ShowdownStatsStore,
+         options: EngineOptions = .default, spots: Int = 1,
          betting: Bool = false, bankroll: BankrollStore = BankrollStore(),
          onExit: @escaping ([Card]) -> Void) {
         _model = State(initialValue: ShowdownModel(
-            shoe: shoe, ruleSet: ruleSet, stats: stats, spots: spots,
+            shoe: shoe, ruleSet: ruleSet, stats: stats, options: options, spots: spots,
             betting: betting, bankroll: bankroll
         ))
         self.onExit = onExit

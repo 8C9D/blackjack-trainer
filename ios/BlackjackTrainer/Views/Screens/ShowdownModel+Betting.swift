@@ -15,10 +15,13 @@ extension ShowdownModel {
         remaining >= Showdown.minCards(forSpots: spots)
     }
 
-    /// Double is offered on any fresh two-card hand (including after a split).
+    /// Double is offered on an original fresh hand, and on a split hand only
+    /// when the shared table rules enable DAS.
     var canDouble: Bool {
         guard let hand = activeHand else { return false }
         return phase == .playerTurn && hand.cards.count == 2 && !hand.isSplitAce
+            && (!hand.fromSplit || options.doubleAfterSplit)
+            && remaining >= 1
             && canPostAnotherBet(hand)
     }
 
@@ -36,7 +39,8 @@ extension ShowdownModel {
     /// natural, which is exactly the "late" in late surrender.
     var canSurrender: Bool {
         guard let hand = activeHand else { return false }
-        return phase == .playerTurn && hand.cards.count == 2 && !hand.fromSplit
+        return options.lateSurrender && phase == .playerTurn
+            && hand.cards.count == 2 && !hand.fromSplit
     }
 
     /// How many hands the given box currently holds — one until it splits.

@@ -71,6 +71,10 @@ final class CardCountingFlowModel {
         prefs.prefs.ruleSet
     }
 
+    var tableOptions: EngineOptions {
+        prefs.prefs.options
+    }
+
     func start() {
         counting.start()
     }
@@ -249,6 +253,7 @@ struct CardCountingFlowView: View {
                 shoe: shoe,
                 ruleSet: model.ruleSet,
                 stats: model.counting.showdownStatsStore,
+                options: model.tableOptions,
                 spots: model.counting.showdownSpots,
                 betting: model.counting.showdownBetting,
                 bankroll: model.showdownBankroll
