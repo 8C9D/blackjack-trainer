@@ -120,6 +120,86 @@ struct FlowPrefsStoreTests {
         #expect(!FlowPrefs.merged(from: ["dailyGoal": 15]).counting.showdownBetting)
     }
 
+    @Test func fallsBackFromAnUnknownCountingSystem() {
+        let counting = FlowPrefs.merged(from: [
+            "counting": ["systemId": "missing-system"]
+        ]).counting
+        #expect(counting.systemId == FlowPrefs.default.counting.systemId)
+    }
+
+    @Test func coercesAnUnbalancedSystemOutOfTrueCountMode() {
+        let counting = FlowPrefs.merged(from: [
+            "counting": [
+                "systemId": "ko",
+                "mode": "true-count",
+                "trueCountSource": "classic"
+            ]
+        ]).counting
+        #expect(counting.systemId == "ko")
+        #expect(counting.mode == .runningCount)
+    }
+
+    @Test func fallsBackFieldByFieldFromUnsupportedCountingNumbers() {
+        let counting = FlowPrefs.merged(from: [
+            "counting": [
+                "numberOfCards": 0,
+                "millisecondsBetweenCards": 99,
+                "decksRemaining": 0.75,
+                "numberOfDecks": 3,
+                "penetration": 0.95
+            ]
+        ]).counting
+        let fallback = FlowPrefs.default.counting
+        #expect(counting.numberOfCards == fallback.numberOfCards)
+        #expect(counting.millisecondsBetweenCards == fallback.millisecondsBetweenCards)
+        #expect(counting.decksRemaining == fallback.decksRemaining)
+        #expect(counting.numberOfDecks == fallback.numberOfDecks)
+        #expect(counting.penetration == fallback.penetration)
+    }
+
+    @Test func rejectsALiveTrueCountRoundThatWouldConsumeTheWholeShoe() {
+        let counting = FlowPrefs.merged(from: [
+            "counting": [
+                "systemId": "hi-lo",
+                "mode": "true-count",
+                "trueCountSource": "live-shoe",
+                "numberOfDecks": 1,
+                "numberOfCards": 52
+            ]
+        ]).counting
+        #expect(counting.numberOfDecks == 1)
+        #expect(counting.numberOfCards == FlowPrefs.default.counting.numberOfCards)
+    }
+
+    @Test func keepsSupportedCountingPreferencesUnchanged() {
+        let counting = FlowPrefs.merged(from: [
+            "counting": [
+                "systemId": "omega-ii",
+                "mode": "true-count",
+                "numberOfCards": 40,
+                "millisecondsBetweenCards": 250,
+                "decksRemaining": 2.5,
+                "trueCountSource": "live-shoe",
+                "numberOfDecks": 2,
+                "penetration": 0.8,
+                "showdownSpots": 2,
+                "showdownBetting": true
+            ]
+        ]).counting
+        #expect(counting == CountingPrefs(
+            systemId: "omega-ii",
+            mode: .trueCount,
+            numberOfCards: 40,
+            millisecondsBetweenCards: 250,
+            decksRemaining: 2.5,
+            trueCountSource: .liveShoe,
+            numberOfDecks: 2,
+            penetration: 0.8,
+            showdownSpots: 2,
+            showdownBetting: true
+        ))
+    }
+
     @Test func roundTripsTheThemeAndBoxCountThroughTheStoredShape() {
         var prefs = FlowPrefs.default
         prefs.theme = .light

@@ -43,6 +43,14 @@ struct StatsStoreTests {
         #expect(store.stats == .empty)
     }
 
+    @Test func impossibleSessionStatsFallBackToEmpty() throws {
+        let defaults = freshDefaults()
+        let impossible = SessionStats(attempts: 2, correct: 3, streak: 0, longestStreak: 0)
+        try defaults.set(JSONEncoder().encode(impossible), forKey: StatsKeys.deviation)
+        let store = SessionStatsStore(key: StatsKeys.deviation, defaults: defaults)
+        #expect(store.stats == .empty)
+    }
+
     @Test func resetClearsOnlyOwnKey() {
         let defaults = freshDefaults()
         let basic = SessionStatsStore(key: StatsKeys.basicStrategy, defaults: defaults)
@@ -74,6 +82,20 @@ struct StatsStoreTests {
             blackjacks: 1
         ))
         #expect(store.key == "blackjack-showdown-stats")
+    }
+
+    @Test func impossibleShowdownTallyFallsBackToEmpty() throws {
+        let defaults = freshDefaults()
+        let impossible = ShowdownStats(
+            hands: 2,
+            wins: 2,
+            losses: 1,
+            pushes: 0,
+            blackjacks: 0
+        )
+        try defaults.set(JSONEncoder().encode(impossible), forKey: StatsKeys.showdown)
+        let store = ShowdownStatsStore(defaults: defaults)
+        #expect(store.stats == .empty)
     }
 
     @Test func legacyKeysAreWiped() {

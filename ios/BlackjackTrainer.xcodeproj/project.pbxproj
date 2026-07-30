@@ -106,6 +106,7 @@
 		CF8D2834052E1EBACEE68166 /* ShowdownModel+Presentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2F1362A78116791974E6D3E /* ShowdownModel+Presentation.swift */; };
 		D1FF42D81F430C0468DF7729 /* RemindersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1F3C9E741253484F3D5474 /* RemindersTests.swift */; };
 		D2AB7ED7BE3625300AACE48F /* ShowdownModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A14FE863E2084BF0AC794D /* ShowdownModelTests.swift */; };
+		D59FC342FEA2A2F0EC1877EE /* FlowPrefs+Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDA0613318A859FEB01755A3 /* FlowPrefs+Persistence.swift */; };
 		D64887099FD3A74A49D1E6DB /* COPYING.txt in Resources */ = {isa = PBXBuildFile; fileRef = D646C0CD8526C8E211E25C42 /* COPYING.txt */; };
 		D7C8B961AF9E71D941DA9126 /* FlowActionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0091241C5E0CB4080EF4B19B /* FlowActionsView.swift */; };
 		D9944DAA85317A7EC72AF2F9 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81F4236F3DD46FE168D9EB8F /* SettingsView.swift */; };
@@ -261,6 +262,7 @@
 		C9A9A50BB9ED98356FA418FB /* CHANGELOG.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CHANGELOG.txt; sourceTree = "<group>"; };
 		CC2AC3CF9F36E63A1B0EF4A6 /* BlackjackWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlackjackWidgetBundle.swift; sourceTree = "<group>"; };
 		CCFA223B9420BDC9AD027B73 /* DeviationScenarioGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationScenarioGeneratorTests.swift; sourceTree = "<group>"; };
+		CDA0613318A859FEB01755A3 /* FlowPrefs+Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FlowPrefs+Persistence.swift"; sourceTree = "<group>"; };
 		CF4D671AA4A053AF40395078 /* CountingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingEngine.swift; sourceTree = "<group>"; };
 		D07A16802F2169B099AE3D66 /* CardGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardGeneratorTests.swift; sourceTree = "<group>"; };
 		D0DAE402AA61CF04300B0AF9 /* CardImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardImage.swift; sourceTree = "<group>"; };
@@ -519,6 +521,7 @@
 			children = (
 				456585027076380424BE63C8 /* CloudKeyValueStore.swift */,
 				98EFDB01E654E3C42D38A419 /* FlowPrefs.swift */,
+				CDA0613318A859FEB01755A3 /* FlowPrefs+Persistence.swift */,
 				6C3FF9EB17A9713215F67B6B /* MissTally.swift */,
 				1588690973F4837FE94A0FA0 /* PracticeHistory.swift */,
 				2A3B7FB8E53D8E1DEAAEE93B /* StatsModels.swift */,
@@ -717,6 +720,7 @@
 				D7C8B961AF9E71D941DA9126 /* FlowActionsView.swift in Sources */,
 				7CA47BF6219EAC05D7BF9D0D /* FlowAdvanceScheduler.swift in Sources */,
 				3428BB4167FFAF6545B55B08 /* FlowDoneView.swift in Sources */,
+				D59FC342FEA2A2F0EC1877EE /* FlowPrefs+Persistence.swift in Sources */,
 				EAAD9174590C20E72577CBCA /* FlowPrefs.swift in Sources */,
 				F68F8690D44ABB89CC9BE0AA /* FlowRootView.swift in Sources */,
 				51FE949661D4778BBF0247ED /* FlowRouter.swift in Sources */,

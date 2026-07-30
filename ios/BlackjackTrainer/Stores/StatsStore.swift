@@ -5,9 +5,16 @@ import Observation
 /// value (the Swift analogue of the web's try/catch + field validation), and
 /// writes tolerate failure silently.
 private enum StatsPersistence {
-    static func load<T: Codable>(_: T.Type, key: String, defaults: UserDefaults, empty: T) -> T {
+    static func load<T: Codable>(
+        _: T.Type,
+        key: String,
+        defaults: UserDefaults,
+        empty: T,
+        validate: (T) -> Bool
+    ) -> T {
         guard let data = defaults.data(forKey: key),
-              let value = try? JSONDecoder().decode(T.self, from: data)
+              let value = try? JSONDecoder().decode(T.self, from: data),
+              validate(value)
         else { return empty }
         return value
     }
@@ -41,7 +48,8 @@ final class SessionStatsStore: CloudSyncable {
             SessionStats.self,
             key: key,
             defaults: defaults,
-            empty: .empty
+            empty: .empty,
+            validate: \.isValid
         )
     }
 
@@ -70,7 +78,8 @@ final class SessionStatsStore: CloudSyncable {
 
     func adoptFromCloud() {
         guard let cloud, let data = cloud.data(forKey: key),
-              let value = try? JSONDecoder().decode(SessionStats.self, from: data) else { return }
+              let value = try? JSONDecoder().decode(SessionStats.self, from: data),
+              value.isValid else { return }
         stats = value
         StatsPersistence.save(stats, key: key, defaults: defaults)
     }
@@ -101,7 +110,8 @@ final class ShowdownStatsStore: CloudSyncable {
             ShowdownStats.self,
             key: key,
             defaults: defaults,
-            empty: .empty
+            empty: .empty,
+            validate: \.isValid
         )
     }
 
@@ -128,7 +138,8 @@ final class ShowdownStatsStore: CloudSyncable {
 
     func adoptFromCloud() {
         guard let cloud, let data = cloud.data(forKey: key),
-              let value = try? JSONDecoder().decode(ShowdownStats.self, from: data) else { return }
+              let value = try? JSONDecoder().decode(ShowdownStats.self, from: data),
+              value.isValid else { return }
         stats = value
         StatsPersistence.save(stats, key: key, defaults: defaults)
     }
@@ -161,7 +172,8 @@ final class BankrollStore: CloudSyncable {
             BankrollState.self,
             key: key,
             defaults: defaults,
-            empty: .empty
+            empty: .empty,
+            validate: \.isValid
         )
     }
 
@@ -200,7 +212,8 @@ final class BankrollStore: CloudSyncable {
 
     func adoptFromCloud() {
         guard let cloud, let data = cloud.data(forKey: key),
-              let value = try? JSONDecoder().decode(BankrollState.self, from: data) else { return }
+              let value = try? JSONDecoder().decode(BankrollState.self, from: data),
+              value.isValid else { return }
         state = value
         StatsPersistence.save(state, key: key, defaults: defaults)
     }

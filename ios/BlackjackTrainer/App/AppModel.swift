@@ -69,7 +69,7 @@ final class AppModel {
         self.showdownStats = showdownStats
         self.showdownBankroll = showdownBankroll
 
-        let flowPrefs = FlowPrefsStore(cloud: cloud)
+        let flowPrefs = FlowPrefsStore(cloud: cloud, systems: loaded.systems)
         let practiceHistory = PracticeHistoryStore(cloud: cloud)
         let missTally = MissTallyStore(cloud: cloud)
         self.flowPrefs = flowPrefs
