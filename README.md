@@ -147,7 +147,7 @@ appears (when the shoe holds enough cards for the opening round). It deals from
 the **same persistent shoe**, depleting it further:
 
 - **One to three boxes** — Settings → Card counting → **Showdown hands** picks how many hands you play at once against the single dealer. The opening round deals in casino order (one card to each box, the dealer's upcard, a second to each box, the dealer's hole card), and each box is then played and settled on its own.
-- **Hit, stand, double, split, and late surrender** — doubling takes exactly one card; pairs re-split up to four hands **per box**; split aces take one card each and stand; a 21 made after splitting is not a natural. A box's original two cards may surrender, settling the box as an immediate loss (half the bet comes back when bet sizing is on); never after a split, and the option lapses once a card is drawn. The peek settles any dealer natural before hands are played, which is what makes the surrender genuinely _late_.
+- **Hit, stand, double, split, and late surrender** — doubling takes exactly one card; pairs re-split up to four hands **per box**; split aces take one card each and stand; a 21 made after splitting is not a natural. The shared table rules govern DAS and LS: a split hand can double only with DAS on, and a box's original two cards may surrender only with LS on. Surrender settles the box as an immediate loss (half the bet comes back when bet sizing is on); never after a split, and the option lapses once a card is drawn. The peek settles any dealer natural before hands are played, which is what makes the surrender genuinely _late_.
 - **Dealer auto-plays** the rule set from the shared table rules: stand on hard 17+, hit soft 17 only under H17.
 - **Settlement** — each hand settles win / lose / push independently; a player natural pays 3:2; a dealer natural beats any non-natural; two naturals push; a player bust loses immediately even if the dealer later busts. A dealer natural ends every box at once, and a box holding a natural is paid immediately and sits out the rest of the round. Multi-hand rounds close with a one-line tally ("2 won, 1 lost"). The showdown keeps a win/lose/push (plus blackjacks) tally under its own `localStorage` key.
 - **Bet sizing (optional)** — Settings → Card counting → **Bet sizing (bankroll)** turns the showdown into a spreading drill. Each round opens on a bet before any card is dealt (the count you just practised is the only information you have), every box posts that bet, and a double or split posts a second one. Hands settle against a persisted bankroll of 500 chips: a win pays the stake, a natural 3:2 on the bet, a push returns it, a loss forfeits it. Chips are abstract units, not currency — what is being drilled is the ratio between the bet and the bankroll. A bet the bankroll cannot back across every box is not offered, and running out of chips offers a reset. Off by default, when the showdown is the pure hand tally above.
@@ -272,7 +272,7 @@ no-ops at runtime but document the chart cell.
 - **Real card images** — 52 SVGs + face-down back from
   [richardschneider/cardsJS](https://github.com/richardschneider/cardsJS).
 - **Routing** — `/` (home), `/drill/*`, `/settings`; pre-Flow trainer URLs redirect into the flow. Each route's component is destroyed and recreated by Angular's router, so in-memory drill state (current cards, in-progress answer, the live shoe) resets on navigation; persisted state is rehydrated from `localStorage` on reinit.
-- **Installable PWA** — production builds ship the Angular service worker (`ngsw-config.json`; registered when the app goes stable), so the app works offline and installs from the browser. The manifest carries 192/512 maskable icons derived from the iOS app icon, plus an `apple-touch-icon`; the page shells pad both safe-area insets so the top bars stay clear of the status bar in iOS standalone mode.
+- **Installable PWA** — production builds ship the Angular service worker (`ngsw-config.json`; registered when the app goes stable), so the app works offline and installs from the browser. Once a complete new version is cached, a dismissible prompt reloads into it without force-activating a mixed bundle. The manifest carries 192/512 maskable icons derived from the iOS app icon, plus an `apple-touch-icon`; the page shells pad both safe-area insets so the top bars stay clear of the status bar in iOS standalone mode.
 
 ## iOS app
 
@@ -586,9 +586,6 @@ and the cursor/handoff log in
 Deferred follow-ons, documented in `docs/roadmap-progress.md` and
 `docs/ios-app-roadmap.md`:
 
-- **Showdown surrender / insurance** — the showdown plays doubles, splits, and
-  (optionally) bets against a bankroll, but offers neither surrender nor
-  insurance.
 - **KO true count** — IRC / key-count math so unbalanced systems get a true
   count (KO is running-count only today).
 - **Deviation charts for KO / Omega II / Wong Halves** — deviations are Hi-Lo
