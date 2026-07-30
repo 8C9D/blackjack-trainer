@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
 import { DEFAULT_BANKROLL } from '../models/bankroll.model';
-import { BANKROLL_KEY, BankrollService } from './bankroll.service';
+import { BANKROLL_KEY, BankrollService, coerceBankrollState } from './bankroll.service';
 
 describe('BankrollService', () => {
   beforeEach(() => {
@@ -66,5 +66,31 @@ describe('BankrollService', () => {
   it('ignores a malformed payload rather than loading a partial bankroll', () => {
     localStorage.setItem(BANKROLL_KEY, JSON.stringify({ bankroll: 100 }));
     expect(service().state()).toEqual({ bankroll: DEFAULT_BANKROLL, wagered: 0, net: 0 });
+  });
+
+  it.each([
+    {
+      label: 'a negative bankroll',
+      value: { bankroll: -1, wagered: 501, net: -501 },
+    },
+    {
+      label: 'negative chips wagered',
+      value: { bankroll: 510, wagered: -10, net: 10 },
+    },
+    {
+      label: 'a bankroll that disagrees with net',
+      value: { bankroll: 510, wagered: 20, net: 5 },
+    },
+  ])('ignores impossible persisted state: $label', ({ value }) => {
+    localStorage.setItem(BANKROLL_KEY, JSON.stringify(value));
+    expect(service().state()).toEqual({ bankroll: DEFAULT_BANKROLL, wagered: 0, net: 0 });
+  });
+
+  it('accepts valid half-chip state from insurance or surrender', () => {
+    expect(coerceBankrollState({ bankroll: 499.5, wagered: 1.5, net: -0.5 })).toEqual({
+      bankroll: 499.5,
+      wagered: 1.5,
+      net: -0.5,
+    });
   });
 });

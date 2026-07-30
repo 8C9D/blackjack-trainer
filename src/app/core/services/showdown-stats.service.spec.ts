@@ -1,6 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 
-import { SHOWDOWN_STATS_KEY, ShowdownStatsService } from './showdown-stats.service';
+import {
+  SHOWDOWN_STATS_KEY,
+  ShowdownStatsService,
+  coerceShowdownStats,
+} from './showdown-stats.service';
 import { TRUE_COUNT_STATS_KEY } from './true-count-stats.service';
 import { CARD_COUNTING_STATS_KEY } from './card-counting-stats.service';
 
@@ -79,5 +83,39 @@ describe('ShowdownStatsService', () => {
     localStorage.setItem(SHOWDOWN_STATS_KEY, '{ not json');
     const service = new ShowdownStatsService();
     expect(service.stats().hands).toBe(0);
+  });
+
+  it.each([
+    {
+      label: 'negative counts',
+      value: { hands: -1, wins: 0, losses: 0, pushes: 0, blackjacks: 0 },
+    },
+    {
+      label: 'fractional counts',
+      value: { hands: 1.5, wins: 1, losses: 0, pushes: 0, blackjacks: 0 },
+    },
+    {
+      label: 'outcomes that do not add up to hands',
+      value: { hands: 2, wins: 2, losses: 1, pushes: 0, blackjacks: 0 },
+    },
+    {
+      label: 'more blackjacks than wins',
+      value: { hands: 2, wins: 1, losses: 1, pushes: 0, blackjacks: 2 },
+    },
+  ])('rejects an impossible persisted tally: $label', ({ value }) => {
+    localStorage.setItem(SHOWDOWN_STATS_KEY, JSON.stringify(value));
+    expect(new ShowdownStatsService().stats()).toEqual({
+      hands: 0,
+      wins: 0,
+      losses: 0,
+      pushes: 0,
+      blackjacks: 0,
+    });
+  });
+
+  it('accepts a consistent persisted tally', () => {
+    expect(coerceShowdownStats({ hands: 4, wins: 2, losses: 1, pushes: 1, blackjacks: 1 })).toEqual(
+      { hands: 4, wins: 2, losses: 1, pushes: 1, blackjacks: 1 },
+    );
   });
 });

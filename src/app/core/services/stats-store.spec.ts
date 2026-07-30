@@ -4,7 +4,7 @@ import {
 } from './basic-strategy-stats.service';
 import { CARD_COUNTING_STATS_KEY, CardCountingStatsService } from './card-counting-stats.service';
 import { DEVIATION_STATS_KEY, DeviationStatsService } from './deviation-stats.service';
-import { StatsStore, cleanupLegacyStatsKeys } from './stats-store';
+import { StatsStore, cleanupLegacyStatsKeys, coerceSessionStats } from './stats-store';
 import { TRUE_COUNT_STATS_KEY, TrueCountStatsService } from './true-count-stats.service';
 
 const TEST_KEY = 'test-stats-store';
@@ -82,6 +82,46 @@ describe('StatsStore', () => {
     localStorage.setItem(TEST_KEY, JSON.stringify({ attempts: 5 }));
     const store = new StatsStore(TEST_KEY);
     expect(store.stats().attempts).toBe(0);
+  });
+
+  it.each([
+    {
+      label: 'negative values',
+      value: { attempts: -1, correct: 0, streak: 0, longestStreak: 0 },
+    },
+    {
+      label: 'fractional values',
+      value: { attempts: 2.5, correct: 2, streak: 2, longestStreak: 2 },
+    },
+    {
+      label: 'more correct answers than attempts',
+      value: { attempts: 2, correct: 3, streak: 0, longestStreak: 1 },
+    },
+    {
+      label: 'a current streak longer than the longest streak',
+      value: { attempts: 4, correct: 3, streak: 3, longestStreak: 2 },
+    },
+    {
+      label: 'a longest streak larger than all correct answers',
+      value: { attempts: 10, correct: 2, streak: 0, longestStreak: 3 },
+    },
+  ])('ignores an impossible stored payload: $label', ({ value }) => {
+    localStorage.setItem(TEST_KEY, JSON.stringify(value));
+    expect(new StatsStore(TEST_KEY).stats()).toEqual({
+      attempts: 0,
+      correct: 0,
+      streak: 0,
+      longestStreak: 0,
+    });
+  });
+
+  it('accepts valid persisted stats at the edge of their invariants', () => {
+    expect(coerceSessionStats({ attempts: 5, correct: 5, streak: 5, longestStreak: 5 })).toEqual({
+      attempts: 5,
+      correct: 5,
+      streak: 5,
+      longestStreak: 5,
+    });
   });
 
   it('isolates state between different keys', () => {

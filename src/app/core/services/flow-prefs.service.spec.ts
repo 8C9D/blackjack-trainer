@@ -116,6 +116,82 @@ describe('FlowPrefsService', () => {
       // Prefs written before the setting existed stay on the pure hand tally.
       expect(mergePrefs({ dailyGoal: 15 }).counting.showdownBetting).toBe(false);
     });
+
+    it('falls back from an unknown counting-system id', () => {
+      expect(mergePrefs({ counting: { systemId: 'missing-system' } }).counting.systemId).toBe(
+        DEFAULT_FLOW_PREFS.counting.systemId,
+      );
+    });
+
+    it('coerces an unbalanced system out of true-count mode', () => {
+      const counting = mergePrefs({
+        counting: { systemId: 'ko', mode: 'true-count', trueCountSource: 'classic' },
+      }).counting;
+      expect(counting.systemId).toBe('ko');
+      expect(counting.mode).toBe('running-count');
+    });
+
+    it('falls back field-by-field from unsupported counting numbers', () => {
+      const counting = mergePrefs({
+        counting: {
+          numberOfCards: 0,
+          millisecondsBetweenCards: 99,
+          decksRemaining: 0.75,
+          numberOfDecks: 3,
+          penetration: 0.95,
+        },
+      }).counting;
+      expect(counting.numberOfCards).toBe(DEFAULT_FLOW_PREFS.counting.numberOfCards);
+      expect(counting.millisecondsBetweenCards).toBe(
+        DEFAULT_FLOW_PREFS.counting.millisecondsBetweenCards,
+      );
+      expect(counting.decksRemaining).toBe(DEFAULT_FLOW_PREFS.counting.decksRemaining);
+      expect(counting.numberOfDecks).toBe(DEFAULT_FLOW_PREFS.counting.numberOfDecks);
+      expect(counting.penetration).toBe(DEFAULT_FLOW_PREFS.counting.penetration);
+    });
+
+    it('rejects a live true-count round that would consume the whole shoe', () => {
+      const counting = mergePrefs({
+        counting: {
+          systemId: 'hi-lo',
+          mode: 'true-count',
+          trueCountSource: 'live-shoe',
+          numberOfDecks: 1,
+          numberOfCards: 52,
+        },
+      }).counting;
+      expect(counting.numberOfDecks).toBe(1);
+      expect(counting.numberOfCards).toBe(DEFAULT_FLOW_PREFS.counting.numberOfCards);
+    });
+
+    it('keeps supported counting preferences unchanged', () => {
+      const counting = mergePrefs({
+        counting: {
+          systemId: 'omega-ii',
+          mode: 'true-count',
+          numberOfCards: 40,
+          millisecondsBetweenCards: 250,
+          decksRemaining: 2.5,
+          trueCountSource: 'live-shoe',
+          numberOfDecks: 2,
+          penetration: 0.8,
+          showdownSpots: 2,
+          showdownBetting: true,
+        },
+      }).counting;
+      expect(counting).toEqual({
+        systemId: 'omega-ii',
+        mode: 'true-count',
+        numberOfCards: 40,
+        millisecondsBetweenCards: 250,
+        decksRemaining: 2.5,
+        trueCountSource: 'live-shoe',
+        numberOfDecks: 2,
+        penetration: 0.8,
+        showdownSpots: 2,
+        showdownBetting: true,
+      });
+    });
   });
 
   describe('clampGoal', () => {

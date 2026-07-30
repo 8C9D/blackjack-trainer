@@ -29,6 +29,25 @@ const EMPTY_STATS: SessionStats = {
   longestStreak: 0,
 };
 
+// A syntactically numeric localStorage payload can still be impossible (for
+// example `correct > attempts` or a negative streak). Reject the whole record
+// so corrupted/manual-edited state cannot surface accuracy above 100% or poison
+// future updates.
+export function coerceSessionStats(raw: unknown): SessionStats {
+  const stats = coerceNumericRecord(raw, EMPTY_STATS);
+  const values = [stats.attempts, stats.correct, stats.streak, stats.longestStreak];
+  if (
+    values.some((value) => !Number.isSafeInteger(value) || value < 0) ||
+    stats.correct > stats.attempts ||
+    stats.streak > stats.correct ||
+    stats.longestStreak > stats.correct ||
+    stats.streak > stats.longestStreak
+  ) {
+    return EMPTY_STATS;
+  }
+  return stats;
+}
+
 // Stats container parameterized by storage key. Concrete services
 // (BasicStrategyStatsService, CardCountingStatsService) extend this and
 // pass their key — multiple feature areas can persist independent stats
@@ -61,7 +80,7 @@ export class StatsStore {
   }
 
   private load(): SessionStats {
-    return readJson(this.storageKey, EMPTY_STATS, (raw) => coerceNumericRecord(raw, EMPTY_STATS));
+    return readJson(this.storageKey, EMPTY_STATS, coerceSessionStats);
   }
 
   private persist(stats: SessionStats): void {
