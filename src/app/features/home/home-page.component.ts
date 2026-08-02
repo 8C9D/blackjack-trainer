@@ -66,10 +66,16 @@ interface TrainerCard {
           }
         </div>
 
-        <button type="button" class="home__settings" (click)="openSettings()">
-          <kbd class="kcap">,</kbd>
-          Settings
-        </button>
+        <div class="home__footer">
+          <button type="button" class="home__quiet home__chart" (click)="openChart()">
+            <kbd class="kcap">C</kbd>
+            Chart
+          </button>
+          <button type="button" class="home__quiet home__settings" (click)="openSettings()">
+            <kbd class="kcap">,</kbd>
+            Settings
+          </button>
+        </div>
       </div>
     </main>
   `,
@@ -138,6 +144,10 @@ export class HomePageComponent {
     void this.router.navigate(['/settings']);
   }
 
+  protected openChart(): void {
+    void this.router.navigate(['/chart']);
+  }
+
   private accuracyFor(id: TrainerId): number | null {
     switch (id) {
       case 'basic-strategy':
@@ -168,6 +178,11 @@ export class HomePageComponent {
     if (event.key === ',') {
       event.preventDefault();
       this.openSettings();
+      return;
+    }
+    if (event.key.toLowerCase() === 'c') {
+      event.preventDefault();
+      this.openChart();
       return;
     }
     const others = this.otherTrainers();

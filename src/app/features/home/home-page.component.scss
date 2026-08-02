@@ -133,8 +133,13 @@
   }
 }
 
-.home__settings {
-  align-self: center;
+.home__footer {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.home__quiet {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;

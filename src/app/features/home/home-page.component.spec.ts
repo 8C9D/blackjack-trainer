@@ -139,6 +139,16 @@ describe('HomePageComponent', () => {
     });
   });
 
+  describe('chart', () => {
+    it('is a quiet link, also on the C key', () => {
+      const { fixture, c, navigate } = createPage();
+      (fixture.nativeElement.querySelector('.home__chart') as HTMLButtonElement).click();
+      expect(navigate).toHaveBeenCalledWith(['/chart']);
+      c.onKeyDown(new KeyboardEvent('keydown', { key: 'c' }));
+      expect(navigate).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('streak strip', () => {
     it('renders seven dots and the streak label', () => {
       const { fixture } = createPage();

@@ -266,6 +266,22 @@ only for systems that carry one (KO alone today).
   the web engine — and `CountingParityTests` grades the Swift
   `evaluateKeyCount` against them.
 
+### Post-roadmap continued: the strategy chart reference (2026-08-02)
+
+The app could grade a play but never show the chart it graded against.
+`/chart` (a quiet `Chart` link next to Settings on home, key `C`) now renders the hard, soft, and pair grids for the rules the trainee actually plays under.
+
+- **Rendered, not re-encoded.** Each cell calls `BasicStrategyEngineService.decide()` on a representative hand for its row rather than reading the chart data a second time, so the page cannot drift from what a miss is scored on.
+  Rows are drawn as hands: hard totals below 12 as `x,2` and 12+ as `10,x`, softs as `A,x`, pairs as `x,x`.
+  Hard 20's only two-card form is `10,10`, and the pair row for tens is `N` against every upcard, so the engine falls through the pair lookup onto hard 20 and that row still shows its own play.
+- **Rule-aware.** `SUR_H` / `SUR_S` / `SUR_Y` and `YN` cells resolve through the engine against the live `EngineOptions`, so turning Late Surrender on flips 16 vs 10 from `H` to `R`, and Double After Split flips 4,4 vs 5 from `H` to `P`.
+  A pair the chart declines to split shows the fall-back play (10,10 stands, 5,5 doubles) rather than a bare `N`, because that is the action the drill grades.
+- **Surrender is `R`, not `SUR`.** Ten columns have to fit a 320px screen; three glyphs overran the cell and merged into the neighbouring one.
+  The legend and each cell's `aria-label` (`Hit`, `Stand`, ..., `Surrender`) spell every symbol out, so color and the letter are never the only carriers.
+- **Palette.** Five chart-cell tints joined the two palette mixins in `src/styles.scss` (hit, stand, double, split, surrender), always under `--ink`.
+- **Validation.** +16 unit tests (938 total), including guards that every representative hand lands on the row it is meant to.
+  `/chart` joined the E2E route sweep, so its markup and both themes' contrast are measured, plus two navigation specs (the home link and the `C` key); the suite is 63 tests and was run four times for flakiness.
+
 ### Bugs found reviewing the multi-box work (2026-07-25)
 
 Three defects surfaced while reviewing and exercising the multi-box showdown.

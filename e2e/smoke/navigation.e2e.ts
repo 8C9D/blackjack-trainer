@@ -34,6 +34,17 @@ test.describe('navigation & routing', () => {
     await expect(page).toHaveTitle(/Settings/);
   });
 
+  test('the strategy chart opens from home and comes back', async ({ page }) => {
+    await page.getByRole('button', { name: /Chart/ }).click();
+    await expect(page).toHaveURL(/\/chart$/);
+    await expect(page).toHaveTitle(/Strategy Chart/);
+    // Every chart key has a row, and the grid follows the active rule set.
+    await expect(page.getByRole('rowheader', { name: '16', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Back' })).toBeVisible();
+    await page.getByRole('button', { name: 'Back' }).click();
+    await expect(page).toHaveURL(/\/$/);
+  });
+
   test('pre-Flow trainer URLs redirect into the flow', async ({ page }) => {
     await page.goto('/card-counting');
     await expect(page).toHaveURL(/\/drill\/card-counting$/);
@@ -87,5 +98,11 @@ test.describe('navigation & routing', () => {
     // "," opens Settings.
     await page.keyboard.press(',');
     await expect(page).toHaveURL(/\/settings$/);
+
+    await page.goto('/');
+    await ready();
+    // "c" opens the strategy chart.
+    await page.keyboard.press('c');
+    await expect(page).toHaveURL(/\/chart$/);
   });
 });

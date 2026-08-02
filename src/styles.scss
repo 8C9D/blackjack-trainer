@@ -44,6 +44,14 @@
   --keycap-border: #3a3f49;
   --card-shadow: rgba(0, 0, 0, 0.35);
 
+  // Strategy-chart cell fills — one hue per action, always under `--ink`.
+  // Tints only: the letter carries the meaning, the fill only groups.
+  --chart-hit: rgba(229, 102, 95, 0.18);
+  --chart-stand: rgba(76, 195, 138, 0.18);
+  --chart-double: rgba(242, 182, 76, 0.2);
+  --chart-split: rgba(96, 150, 235, 0.24);
+  --chart-surrender: rgba(139, 144, 156, 0.22);
+
   // Focus rings must clear 3:1 against whatever they sit on, so they follow
   // the foreground accent rather than the fill.
   --focus: var(--accent-ink);
@@ -86,6 +94,12 @@
 
   --keycap-border: #c2c7d1;
   --card-shadow: rgba(15, 20, 32, 0.18);
+
+  --chart-hit: rgba(179, 43, 35, 0.14);
+  --chart-stand: rgba(15, 114, 71, 0.14);
+  --chart-double: rgba(242, 182, 76, 0.34);
+  --chart-split: rgba(37, 99, 235, 0.16);
+  --chart-surrender: rgba(102, 109, 122, 0.18);
 
   --focus: var(--accent-ink);
 }

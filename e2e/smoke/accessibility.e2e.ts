@@ -17,6 +17,7 @@ import {
 const ROUTES = [
   '/',
   '/settings',
+  '/chart',
   '/drill/basic-strategy',
   '/drill/deviations',
   '/drill/card-counting',
