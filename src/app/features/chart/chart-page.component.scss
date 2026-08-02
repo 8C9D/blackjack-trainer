@@ -64,6 +64,37 @@
   border-radius: 6px;
 }
 
+.chart__modes {
+  display: flex;
+  gap: 0.35rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.25rem;
+}
+
+.chart__mode {
+  flex: 1;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 0.45rem 0.5rem;
+  font-size: 0.85rem;
+  color: var(--ink-2);
+  cursor: pointer;
+
+  &--on {
+    background: var(--raised);
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
 .chart__section {
   background: var(--surface);
   border: 1px solid var(--hairline);
@@ -140,6 +171,61 @@
 
 .chart__cell--sur {
   background: var(--chart-surrender);
+}
+
+.chart__cell--ins {
+  background: var(--chart-insurance);
+}
+
+// The deviation list: three text columns, not a ten-column grid.
+.chart__table--rules {
+  table-layout: auto;
+  border-spacing: 0;
+  font-size: 0.82rem;
+
+  th,
+  td {
+    text-align: left;
+    padding: 0.32rem 0.4rem;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  thead th {
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  tbody tr:last-child th,
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.chart__rule-hand {
+  width: auto;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.chart__index {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+
+.chart__play {
+  white-space: nowrap;
+  color: var(--ink-2);
+
+  .chart__cell {
+    display: inline-block;
+    min-width: 1.5rem;
+    margin-right: 0.35rem;
+    padding: 0.1rem 0.3rem;
+  }
 }
 
 .chart__legend {
