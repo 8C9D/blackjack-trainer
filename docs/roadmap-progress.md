@@ -276,6 +276,8 @@ A segmented switch above the rules line picks Basic strategy (the grids) or Devi
 - **The threshold** prints the comparison the chart legend uses: `≥ +3` / `≤ -1` for the indexed directions (signs via the shared `formatSignedCount`), and `> 0` / `< 0` for the two count-sign directions, which carry no index.
 - **Insurance** is the one action outside the basic grids' five, so it gets its own cell hue (`--chart-insurance`) and the symbol `I`.
 - **Validation.** +5 unit tests (943 total) and a contrast sweep of the second tab in both themes (65 E2E), since the route sweep only ever measures a screen's opening state.
+- **iOS mirror.** `StrategyChartGrid.deviationSections(rules:)` / `.threshold(_:)` (fed from `charts.deviations`, the same table `DeviationEngine` looks up) plus a `ChartMode` segmented `Picker` and a row list in `ChartGridView`; `Theme.chartInsurance` is the sixth cell hue.
+  +4 Swift tests (295 total). The probe render shows the segmented picker as ImageRenderer's "unsupported" bar, which is a renderer limitation, not the screen: `.pickerStyle(.segmented)` is what Settings already uses in four places.
 
 ### Post-roadmap continued: the strategy chart reference (2026-08-02)
 
