@@ -104,7 +104,9 @@
 		C8E377757426914C0C25B692 /* DrillHand.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA44A857F312C0801027DE52 /* DrillHand.swift */; };
 		CA4D608DD9DB115BD8BEDD6B /* CountingParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */; };
 		CA91BAD96E4855BF68D1FD52 /* BlackjackWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 424CE3E5C15E3B885150126A /* BlackjackWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CB428B6B9AE879EA9322AAEC /* PracticeProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9027A7C8DD13E222350D437B /* PracticeProgressView.swift */; };
 		CCF53B5EC96C4C0EF2F84921 /* HardwareKeyboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56D03F7A78236CB3E5505245 /* HardwareKeyboard.swift */; };
+		CD1B136CDAF9FADDBC817AFF /* ProgressSummaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 743B8812CB1A205EA087ACC5 /* ProgressSummaryTests.swift */; };
 		CD5DF8C13DB099C1784832CB /* Showdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = B174892CC11A60C0F530B406 /* Showdown.swift */; };
 		CF8D2834052E1EBACEE68166 /* ShowdownModel+Presentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2F1362A78116791974E6D3E /* ShowdownModel+Presentation.swift */; };
 		D1FF42D81F430C0468DF7729 /* RemindersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1F3C9E741253484F3D5474 /* RemindersTests.swift */; };
@@ -112,6 +114,7 @@
 		D59FC342FEA2A2F0EC1877EE /* FlowPrefs+Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDA0613318A859FEB01755A3 /* FlowPrefs+Persistence.swift */; };
 		D64887099FD3A74A49D1E6DB /* COPYING.txt in Resources */ = {isa = PBXBuildFile; fileRef = D646C0CD8526C8E211E25C42 /* COPYING.txt */; };
 		D7C8B961AF9E71D941DA9126 /* FlowActionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0091241C5E0CB4080EF4B19B /* FlowActionsView.swift */; };
+		D96B16FD90E79CE8C4135E30 /* ProgressSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DA1FF307F03CE0AA5BEF9E9 /* ProgressSummary.swift */; };
 		D9944DAA85317A7EC72AF2F9 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81F4236F3DD46FE168D9EB8F /* SettingsView.swift */; };
 		DAA0754AABD5AAFC8003BF86 /* Strategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 577C951192BCC781DBE8EBDD /* Strategy.swift */; };
 		DBE51B6B16BCDF2D61562892 /* counting-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = A039C5E6271C7F1C7AFECA72 /* counting-vectors.json */; };
@@ -222,6 +225,7 @@
 		5A74F8324193BA0A96DB8B29 /* BlackjackTrainerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = BlackjackTrainerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5B05E37DDD485FFB7F97B52C /* ChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartView.swift; sourceTree = "<group>"; };
 		5D6A6BE6AD0BE9426D92EAA5 /* HomeHelpersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeHelpersTests.swift; sourceTree = "<group>"; };
+		5DA1FF307F03CE0AA5BEF9E9 /* ProgressSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressSummary.swift; sourceTree = "<group>"; };
 		645F62DA06D6384BB1E98209 /* SharedComponentsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponentsTests.swift; sourceTree = "<group>"; };
 		6A64DE6664C81E82AA4D8054 /* ActionButtonsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionButtonsView.swift; sourceTree = "<group>"; };
 		6C3FF9EB17A9713215F67B6B /* MissTally.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissTally.swift; sourceTree = "<group>"; };
@@ -233,6 +237,7 @@
 		72027F1B6A9AFD3511240253 /* GoalRingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalRingView.swift; sourceTree = "<group>"; };
 		7244BE12FDAD7DBD620EFE49 /* DeviationsDrillView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationsDrillView.swift; sourceTree = "<group>"; };
 		732250420D9C90F9AD665184 /* DrillHandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillHandTests.swift; sourceTree = "<group>"; };
+		743B8812CB1A205EA087ACC5 /* ProgressSummaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressSummaryTests.swift; sourceTree = "<group>"; };
 		786E4951CEEAFF7A09457F30 /* ShowdownParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownParityTests.swift; sourceTree = "<group>"; };
 		78DC33D28D09EB8697F6D833 /* StrategyChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrategyChart.swift; sourceTree = "<group>"; };
 		7B1046B13D6373233EEA1F35 /* CardCounting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardCounting.swift; sourceTree = "<group>"; };
@@ -240,6 +245,7 @@
 		81F4236F3DD46FE168D9EB8F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		825AB70D2C6317662368AC83 /* BasicStrategyParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicStrategyParityTests.swift; sourceTree = "<group>"; };
 		8C574B4537F0D533478F29ED /* ShowdownInsuranceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownInsuranceTests.swift; sourceTree = "<group>"; };
+		9027A7C8DD13E222350D437B /* PracticeProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeProgressView.swift; sourceTree = "<group>"; };
 		92869AF24C67B01CE515A238 /* StatsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsStore.swift; sourceTree = "<group>"; };
 		94C1E91BE95C99F9AC8C66D7 /* BlackjackWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BlackjackWidget.entitlements; sourceTree = "<group>"; };
 		9558F60D7AA7FADAB9B83CFF /* MissTallyStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissTallyStoreTests.swift; sourceTree = "<group>"; };
@@ -401,6 +407,7 @@
 				5D6A6BE6AD0BE9426D92EAA5 /* HomeHelpersTests.swift */,
 				9558F60D7AA7FADAB9B83CFF /* MissTallyStoreTests.swift */,
 				0532EF5C44190141EA29F7E8 /* PracticeHistoryStoreTests.swift */,
+				743B8812CB1A205EA087ACC5 /* ProgressSummaryTests.swift */,
 				0B1F3C9E741253484F3D5474 /* RemindersTests.swift */,
 				645F62DA06D6384BB1E98209 /* SharedComponentsTests.swift */,
 				3D44944317BBDF4871E4996D /* ShoeFactoryTests.swift */,
@@ -489,6 +496,7 @@
 				28F2B341E3013B66C148210C /* FlowTopBarView.swift */,
 				72027F1B6A9AFD3511240253 /* GoalRingView.swift */,
 				355840D6D85CBA4C7903ED7C /* HomeView.swift */,
+				9027A7C8DD13E222350D437B /* PracticeProgressView.swift */,
 				81F4236F3DD46FE168D9EB8F /* SettingsView.swift */,
 				D33F7F71F87D6F8DE7DB2A52 /* StreakDotsView.swift */,
 			);
@@ -549,6 +557,7 @@
 				EA44A857F312C0801027DE52 /* DrillHand.swift */,
 				0F8122F7E6CB4CFC71CC7DD1 /* DrillSession.swift */,
 				1F8840CC6E0B7C1C81FB294A /* FlowAdvanceScheduler.swift */,
+				5DA1FF307F03CE0AA5BEF9E9 /* ProgressSummary.swift */,
 			);
 			path = Flow;
 			sourceTree = "<group>";
@@ -750,7 +759,9 @@
 				11B4EF92A5EE8846F8C72873 /* NotificationCoordinator.swift in Sources */,
 				5F8498BABF2D152C9679928E /* PlayerHand.swift in Sources */,
 				56400A2A2343C8F479E57FD0 /* PracticeHistory.swift in Sources */,
+				CB428B6B9AE879EA9322AAEC /* PracticeProgressView.swift in Sources */,
 				1545392CB4419FD4C62C30D3 /* PracticeReminders.swift in Sources */,
+				D96B16FD90E79CE8C4135E30 /* ProgressSummary.swift in Sources */,
 				457BD2A5B549C7C4D08A030F /* RemindersModel.swift in Sources */,
 				A72B5C6E116DC9D70E9F7055 /* RemindersView.swift in Sources */,
 				D9944DAA85317A7EC72AF2F9 /* SettingsView.swift in Sources */,
@@ -812,6 +823,7 @@
 				A1A15FE9D46824C3D9167D3C /* HomeHelpersTests.swift in Sources */,
 				9E2C8B656A2313AAE1CAF058 /* MissTallyStoreTests.swift in Sources */,
 				50C0B892FA4BD6F58EBACF9A /* PracticeHistoryStoreTests.swift in Sources */,
+				CD1B136CDAF9FADDBC817AFF /* ProgressSummaryTests.swift in Sources */,
 				D1FF42D81F430C0468DF7729 /* RemindersTests.swift in Sources */,
 				30715FEEF950524036747DC0 /* SharedComponentsTests.swift in Sources */,
 				9C4B22D42A6A12BC4DC5C62E /* ShoeFactoryTests.swift in Sources */,

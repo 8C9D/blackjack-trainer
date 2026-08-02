@@ -8,6 +8,7 @@ enum FlowRoute: Equatable {
     case home
     case settings
     case chart
+    case progress
     case drill(TrainerId)
 }
 
