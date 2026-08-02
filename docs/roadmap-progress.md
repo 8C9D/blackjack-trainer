@@ -275,6 +275,10 @@ Ten stores could be written but never cleared: `StatsStore.reset()` existed and 
 - **Settings keeps its settings.** The rules, daily goal, appearance, and drill configuration are untouched: a trainee clearing their numbers has not changed their mind about the table they are practising for.
 - **Two steps, no dialog.** The confirm replaces the button in place and names exactly what goes, matching the app's no-modal habit; a `role="status"` line confirms afterwards.
 - **Validation.** +4 unit tests (962 total), an E2E that resets and reloads (the goal survives, the history does not), and a contrast sweep of the confirm state, the app's only destructive control; 70 E2E.
+- **iOS mirror.** `AppModel.resetPracticeData()` is the coordinator (`PracticeHistoryStore.reset()` and `MissTallyStore.reset()` are new), and `PracticeDataSection` is its own file so `SettingsView` stays inside the `type_body_length` cap.
+  It asks with a `confirmationDialog` rather than the web's in-place confirm — the platform's own answer for a destructive action — and `flowPrefs` is deliberately not in the list. +1 Swift test (303 total).
+- **The destructive role picks its own red.** `Button(role: .destructive)` paints the label systemRed, ~3.5:1 on the light theme's near-white row; the label now takes `Theme.bad`, the pair tuned per scheme exactly as the web's `--bad` is.
+  Only a real screenshot showed it: `ImageRenderer` draws a `Form` as its "unsupported" placeholder, so the section was run as the app's root view in the simulator and captured under both `simctl ui appearance` settings.
 
 ### Post-roadmap continued: the Progress screen (2026-08-02)
 

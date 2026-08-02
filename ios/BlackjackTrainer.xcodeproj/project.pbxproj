@@ -44,6 +44,7 @@
 		4C357F27214321B492EA280F /* DeviationTrainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C64CBE362221FD3923975DBF /* DeviationTrainer.swift */; };
 		4DC171F2E11923E6F13DE2DF /* CardImageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7D35732C70EB138CD4848D4 /* CardImageTests.swift */; };
 		4F34564EAD24EB9CA97E6818 /* CloudKeyValueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 456585027076380424BE63C8 /* CloudKeyValueStore.swift */; };
+		4F73024F5DE4B5065E751890 /* PracticeDataSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 681D9216B84FB800980BB277 /* PracticeDataSection.swift */; };
 		50C0B892FA4BD6F58EBACF9A /* PracticeHistoryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0532EF5C44190141EA29F7E8 /* PracticeHistoryStoreTests.swift */; };
 		51FE949661D4778BBF0247ED /* FlowRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 999CBB4ECACD7CAF358DC9B6 /* FlowRouter.swift */; };
 		53E0D784E52D67FE0E0D7D30 /* CardGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2705BBD8AAF017C2486055AE /* CardGenerator.swift */; };
@@ -227,6 +228,7 @@
 		5D6A6BE6AD0BE9426D92EAA5 /* HomeHelpersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeHelpersTests.swift; sourceTree = "<group>"; };
 		5DA1FF307F03CE0AA5BEF9E9 /* ProgressSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressSummary.swift; sourceTree = "<group>"; };
 		645F62DA06D6384BB1E98209 /* SharedComponentsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponentsTests.swift; sourceTree = "<group>"; };
+		681D9216B84FB800980BB277 /* PracticeDataSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeDataSection.swift; sourceTree = "<group>"; };
 		6A64DE6664C81E82AA4D8054 /* ActionButtonsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionButtonsView.swift; sourceTree = "<group>"; };
 		6C3FF9EB17A9713215F67B6B /* MissTally.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissTally.swift; sourceTree = "<group>"; };
 		6E38CEB24905B810A63FC4E4 /* AppModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelTests.swift; sourceTree = "<group>"; };
@@ -496,6 +498,7 @@
 				28F2B341E3013B66C148210C /* FlowTopBarView.swift */,
 				72027F1B6A9AFD3511240253 /* GoalRingView.swift */,
 				355840D6D85CBA4C7903ED7C /* HomeView.swift */,
+				681D9216B84FB800980BB277 /* PracticeDataSection.swift */,
 				9027A7C8DD13E222350D437B /* PracticeProgressView.swift */,
 				81F4236F3DD46FE168D9EB8F /* SettingsView.swift */,
 				D33F7F71F87D6F8DE7DB2A52 /* StreakDotsView.swift */,
@@ -758,6 +761,7 @@
 				94A043188027320FBD0E92AB /* MissTally.swift in Sources */,
 				11B4EF92A5EE8846F8C72873 /* NotificationCoordinator.swift in Sources */,
 				5F8498BABF2D152C9679928E /* PlayerHand.swift in Sources */,
+				4F73024F5DE4B5065E751890 /* PracticeDataSection.swift in Sources */,
 				56400A2A2343C8F479E57FD0 /* PracticeHistory.swift in Sources */,
 				CB428B6B9AE879EA9322AAEC /* PracticeProgressView.swift in Sources */,
 				1545392CB4419FD4C62C30D3 /* PracticeReminders.swift in Sources */,

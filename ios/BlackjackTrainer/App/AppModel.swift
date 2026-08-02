@@ -89,4 +89,22 @@ final class AppModel {
         // the daily-goal ring and the streak — from the practice history + goal.
         widgetPublisher = WidgetSnapshotPublisher(history: practiceHistory, prefs: flowPrefs)
     }
+
+    /// Everything practice writes, cleared in one call, so no store can be
+    /// forgotten when a new one is added. `flowPrefs` is deliberately NOT
+    /// touched: a trainee clearing their numbers has not changed their mind
+    /// about the table they are practising for. Mirrors the web
+    /// `PracticeDataService`.
+    func resetPracticeData() {
+        for store in [
+            basicStrategyStats, deviationStats, runningCountStats,
+            trueCountStats, deckEstimationStats, keyCountStats
+        ] {
+            store.reset()
+        }
+        showdownStats.reset()
+        showdownBankroll.reset()
+        practiceHistory.reset()
+        missTally.reset()
+    }
 }
