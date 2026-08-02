@@ -271,6 +271,8 @@ no-ops at runtime but document the chart cell.
 - **Review rounds** — the Done screen's queued weakness is a button (`R`): it starts a round drawn entirely from the weak list, falling back to fresh hands if you clear it mid-round.
 - **Flow drill shell** — shared top bar (today's count, session target, current streak, exit), full-screen stage, action buttons with key hints, and a Done screen with the round's accuracy and best streak.
 - **Settings screen** — daily goal, appearance, table rules (H17/S17, DAS, LS), deviation options, and the full counting-drill configuration all live here; the drill pages host no configuration.
+- **Reset practice data** (Settings → Practice data): a two-step control that clears every stat store, the practice history and streak, the weak-spot tallies, and the showdown record and bankroll through one `PracticeDataService`, so no store is missed.
+  Settings themselves are deliberately untouched.
 - **Strategy chart reference** (`/chart`, `C` from home): the hard/soft/pair grids for the active table rules, color-coded per action with a legend.
   Every cell is `BasicStrategyEngineService.decide()` run on a representative hand rather than a second transcription of the chart data, so what the page shows and what a drill grades cannot drift.
   `SUR_*` and `YN` cells resolve against the live DAS / Late-Surrender settings, and a pair the chart declines to split shows the play it falls back to.
@@ -339,6 +341,7 @@ src/app/
 │       ├── deviation-stats.service.ts           Deviations StatsStore
 │       ├── deck-estimation-stats.service.ts     Deck-estimate (±0.5) StatsStore
 │       ├── showdown-stats.service.ts            Showdown win/lose/push tally (own shape)
+│       ├── practice-data.service.ts             one-call reset of every practice store
 │       └── bankroll.service.ts                  Showdown bankroll (chips wagered + net)
 ├── data/
 │   ├── h17-basic-strategy.ts                    BJA H17 chart (PDF linked)

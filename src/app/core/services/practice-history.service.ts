@@ -124,6 +124,12 @@ export class PracticeHistoryService {
     });
   }
 
+  // Wipes the history: the goal ring, streak, and week strip all start over.
+  reset(): void {
+    this._days.set([]);
+    this.persist([]);
+  }
+
   private persist(days: readonly PracticeDay[]): void {
     writeJson(PRACTICE_HISTORY_KEY, { days });
   }

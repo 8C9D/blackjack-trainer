@@ -73,6 +73,45 @@
   font-weight: 600;
 }
 
+.settings__row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.settings__warning {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.settings__cancel,
+.settings__danger {
+  align-self: flex-start;
+  background: var(--ground);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  color: var(--ink-2);
+  font-size: 0.85rem;
+  padding: 0.45rem 0.8rem;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--raised);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
+.settings__danger {
+  color: var(--bad);
+  border-color: var(--bad-edge);
+  background: var(--bad-tint);
+}
+
 .settings__field {
   justify-content: space-between;
 

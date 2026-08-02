@@ -163,6 +163,18 @@ test.describe('accessibility', () => {
     });
   }
 
+  // Settings' reset confirm is the app's only destructive control, and its red
+  // button sits on a tint the route sweep never reaches.
+  for (const scheme of ['dark', 'light'] as const) {
+    test(`the reset confirm meets WCAG AA in the ${scheme} theme`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.goto('/settings');
+      await page.getByRole('button', { name: 'Reset practice data' }).click();
+      await expect(page.getByRole('button', { name: 'Reset everything' })).toBeVisible();
+      expect(await contrastFailures(page), `reset confirm (${scheme})`).toEqual([]);
+    });
+  }
+
   // The chart opens on the basic grids, so its second half — the deviation
   // list, with an action pill hue of its own for insurance — is never sampled
   // by the route sweep.
