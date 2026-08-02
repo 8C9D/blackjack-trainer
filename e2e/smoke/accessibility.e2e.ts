@@ -18,6 +18,7 @@ const ROUTES = [
   '/',
   '/settings',
   '/chart',
+  '/progress',
   '/drill/basic-strategy',
   '/drill/deviations',
   '/drill/card-counting',

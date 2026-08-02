@@ -1,0 +1,212 @@
+.progress {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: calc(1.4rem + env(safe-area-inset-top)) 1.25rem calc(2rem + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.progress__header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.progress__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 0.88rem;
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+  border-radius: 8px;
+
+  &:hover {
+    color: var(--ink);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
+.progress__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 650;
+}
+
+.progress__card {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.progress__heading {
+  margin: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.progress__week {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  height: 5.5rem;
+}
+
+.progress__day {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  height: 100%;
+}
+
+.progress__bar-track {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  background: var(--ground);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.progress__bar {
+  width: 100%;
+  min-height: 2px;
+  // A day short of the goal still has to read as a bar, so it takes the muted
+  // foreground rather than a raised surface, which is a hair off the track.
+  background: var(--muted);
+  border-radius: 6px;
+
+  &--met {
+    background: var(--accent-ink);
+  }
+
+  &--today {
+    outline: 1px solid var(--accent-edge);
+    outline-offset: -1px;
+  }
+}
+
+.progress__weekday {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.progress__week-note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ink-2);
+}
+
+.progress__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+
+  th,
+  td {
+    text-align: right;
+    padding: 0.35rem 0.2rem;
+    border-bottom: 1px solid var(--hairline);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-2);
+    font-weight: 400;
+  }
+
+  th:first-child,
+  td:first-child {
+    text-align: left;
+    color: var(--ink);
+  }
+
+  thead th {
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  tbody tr:last-child th,
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  // Nested so it outranks the cell's own `--ink-2`.
+  .progress__good {
+    color: var(--good);
+  }
+}
+
+.progress__good {
+  color: var(--good);
+}
+
+.progress__bad {
+  color: var(--bad);
+}
+
+.progress__record {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--ink);
+
+  small {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.76rem;
+    color: var(--muted);
+  }
+}
+
+.progress__spots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+
+  li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    color: var(--ink);
+  }
+
+  span {
+    color: var(--muted);
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+}
+
+.progress__cleared,
+.progress__empty {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+
+  b {
+    color: var(--ink-2);
+    font-weight: 600;
+  }
+}
