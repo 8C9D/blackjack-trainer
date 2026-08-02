@@ -22,6 +22,8 @@ struct FlowRootView: View {
             SettingsView()
         case .chart:
             ChartView()
+        case .progress:
+            PracticeProgressView()
         case let .drill(trainer):
             drill(trainer)
         }

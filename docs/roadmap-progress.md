@@ -279,6 +279,8 @@ Eleven stores had been recording for months behind two accuracy chips on Home an
 - **A specificity bug caught by rendering, not by a test:** `.progress__good` (the ≥85% green) lost to `.progress__table td`'s own `--ink-2`, so the class applied and the colour did not.
   The unit test asserted the class, which is all jsdom can see without the global palette; nesting the rule inside the table block fixed it.
 - **Validation.** +11 unit tests (958 total). `/progress` joined the E2E route sweep (contrast, landmark, heading) plus two navigation specs; 67 E2E, run four times.
+- **iOS mirror.** `Flow/ProgressSummary.swift` (rows, bars, weekday initials, cleared label) plus `PracticeProgressView` / `ProgressBodyView` — named around SwiftUI's own `ProgressView` — and a fifth `FlowRoute`; Home's quiet row is now Chart / Progress / Settings on both platforms.
+  The trainer table gives its three numeric columns fixed widths and the label the remainder: an even four-way `Grid` split truncated "Basic Strategy" on a phone. +7 Swift tests (302 total), both themes rendered.
 
 ### Post-roadmap continued: the deviation chart reference (2026-08-02)
 
