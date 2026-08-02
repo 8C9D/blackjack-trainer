@@ -266,6 +266,16 @@ only for systems that carry one (KO alone today).
   the web engine — and `CountingParityTests` grades the Swift
   `evaluateKeyCount` against them.
 
+### Post-roadmap continued: resetting practice data (2026-08-02)
+
+Ten stores could be written but never cleared: `StatsStore.reset()` existed and had no caller outside the showdown's busted-out bankroll, and the history and miss tally had no reset at all.
+
+- **One coordinator.** `PracticeDataService` holds every practice store and resets them in one call, so a new store is one line away from being covered rather than a silent omission.
+  `PracticeHistoryService.reset()` and `MissTallyService.reset()` are new; the rest already had one.
+- **Settings keeps its settings.** The rules, daily goal, appearance, and drill configuration are untouched: a trainee clearing their numbers has not changed their mind about the table they are practising for.
+- **Two steps, no dialog.** The confirm replaces the button in place and names exactly what goes, matching the app's no-modal habit; a `role="status"` line confirms afterwards.
+- **Validation.** +4 unit tests (962 total), an E2E that resets and reloads (the goal survives, the history does not), and a contrast sweep of the confirm state, the app's only destructive control; 70 E2E.
+
 ### Post-roadmap continued: the Progress screen (2026-08-02)
 
 Eleven stores had been recording for months behind two accuracy chips on Home and a session summary that vanished on the next round.

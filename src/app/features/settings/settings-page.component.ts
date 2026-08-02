@@ -1,4 +1,4 @@
-import { Component, HostListener, computed, inject } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
@@ -21,6 +21,7 @@ import {
   type DeviationTrueCountSource,
   type ThemePref,
 } from '../../core/services/flow-prefs.service';
+import { PracticeDataService } from '../../core/services/practice-data.service';
 import { CountingSettingsComponent } from '../card-counting/counting-settings.component';
 
 // Manual practice-true-count bounds (the BJA charts top out around +6; ±20
@@ -206,6 +207,30 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
           (showdownBettingChange)="updateCounting({ showdownBetting: $event })"
         />
       </section>
+
+      <section class="settings__group" aria-label="Practice data">
+        <h2 class="settings__heading">Practice data</h2>
+        <!-- Two steps, no dialog: the confirm replaces the button in place. -->
+        @if (confirmingReset()) {
+          <p class="settings__warning" role="status">
+            This clears every drill's stats, the practice history and streak, your weak spots, and
+            the showdown record and chips. Your settings stay as they are.
+          </p>
+          <div class="settings__row">
+            <button type="button" class="settings__danger" (click)="resetPracticeData()">
+              Reset everything
+            </button>
+            <button type="button" class="settings__cancel" (click)="cancelReset()">Cancel</button>
+          </div>
+        } @else {
+          <button type="button" class="settings__cancel" (click)="askReset()">
+            Reset practice data
+          </button>
+          @if (resetDone()) {
+            <p class="settings__warning" role="status">Practice data cleared.</p>
+          }
+        }
+      </section>
     </main>
   `,
   styleUrl: './settings-page.component.scss',
@@ -213,7 +238,11 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
 export class SettingsPageComponent {
   private readonly prefsService = inject(FlowPrefsService);
   private readonly countingEngine = inject(CountingEngineService);
+  private readonly practiceData = inject(PracticeDataService);
   private readonly router = inject(Router);
+
+  protected readonly confirmingReset = signal(false);
+  protected readonly resetDone = signal(false);
 
   protected readonly MIN_GOAL = MIN_DAILY_GOAL;
   protected readonly MAX_GOAL = MAX_DAILY_GOAL;
@@ -249,6 +278,21 @@ export class SettingsPageComponent {
 
   protected goHome(): void {
     void this.router.navigate(['/']);
+  }
+
+  protected askReset(): void {
+    this.resetDone.set(false);
+    this.confirmingReset.set(true);
+  }
+
+  protected cancelReset(): void {
+    this.confirmingReset.set(false);
+  }
+
+  protected resetPracticeData(): void {
+    this.practiceData.reset();
+    this.confirmingReset.set(false);
+    this.resetDone.set(true);
   }
 
   protected onGoalChange(event: Event): void {

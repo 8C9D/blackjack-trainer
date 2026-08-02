@@ -1,7 +1,12 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 
+import { BankrollService } from '../../core/services/bankroll.service';
+import { BasicStrategyStatsService } from '../../core/services/basic-strategy-stats.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
+import { MissTallyService } from '../../core/services/miss-tally.service';
+import { PracticeHistoryService } from '../../core/services/practice-history.service';
+import { ShowdownStatsService } from '../../core/services/showdown-stats.service';
 import { SettingsPageComponent } from './settings-page.component';
 
 function createPage(): {
@@ -149,6 +154,68 @@ describe('SettingsPageComponent', () => {
     system.dispatchEvent(new Event('change'));
 
     expect(prefs.prefs().counting.mode).toBe('key-count');
+  });
+
+  describe('resetting practice data', () => {
+    function button(
+      fixture: ComponentFixture<SettingsPageComponent>,
+      label: string,
+    ): HTMLButtonElement {
+      const el = [...fixture.nativeElement.querySelectorAll('.settings__group button')].find(
+        (b) => (b as HTMLElement).textContent!.trim() === label,
+      ) as HTMLButtonElement | undefined;
+      if (!el) throw new Error(`No button "${label}"`);
+      return el;
+    }
+
+    function seedPractice(): void {
+      TestBed.inject(BasicStrategyStatsService).recordAttempt(true);
+      TestBed.inject(PracticeHistoryService).recordHand();
+      TestBed.inject(MissTallyService).record(
+        'basic-strategy',
+        { kind: 'hard', hand: '16', dealer: '10' },
+        false,
+      );
+      TestBed.inject(ShowdownStatsService).record('win');
+      TestBed.inject(BankrollService).record(10, -10);
+    }
+
+    it('asks before clearing anything', () => {
+      const { fixture } = createPage();
+      seedPractice();
+
+      button(fixture, 'Reset practice data').click();
+      fixture.detectChanges();
+      expect(TestBed.inject(BasicStrategyStatsService).stats().attempts).toBe(1);
+
+      button(fixture, 'Cancel').click();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.settings__danger')).toBeNull();
+      expect(TestBed.inject(BasicStrategyStatsService).stats().attempts).toBe(1);
+    });
+
+    it('clears every practice store but leaves the settings alone', () => {
+      const { fixture, prefs } = createPage();
+      prefs.setDailyGoal(42);
+      prefs.setRuleSet('H17');
+      seedPractice();
+
+      button(fixture, 'Reset practice data').click();
+      fixture.detectChanges();
+      button(fixture, 'Reset everything').click();
+      fixture.detectChanges();
+
+      expect(TestBed.inject(BasicStrategyStatsService).stats().attempts).toBe(0);
+      expect(TestBed.inject(PracticeHistoryService).handsToday()).toBe(0);
+      expect(TestBed.inject(MissTallyService).weakSpots('basic-strategy')).toEqual([]);
+      expect(TestBed.inject(ShowdownStatsService).stats().hands).toBe(0);
+      expect(TestBed.inject(BankrollService).state().wagered).toBe(0);
+      expect(prefs.prefs().dailyGoal).toBe(42);
+      expect(prefs.prefs().ruleSet).toBe('H17');
+      expect(fixture.nativeElement.querySelector('.settings__warning')!.textContent).toContain(
+        'Practice data cleared',
+      );
+    });
   });
 
   it('Escape and the back button return home', () => {

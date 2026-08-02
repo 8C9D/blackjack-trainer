@@ -241,4 +241,19 @@ describe('MissTallyService', () => {
       ]);
     });
   });
+  describe('reset', () => {
+    it('forgets every tally and the stored payload', () => {
+      const s = createService(() => current);
+      s.record('basic-strategy', HARD_16_V_10, false);
+      s.record('deviations', SOFT_18_V_9, false);
+      expect(s.weakSpots('basic-strategy')).toHaveLength(1);
+
+      s.reset();
+
+      expect(s.weakSpots('basic-strategy')).toEqual([]);
+      expect(s.weakSpots('deviations')).toEqual([]);
+      expect(s.state()).toEqual({});
+      expect(localStorage.getItem(MISS_TALLY_KEY)).toBe('{}');
+    });
+  });
 });

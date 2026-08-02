@@ -232,6 +232,12 @@ export class MissTallyService {
     });
   }
 
+  // Forgets every scenario tally, so adaptive practice starts from scratch.
+  reset(): void {
+    this._state.set({});
+    this.persist({});
+  }
+
   private persist(state: TallyState): void {
     writeJson(MISS_TALLY_KEY, state);
   }

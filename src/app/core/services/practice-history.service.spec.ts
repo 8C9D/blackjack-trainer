@@ -160,4 +160,19 @@ describe('PracticeHistoryService', () => {
       expect(s.last7(19)[5].met).toBe(true);
     });
   });
+  describe('reset', () => {
+    it('empties the history and the stored payload', () => {
+      const s = createService(() => current);
+      s.recordHand();
+      s.recordHand();
+      expect(s.handsToday()).toBe(2);
+
+      s.reset();
+
+      expect(s.handsToday()).toBe(0);
+      expect(s.days()).toEqual([]);
+      expect(s.streak(1)).toBe(0);
+      expect(localStorage.getItem(PRACTICE_HISTORY_KEY)).toBe(JSON.stringify({ days: [] }));
+    });
+  });
 });
