@@ -1,12 +1,13 @@
 import Observation
 
-/// The Flow app's four moments reduce to three destinations: the Open home, a
-/// running drill, and the Settings screen. The web app expresses these as routes;
-/// on iOS a single observable router drives a root-level switch — no tab bar, no
-/// navigation stack to reason about.
+/// The Flow app's four moments reduce to four destinations: the Open home, a
+/// running drill, the Settings screen, and the read-only strategy chart. The web
+/// app expresses these as routes; on iOS a single observable router drives a
+/// root-level switch — no tab bar, no navigation stack to reason about.
 enum FlowRoute: Equatable {
     case home
     case settings
+    case chart
     case drill(TrainerId)
 }
 

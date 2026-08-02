@@ -31,6 +31,25 @@ enum Theme {
     static let onAccent = Color(hex: 0x1A1408)
     static let good = Color(dark: 0x4CC38A, light: 0x0F7247)
     static let bad = Color(dark: 0xE5665F, light: 0xB32B23)
+
+    // Strategy-chart cell fills — one hue per action, always under `ink`.
+    // Tints only: the letter carries the meaning, the fill only groups.
+    static let chartHit = Color(dark: 0xE5665F, light: 0xB32B23, opacity: 0.16)
+    static let chartStand = Color(dark: 0x4CC38A, light: 0x0F7247, opacity: 0.16)
+    static let chartDouble = Color(hex: 0xF2B64C, opacity: 0.24)
+    static let chartSplit = Color(dark: 0x6096EB, light: 0x2563EB, opacity: 0.2)
+    static let chartSurrender = Color(dark: 0x8B909C, light: 0x666D7A, opacity: 0.2)
+
+    /// The fill for a chart cell's action.
+    static func chartCell(_ action: Action) -> Color {
+        switch action {
+        case .hit: chartHit
+        case .stand: chartStand
+        case .double: chartDouble
+        case .split: chartSplit
+        case .surrender, .insurance: chartSurrender
+        }
+    }
 }
 
 extension ThemePref {

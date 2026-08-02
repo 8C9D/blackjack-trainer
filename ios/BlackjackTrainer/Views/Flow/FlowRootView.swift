@@ -20,6 +20,8 @@ struct FlowRootView: View {
             HomeView()
         case .settings:
             SettingsView()
+        case .chart:
+            ChartView()
         case let .drill(trainer):
             drill(trainer)
         }
