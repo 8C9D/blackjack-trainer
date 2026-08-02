@@ -29,6 +29,7 @@ type Internals = {
     | 'estimating'
     | 'answering'
     | 'advantage'
+    | 'betting'
     | 'feedback'
     | 'showdown'
     | 'done';
@@ -42,6 +43,9 @@ type Internals = {
   fractionalAnswers(): boolean;
   liveShoeTrueCount(): boolean;
   keyCountDrill(): boolean;
+  betSpreadDrill(): boolean;
+  liveShoeBetSpread(): boolean;
+  asksDeckEstimate(): boolean;
   usesLiveShoe(): boolean;
   countResetLabel(): string;
   isValid(): boolean;
@@ -50,12 +54,14 @@ type Internals = {
   trueCountStatsService: StatsLike;
   deckEstimationStatsService: StatsLike;
   keyCountStatsService: StatsLike;
+  betSpreadStatsService: StatsLike;
   start(): void;
   runAgain(): void;
   oneMoreRound(): void;
   onEstimate(n: number): void;
   onAnswer(n: number): void;
   onAdvantage(saidYes: boolean): void;
+  onBet(units: number): void;
   onKeyDown(e: KeyboardEvent): void;
   shoeRunningCount(): number;
   actualDecksRemaining(): number;
@@ -1008,6 +1014,173 @@ describe('CardCountingPageComponent', () => {
       const { c } = createPage();
       c.start();
       c.onAdvantage(true);
+      expect(c.state()).toBe('streaming');
+      expect(c.result()).toBeNull();
+    });
+  });
+
+  describe('bet-spread drills', () => {
+    function configureBetSpread(source: 'live-shoe' | 'classic' = 'live-shoe'): void {
+      updateSetting('systemId', 'hi-lo');
+      updateSetting('mode', 'bet-spread');
+      updateSetting('trueCountSource', source);
+      updateSetting('numberOfDecks', 6);
+      updateSetting('penetration', 0.75);
+      updateSetting('decksRemaining', 2);
+      updateSetting('numberOfCards', 5);
+      updateSetting('millisecondsBetweenCards', 100);
+    }
+
+    function streamToEnd(c: Internals): void {
+      vi.advanceTimersByTime(c.cards().length * 100);
+    }
+
+    it('is a live-shoe drill that asks for the deck estimate first', () => {
+      configureBetSpread();
+      const { c } = createPage();
+      expect(c.betSpreadDrill()).toBe(true);
+      expect(c.liveShoeBetSpread()).toBe(true);
+      expect(c.usesLiveShoe()).toBe(true);
+      expect(c.asksDeckEstimate()).toBe(true);
+      expect(c.isValid()).toBe(true);
+    });
+
+    it('is invalid for an unbalanced system, and start() refuses', () => {
+      updateSetting('systemId', 'ko');
+      updateSetting('mode', 'bet-spread');
+      const { c } = createPage();
+      expect(c.betSpreadDrill()).toBe(false);
+      expect(c.isValid()).toBe(false);
+      c.start();
+      expect(c.state()).toBe('idle');
+    });
+
+    it('runs streaming → estimating → answering → betting → feedback', () => {
+      configureBetSpread();
+      const { c } = createPage();
+      c.start();
+      streamToEnd(c);
+      expect(c.state()).toBe('estimating');
+      c.onEstimate(5);
+      expect(c.state()).toBe('answering');
+      c.onAnswer(0);
+      expect(c.state()).toBe('betting');
+      expect(c.isDrillActive()).toBe(true);
+      c.onBet(1);
+      expect(c.state()).toBe('feedback');
+    });
+
+    it('skips the deck estimate on the classic preset', () => {
+      configureBetSpread('classic');
+      const { c } = createPage();
+      expect(c.asksDeckEstimate()).toBe(false);
+      c.start();
+      streamToEnd(c);
+      expect(c.state()).toBe('answering');
+      c.onAnswer(0);
+      c.onBet(1);
+      const r = c.result();
+      expect(r?.mode).toBe('bet-spread');
+      if (r && r.mode === 'bet-spread') {
+        // The classic preset's fixed decks, not a live shoe's.
+        expect(r.decksRemaining).toBe(2);
+        expect(r.deckEstimate).toBeUndefined();
+      }
+    });
+
+    it('grades the bet against the ramp at the correct true count', () => {
+      const engine = new CountingEngineService();
+      configureBetSpread('classic');
+      updateSetting('decksRemaining', 1);
+      const { c } = createPage();
+      c.start();
+      const correctRc = engine.runningCount([...c.cards()], c.system());
+      streamToEnd(c);
+      c.onAnswer(correctRc);
+      const ramp = c.settings().betRamp;
+      const expectedUnits = ramp[Math.min(4, Math.max(0, correctRc - 1))];
+      c.onBet(expectedUnits);
+      const r = c.result();
+      if (r && r.mode === 'bet-spread') {
+        expect(r.correctTrueCount).toBe(correctRc);
+        expect(r.correctUnits).toBe(expectedUnits);
+        expect(r.betCorrect).toBe(true);
+        expect(r.countCorrect).toBe(true);
+        expect(r.isCorrect).toBe(true);
+        expect(r.ramp).toEqual(ramp);
+      }
+    });
+
+    it('routes the count to the true-count store and the bet to its own', () => {
+      const engine = new CountingEngineService();
+      configureBetSpread('classic');
+      updateSetting('decksRemaining', 1);
+      const { c } = createPage();
+      c.trueCountStatsService.reset();
+      c.betSpreadStatsService.reset();
+      c.start();
+      const correctRc = engine.runningCount([...c.cards()], c.system());
+      streamToEnd(c);
+      // Right count, deliberately wrong bet (0 is never a ramp entry).
+      c.onAnswer(correctRc);
+      c.onBet(99);
+      expect(c.trueCountStatsService.stats().attempts).toBe(1);
+      expect(c.trueCountStatsService.stats().correct).toBe(1);
+      expect(c.betSpreadStatsService.stats().attempts).toBe(1);
+      expect(c.betSpreadStatsService.stats().correct).toBe(0);
+      expect(c.statsService.stats().attempts).toBe(0);
+      // The rep counts toward the goal but not the streak (strict AND).
+      expect(c.handsToday()).toBe(1);
+      expect(c.result()?.isCorrect).toBe(false);
+    });
+
+    it('scores the deck estimate and carries the count across live-shoe rounds', () => {
+      configureBetSpread();
+      const { c } = createPage();
+      c.deckEstimationStatsService.reset();
+      c.start();
+      streamToEnd(c);
+      c.onEstimate(c.actualDecksRemaining());
+      c.onAnswer(0);
+      c.onBet(1);
+      expect(c.deckEstimationStatsService.stats().attempts).toBe(1);
+      expect(c.deckEstimationStatsService.stats().correct).toBe(1);
+      const r = c.result();
+      if (r && r.mode === 'bet-spread') {
+        expect(r.deckEstimateWithinBand).toBe(true);
+        expect(r.priorRunningCount).toBe(0);
+        expect(c.shoeRunningCount()).toBe(r.correctRunningCount);
+      }
+      // The next round of the same shoe opens on the carried count.
+      c.runAgain();
+      streamToEnd(c);
+      c.onEstimate(c.actualDecksRemaining());
+      c.onAnswer(0);
+      c.onBet(1);
+      const second = c.result();
+      if (second && second.mode === 'bet-spread') {
+        expect(second.priorRunningCount).not.toBe(0);
+      }
+    });
+
+    it('offers the showdown off the same shoe after a bet-spread round', () => {
+      configureBetSpread();
+      const { fixture, c } = createPage();
+      c.start();
+      streamToEnd(c);
+      c.onEstimate(5);
+      c.onAnswer(0);
+      c.onBet(1);
+      expect(c.showdownAvailable()).toBe(true);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.count__showdown-button')).not.toBeNull();
+    });
+
+    it('ignores a bet outside the betting state', () => {
+      configureBetSpread();
+      const { c } = createPage();
+      c.start();
+      c.onBet(4);
       expect(c.state()).toBe('streaming');
       expect(c.result()).toBeNull();
     });

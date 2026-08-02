@@ -45,6 +45,44 @@
     opacity: 0.9;
   }
 
+  // The bet spread, one row per true-count band, with the band this round
+  // landed in filled. The fill is the accent, so the label takes --on-accent.
+  &__ramp {
+    list-style: none;
+    margin: 0 0 0.75rem;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+    gap: 0.4rem;
+  }
+
+  &__band {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.35rem 0.4rem;
+    border-radius: 6px;
+    background: var(--raised);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+
+    &--active {
+      background: var(--accent);
+      color: var(--on-accent);
+      font-weight: 600;
+    }
+  }
+
+  &__band-label {
+    opacity: 0.8;
+  }
+
+  &__band-units {
+    font-weight: 600;
+  }
+
   &__toggle {
     background: transparent;
     color: var(--ink);

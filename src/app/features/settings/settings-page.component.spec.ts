@@ -1,6 +1,7 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 
+import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.service';
 import { BankrollService } from '../../core/services/bankroll.service';
 import { BasicStrategyStatsService } from '../../core/services/basic-strategy-stats.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
@@ -176,6 +177,7 @@ describe('SettingsPageComponent', () => {
         { kind: 'hard', hand: '16', dealer: '10' },
         false,
       );
+      TestBed.inject(BetSpreadStatsService).recordAttempt(true);
       TestBed.inject(ShowdownStatsService).record('win');
       TestBed.inject(BankrollService).record(10, -10);
     }
@@ -208,6 +210,7 @@ describe('SettingsPageComponent', () => {
       expect(TestBed.inject(BasicStrategyStatsService).stats().attempts).toBe(0);
       expect(TestBed.inject(PracticeHistoryService).handsToday()).toBe(0);
       expect(TestBed.inject(MissTallyService).weakSpots('basic-strategy')).toEqual([]);
+      expect(TestBed.inject(BetSpreadStatsService).stats().attempts).toBe(0);
       expect(TestBed.inject(ShowdownStatsService).stats().hands).toBe(0);
       expect(TestBed.inject(BankrollService).state().wagered).toBe(0);
       expect(prefs.prefs().dailyGoal).toBe(42);

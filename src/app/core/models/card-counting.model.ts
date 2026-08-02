@@ -1,3 +1,4 @@
+import type { BetRamp } from './bet-ramp.model';
 import type { Card } from './card.model';
 
 // 'key-count' is the unbalanced-system counterpart of the live-shoe true-count
@@ -5,18 +6,28 @@ import type { Card } from './card.model';
 // player calls whether it has reached the key count (the advantage threshold)
 // instead of converting to a true count. Only offered for systems that carry a
 // KeyCountSchedule (KO).
-export type DrillMode = 'running-count' | 'true-count' | 'key-count';
+// 'bet-spread' is the true-count drill plus the question the count is for: how
+// many units to bet. Balanced systems only, since it grades a true count first.
+export type DrillMode = 'running-count' | 'true-count' | 'key-count' | 'bet-spread';
 
 // In true-count mode the decks-remaining figure can come from a live, depleting
 // shoe the player reads ('live-shoe', the default) or from a fixed preset the
 // player picks before each drill ('classic', the original behavior).
 export type TrueCountSource = 'live-shoe' | 'classic';
 
-// The shoe-driven modes: key count always reads a live shoe; true count only
-// with the live-shoe source. The one predicate behind the settings fields, the
-// prefs clamp, and the engine's shoe checks.
+// The shoe-driven modes: key count always reads a live shoe; the two true-count
+// modes (true count and bet spread, which asks for one) only with the live-shoe
+// source. The one predicate behind the settings fields, the prefs clamp, and
+// the engine's shoe checks.
 export function usesLiveShoe(mode: DrillMode, trueCountSource: TrueCountSource): boolean {
-  return mode === 'key-count' || (mode === 'true-count' && trueCountSource === 'live-shoe');
+  return mode === 'key-count' || (asksTrueCount(mode) && trueCountSource === 'live-shoe');
+}
+
+// Modes whose answer is a true count: the true-count drill and the bet-spread
+// drill built on top of it. They share the decks-remaining configuration, the
+// deck estimate, and the true-count stat store.
+export function asksTrueCount(mode: DrillMode): boolean {
+  return mode === 'true-count' || mode === 'bet-spread';
 }
 
 // Signed count rendering ("+2", "-4", "0") — the web mirror of the Swift
@@ -30,6 +41,8 @@ export interface CountingDrillSettings {
   readonly mode: DrillMode;
   readonly numberOfCards: number;
   readonly millisecondsBetweenCards: number;
+  // Units per true-count band, graded against in bet-spread mode.
+  readonly betRamp: BetRamp;
   // Decks remaining for classic (preset) true-count mode.
   readonly decksRemaining: number;
   // True-count-only shoe configuration. trueCountSource selects between the live
@@ -90,10 +103,37 @@ export interface KeyCountDrillResult {
   readonly isCorrect: boolean;
 }
 
+// The bet-spread round: a true-count round (same count, decks, and estimate
+// fields) plus the bet it was for. The units are graded against the ramp at the
+// *correct* true count, not at the count the player claimed — a miscount that
+// leads to the wrong bet is exactly the failure the drill is there to catch,
+// and it mirrors how the key-count drill grades its advantage call.
+export interface BetSpreadDrillResult {
+  readonly mode: 'bet-spread';
+  readonly cards: readonly Card[];
+  readonly correctRunningCount: number;
+  readonly decksRemaining: number;
+  readonly correctTrueCount: number;
+  readonly userTrueCount: number;
+  readonly countCorrect: boolean;
+  readonly priorRunningCount?: number;
+  readonly deckEstimate?: number;
+  readonly deckEstimateWithinBand?: boolean;
+  // The ramp the round was graded against, kept on the result so the feedback
+  // can show the whole spread without re-reading prefs.
+  readonly ramp: BetRamp;
+  readonly correctUnits: number;
+  readonly userUnits: number;
+  readonly betCorrect: boolean;
+  // The rep is correct only when both the true count and the bet are.
+  readonly isCorrect: boolean;
+}
+
 export type CountingDrillResult =
   | RunningCountDrillResult
   | TrueCountDrillResult
-  | KeyCountDrillResult;
+  | KeyCountDrillResult
+  | BetSpreadDrillResult;
 
 export interface SettingsValidation {
   readonly valid: boolean;

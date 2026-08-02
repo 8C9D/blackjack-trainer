@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 
 import { expect, test } from '../fixtures/app.fixture';
 import {
+  configureBetSpread,
   configureCounting,
   configureKeyCount,
   runCountingRound,
@@ -265,6 +266,38 @@ test.describe('accessibility', () => {
       await page.getByRole('button', { name: /^Yes/ }).click();
       await expect(page.getByText('Key count', { exact: true })).toBeVisible();
       expect(await contrastFailures(page), `key-count feedback (${scheme})`).toEqual([]);
+    });
+  }
+
+  // The bet-spread drill adds the spread editor in Settings (hidden in every
+  // other mode, so the route sweep never sees it) and a feedback panel whose
+  // matched band sits on the accent fill.
+  for (const scheme of ['dark', 'light'] as const) {
+    test(`the bet-spread drill meets WCAG AA in the ${scheme} theme`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await configureBetSpread(page);
+      expect(await contrastFailures(page), `spread editor (${scheme})`).toEqual([]);
+
+      await page.goto('/drill/card-counting');
+      await page.getByRole('button', { name: /Start counting/ }).click();
+      const estimate = page.getByLabel('How many decks remain?');
+      await expect(estimate).toBeVisible();
+      await estimate.fill('6');
+      await page.getByRole('button', { name: /Submit estimate/ }).click();
+
+      const answer = page.getByLabel('What is the true count?');
+      await expect(answer).toBeVisible();
+      await answer.fill('0');
+      await page.getByRole('button', { name: /^Submit/ }).click();
+
+      const bet = page.getByLabel('How many units do you bet?');
+      await expect(bet).toBeVisible();
+      expect(await contrastFailures(page), `bet question (${scheme})`).toEqual([]);
+      await bet.fill('1');
+      await page.getByRole('button', { name: /^Submit/ }).click();
+
+      await expect(page.getByRole('list', { name: 'Your bet spread' })).toBeVisible();
+      expect(await contrastFailures(page), `bet-spread feedback (${scheme})`).toEqual([]);
     });
   }
 

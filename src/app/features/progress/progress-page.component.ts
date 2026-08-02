@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
 import { BasicStrategyStatsService } from '../../core/services/basic-strategy-stats.service';
 import { BankrollService } from '../../core/services/bankroll.service';
+import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.service';
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
 import { DeckEstimationStatsService } from '../../core/services/deck-estimation-stats.service';
 import { DeviationStatsService } from '../../core/services/deviation-stats.service';
@@ -167,6 +168,7 @@ export class ProgressPageComponent {
   private readonly trueCountStats = inject(TrueCountStatsService);
   private readonly deckEstimationStats = inject(DeckEstimationStatsService);
   private readonly keyCountStats = inject(KeyCountStatsService);
+  private readonly betSpreadStats = inject(BetSpreadStatsService);
   private readonly showdownStats = inject(ShowdownStatsService);
   private readonly bankrollService = inject(BankrollService);
   private readonly router = inject(Router);
@@ -205,6 +207,7 @@ export class ProgressPageComponent {
     row('True count', this.trueCountStats.stats()),
     row('Deck estimate', this.deckEstimationStats.stats()),
     row('Key count call', this.keyCountStats.stats()),
+    row('Bet spread', this.betSpreadStats.stats()),
   ]);
 
   protected readonly winRate = computed(() => {

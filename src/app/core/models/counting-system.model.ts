@@ -71,12 +71,12 @@ export interface ResolvedKeyCounts {
   readonly insuranceCount: number;
 }
 
-// Whether a system can host the requested drill mode: true count requires a
-// balanced system, the key-count drill a published schedule; running count is
-// always available. A system capability, so it lives here rather than in the
-// prefs machinery that first needed it.
+// Whether a system can host the requested drill mode: true count — and the bet
+// spread drilled on top of it — requires a balanced system, the key-count drill
+// a published schedule; running count is always available. A system capability,
+// so it lives here rather than in the prefs machinery that first needed it.
 export function modeAllowedFor(system: CountingSystem, mode: DrillMode): boolean {
-  if (mode === 'true-count') return system.balanced;
+  if (mode === 'true-count' || mode === 'bet-spread') return system.balanced;
   if (mode === 'key-count') return system.keyCounts !== undefined;
   return true;
 }

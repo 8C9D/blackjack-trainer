@@ -1,7 +1,7 @@
 {
-  "schema": "counting-vectors/2",
+  "schema": "counting-vectors/3",
   "generatedBy": "tools/export-parity-fixtures.ts",
-  "description": "Per-system running/true counts over fixed sequences (color, fractional, and truncation-toward-zero cases), scoreDeckEstimate ±0.5 boundaries, and key-count schedules with threshold-boundary advantage calls.",
+  "description": "Per-system running/true counts over fixed sequences (color, fractional, and truncation-toward-zero cases), scoreDeckEstimate ±0.5 boundaries, key-count schedules with threshold-boundary advantage calls, and bet-spread ramps read at every band boundary.",
   "systems": [
     {
       "systemId": "hi-lo",
@@ -20080,6 +20080,149 @@
               "takeInsurance": true
             }
           ]
+        }
+      ]
+    }
+  ],
+  "betRampCases": [
+    {
+      "ramp": [
+        1,
+        2,
+        4,
+        8,
+        12
+      ],
+      "calls": [
+        {
+          "trueCount": -5,
+          "units": 1
+        },
+        {
+          "trueCount": -1,
+          "units": 1
+        },
+        {
+          "trueCount": 0,
+          "units": 1
+        },
+        {
+          "trueCount": 1,
+          "units": 1
+        },
+        {
+          "trueCount": 2,
+          "units": 2
+        },
+        {
+          "trueCount": 3,
+          "units": 4
+        },
+        {
+          "trueCount": 4,
+          "units": 8
+        },
+        {
+          "trueCount": 5,
+          "units": 12
+        },
+        {
+          "trueCount": 9,
+          "units": 12
+        }
+      ]
+    },
+    {
+      "ramp": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "calls": [
+        {
+          "trueCount": -5,
+          "units": 1
+        },
+        {
+          "trueCount": -1,
+          "units": 1
+        },
+        {
+          "trueCount": 0,
+          "units": 1
+        },
+        {
+          "trueCount": 1,
+          "units": 1
+        },
+        {
+          "trueCount": 2,
+          "units": 1
+        },
+        {
+          "trueCount": 3,
+          "units": 1
+        },
+        {
+          "trueCount": 4,
+          "units": 1
+        },
+        {
+          "trueCount": 5,
+          "units": 1
+        },
+        {
+          "trueCount": 9,
+          "units": 1
+        }
+      ]
+    },
+    {
+      "ramp": [
+        2,
+        5,
+        10,
+        25,
+        50
+      ],
+      "calls": [
+        {
+          "trueCount": -5,
+          "units": 2
+        },
+        {
+          "trueCount": -1,
+          "units": 2
+        },
+        {
+          "trueCount": 0,
+          "units": 2
+        },
+        {
+          "trueCount": 1,
+          "units": 2
+        },
+        {
+          "trueCount": 2,
+          "units": 5
+        },
+        {
+          "trueCount": 3,
+          "units": 10
+        },
+        {
+          "trueCount": 4,
+          "units": 25
+        },
+        {
+          "trueCount": 5,
+          "units": 50
+        },
+        {
+          "trueCount": 9,
+          "units": 50
         }
       ]
     }

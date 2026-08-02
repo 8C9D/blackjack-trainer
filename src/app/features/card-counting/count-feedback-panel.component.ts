@@ -1,7 +1,9 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 
+import { BET_RAMP_BAND_LABELS, betRampBandIndex } from '../../core/models/bet-ramp.model';
 import {
   formatSignedCount,
+  type BetSpreadDrillResult,
   type CountingDrillResult,
   type KeyCountDrillResult,
   type RunningCountDrillResult,
@@ -15,6 +17,12 @@ interface BreakdownEntry {
   readonly card: RunningCountDrillResult['cards'][number];
   readonly deltaLabel: string;
   readonly runningTotal: number;
+}
+
+interface RampBand {
+  readonly label: string;
+  readonly units: number;
+  readonly active: boolean;
 }
 
 @Component({
@@ -86,6 +94,40 @@ interface BreakdownEntry {
             {{ formatSigned(kc.insuranceCount) }} — take insurance when it is offered.
           </p>
         }
+      } @else if (betSpreadResult(); as bs) {
+        <dl class="feedback__details">
+          <dt>Your true count</dt>
+          <dd>{{ bs.userTrueCount }}</dd>
+          <dt>Correct true count</dt>
+          <dd>{{ bs.correctTrueCount }}</dd>
+          <dt>Running count</dt>
+          <dd>{{ bs.correctRunningCount }}</dd>
+          <dt>Decks remaining</dt>
+          <dd>{{ formatDecks(bs.decksRemaining) }}</dd>
+          @if (bs.deckEstimate !== undefined) {
+            <dt>Your decks estimate</dt>
+            <dd>{{ formatDecks(bs.deckEstimate) }}</dd>
+            <dt>Estimate within ±0.5</dt>
+            <dd>{{ bs.deckEstimateWithinBand ? 'Yes' : 'No' }}</dd>
+          }
+          <dt>Your bet</dt>
+          <dd>{{ units(bs.userUnits) }}</dd>
+          <dt>Your spread says</dt>
+          <dd>{{ units(bs.correctUnits) }}</dd>
+        </dl>
+        <p class="feedback__formula">
+          Running count {{ bs.correctRunningCount }} ÷ {{ formatDecks(bs.decksRemaining) }} decks =
+          true count {{ bs.correctTrueCount }}, which is the
+          {{ rampBandLabel(bs.correctTrueCount) }} band of your spread.
+        </p>
+        <ul class="feedback__ramp" aria-label="Your bet spread">
+          @for (band of rampBands(); track band.label) {
+            <li class="feedback__band" [class.feedback__band--active]="band.active">
+              <span class="feedback__band-label">{{ band.label }}</span>
+              <span class="feedback__band-units">{{ units(band.units) }}</span>
+            </li>
+          }
+        </ul>
       }
 
       <button
@@ -140,6 +182,24 @@ export class CountFeedbackPanelComponent {
     return r.mode === 'key-count' ? r : null;
   });
 
+  protected readonly betSpreadResult = computed<BetSpreadDrillResult | null>(() => {
+    const r = this.result();
+    return r.mode === 'bet-spread' ? r : null;
+  });
+
+  // The whole spread, with the band this round landed in marked — the feedback
+  // shows the table so a missed bet reads as "that count was this band".
+  protected readonly rampBands = computed<readonly RampBand[]>(() => {
+    const bs = this.betSpreadResult();
+    if (!bs) return [];
+    const active = betRampBandIndex(bs.correctTrueCount);
+    return bs.ramp.map((units, index) => ({
+      label: BET_RAMP_BAND_LABELS[index],
+      units,
+      active: index === active,
+    }));
+  });
+
   protected readonly breakdown = computed<readonly BreakdownEntry[]>(() => {
     const sys = this.system();
     const r = this.result();
@@ -168,6 +228,16 @@ export class CountFeedbackPanelComponent {
   // KO tables are written.
   protected formatSigned(value: number): string {
     return formatSignedCount(value);
+  }
+
+  // Bets are always whole units, and the singular reads oddly as "1 units".
+  protected units(count: number): string {
+    return count === 1 ? '1 unit' : `${count} units`;
+  }
+
+  // The band label a true count falls in, for the feedback line.
+  protected rampBandLabel(trueCount: number): string {
+    return BET_RAMP_BAND_LABELS[betRampBandIndex(trueCount)];
   }
 
   // Whole decks render as "5"; fractional decks as up to two decimals with

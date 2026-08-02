@@ -45,6 +45,7 @@ import {
   stakeFor,
   surrenderForfeit,
 } from '../src/app/core/models/bankroll.model';
+import { DEFAULT_BET_RAMP, betUnitsForTrueCount } from '../src/app/core/models/bet-ramp.model';
 import { COUNTING_SYSTEMS } from '../src/app/data/counting-systems';
 import { H17_CHART } from '../src/app/data/h17-basic-strategy';
 import { H17_DEVIATIONS } from '../src/app/data/h17-deviations';
@@ -465,16 +466,29 @@ function exportCountingVectors(): void {
     };
   });
 
+  // Bet-spread ramps: every band boundary of the default spread plus a flat and
+  // a wide one, so the Swift port's band arithmetic (truncate, clamp both ends)
+  // is pinned to betUnitsForTrueCount rather than re-derived.
+  const betRampCases = [DEFAULT_BET_RAMP, [1, 1, 1, 1, 1], [2, 5, 10, 25, 50]].map((ramp) => ({
+    ramp: [...ramp],
+    calls: [-5, -1, 0, 1, 2, 3, 4, 5, 9].map((trueCount) => ({
+      trueCount,
+      units: betUnitsForTrueCount(trueCount, ramp),
+    })),
+  }));
+
   writeJson('counting-vectors.json', {
-    schema: 'counting-vectors/2',
+    schema: 'counting-vectors/3',
     generatedBy: 'tools/export-parity-fixtures.ts',
     description:
       'Per-system running/true counts over fixed sequences (color, fractional, ' +
       'and truncation-toward-zero cases), scoreDeckEstimate ±0.5 boundaries, ' +
-      'and key-count schedules with threshold-boundary advantage calls.',
+      'key-count schedules with threshold-boundary advantage calls, and ' +
+      'bet-spread ramps read at every band boundary.',
     systems,
     deckEstimateCases: estimateCases,
     keyCountCases,
+    betRampCases,
   });
 }
 

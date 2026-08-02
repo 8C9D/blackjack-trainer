@@ -12,6 +12,7 @@ import { resolveKeyCounts, type CountingSystem } from '../../core/models/countin
 import { type Shoe } from '../../core/models/shoe.model';
 import { minCardsForSpots } from '../../core/models/showdown.model';
 import { COUNTING_SYSTEMS, HI_LO } from '../../data/counting-systems';
+import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.service';
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
 import { CardGeneratorService } from '../../core/services/card-generator.service';
 import { CountingEngineService } from '../../core/services/counting-engine.service';
@@ -36,7 +37,8 @@ import { ShowdownComponent } from './showdown.component';
 // trainer; 'done' is the Flow session end. 'estimating' is the live-shoe-only
 // step where the player guesses the decks remaining before giving the true
 // count. 'advantage' is the key-count drill's second question (has the running
-// count reached the key count?) after the count answer. 'showdown' is the
+// count reached the key count?) after the count answer, and 'betting' is the
+// bet-spread drill's second question (how many units?). 'showdown' is the
 // optional post-count hand vs the dealer off the same live shoe.
 type DrillState =
   | 'idle'
@@ -44,6 +46,7 @@ type DrillState =
   | 'estimating'
   | 'answering'
   | 'advantage'
+  | 'betting'
   | 'feedback'
   | 'showdown'
   | 'done';
@@ -125,6 +128,10 @@ type DrillState =
             <app-advantage-form (answer)="onAdvantage($event)" />
           }
 
+          @if (state() === 'betting') {
+            <app-count-answer-form question="bet" (answer)="onBet($event)" />
+          }
+
           @if (state() === 'feedback' && result(); as r) {
             <app-count-feedback-panel [result]="r" [system]="system()" (next)="runAgain()" />
             @if (usesLiveShoe() && showdownAvailable()) {
@@ -181,6 +188,8 @@ export class CardCountingPageComponent {
   protected readonly deckEstimationStatsService = inject(DeckEstimationStatsService);
   // Advantage-call accuracy for the key-count drill, its own store.
   protected readonly keyCountStatsService = inject(KeyCountStatsService);
+  // Bet accuracy for the bet-spread drill, likewise its own store.
+  protected readonly betSpreadStatsService = inject(BetSpreadStatsService);
 
   protected readonly session = new DrillSession();
 
@@ -242,6 +251,22 @@ export class CardCountingPageComponent {
       this.system().balanced,
   );
 
+  // The bet-spread drill: a true-count round followed by the bet it is for.
+  // Balanced systems only, like the true count it grades first.
+  protected readonly betSpreadDrill = computed(
+    () => this.settings().mode === 'bet-spread' && this.system().balanced,
+  );
+
+  protected readonly liveShoeBetSpread = computed(
+    () => this.betSpreadDrill() && this.settings().trueCountSource === 'live-shoe',
+  );
+
+  // The rounds that open with a decks-remaining estimate: every live-shoe round
+  // whose answer is a true count.
+  protected readonly asksDeckEstimate = computed(
+    () => this.liveShoeTrueCount() || this.liveShoeBetSpread(),
+  );
+
   // The system's IRC/key-count schedule resolved for the configured shoe, or
   // null when the drill is not in key-count mode or the system/deck pairing
   // has no published values. Null while in key-count mode means the settings
@@ -254,11 +279,9 @@ export class CardCountingPageComponent {
 
   protected readonly keyCountDrill = computed(() => this.keyCountSchedule() !== null);
 
-  // The two shoe-driven drills share the persistent live shoe (and the
-  // post-count showdown that deals from it).
-  protected readonly usesLiveShoe = computed(
-    () => this.liveShoeTrueCount() || this.keyCountDrill(),
-  );
+  // The shoe-driven drills share the persistent live shoe (and the post-count
+  // showdown that deals from it).
+  protected readonly usesLiveShoe = computed(() => this.asksDeckEstimate() || this.keyCountDrill());
 
   // What the carried count resets to on a reshuffle: the IRC in key-count
   // mode, 0 otherwise — surfaced in the reshuffle notice.
@@ -274,19 +297,21 @@ export class CardCountingPageComponent {
   });
 
   // Key-count mode additionally needs a schedule entry for the configured
-  // shoe — validateSettings cannot know that, since the settings shape carries
-  // no system.
+  // shoe, and bet-spread mode a balanced system — validateSettings cannot know
+  // either, since the settings shape carries no system.
   protected readonly isValid = computed(
     () =>
       this.engine.validateSettings(this.settings()).valid &&
-      (this.settings().mode !== 'key-count' || this.keyCountDrill()),
+      (this.settings().mode !== 'key-count' || this.keyCountDrill()) &&
+      (this.settings().mode !== 'bet-spread' || this.betSpreadDrill()),
   );
   protected readonly isDrillActive = computed(
     () =>
       this.state() === 'streaming' ||
       this.state() === 'estimating' ||
       this.state() === 'answering' ||
-      this.state() === 'advantage',
+      this.state() === 'advantage' ||
+      this.state() === 'betting',
   );
 
   // Live-shoe state. `shoe` persists across rounds until the cut card; the
@@ -306,8 +331,8 @@ export class CardCountingPageComponent {
   // The player's decks-remaining estimate for the current round, or null
   // before they submit one.
   protected readonly deckEstimate = signal<number | null>(null);
-  // Key-count mode: the count answer held while the advantage question is up,
-  // graded together with the advantage call in onAdvantage.
+  // Key-count and bet-spread modes: the count answer held while the second
+  // question is up, graded together with it in onAdvantage / onBet.
   private pendingUserCount = 0;
   // True for the round that began with an at-cut-card reshuffle (drives the
   // visible notice).
@@ -422,6 +447,12 @@ export class CardCountingPageComponent {
       this.state.set('advantage');
       return;
     }
+    // Bet-spread mode: same hold, but the second question is the bet.
+    if (s.mode === 'bet-spread') {
+      this.pendingUserCount = userCount;
+      this.state.set('betting');
+      return;
+    }
     let isCorrect: boolean;
     if (s.mode === 'true-count') {
       if (this.liveShoeTrueCount()) {
@@ -471,6 +502,45 @@ export class CardCountingPageComponent {
     this.history.recordHand();
     this.session.record(evaluated.isCorrect);
     this.shoeRunningCount.set(evaluated.correctRunningCount);
+    this.state.set('feedback');
+  }
+
+  // Grade the bet-spread round: the held true-count answer exactly as the
+  // true-count drill grades it (including the deck estimate off a live shoe),
+  // and the bet against the player's ramp at the correct true count. The count
+  // feeds the true-count store, the bet its own store, and the session rep is
+  // correct only when both are.
+  protected onBet(userUnits: number): void {
+    if (this.state() !== 'betting') return;
+    const s = this.settings();
+    const live = this.liveShoeBetSpread();
+    const decks = live ? this.actualDecksRemaining() : s.decksRemaining;
+    const evaluated = this.engine.evaluateBetSpread(
+      this.cards(),
+      this.pendingUserCount,
+      userUnits,
+      decks,
+      this.system(),
+      s.betRamp,
+      live ? this.shoeRunningCount() : 0,
+    );
+    const estimate = live ? this.deckEstimate() : null;
+    const withinBand = estimate !== null && this.engine.scoreDeckEstimate(estimate, decks);
+    this.result.set(
+      estimate !== null
+        ? { ...evaluated, deckEstimate: estimate, deckEstimateWithinBand: withinBand }
+        : evaluated,
+    );
+    this.trueCountStatsService.recordAttempt(evaluated.countCorrect);
+    if (estimate !== null) {
+      this.deckEstimationStatsService.recordAttempt(withinBand);
+    }
+    this.betSpreadStatsService.recordAttempt(evaluated.betCorrect);
+    this.history.recordHand();
+    this.session.record(evaluated.isCorrect);
+    if (live) {
+      this.shoeRunningCount.set(evaluated.correctRunningCount);
+    }
     this.state.set('feedback');
   }
 
@@ -541,9 +611,9 @@ export class CardCountingPageComponent {
     this.timeoutId = setTimeout(() => {
       const next = this.currentIndex() + 1;
       if (next >= this.cards().length) {
-        // Live-shoe true-count drills ask for the decks-remaining estimate
-        // first.
-        this.state.set(this.liveShoeTrueCount() ? 'estimating' : 'answering');
+        // Live-shoe drills that answer a true count ask for the decks-remaining
+        // estimate first.
+        this.state.set(this.asksDeckEstimate() ? 'estimating' : 'answering');
         this.timeoutId = null;
         return;
       }

@@ -116,6 +116,7 @@ describe('ProgressPageComponent', () => {
         'True count',
         'Deck estimate',
         'Key count call',
+        'Bet spread',
       ]);
     });
 

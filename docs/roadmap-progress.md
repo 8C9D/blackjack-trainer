@@ -266,6 +266,16 @@ only for systems that carry one (KO alone today).
   the web engine — and `CountingParityTests` grades the Swift
   `evaluateKeyCount` against them.
 
+### Post-roadmap continued: the bet spread (2026-08-02)
+
+The app drilled count → convert → play, and stopped there.
+Betting is where a counter's edge is actually taken, and it was the one step nothing graded: the showdown let a trainee bet anything at any count and never said a word about it.
+
+- **A fourth drill mode.** `bet-spread` is the true-count round plus the question the count is for — "How many units do you bet?" — asked after the count exactly as the KO drill asks for the advantage call. It reuses the true-count machinery whole (live shoe or classic preset, the deck estimate, the true-count store), so only the second question and its store are new.
+- **The ramp is the player's, not the app's.** Five bands (`TC ≤ +1`, `+2`, `+3`, `+4`, `+5 or more`), whole units 1–100, edited under the mode radio, defaulting to the textbook 1-2-4-8-12 six-deck spread. What to bet follows from bankroll, risk of ruin, rules, and table tolerance — none of which this app knows — so it grades the ramp the trainee intends to play rather than inventing an optimum. A ramp that shrinks as the count rises gets a note, not an error: it is legal, just usually a typo.
+- **Graded at the correct true count**, not the claimed one, and the rep counts only when count and bet are both right — the same strict AND the key-count drill uses. A miscount that leads to the wrong bet is the failure the drill exists to catch.
+- **Validation.** +52 unit tests (1014 total), an E2E round that edits the spread in Settings and reads it back in the feedback, and a contrast sweep of the spread editor, the bet question, and the accent-filled matched band, in both themes; 73 E2E. `counting-vectors` (schema /3) carries `betRampCases` for the iOS port.
+
 ### Post-roadmap continued: resetting practice data (2026-08-02)
 
 Ten stores could be written but never cleared: `StatsStore.reset()` existed and had no caller outside the showdown's busted-out bankroll, and the history and miss tally had no reset at all.

@@ -1,4 +1,5 @@
 import type { Card, Rank, Suit } from '../models/card.model';
+import { DEFAULT_BET_RAMP } from '../models/bet-ramp.model';
 import { MAX_CARDS_PER_DRILL, type CountingDrillSettings } from '../models/card-counting.model';
 import type { CountingSystem } from '../models/counting-system.model';
 import { HI_LO, KO, OMEGA_II, WONG_HALVES } from '../../data/counting-systems';
@@ -14,6 +15,7 @@ const rcSettings = (overrides: Partial<CountingDrillSettings> = {}): CountingDri
   mode: 'running-count',
   numberOfCards: 20,
   millisecondsBetweenCards: 500,
+  betRamp: DEFAULT_BET_RAMP,
   decksRemaining: 1,
   trueCountSource: 'classic',
   numberOfDecks: 6,
@@ -26,6 +28,7 @@ const tcSettings = (overrides: Partial<CountingDrillSettings> = {}): CountingDri
   mode: 'true-count',
   numberOfCards: 20,
   millisecondsBetweenCards: 500,
+  betRamp: DEFAULT_BET_RAMP,
   decksRemaining: 2,
   trueCountSource: 'classic',
   numberOfDecks: 6,
@@ -38,6 +41,7 @@ const liveSettings = (overrides: Partial<CountingDrillSettings> = {}): CountingD
   mode: 'true-count',
   numberOfCards: 20,
   millisecondsBetweenCards: 500,
+  betRamp: DEFAULT_BET_RAMP,
   decksRemaining: 2,
   trueCountSource: 'live-shoe',
   numberOfDecks: 6,
@@ -436,6 +440,61 @@ describe('CountingEngineService', () => {
     });
   });
 
+  describe('evaluateBetSpread()', () => {
+    // 2..6 is +5 Hi-Lo; over 1 deck that is true count +5, the top band.
+    const round = seq('2', '3', '4', '5', '6');
+
+    it('grades the true count and the bet against the ramp at that count', () => {
+      const result = engine.evaluateBetSpread(round, 5, 12, 1, HI_LO, DEFAULT_BET_RAMP);
+      expect(result.mode).toBe('bet-spread');
+      expect(result.correctRunningCount).toBe(5);
+      expect(result.correctTrueCount).toBe(5);
+      expect(result.countCorrect).toBe(true);
+      expect(result.correctUnits).toBe(12);
+      expect(result.userUnits).toBe(12);
+      expect(result.betCorrect).toBe(true);
+      expect(result.isCorrect).toBe(true);
+      expect(result.ramp).toEqual(DEFAULT_BET_RAMP);
+    });
+
+    it('a rep is correct only when both the count and the bet are', () => {
+      const wrongBet = engine.evaluateBetSpread(round, 5, 4, 1, HI_LO, DEFAULT_BET_RAMP);
+      expect(wrongBet.countCorrect).toBe(true);
+      expect(wrongBet.betCorrect).toBe(false);
+      expect(wrongBet.isCorrect).toBe(false);
+      const wrongCount = engine.evaluateBetSpread(round, 3, 12, 1, HI_LO, DEFAULT_BET_RAMP);
+      expect(wrongCount.countCorrect).toBe(false);
+      expect(wrongCount.betCorrect).toBe(true);
+      expect(wrongCount.isCorrect).toBe(false);
+    });
+
+    it('grades the bet at the correct true count, not the one the player claimed', () => {
+      // Two decks: +5 running is true count +2 → 2 units. A player who called
+      // the count +5 and bet the +5 band's 12 units is wrong on both.
+      const result = engine.evaluateBetSpread(round, 5, 12, 2, HI_LO, DEFAULT_BET_RAMP);
+      expect(result.correctTrueCount).toBe(2);
+      expect(result.correctUnits).toBe(2);
+      expect(result.countCorrect).toBe(false);
+      expect(result.betCorrect).toBe(false);
+    });
+
+    it('folds in the running count carried from earlier rounds of the shoe', () => {
+      const result = engine.evaluateBetSpread(round, 4, 8, 2, HI_LO, DEFAULT_BET_RAMP, 4);
+      expect(result.priorRunningCount).toBe(4);
+      expect(result.correctRunningCount).toBe(9);
+      expect(result.correctTrueCount).toBe(4);
+      expect(result.correctUnits).toBe(8);
+      expect(result.isCorrect).toBe(true);
+    });
+
+    it('grades against whatever ramp it is given, flat included', () => {
+      const flat = [1, 1, 1, 1, 1];
+      const result = engine.evaluateBetSpread(round, 5, 1, 1, HI_LO, flat);
+      expect(result.correctUnits).toBe(1);
+      expect(result.isCorrect).toBe(true);
+    });
+  });
+
   describe('scoreDeckEstimate()', () => {
     it('accepts an exact match', () => {
       expect(engine.scoreDeckEstimate(5, 5)).toBe(true);
@@ -470,6 +529,31 @@ describe('CountingEngineService', () => {
       const v = engine.validateSettings(rcSettings());
       expect(v.valid).toBe(true);
       expect(v.errors).toEqual([]);
+    });
+
+    it('only checks the bet ramp in bet-spread mode', () => {
+      const broken = { betRamp: [0, 2, 4, 8, 12] };
+      expect(engine.validateSettings(rcSettings(broken)).valid).toBe(true);
+      expect(engine.validateSettings(tcSettings(broken)).valid).toBe(true);
+      const spread = engine.validateSettings(tcSettings({ ...broken, mode: 'bet-spread' }));
+      expect(spread.valid).toBe(false);
+      expect(spread.errors.some((e) => e.includes('Bet spread units'))).toBe(true);
+    });
+
+    it('accepts bet-spread settings with a usable ramp', () => {
+      expect(engine.validateSettings(tcSettings({ mode: 'bet-spread' })).valid).toBe(true);
+      expect(engine.validateSettings(liveSettings({ mode: 'bet-spread' })).valid).toBe(true);
+    });
+
+    it('holds bet-spread mode to the same shoe checks as the true count', () => {
+      const wholeShoe = engine.validateSettings(
+        liveSettings({ mode: 'bet-spread', numberOfDecks: 1, numberOfCards: 52 }),
+      );
+      expect(wholeShoe.valid).toBe(false);
+      const classicDecks = engine.validateSettings(
+        tcSettings({ mode: 'bet-spread', decksRemaining: 0 }),
+      );
+      expect(classicDecks.valid).toBe(false);
     });
 
     it('accepts the boundary timing of exactly 100ms', () => {
