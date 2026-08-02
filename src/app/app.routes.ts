@@ -10,6 +10,12 @@ export const APP_ROUTES: Routes = [
     title: 'Blackjack Trainer',
   },
   {
+    path: 'chart',
+    loadComponent: () =>
+      import('./features/chart/chart-page.component').then((m) => m.ChartPageComponent),
+    title: 'Strategy Chart — Blackjack Trainer',
+  },
+  {
     path: 'settings',
     loadComponent: () =>
       import('./features/settings/settings-page.component').then((m) => m.SettingsPageComponent),

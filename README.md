@@ -265,18 +265,21 @@ no-ops at runtime but document the chart cell.
 
 ### Shared (the Flow shell)
 
-- **Flow home** — one loud primary action ("Continue — last trainer", `Enter`), the other two trainers on stable cards with lifetime-accuracy chips (keys `2` / `3`), Settings (`,`), a daily-goal ring, and a 7-day streak strip.
+- **Flow home** — one loud primary action ("Continue — last trainer", `Enter`), the other two trainers on stable cards with lifetime-accuracy chips (keys `2` / `3`), the strategy chart (`C`), Settings (`,`), a daily-goal ring, and a 7-day streak strip.
 - **Daily goal & practice history** — every graded rep records to a per-day hands count; the goal ring, streak dots, and each drill's session target derive from it. The daily goal (1–200, default 20) is set in Settings.
 - **Adaptive weak-spot practice** — Basic Strategy and Deviations misses are tallied per scenario over a rolling 7-day window. Every round opens on the worst outstanding scenario and then draws ~40% of its hands from the weak list, weighted by miss count, so what you keep missing keeps coming back. A scenario retires from the list once you answer it correctly three times running, and the Done screen names the week's cleared spots.
 - **Review rounds** — the Done screen's queued weakness is a button (`R`): it starts a round drawn entirely from the weak list, falling back to fresh hands if you clear it mid-round.
 - **Flow drill shell** — shared top bar (today's count, session target, current streak, exit), full-screen stage, action buttons with key hints, and a Done screen with the round's accuracy and best streak.
 - **Settings screen** — daily goal, appearance, table rules (H17/S17, DAS, LS), deviation options, and the full counting-drill configuration all live here; the drill pages host no configuration.
+- **Strategy chart reference** (`/chart`, `C` from home): the hard/soft/pair grids for the active table rules, color-coded per action with a legend.
+  Every cell is `BasicStrategyEngineService.decide()` run on a representative hand rather than a second transcription of the chart data, so what the page shows and what a drill grades cannot drift.
+  `SUR_*` and `YN` cells resolve against the live DAS / Late-Surrender settings, and a pair the chart declines to split shows the play it falls back to.
 - **Light and dark themes** — one semantic token set in two palettes (`src/styles.scss`). The palette follows `prefers-color-scheme`; Settings → Appearance pins it, which `ThemeService` applies as `data-theme` on `<html>` and mirrors into the `theme-color` meta so the browser chrome matches.
 - **Accessibility** — grading is announced through a live region (the action grid conveys it with color and position alone), the Done screen takes focus when it replaces the drill, every screen carries a level-1 heading, focus rings clear 3:1 in both themes, and `prefers-reduced-motion` is honored.
 - **Persistent lifetime stats per trainer** — attempts, correct count, accuracy, current streak, longest streak, each under its own `localStorage` key.
 - **Real card images** — 52 SVGs + face-down back from
   [richardschneider/cardsJS](https://github.com/richardschneider/cardsJS).
-- **Routing** — `/` (home), `/drill/*`, `/settings`; pre-Flow trainer URLs redirect into the flow. Each route's component is destroyed and recreated by Angular's router, so in-memory drill state (current cards, in-progress answer, the live shoe) resets on navigation; persisted state is rehydrated from `localStorage` on reinit.
+- **Routing** — `/` (home), `/drill/*`, `/chart`, `/settings`; pre-Flow trainer URLs redirect into the flow. Each route's component is destroyed and recreated by Angular's router, so in-memory drill state (current cards, in-progress answer, the live shoe) resets on navigation; persisted state is rehydrated from `localStorage` on reinit.
 - **Installable PWA** — production builds ship the Angular service worker (`ngsw-config.json`; registered when the app goes stable), so the app works offline and installs from the browser. Once a complete new version is cached, a dismissible prompt reloads into it without force-activating a mixed bundle. The manifest carries 192/512 maskable icons derived from the iOS app icon, plus an `apple-touch-icon`; the page shells pad both safe-area insets so the top bars stay clear of the status bar in iOS standalone mode.
 
 ## iOS app
@@ -303,7 +306,7 @@ below for brevity.
 
 ```
 src/app/
-├── app.ts, app.config.ts, app.routes.ts        bootstrap + lazy routes (home / drills / settings)
+├── app.ts, app.config.ts, app.routes.ts        bootstrap + lazy routes (home / drills / chart / settings)
 ├── core/
 │   ├── keyboard.ts                              action hotkeys + shared keydown helpers
 │   ├── models/
@@ -345,6 +348,8 @@ src/app/
 │   │   └── home-page.component.ts               Flow home (continue, goal ring, streak)
 │   ├── settings/
 │   │   └── settings-page.component.ts           all configuration (goal, rules, drill settings)
+│   ├── chart/
+│   │   └── chart-page.component.ts              read-only strategy grids for the active rules
 │   ├── drill/
 │   │   ├── basic-strategy-drill-page.component.ts  Basic Strategy in the Flow loop
 │   │   ├── deviations-drill-page.component.ts   Deviations in the Flow loop

@@ -1,0 +1,206 @@
+import { TestBed, type ComponentFixture } from '@angular/core/testing';
+import { Router, provideRouter } from '@angular/router';
+
+import { cardHighValue, isAce } from '../../core/models/card.model';
+import type { HardKey, PairKey, SoftKey } from '../../core/models/strategy.model';
+import { classifyAsPair, isSoftHand } from '../../core/services/basic-strategy-engine.service';
+import { FlowPrefsService } from '../../core/services/flow-prefs.service';
+import {
+  ChartPageComponent,
+  DEALER_UPCARDS,
+  hardHandFor,
+  pairHandFor,
+  softHandFor,
+} from './chart-page.component';
+
+type Internals = { onKeyDown(event: KeyboardEvent): void };
+
+function createPage(): {
+  fixture: ComponentFixture<ChartPageComponent>;
+  c: Internals;
+  navigate: ReturnType<typeof vi.spyOn>;
+} {
+  const router = TestBed.inject(Router);
+  const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+  const fixture = TestBed.createComponent(ChartPageComponent);
+  fixture.detectChanges();
+  return { fixture, c: fixture.componentInstance as unknown as Internals, navigate };
+}
+
+// The cell text for one row of one section, e.g. cells('hard', '16').
+function cells(fixture: ComponentFixture<ChartPageComponent>, section: number, label: string) {
+  const table = fixture.nativeElement.querySelectorAll('.chart__table')[section] as HTMLElement;
+  const row = [...table.querySelectorAll('tbody tr')].find(
+    (tr) => tr.querySelector('.chart__hand')!.textContent!.trim() === label,
+  );
+  if (!row) throw new Error(`No row "${label}" in section ${section}`);
+  return [...row.querySelectorAll('td')].map((td) => td.textContent!.trim());
+}
+
+const HARD = 0;
+const SOFT = 1;
+const PAIR = 2;
+
+// Column index of a dealer upcard in every table.
+function col(upcard: string): number {
+  return DEALER_UPCARDS.indexOf(upcard as (typeof DEALER_UPCARDS)[number]);
+}
+
+describe('ChartPageComponent', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      imports: [ChartPageComponent],
+      providers: [provideRouter([])],
+    });
+  });
+
+  describe('representative hands', () => {
+    it('lands every hard total on its own row and never on a pair row', () => {
+      const totals: HardKey[] = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+      for (const total of totals) {
+        const hand = hardHandFor(total);
+        expect(cardHighValue(hand[0]) + cardHighValue(hand[1])).toBe(total);
+        expect(isSoftHand(hand)).toBe(false);
+        // Hard 20 is only dealable as 10,10; every other row avoids the pair
+        // lookup entirely.
+        expect(classifyAsPair(hand)).toBe(total === 20 ? '10' : null);
+      }
+    });
+
+    it('lands every soft total on the matching A,x row', () => {
+      const keys: SoftKey[] = [2, 3, 4, 5, 6, 7, 8, 9];
+      for (const key of keys) {
+        const hand = softHandFor(key);
+        expect(isSoftHand(hand)).toBe(true);
+        expect(hand.some(isAce)).toBe(true);
+        expect(hand.filter((c) => !isAce(c)).map(cardHighValue)).toEqual([key]);
+      }
+    });
+
+    it('lands every pair on its own row', () => {
+      const keys: PairKey[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'];
+      for (const key of keys) {
+        expect(classifyAsPair(pairHandFor(key))).toBe(key);
+      }
+    });
+  });
+
+  describe('grid', () => {
+    it('renders a full row per chart key and a column per dealer upcard', () => {
+      const { fixture } = createPage();
+      const tables = fixture.nativeElement.querySelectorAll('.chart__table');
+      expect(tables.length).toBe(3);
+      expect(tables[HARD].querySelectorAll('tbody tr').length).toBe(16);
+      expect(tables[SOFT].querySelectorAll('tbody tr').length).toBe(8);
+      expect(tables[PAIR].querySelectorAll('tbody tr').length).toBe(10);
+      for (const table of tables) {
+        expect(table.querySelectorAll('thead th').length).toBe(DEALER_UPCARDS.length + 1);
+        for (const row of table.querySelectorAll('tbody tr')) {
+          expect(row.querySelectorAll('td').length).toBe(DEALER_UPCARDS.length);
+        }
+      }
+    });
+
+    it('names the action on each cell so the letter is not the only label', () => {
+      const { fixture } = createPage();
+      const cell = fixture.nativeElement.querySelector('.chart__cell') as HTMLElement;
+      expect(cell.getAttribute('aria-label')).toBe('Hit');
+    });
+
+    it('spells out every symbol it uses in the legend', () => {
+      const { fixture } = createPage();
+      const entries = [...fixture.nativeElement.querySelectorAll('.chart__legend li')].map((li) =>
+        (li as HTMLElement).textContent!.replace(/\s+/g, ' ').trim(),
+      );
+      expect(entries).toEqual(['H Hit', 'S Stand', 'D Double', 'P Split', 'R Surrender']);
+    });
+
+    it('shows hard 20 standing against every upcard', () => {
+      const { fixture } = createPage();
+      expect(cells(fixture, HARD, '20')).toEqual(Array(10).fill('S'));
+    });
+
+    it('resolves pair cells the chart declines to split into the fall-back play', () => {
+      const { fixture } = createPage();
+      // 10,10 is never split, so the row shows what hard 20 plays.
+      expect(cells(fixture, PAIR, '10,10')).toEqual(Array(10).fill('S'));
+      // 8,8 is always split.
+      expect(cells(fixture, PAIR, '8,8')).toEqual(Array(10).fill('P'));
+    });
+  });
+
+  describe('the active rules', () => {
+    it('follows the rule set: soft 18 vs 2 stands under S17 and doubles under H17', () => {
+      const prefs = TestBed.inject(FlowPrefsService);
+      prefs.setRuleSet('S17');
+      const { fixture } = createPage();
+      expect(cells(fixture, SOFT, 'A,7')[col('2')]).toBe('S');
+
+      prefs.setRuleSet('H17');
+      fixture.detectChanges();
+      expect(cells(fixture, SOFT, 'A,7')[col('2')]).toBe('D');
+    });
+
+    it('hits 16 vs 10 without late surrender and surrenders with it', () => {
+      const prefs = TestBed.inject(FlowPrefsService);
+      const { fixture } = createPage();
+      expect(cells(fixture, HARD, '16')[col('10')]).toBe('H');
+
+      prefs.setOptions({ doubleAfterSplit: false, lateSurrender: true });
+      fixture.detectChanges();
+      expect(cells(fixture, HARD, '16')[col('10')]).toBe('R');
+    });
+
+    it('splits 4,4 vs 5 only when double after split is on', () => {
+      const prefs = TestBed.inject(FlowPrefsService);
+      const { fixture } = createPage();
+      // Without DAS the hand falls through to hard 8 — hit.
+      expect(cells(fixture, PAIR, '4,4')[col('5')]).toBe('H');
+
+      prefs.setOptions({ doubleAfterSplit: true, lateSurrender: false });
+      fixture.detectChanges();
+      expect(cells(fixture, PAIR, '4,4')[col('5')]).toBe('P');
+    });
+
+    it('names the rules the chart was built under', () => {
+      const prefs = TestBed.inject(FlowPrefsService);
+      prefs.setRuleSet('H17');
+      prefs.setOptions({ doubleAfterSplit: true, lateSurrender: true });
+      const { fixture } = createPage();
+      const chips = [...fixture.nativeElement.querySelectorAll('.chart__chip')].map((el) =>
+        (el as HTMLElement).textContent!.trim(),
+      );
+      expect(chips).toEqual(['H17 — dealer hits soft 17', 'Double after split', 'Late surrender']);
+    });
+  });
+
+  describe('navigation', () => {
+    it('goes home on Back and on Escape', () => {
+      const { fixture, c, navigate } = createPage();
+      (fixture.nativeElement.querySelector('.chart__back') as HTMLButtonElement).click();
+      expect(navigate).toHaveBeenCalledWith(['/']);
+
+      navigate.mockClear();
+      c.onKeyDown(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(navigate).toHaveBeenCalledWith(['/']);
+    });
+
+    it('sends "Change rules" to Settings', () => {
+      const { fixture, navigate } = createPage();
+      (fixture.nativeElement.querySelector('.chart__settings') as HTMLButtonElement).click();
+      expect(navigate).toHaveBeenCalledWith(['/settings']);
+    });
+
+    it('ignores keys typed into a field', () => {
+      const { c, navigate } = createPage();
+      const input = document.createElement('input');
+      document.body.appendChild(input);
+      const event = new KeyboardEvent('keydown', { key: 'Escape' });
+      Object.defineProperty(event, 'target', { value: input });
+      c.onKeyDown(event);
+      expect(navigate).not.toHaveBeenCalled();
+      input.remove();
+    });
+  });
+});
