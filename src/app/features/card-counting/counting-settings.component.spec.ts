@@ -1,5 +1,6 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 
+import { DEFAULT_BET_RAMP, type BetRamp } from '../../core/models/bet-ramp.model';
 import {
   DECKS_REMAINING_PRESETS,
   type DrillMode,
@@ -22,6 +23,7 @@ function createSettings(
     numberOfDecks: number;
     penetration: number;
     liveDecksRemaining: number;
+    betRamp: BetRamp;
     errors: readonly string[];
     disabled: boolean;
   }> = {},
@@ -45,6 +47,7 @@ function createSettings(
   ref.setInput('deckOptions', SHOE_DECK_OPTIONS);
   ref.setInput('penetrationPresets', PENETRATION_PRESETS);
   ref.setInput('liveDecksRemaining', overrides.liveDecksRemaining ?? 6);
+  if (overrides.betRamp !== undefined) ref.setInput('betRamp', overrides.betRamp);
   if (overrides.errors !== undefined) ref.setInput('errors', overrides.errors);
   if (overrides.disabled !== undefined) ref.setInput('disabled', overrides.disabled);
   fixture.detectChanges();
@@ -107,12 +110,12 @@ describe('CountingSettingsComponent', () => {
     expect(note!.textContent).toContain('running count');
   });
 
-  it('renders all three mode radios', () => {
+  it('renders every mode radio', () => {
     const fixture = createSettings();
     const radios = fixture.nativeElement.querySelectorAll('input[type=radio][name=drill-mode]');
-    expect(radios.length).toBe(3);
+    expect(radios.length).toBe(4);
     const values = Array.from(radios).map((r) => (r as HTMLInputElement).value);
-    expect(values).toEqual(['running-count', 'true-count', 'key-count']);
+    expect(values).toEqual(['running-count', 'true-count', 'key-count', 'bet-spread']);
   });
 
   it('marks the active mode radio as checked', () => {
@@ -358,5 +361,80 @@ describe('CountingSettingsComponent', () => {
       'fieldset.settings',
     ) as HTMLFieldSetElement;
     expect(fieldset.disabled).toBe(true);
+  });
+
+  describe('the bet spread', () => {
+    it('is hidden outside bet-spread mode', () => {
+      for (const mode of ['running-count', 'true-count', 'key-count'] as DrillMode[]) {
+        const fixture = createSettings({ mode });
+        expect(fixture.nativeElement.querySelector('.settings__ramp')).toBeNull();
+      }
+    });
+
+    it('renders one units field per band, seeded from the ramp', () => {
+      const fixture = createSettings({ mode: 'bet-spread' });
+      const inputs = Array.from(
+        fixture.nativeElement.querySelectorAll('.settings__ramp-band input'),
+      ) as HTMLInputElement[];
+      expect(inputs.length).toBe(DEFAULT_BET_RAMP.length);
+      expect(inputs.map((i) => Number(i.value))).toEqual([...DEFAULT_BET_RAMP]);
+    });
+
+    it('emits the whole ramp with only the edited band changed', () => {
+      const fixture = createSettings({ mode: 'bet-spread' });
+      let received: BetRamp | undefined;
+      fixture.componentInstance.betRampChange.subscribe((ramp) => {
+        received = ramp;
+      });
+      const inputs = fixture.nativeElement.querySelectorAll(
+        '.settings__ramp-band input',
+      ) as NodeListOf<HTMLInputElement>;
+      inputs[2].value = '6';
+      inputs[2].dispatchEvent(new Event('input'));
+      expect(received).toEqual([
+        DEFAULT_BET_RAMP[0],
+        DEFAULT_BET_RAMP[1],
+        6,
+        DEFAULT_BET_RAMP[3],
+        DEFAULT_BET_RAMP[4],
+      ]);
+    });
+
+    it('leaves the ramp alone when a field is cleared', () => {
+      const fixture = createSettings({ mode: 'bet-spread' });
+      let received: BetRamp | undefined;
+      fixture.componentInstance.betRampChange.subscribe((ramp) => {
+        received = ramp;
+      });
+      const input = fixture.nativeElement.querySelector(
+        '.settings__ramp-band input',
+      ) as HTMLInputElement;
+      input.value = '';
+      input.dispatchEvent(new Event('input'));
+      expect(received).toBeUndefined();
+    });
+
+    it('notes a spread that shrinks as the count rises, without erroring', () => {
+      const straight = createSettings({ mode: 'bet-spread' });
+      expect(straight.nativeElement.querySelector('.settings__note--warn')).toBeNull();
+      const backwards = createSettings({ mode: 'bet-spread', betRamp: [12, 8, 4, 2, 1] });
+      const note = backwards.nativeElement.querySelector('.settings__note--warn');
+      expect(note).not.toBeNull();
+      expect(note!.textContent).toContain('typo');
+      expect(backwards.nativeElement.querySelector('.settings__errors')).toBeNull();
+    });
+
+    it('disables the bet-spread radio for an unbalanced system', () => {
+      const fixture = createSettings({ trueCountAvailable: false });
+      const radio = fixture.nativeElement.querySelector(
+        'input[type=radio][value="bet-spread"]',
+      ) as HTMLInputElement;
+      expect(radio.disabled).toBe(true);
+    });
+
+    it('offers the live-shoe / classic source picker in bet-spread mode too', () => {
+      const fixture = createSettings({ mode: 'bet-spread' });
+      expect(fixture.nativeElement.querySelector('.settings__source')).not.toBeNull();
+    });
   });
 });

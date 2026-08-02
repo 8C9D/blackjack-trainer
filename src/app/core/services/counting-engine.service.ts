@@ -1,10 +1,13 @@
 import { Injectable } from '@angular/core';
 
+import { betUnitsForTrueCount, validateBetRamp, type BetRamp } from '../models/bet-ramp.model';
 import { ALL_RANKS, type Card } from '../models/card.model';
 import {
   MAX_CARDS_PER_DRILL,
   MIN_MILLISECONDS_BETWEEN_CARDS,
+  asksTrueCount,
   usesLiveShoe,
+  type BetSpreadDrillResult,
   type CountingDrillSettings,
   type KeyCountDrillResult,
   type RunningCountDrillResult,
@@ -86,6 +89,39 @@ export class CountingEngineService {
     };
   }
 
+  // Grade one round of the bet-spread drill: the claimed true count exactly as
+  // evaluateTrueCount does, and the claimed bet against the player's ramp at the
+  // correct true count. The rep counts as correct only when both are right.
+  evaluateBetSpread(
+    cards: readonly Card[],
+    userTrueCount: number,
+    userUnits: number,
+    decksRemaining: number,
+    system: CountingSystem,
+    ramp: BetRamp,
+    priorRunningCount = 0,
+  ): BetSpreadDrillResult {
+    const counted = this.evaluateTrueCount(
+      cards,
+      userTrueCount,
+      decksRemaining,
+      system,
+      priorRunningCount,
+    );
+    const correctUnits = betUnitsForTrueCount(counted.correctTrueCount, ramp);
+    const betCorrect = userUnits === correctUnits;
+    return {
+      ...counted,
+      mode: 'bet-spread',
+      countCorrect: counted.isCorrect,
+      ramp,
+      correctUnits,
+      userUnits,
+      betCorrect,
+      isCorrect: counted.isCorrect && betCorrect,
+    };
+  }
+
   // Grade one round of the key-count drill: the claimed running count against
   // the IRC-seeded count of every card seen since the shuffle, and the
   // advantage call against the system's published key count for this shoe.
@@ -149,6 +185,12 @@ export class CountingEngineService {
       errors.push(`Time between cards must be at least ${MIN_MILLISECONDS_BETWEEN_CARDS}ms.`);
     }
 
+    // The ramp is only graded against in bet-spread mode, so a nonsense ramp
+    // only blocks that drill.
+    if (settings.mode === 'bet-spread') {
+      errors.push(...validateBetRamp(settings.betRamp));
+    }
+
     // The decks-remaining configuration is only relevant when the user is being
     // asked for a true count. In running-count mode it has no bearing on the
     // drill, so it is not validated. The key-count drill always reads a live
@@ -179,7 +221,7 @@ export class CountingEngineService {
         // decks-remaining stays positive and the true count never divides by 0.
         errors.push('Number of cards must be fewer than the shoe size (52 × decks).');
       }
-    } else if (settings.mode === 'true-count') {
+    } else if (asksTrueCount(settings.mode)) {
       // Classic mode: the user picks a fixed decks-remaining value.
       if (!Number.isFinite(settings.decksRemaining)) {
         errors.push('Decks remaining must be a number.');

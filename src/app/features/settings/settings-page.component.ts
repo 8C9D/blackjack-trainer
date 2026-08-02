@@ -2,6 +2,7 @@ import { Component, HostListener, computed, inject, signal } from '@angular/core
 import { Router } from '@angular/router';
 
 import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
+import type { BetRamp } from '../../core/models/bet-ramp.model';
 import {
   DECKS_REMAINING_PRESETS,
   type CountingDrillSettings,
@@ -194,6 +195,7 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
           [liveDecksRemaining]="prefs().counting.numberOfDecks"
           [showdownSpots]="prefs().counting.showdownSpots"
           [showdownBetting]="prefs().counting.showdownBetting"
+          [betRamp]="prefs().counting.betRamp"
           [errors]="countingErrors()"
           (systemChange)="onSystemChange($event)"
           (modeChange)="updateCounting({ mode: $event })"
@@ -205,6 +207,7 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
           (penetrationChange)="updateCounting({ penetration: $event })"
           (showdownSpotsChange)="updateCounting({ showdownSpots: $event })"
           (showdownBettingChange)="updateCounting({ showdownBetting: $event })"
+          (betRampChange)="updateCounting({ betRamp: $event })"
         />
       </section>
 
@@ -362,6 +365,7 @@ export class SettingsPageComponent {
       penetration: number;
       showdownSpots: number;
       showdownBetting: boolean;
+      betRamp: BetRamp;
     }>,
   ): void {
     this.prefsService.updateCounting(partial);

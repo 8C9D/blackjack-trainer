@@ -1,7 +1,9 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 
 import type { Card, Rank } from '../../core/models/card.model';
+import { DEFAULT_BET_RAMP } from '../../core/models/bet-ramp.model';
 import type {
+  BetSpreadDrillResult,
   CountingDrillResult,
   KeyCountDrillResult,
   RunningCountDrillResult,
@@ -57,6 +59,27 @@ function makeKeyCountResult(overrides: Partial<KeyCountDrillResult> = {}): KeyCo
     hasAdvantage: false,
     userSaidAdvantage: false,
     advantageCorrect: true,
+    isCorrect: true,
+    ...overrides,
+  };
+}
+
+// A live-shoe Hi-Lo round: +6 running over 2 decks is true count +3, the
+// default spread's 4-unit band, bet correctly.
+function makeBetSpreadResult(overrides: Partial<BetSpreadDrillResult> = {}): BetSpreadDrillResult {
+  return {
+    mode: 'bet-spread',
+    cards: seq('2', '3', '4', '5', '6'),
+    correctRunningCount: 6,
+    decksRemaining: 2,
+    correctTrueCount: 3,
+    userTrueCount: 3,
+    countCorrect: true,
+    priorRunningCount: 1,
+    ramp: DEFAULT_BET_RAMP,
+    correctUnits: 4,
+    userUnits: 4,
+    betCorrect: true,
     isCorrect: true,
     ...overrides,
   };
@@ -240,6 +263,60 @@ describe('CountFeedbackPanelComponent', () => {
         fixture.nativeElement.querySelectorAll('.feedback__running'),
       ) as HTMLElement[];
       expect(totals.map((t) => t.textContent?.trim())).toEqual(['→ -19', '→ -18']);
+    });
+  });
+
+  describe('bet-spread mode', () => {
+    it('shows the bet next to what the spread called for', () => {
+      const fixture = createPanel(makeBetSpreadResult());
+      const text = fixture.nativeElement.textContent ?? '';
+      expect(text).toContain('Correct');
+      expect(text).toContain('Your bet');
+      expect(text).toContain('Your spread says');
+      expect(text).toContain('4 units');
+      expect(text).toContain('true count 3');
+    });
+
+    it('names the band a missed bet belonged to', () => {
+      const fixture = createPanel(
+        makeBetSpreadResult({ userUnits: 1, betCorrect: false, isCorrect: false }),
+      );
+      const text = fixture.nativeElement.textContent ?? '';
+      expect(text).toContain('Incorrect');
+      expect(text).toContain('1 unit');
+      expect(text).toContain('TC +3');
+    });
+
+    it('renders the whole spread, marking the band the round landed in', () => {
+      const fixture = createPanel(makeBetSpreadResult());
+      const bands = Array.from(
+        fixture.nativeElement.querySelectorAll('.feedback__band'),
+      ) as HTMLElement[];
+      expect(bands.length).toBe(DEFAULT_BET_RAMP.length);
+      const active = bands.filter((b) => b.classList.contains('feedback__band--active'));
+      expect(active.length).toBe(1);
+      expect(active[0].textContent).toContain('TC +3');
+      expect(active[0].textContent).toContain('4 units');
+    });
+
+    it('shows the deck estimate only when the round asked for one', () => {
+      const live = createPanel(
+        makeBetSpreadResult({ deckEstimate: 2.5, deckEstimateWithinBand: true }),
+      );
+      expect(live.nativeElement.textContent).toContain('Your decks estimate');
+      const classic = createPanel(makeBetSpreadResult());
+      expect(classic.nativeElement.textContent).not.toContain('Your decks estimate');
+    });
+
+    it('starts the breakdown running total from the carried prior', () => {
+      const fixture = createPanel(makeBetSpreadResult({ cards: seq('2', '3') }));
+      const toggle = fixture.nativeElement.querySelector('.feedback__toggle') as HTMLButtonElement;
+      toggle.click();
+      fixture.detectChanges();
+      const totals = Array.from(
+        fixture.nativeElement.querySelectorAll('.feedback__running'),
+      ) as HTMLElement[];
+      expect(totals.map((t) => t.textContent?.trim())).toEqual(['\u2192 2', '\u2192 3']);
     });
   });
 });

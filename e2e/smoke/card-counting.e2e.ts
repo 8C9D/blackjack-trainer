@@ -82,6 +82,43 @@ test.describe('card counting drill', () => {
     await expect(page.getByText('Key count', { exact: true })).toBeVisible();
   });
 
+  test('a bet-spread round asks for the count, then the bet, and shows the spread', async ({
+    page,
+  }) => {
+    await shrinkDrill(page);
+    await page
+      .getByRole('radiogroup', { name: 'Drill mode' })
+      .getByRole('radio', { name: 'Bet spread', exact: true })
+      .check();
+    // The spread is editable right there; widen the top band to prove the
+    // drill grades against what Settings holds.
+    const bands = page.getByRole('group', { name: 'Bet spread' }).getByRole('spinbutton');
+    await bands.last().fill('20');
+
+    await page.goto('/drill/card-counting');
+    await page.getByRole('button', { name: /Start counting/ }).click();
+
+    // Live shoe by default: estimate, then the true count, then the bet.
+    const estimate = page.getByLabel('How many decks remain?');
+    await expect(estimate).toBeVisible();
+    await estimate.fill('6');
+    await page.getByRole('button', { name: /Submit estimate/ }).click();
+
+    const answer = page.getByLabel('What is the true count?');
+    await expect(answer).toBeVisible();
+    await answer.fill('0');
+    await page.getByRole('button', { name: /^Submit/ }).click();
+
+    const bet = page.getByLabel('How many units do you bet?');
+    await expect(bet).toBeVisible();
+    await bet.fill('1');
+    await page.getByRole('button', { name: /^Submit/ }).click();
+
+    await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1');
+    await expect(page.getByText('Your spread says')).toBeVisible();
+    await expect(page.getByRole('list', { name: 'Your bet spread' })).toContainText('20 units');
+  });
+
   test('Escape exits the idle drill back to home', async ({ page }) => {
     await page.goto('/drill/card-counting');
     await expect(page.getByRole('heading', { name: 'Hi-Lo' })).toBeVisible();

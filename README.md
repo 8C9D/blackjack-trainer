@@ -62,7 +62,7 @@ It exists so the E2E suite can assert real outcomes rather than only that the fl
 
 ### Card Counting Trainer (v2 + v3, plus live shoe & showdown)
 
-The card counting page hosts two drill modes that share the same flow; the mode (like the rest of the counting configuration) is chosen on the Settings screen.
+The card counting page hosts four drill modes that share the same flow; the mode (like the rest of the counting configuration) is chosen on the Settings screen.
 
 **Running count mode (v2)** — user watches a card stream and submits the
 running count at the end of the stream.
@@ -70,6 +70,13 @@ running count at the end of the stream.
 **True count mode (v3)** — same card stream, plus a decks-remaining figure.
 User submits the true count, computed as
 `Math.trunc(runningCount / decksRemaining)`.
+
+**Key count mode** — the unbalanced-system counterpart of the true count (KO
+only); see the counting-systems notes below.
+
+**Bet spread mode** — the true-count round, then the question the count is
+for: how many units do you bet? See
+[Bet spread](#bet-spread-what-the-count-is-for).
 
 #### Counting systems
 
@@ -144,6 +151,32 @@ True count mode has two sources for "decks remaining":
 differently, and this is the convention the trainer scores against. True-count
 attempts persist under their own `localStorage` key (see
 [Stats persistence](#stats-persistence)).
+
+#### Bet spread: what the count is for
+
+Counting and converting are only worth anything if the bet moves with the
+count, and that step was previously ungraded — the showdown let you bet
+anything you liked. **Bet spread** mode (Settings → Card counting → drill mode)
+runs a true-count round and then asks **"How many units do you bet?"**, grading
+the answer against your own ramp.
+
+- **The ramp is yours.** Five bands — `TC ≤ +1`, `+2`, `+3`, `+4`, `+5 or more`
+  — each holding a whole number of units (1–100), edited right under the mode.
+  The default is the textbook **1-2-4-8-12** six-deck spread. The app does not
+  compute an "optimal" bet: what to bet follows from bankroll, risk of ruin,
+  the rules of the game, and how much spread the table tolerates, so the drill
+  rehearses the ramp _you_ intend to play. A spread that shrinks as the count
+  rises is allowed, with a note that it is usually a typo.
+- **Graded at the correct count**, not the one you claimed: a miscount that
+  leads to the wrong bet is exactly what the drill is there to catch. The rep
+  counts as correct only when both the true count and the bet are right, and
+  the two skills persist to separate stats stores (`True count` and
+  `Bet spread` on the Progress screen).
+- **Units, not chips.** They are ratios to a bankroll, deliberately unitless —
+  unrelated to the showdown's 500 chips.
+- **Live shoe or classic preset**, exactly like the true-count drill it is built
+  on, and the post-count showdown follows a live-shoe round as usual: bet what
+  your ramp says, then play the hand out.
 
 #### Post-count showdown (live shoe only)
 
@@ -494,7 +527,7 @@ Other encoding choices:
 ## Stats persistence
 
 Each trainer (and each card-counting mode) persists its own stats under a
-dedicated `localStorage` key. The first five share the `StatsStore` base class
+dedicated `localStorage` key. The first seven share the `StatsStore` base class
 (`{ attempts, correct, streak, longestStreak }`); the showdown keeps a
 different tally and does **not** extend `StatsStore`:
 
@@ -505,6 +538,8 @@ different tally and does **not** extend `StatsStore`:
 | True Count      | `blackjack-true-count-stats`      | StatsStore                                     |
 | Deviations      | `blackjack-deviation-stats`       | StatsStore                                     |
 | Deck estimation | `blackjack-deck-estimation-stats` | StatsStore (±0.5-deck hit = "correct")         |
+| Key count call  | `blackjack-key-count-stats`       | StatsStore (the advantage call)                |
+| Bet spread      | `blackjack-bet-spread-stats`      | StatsStore (the bet against your ramp)         |
 | Showdown        | `blackjack-showdown-stats`        | `{ hands, wins, losses, pushes, blackjacks }`  |
 | Showdown chips  | `blackjack-showdown-bankroll`     | `{ bankroll, wagered, net }` (bet sizing only) |
 

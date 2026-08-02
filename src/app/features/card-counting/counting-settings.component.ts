@@ -1,6 +1,14 @@
 import { Component, computed, input, output } from '@angular/core';
 
 import {
+  BET_RAMP_BAND_LABELS,
+  DEFAULT_BET_RAMP,
+  MAX_BET_UNITS,
+  MIN_BET_UNITS,
+  rampShrinks,
+  type BetRamp,
+} from '../../core/models/bet-ramp.model';
+import {
   usesLiveShoe,
   type DrillMode,
   type TrueCountSource,
@@ -54,6 +62,17 @@ import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.mo
           />
           <span>Key count</span>
         </label>
+        <label class="settings__mode">
+          <input
+            type="radio"
+            name="drill-mode"
+            value="bet-spread"
+            [checked]="mode() === 'bet-spread'"
+            [disabled]="!trueCountAvailable()"
+            (change)="onModeChange('bet-spread')"
+          />
+          <span>Bet spread</span>
+        </label>
       </div>
       @if (!trueCountAvailable()) {
         @if (keyCountAvailable()) {
@@ -92,7 +111,9 @@ import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.mo
             (input)="onMsInput($event)"
           />
         </label>
-        @if (mode() === 'true-count' && trueCountSource() === 'classic') {
+        @if (
+          (mode() === 'true-count' || mode() === 'bet-spread') && trueCountSource() === 'classic'
+        ) {
           <label class="settings__field">
             <span>Decks remaining</span>
             <select
@@ -135,7 +156,37 @@ import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.mo
           </label>
         }
       </div>
-      @if (mode() === 'true-count') {
+      @if (mode() === 'bet-spread') {
+        <div class="settings__ramp" role="group" aria-label="Bet spread">
+          <p class="settings__note">
+            The drill asks for the true count, then the bet it is for, graded against this spread —
+            your own ramp, in units, not a table this app picked for you.
+          </p>
+          <div class="settings__ramp-bands">
+            @for (band of rampBands(); track band.label) {
+              <label class="settings__ramp-band">
+                <span>{{ band.label }}</span>
+                <input
+                  type="number"
+                  [min]="minUnits"
+                  [max]="maxUnits"
+                  step="1"
+                  inputmode="numeric"
+                  [value]="band.units"
+                  (input)="onRampInput(band.index, $event)"
+                />
+              </label>
+            }
+          </div>
+          @if (rampShrinks()) {
+            <p class="settings__note settings__note--warn">
+              This spread bets less at a higher count than at a lower one. That is allowed, but it
+              is usually a typo.
+            </p>
+          }
+        </div>
+      }
+      @if (mode() === 'true-count' || mode() === 'bet-spread') {
         <div class="settings__source" role="radiogroup" aria-label="True-count decks source">
           <label class="settings__mode">
             <input
@@ -213,6 +264,9 @@ export class CountingSettingsComponent {
   readonly deckOptions = input.required<readonly number[]>();
   readonly penetrationPresets = input.required<readonly number[]>();
   readonly liveDecksRemaining = input.required<number>();
+  // The player's bet spread, edited here and graded against by the bet-spread
+  // drill.
+  readonly betRamp = input<BetRamp>(DEFAULT_BET_RAMP);
   // Boxes the post-count showdown deals to. Only reachable from the live-shoe
   // true-count path, which is the only place the showdown is offered.
   readonly showdownSpots = input(1);
@@ -231,8 +285,23 @@ export class CountingSettingsComponent {
   readonly penetrationChange = output<number>();
   readonly showdownSpotsChange = output<number>();
   readonly showdownBettingChange = output<boolean>();
+  readonly betRampChange = output<BetRamp>();
 
   protected readonly spotOptions = SHOWDOWN_SPOT_OPTIONS;
+  protected readonly minUnits = MIN_BET_UNITS;
+  protected readonly maxUnits = MAX_BET_UNITS;
+
+  protected readonly rampBands = computed(() =>
+    this.betRamp().map((units, index) => ({
+      index,
+      units,
+      label: BET_RAMP_BAND_LABELS[index],
+    })),
+  );
+
+  // Advisory only: a spread that shrinks as the count rises is legal but almost
+  // always a typo, so it is a note rather than a validation error.
+  protected readonly rampShrinks = computed(() => rampShrinks(this.betRamp()));
 
   // Drives the deck/penetration fields, the live readout, and the showdown
   // settings.
@@ -275,6 +344,15 @@ export class CountingSettingsComponent {
 
   protected onShowdownSpotsChange(event: Event): void {
     this.showdownSpotsChange.emit(clampSpots(Number((event.target as HTMLSelectElement).value)));
+  }
+
+  // Emits the whole ramp with one band replaced; an empty or non-numeric input
+  // leaves the band alone rather than writing NaN into prefs.
+  protected onRampInput(index: number, event: Event): void {
+    const units = (event.target as HTMLInputElement).valueAsNumber;
+    if (!Number.isFinite(units)) return;
+    const next = this.betRamp().map((current, i) => (i === index ? Math.trunc(units) : current));
+    this.betRampChange.emit(next);
   }
 
   protected onShowdownBettingChange(event: Event): void {

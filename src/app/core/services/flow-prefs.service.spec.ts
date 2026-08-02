@@ -117,6 +117,33 @@ describe('FlowPrefsService', () => {
       expect(mergePrefs({ dailyGoal: 15 }).counting.showdownBetting).toBe(false);
     });
 
+    it('normalizes a stored bet spread band by band', () => {
+      expect(mergePrefs({ counting: { betRamp: [2, 4, 8, 16, 32] } }).counting.betRamp).toEqual([
+        2, 4, 8, 16, 32,
+      ]);
+      // A junk band falls back to the default's, the rest survive.
+      expect(mergePrefs({ counting: { betRamp: [2, 'x', 8, 16, 32] } }).counting.betRamp).toEqual([
+        2,
+        DEFAULT_FLOW_PREFS.counting.betRamp[1],
+        8,
+        16,
+        32,
+      ]);
+      // Prefs written before the spread existed get the default.
+      expect(mergePrefs({ dailyGoal: 15 }).counting.betRamp).toEqual(
+        DEFAULT_FLOW_PREFS.counting.betRamp,
+      );
+    });
+
+    it('keeps bet-spread mode for a balanced system and coerces it away from an unbalanced one', () => {
+      expect(
+        mergePrefs({ counting: { systemId: 'hi-lo', mode: 'bet-spread' } }).counting.mode,
+      ).toBe('bet-spread');
+      expect(mergePrefs({ counting: { systemId: 'ko', mode: 'bet-spread' } }).counting.mode).toBe(
+        'running-count',
+      );
+    });
+
     it('falls back from an unknown counting-system id', () => {
       expect(mergePrefs({ counting: { systemId: 'missing-system' } }).counting.systemId).toBe(
         DEFAULT_FLOW_PREFS.counting.systemId,
@@ -204,6 +231,7 @@ describe('FlowPrefsService', () => {
           trueCountSource: 'live-shoe',
           numberOfDecks: 2,
           penetration: 0.8,
+          betRamp: [1, 3, 6, 10, 20],
           showdownSpots: 2,
           showdownBetting: true,
         },
@@ -217,6 +245,7 @@ describe('FlowPrefsService', () => {
         trueCountSource: 'live-shoe',
         numberOfDecks: 2,
         penetration: 0.8,
+        betRamp: [1, 3, 6, 10, 20],
         showdownSpots: 2,
         showdownBetting: true,
       });

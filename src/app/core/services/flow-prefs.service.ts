@@ -1,5 +1,6 @@
 import { Injectable, signal, type Signal } from '@angular/core';
 
+import { DEFAULT_BET_RAMP, normalizeBetRamp, type BetRamp } from '../models/bet-ramp.model';
 import {
   DECKS_REMAINING_PRESETS,
   MAX_CARDS_PER_DRILL,
@@ -62,6 +63,9 @@ export interface CountingPrefs {
   readonly trueCountSource: TrueCountSource;
   readonly numberOfDecks: number;
   readonly penetration: number;
+  // The player's own bet spread, in units per true-count band. Graded against
+  // by the bet-spread drill; ignored by every other mode.
+  readonly betRamp: BetRamp;
   // Boxes the player occupies in the optional post-count showdown (1–3).
   readonly showdownSpots: number;
   // Bet sizing in the showdown: each round opens on a bet and settles against a
@@ -105,6 +109,7 @@ export const DEFAULT_FLOW_PREFS: FlowPrefs = {
     trueCountSource: 'live-shoe',
     numberOfDecks: DEFAULT_NUMBER_OF_DECKS,
     penetration: DEFAULT_PENETRATION,
+    betRamp: DEFAULT_BET_RAMP,
     showdownSpots: 1,
     showdownBetting: false,
   },
@@ -188,13 +193,13 @@ export function mergePrefs(parsed: unknown): FlowPrefs {
   const system = COUNTING_SYSTEMS.find((candidate) => candidate.id === systemId)!;
   const requestedMode = oneOf(
     cnt['mode'],
-    ['running-count', 'true-count', 'key-count'] as const,
+    ['running-count', 'true-count', 'key-count', 'bet-spread'] as const,
     d.counting.mode,
   );
-  // True count needs a balanced system; the key-count drill needs a published
-  // IRC/key-count schedule (KO). The Settings UI enforces both when changed
-  // interactively; the loader must enforce the same invariants for stale or
-  // hand-edited payloads.
+  // True count — and the bet spread built on it — needs a balanced system; the
+  // key-count drill needs a published IRC/key-count schedule (KO). The Settings
+  // UI enforces both when changed interactively; the loader must enforce the
+  // same invariants for stale or hand-edited payloads.
   const mode: DrillMode = modeAllowedFor(system, requestedMode) ? requestedMode : 'running-count';
   const trueCountSource = oneOf(
     cnt['trueCountSource'],
@@ -254,6 +259,7 @@ export function mergePrefs(parsed: unknown): FlowPrefs {
       trueCountSource,
       numberOfDecks,
       penetration: numberOneOf(cnt['penetration'], PENETRATION_PRESETS, d.counting.penetration),
+      betRamp: normalizeBetRamp(cnt['betRamp']),
       showdownSpots: clampSpots(num(cnt['showdownSpots'], d.counting.showdownSpots)),
       showdownBetting: bool(cnt['showdownBetting'], d.counting.showdownBetting),
     },

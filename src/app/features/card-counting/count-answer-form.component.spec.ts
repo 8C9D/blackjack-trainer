@@ -151,4 +151,49 @@ describe('CountAnswerFormComponent', () => {
       expect(fixture.nativeElement.querySelector('.answer__note')).not.toBeNull();
     });
   });
+
+  describe('the bet question', () => {
+    function createBetForm(): ComponentFixture<CountAnswerFormComponent> {
+      const fixture = TestBed.createComponent(CountAnswerFormComponent);
+      fixture.componentRef.setInput('mode', 'bet-spread');
+      fixture.componentRef.setInput('question', 'bet');
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    it('asks for units, not a count', () => {
+      const fixture = createBetForm();
+      const text = fixture.nativeElement.textContent ?? '';
+      expect(text).toContain('How many units do you bet?');
+      expect(text).toContain('not chips');
+    });
+
+    it('asks for the true count first when the same form serves the count step', () => {
+      const fixture = TestBed.createComponent(CountAnswerFormComponent);
+      fixture.componentRef.setInput('mode', 'bet-spread');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('true count');
+    });
+
+    it('rejects a bet of zero, a negative bet, and one over the cap', () => {
+      const fixture = createBetForm();
+      for (const value of ['0', '-2', '101', '2.5']) {
+        setInput(fixture, value);
+        expect(getSubmit(fixture).disabled).toBe(true);
+      }
+      setInput(fixture, '12');
+      expect(getSubmit(fixture).disabled).toBe(false);
+    });
+
+    it('emits the units on submit', () => {
+      const fixture = createBetForm();
+      let received: number | undefined;
+      fixture.componentInstance.answer.subscribe((units) => {
+        received = units;
+      });
+      setInput(fixture, '8');
+      submitForm(fixture);
+      expect(received).toBe(8);
+    });
+  });
 });

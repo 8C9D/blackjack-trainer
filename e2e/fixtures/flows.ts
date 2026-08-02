@@ -32,6 +32,19 @@ export async function configureKeyCount(page: Page): Promise<void> {
     .check();
 }
 
+// Shrink the counting drill to a fast live-shoe bet-spread rep. Same Settings
+// walk as the true count it is built on, plus the mode radio that reveals the
+// spread editor.
+export async function configureBetSpread(page: Page): Promise<void> {
+  await page.goto('/settings');
+  await page.getByLabel('Number of cards').fill('3');
+  await page.getByLabel('Time between cards (ms)').fill('100');
+  await page
+    .getByRole('radiogroup', { name: 'Drill mode' })
+    .getByRole('radio', { name: 'Bet spread', exact: true })
+    .check();
+}
+
 // Run one live-shoe true-count rep, ending on the feedback screen where the
 // showdown is offered. The answers need not be correct — this is flow, not math.
 // A `seed` pins the app's randomness (the shoe's shuffle included) via the
