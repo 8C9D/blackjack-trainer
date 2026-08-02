@@ -112,6 +112,12 @@ final class PracticeHistoryStore: CloudSyncable {
         return days.filter { $0.date >= cutoff }
     }
 
+    /// Wipes the history: the goal ring, streak, and week strip all start over.
+    func reset() {
+        days = []
+        persist()
+    }
+
     private func persist() {
         Self.save(days, key: key, defaults: defaults)
         pushToCloud()

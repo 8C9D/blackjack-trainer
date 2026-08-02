@@ -244,6 +244,12 @@ final class MissTallyStore: CloudSyncable {
         return out
     }
 
+    /// Forgets every scenario tally, so adaptive practice starts from scratch.
+    func reset() {
+        state = [:]
+        persist()
+    }
+
     private func persist() {
         save(state)
         pushToCloud()

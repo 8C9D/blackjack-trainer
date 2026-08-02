@@ -40,6 +40,7 @@ struct SettingsView: View {
                 tableRulesSection
                 deviationsSection
                 countingSection
+                PracticeDataSection()
                 aboutSection
             }
             .scrollContentBackground(.hidden)
