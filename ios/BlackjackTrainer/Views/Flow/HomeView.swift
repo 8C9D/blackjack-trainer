@@ -67,13 +67,10 @@ struct HomeView: View {
                         otherCard(trainer)
                     }
                 }
-                Button { router.go(.settings) } label: {
-                    Text("Settings")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Theme.muted)
-                        .padding(.vertical, 6)
+                HStack(spacing: 18) {
+                    quietButton("Chart") { router.go(.chart) }
+                    quietButton("Settings") { router.go(.settings) }
                 }
-                .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 20)
@@ -82,6 +79,17 @@ struct HomeView: View {
         .frame(maxWidth: 460)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.ground.ignoresSafeArea())
+    }
+
+    private func quietButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 14))
+                .foregroundStyle(Theme.muted)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 6)
+        }
+        .buttonStyle(.plain)
     }
 
     private var primaryButton: some View {

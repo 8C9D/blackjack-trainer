@@ -279,6 +279,9 @@ The app could grade a play but never show the chart it graded against.
 - **Surrender is `R`, not `SUR`.** Ten columns have to fit a 320px screen; three glyphs overran the cell and merged into the neighbouring one.
   The legend and each cell's `aria-label` (`Hit`, `Stand`, ..., `Surrender`) spell every symbol out, so color and the letter are never the only carriers.
 - **Palette.** Five chart-cell tints joined the two palette mixins in `src/styles.scss` (hit, stand, double, split, surrender), always under `--ink`.
+- **iOS mirror.** `StrategyChartGrid` (pure, in `Engine/`, reusing `ChartKeys` for the row/column lists) plus `ChartView` / `ChartGridView`, a fourth `FlowRoute`, and the same `Chart` / `Settings` pair on Home.
+  The body is split from its navigation shell because `ImageRenderer` draws a `NavigationStack` as the "unsupported" glyph, and an ImageRenderer probe is the only way to look at a screen in this project; both themes were rendered and match the web cell for cell.
+  Five chart-cell fills joined `Theme`. +11 Swift tests (292 total).
 - **Validation.** +16 unit tests (938 total), including guards that every representative hand lands on the row it is meant to.
   `/chart` joined the E2E route sweep, so its markup and both themes' contrast are measured, plus two navigation specs (the home link and the `C` key); the suite is 63 tests and was run four times for flakiness.
 
