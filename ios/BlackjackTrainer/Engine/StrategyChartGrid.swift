@@ -29,6 +29,49 @@ struct ChartSection: Identifiable {
     let rows: [ChartRow]
 }
 
+/// The chart screen's two halves.
+enum ChartMode: String, CaseIterable, Identifiable {
+    case basic
+    case deviations
+
+    var id: String {
+        rawValue
+    }
+
+    var label: String {
+        switch self {
+        case .basic: "Basic strategy"
+        case .deviations: "Deviations"
+        }
+    }
+}
+
+/// One row of the deviation list: the hand, the true count that turns the rule
+/// on, and the play it switches to.
+struct DeviationRuleRow: Identifiable {
+    var id: String {
+        hand
+    }
+
+    let hand: String
+    let threshold: String
+    let action: Action
+
+    var symbol: String {
+        StrategyChartGrid.symbol(for: action)
+    }
+
+    var label: String {
+        action.label
+    }
+}
+
+struct DeviationSection: Identifiable {
+    let id: String
+    let title: String
+    let rows: [DeviationRuleRow]
+}
+
 /// The pure half of the strategy-chart screen, mirroring the web
 /// `chart-page.component`: the chart is *rendered by asking the engine*, not by
 /// reading the chart data a second time, so the reference the trainee reads and
@@ -41,7 +84,52 @@ enum StrategyChartGrid {
     /// have to fit a phone's width, where three glyphs overrun their cell. Each
     /// cell's accessibility label spells the action out.
     static func symbol(for action: Action) -> String {
-        action == .surrender ? "R" : action.rawValue
+        switch action {
+        case .surrender: "R"
+        case .insurance: "I"
+        default: action.rawValue
+        }
+    }
+
+    /// Section order for the deviation list, matching how the source chart reads.
+    static let deviationCategories: [(id: String, title: String)] = [
+        ("insurance", "Insurance"),
+        ("hard", "Hard totals"),
+        ("soft", "Soft totals"),
+        ("pair", "Pairs"),
+        ("surrender", "Surrender")
+    ]
+
+    /// The deviation table for a rule set, grouped for display. Empty groups are
+    /// dropped so a chart without, say, surrender rules shows no empty card.
+    static func deviationSections(rules: [DeviationRule]) -> [DeviationSection] {
+        deviationCategories.compactMap { category in
+            let rows = rules.filter { $0.category == category.id }.map(deviationRow)
+            guard !rows.isEmpty else { return nil }
+            return DeviationSection(id: category.id, title: category.title, rows: rows)
+        }
+    }
+
+    /// "Take at +3 or above" reads as "≥ +3"; the two count-sign directions carry
+    /// no index at all, so they print the comparison the chart legend uses.
+    static func threshold(_ rule: DeviationRule) -> String {
+        switch rule.direction {
+        case "positive": "> 0"
+        case "negative": "< 0"
+        case "at-or-below": "≤ \(CountFormat.signedCount(Double(rule.index)))"
+        default: "≥ \(CountFormat.signedCount(Double(rule.index)))"
+        }
+    }
+
+    private static func deviationRow(_ rule: DeviationRule) -> DeviationRuleRow {
+        DeviationRuleRow(
+            // Insurance has no player hand — the dealer's ace is the whole scenario.
+            hand: rule.category == "insurance"
+                ? "Dealer ace"
+                : "\(rule.playerHandLabel) vs \(rule.dealerUpcard)",
+            threshold: threshold(rule),
+            action: Action(rawValue: rule.deviationAction) ?? .hit
+        )
     }
 
     static func sections(

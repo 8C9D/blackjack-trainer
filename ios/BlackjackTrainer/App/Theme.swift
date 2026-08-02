@@ -39,6 +39,8 @@ enum Theme {
     static let chartDouble = Color(hex: 0xF2B64C, opacity: 0.24)
     static let chartSplit = Color(dark: 0x6096EB, light: 0x2563EB, opacity: 0.2)
     static let chartSurrender = Color(dark: 0x8B909C, light: 0x666D7A, opacity: 0.2)
+    /// Insurance never appears in the basic grids, only in the deviation list.
+    static let chartInsurance = Color(dark: 0xA882E0, light: 0x6D3CAD, opacity: 0.22)
 
     /// The fill for a chart cell's action.
     static func chartCell(_ action: Action) -> Color {
@@ -47,7 +49,8 @@ enum Theme {
         case .stand: chartStand
         case .double: chartDouble
         case .split: chartSplit
-        case .surrender, .insurance: chartSurrender
+        case .surrender: chartSurrender
+        case .insurance: chartInsurance
         }
     }
 }

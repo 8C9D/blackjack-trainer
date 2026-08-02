@@ -113,6 +113,65 @@ struct StrategyChartGridTests {
         #expect(try cell(sections(das: true), "pair", "4,4", vs: "5") == "P")
     }
 
+    // MARK: the deviation list
+
+    private func deviations(_ ruleSet: RuleSet = .s17) throws -> [DeviationSection] {
+        let charts = try GameData.loadCharts()
+        return StrategyChartGrid.deviationSections(rules: charts.deviations[ruleSet.rawValue] ?? [])
+    }
+
+    private func deviationRow(_ sections: [DeviationSection], _ hand: String) -> DeviationRuleRow? {
+        sections.flatMap(\.rows).first { $0.hand == hand }
+    }
+
+    @Test func groupsEveryDeviationInChartOrder() throws {
+        let sections = try deviations()
+        #expect(sections.map(\.title) == [
+            "Insurance", "Hard totals", "Soft totals", "Pairs", "Surrender"
+        ])
+        // Every rule in the table reaches the list exactly once.
+        let charts = try GameData.loadCharts()
+        #expect(sections.flatMap(\.rows).count == charts.deviations["S17"]?.count)
+    }
+
+    @Test func printsEachRuleAsHandThresholdAndPlay() throws {
+        let sections = try deviations()
+        let sixteen = deviationRow(sections, "Hard 16 vs 10")
+        #expect(sixteen?.threshold == "≥ 0")
+        #expect(sixteen?.symbol == "S")
+        #expect(sixteen?.label == "Stand")
+
+        let thirteen = deviationRow(sections, "Hard 13 vs 2")
+        #expect(thirteen?.threshold == "≤ -1")
+        #expect(thirteen?.label == "Hit")
+
+        // Insurance has no player hand of its own.
+        let insurance = deviationRow(sections, "Dealer ace")
+        #expect(insurance?.threshold == "≥ +3")
+        #expect(insurance?.symbol == "I")
+        #expect(insurance?.label == "Insurance")
+    }
+
+    @Test func followsTheRuleSet() throws {
+        let s17 = try deviations(.s17).flatMap(\.rows).count
+        let h17 = try deviations(.h17).flatMap(\.rows).count
+        #expect(s17 > 0)
+        #expect(h17 != s17)
+    }
+
+    @Test func thresholdReadsAsTheChartLegendComparison() {
+        func rule(_ direction: String, _ index: Int) -> DeviationRule {
+            DeviationRule(ruleSet: "S17", category: "hard", playerHand: "16",
+                          playerHandLabel: "Hard 16", dealerUpcard: "10", index: index,
+                          direction: direction, basicAction: "H", deviationAction: "S", source: "")
+        }
+        #expect(StrategyChartGrid.threshold(rule("at-or-above", 3)) == "≥ +3")
+        #expect(StrategyChartGrid.threshold(rule("at-or-above", 0)) == "≥ 0")
+        #expect(StrategyChartGrid.threshold(rule("at-or-below", -1)) == "≤ -1")
+        #expect(StrategyChartGrid.threshold(rule("positive", 0)) == "> 0")
+        #expect(StrategyChartGrid.threshold(rule("negative", 0)) == "< 0")
+    }
+
     @Test func surrenderIsAbbreviatedToOneGlyph() {
         #expect(StrategyChartGrid.symbol(for: .surrender) == "R")
         #expect(Action.chartLegend.map(StrategyChartGrid.symbol) == ["H", "S", "D", "P", "R"])
