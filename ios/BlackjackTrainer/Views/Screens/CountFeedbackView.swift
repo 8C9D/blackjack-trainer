@@ -88,31 +88,45 @@ struct CountFeedbackView: View {
         detailRow("Your count", CountFormat.count(result.userRunningCount))
         detailRow("Correct count", CountFormat.count(result.correctRunningCount))
         detailRow("Key count", CountFormat.signedCount(Double(result.keyCount)))
-        detailRow(
-            "Advantage",
-            (result.hasAdvantage ? "Yes" : "No")
-                + " — you said " + (result.userSaidAdvantage ? "yes" : "no")
-        )
-        Text(
-            "Running count \(CountFormat.signedCount(result.correctRunningCount)) is "
-                + (result.hasAdvantage ? "at or above" : "below") + " the key count "
-                + "\(CountFormat.signedCount(Double(result.keyCount))) — "
-                + (result.hasAdvantage ? "the edge is yours" : "no edge yet") + ". "
-                + "The shoe started at the IRC "
-                + "\(CountFormat.signedCount(Double(result.irc))) and a full shoe ends "
-                + "at the pivot \(CountFormat.signedCount(Double(result.pivot)))."
-        )
-        .font(.footnote)
-        .foregroundStyle(Theme.muted)
-        if result.correctRunningCount >= Double(result.insuranceCount) {
-            Text(
-                "Running count \(CountFormat.signedCount(result.correctRunningCount)) has "
-                    + "reached \(CountFormat.signedCount(Double(result.insuranceCount))) — "
-                    + "take insurance when it is offered."
-            )
+        detailRow("Advantage", Self.advantageAnswer(result))
+        Text(Self.keyCountRationale(result))
             .font(.footnote)
             .foregroundStyle(Theme.muted)
+        if result.correctRunningCount >= Double(result.insuranceCount) {
+            Text(Self.insuranceRationale(result))
+                .font(.footnote)
+                .foregroundStyle(Theme.muted)
         }
+    }
+
+    // The rationale strings are built outside the view body: as `+` chains of
+    // interpolations inline they pushed `keyCountDetails` past the Swift type
+    // checker's budget, which fails a clean build ("unable to type-check this
+    // expression in reasonable time") while an incremental one reuses the
+    // cached object and looks fine.
+
+    static func advantageAnswer(_ result: KeyCountDrillResult) -> String {
+        let correct = result.hasAdvantage ? "Yes" : "No"
+        let said = result.userSaidAdvantage ? "yes" : "no"
+        return "\(correct) — you said \(said)"
+    }
+
+    static func keyCountRationale(_ result: KeyCountDrillResult) -> String {
+        let running = CountFormat.signedCount(result.correctRunningCount)
+        let key = CountFormat.signedCount(Double(result.keyCount))
+        let irc = CountFormat.signedCount(Double(result.irc))
+        let pivot = CountFormat.signedCount(Double(result.pivot))
+        let comparison = result.hasAdvantage ? "at or above" : "below"
+        let edge = result.hasAdvantage ? "the edge is yours" : "no edge yet"
+        return "Running count \(running) is \(comparison) the key count \(key) — \(edge). "
+            + "The shoe started at the IRC \(irc) and a full shoe ends at the pivot \(pivot)."
+    }
+
+    static func insuranceRationale(_ result: KeyCountDrillResult) -> String {
+        let running = CountFormat.signedCount(result.correctRunningCount)
+        let insurance = CountFormat.signedCount(Double(result.insuranceCount))
+        return "Running count \(running) has reached \(insurance) — "
+            + "take insurance when it is offered."
     }
 
     private var breakdown: some View {
