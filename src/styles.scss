@@ -51,6 +51,7 @@
   --chart-double: rgba(242, 182, 76, 0.2);
   --chart-split: rgba(96, 150, 235, 0.24);
   --chart-surrender: rgba(139, 144, 156, 0.22);
+  --chart-insurance: rgba(168, 130, 224, 0.24);
 
   // Focus rings must clear 3:1 against whatever they sit on, so they follow
   // the foreground accent rather than the fill.
@@ -100,6 +101,7 @@
   --chart-double: rgba(242, 182, 76, 0.34);
   --chart-split: rgba(37, 99, 235, 0.16);
   --chart-surrender: rgba(102, 109, 122, 0.18);
+  --chart-insurance: rgba(109, 60, 173, 0.16);
 
   --focus: var(--accent-ink);
 }

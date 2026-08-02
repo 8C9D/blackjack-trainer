@@ -2,12 +2,14 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 
 import { cardHighValue, isAce } from '../../core/models/card.model';
+import type { DeviationRule } from '../../core/models/deviation.model';
 import type { HardKey, PairKey, SoftKey } from '../../core/models/strategy.model';
 import { classifyAsPair, isSoftHand } from '../../core/services/basic-strategy-engine.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
 import {
   ChartPageComponent,
   DEALER_UPCARDS,
+  formatDeviationThreshold,
   hardHandFor,
   pairHandFor,
   softHandFor,
@@ -172,6 +174,87 @@ describe('ChartPageComponent', () => {
         (el as HTMLElement).textContent!.trim(),
       );
       expect(chips).toEqual(['H17 — dealer hits soft 17', 'Double after split', 'Late surrender']);
+    });
+  });
+
+  describe('the deviation list', () => {
+    function showDeviations(fixture: ComponentFixture<ChartPageComponent>): void {
+      const button = [...fixture.nativeElement.querySelectorAll('.chart__mode')].find(
+        (el) => (el as HTMLElement).textContent!.trim() === 'Deviations',
+      ) as HTMLButtonElement;
+      button.click();
+      fixture.detectChanges();
+    }
+
+    // "Hard 16 vs 10 | ≥ 0 | Stand" → the three cells as text.
+    function ruleRow(fixture: ComponentFixture<ChartPageComponent>, hand: string): string[] {
+      const row = [...fixture.nativeElement.querySelectorAll('.chart__table--rules tbody tr')].find(
+        (tr) => tr.querySelector('.chart__rule-hand')!.textContent!.trim() === hand,
+      );
+      if (!row) throw new Error(`No deviation row "${hand}"`);
+      return [...row.querySelectorAll('th, td')].map((cell) =>
+        cell.textContent!.replace(/\s+/g, ' ').trim(),
+      );
+    }
+
+    it('opens on the basic chart and switches to the deviations on demand', () => {
+      const { fixture } = createPage();
+      expect(fixture.nativeElement.querySelectorAll('.chart__table--rules')).toHaveLength(0);
+
+      showDeviations(fixture);
+      expect(fixture.nativeElement.querySelector('.chart__table')).toBeTruthy();
+      expect(fixture.nativeElement.querySelectorAll('.chart__cell--h')).toHaveLength(2);
+      const captions = [...fixture.nativeElement.querySelectorAll('.chart__caption')].map((el) =>
+        (el as HTMLElement).textContent!.trim(),
+      );
+      expect(captions).toEqual(['Insurance', 'Hard totals', 'Soft totals', 'Pairs', 'Surrender']);
+    });
+
+    it('prints every rule as hand, threshold, and play', () => {
+      const { fixture } = createPage();
+      showDeviations(fixture);
+      expect(ruleRow(fixture, 'Hard 16 vs 10')).toEqual(['Hard 16 vs 10', '≥ 0', 'S Stand']);
+      expect(ruleRow(fixture, 'Hard 13 vs 2')).toEqual(['Hard 13 vs 2', '≤ -1', 'H Hit']);
+      expect(ruleRow(fixture, 'Dealer ace')).toEqual(['Dealer ace', '≥ +3', 'I Insurance']);
+      expect(ruleRow(fixture, 'Pair of 10s vs 5')).toEqual(['Pair of 10s vs 5', '≥ +5', 'P Split']);
+    });
+
+    it('follows the rule set — H17 carries its own index for 12 vs 4', () => {
+      const prefs = TestBed.inject(FlowPrefsService);
+      const { fixture } = createPage();
+      showDeviations(fixture);
+      const s17 = fixture.nativeElement.querySelectorAll('.chart__table--rules tbody tr').length;
+
+      prefs.setRuleSet('H17');
+      fixture.detectChanges();
+      const h17 = fixture.nativeElement.querySelectorAll('.chart__table--rules tbody tr').length;
+      expect(h17).toBeGreaterThan(0);
+      expect(h17).not.toBe(s17);
+    });
+
+    it('drops the DAS and surrender chips, which no deviation reads', () => {
+      const { fixture } = createPage();
+      expect(fixture.nativeElement.querySelectorAll('.chart__chip')).toHaveLength(3);
+      showDeviations(fixture);
+      const chips = [...fixture.nativeElement.querySelectorAll('.chart__chip')].map((el) =>
+        (el as HTMLElement).textContent!.trim(),
+      );
+      expect(chips).toEqual(['S17 — dealer stands soft 17']);
+    });
+  });
+
+  describe('formatDeviationThreshold', () => {
+    const rule = (
+      direction: DeviationRule['direction'],
+      index: number,
+    ): Pick<DeviationRule, 'direction' | 'index'> => ({ direction, index });
+
+    it('reads as the comparison the chart legend uses', () => {
+      expect(formatDeviationThreshold(rule('at-or-above', 3) as DeviationRule)).toBe('≥ +3');
+      expect(formatDeviationThreshold(rule('at-or-above', 0) as DeviationRule)).toBe('≥ 0');
+      expect(formatDeviationThreshold(rule('at-or-below', -1) as DeviationRule)).toBe('≤ -1');
+      expect(formatDeviationThreshold(rule('positive', 0) as DeviationRule)).toBe('> 0');
+      expect(formatDeviationThreshold(rule('negative', 0) as DeviationRule)).toBe('< 0');
     });
   });
 

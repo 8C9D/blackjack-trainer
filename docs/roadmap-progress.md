@@ -266,6 +266,17 @@ only for systems that carry one (KO alone today).
   the web engine — and `CountingParityTests` grades the Swift
   `evaluateKeyCount` against them.
 
+### Post-roadmap continued: the deviation chart reference (2026-08-02)
+
+The chart screen grew a second tab, so the Deviations trainer has a reference too.
+A segmented switch above the rules line picks Basic strategy (the grids) or Deviations (the list), and the DAS / Late-Surrender chips drop away in the second, because no deviation rule reads them.
+
+- **The list** comes from `deviationsFor(ruleSet)`, the same table the deviation engine looks up, grouped in the order the source PDF reads: insurance, hard, soft, pairs, surrender.
+  Each row is hand ("Hard 16 vs 10", or "Dealer ace" for insurance, which has no player hand), the threshold, and the play as an action pill plus its word.
+- **The threshold** prints the comparison the chart legend uses: `≥ +3` / `≤ -1` for the indexed directions (signs via the shared `formatSignedCount`), and `> 0` / `< 0` for the two count-sign directions, which carry no index.
+- **Insurance** is the one action outside the basic grids' five, so it gets its own cell hue (`--chart-insurance`) and the symbol `I`.
+- **Validation.** +5 unit tests (943 total) and a contrast sweep of the second tab in both themes (65 E2E), since the route sweep only ever measures a screen's opening state.
+
 ### Post-roadmap continued: the strategy chart reference (2026-08-02)
 
 The app could grade a play but never show the chart it graded against.

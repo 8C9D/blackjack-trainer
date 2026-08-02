@@ -162,6 +162,19 @@ test.describe('accessibility', () => {
     });
   }
 
+  // The chart opens on the basic grids, so its second half — the deviation
+  // list, with an action pill hue of its own for insurance — is never sampled
+  // by the route sweep.
+  for (const scheme of ['dark', 'light'] as const) {
+    test(`the deviation chart meets WCAG AA in the ${scheme} theme`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.goto('/chart');
+      await page.getByRole('button', { name: 'Deviations' }).click();
+      await expect(page.getByRole('rowheader', { name: 'Dealer ace' })).toBeVisible();
+      expect(await contrastFailures(page), `deviation chart (${scheme})`).toEqual([]);
+    });
+  }
+
   // The route sweep above only measures each screen's opening state, so the
   // showdown — the screen with the most colour of its own (per-box verdicts in
   // win/lose/push, the round tally, the active-box highlight) — goes unmeasured.

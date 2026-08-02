@@ -1,8 +1,10 @@
-import { Component, HostListener, computed, inject } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
+import { formatSignedCount } from '../../core/models/card-counting.model';
 import type { Card, Rank, Suit } from '../../core/models/card.model';
+import type { DeviationCategory, DeviationRule } from '../../core/models/deviation.model';
 import {
   ACTION_LABELS,
   type Action,
@@ -14,6 +16,7 @@ import {
   type SoftKey,
 } from '../../core/models/strategy.model';
 import { BasicStrategyEngineService } from '../../core/services/basic-strategy-engine.service';
+import { deviationsFor } from '../../core/services/deviation-engine.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
 
 export const DEALER_UPCARDS: readonly DealerUpcard[] = [
@@ -36,13 +39,30 @@ const PAIR_KEYS: readonly PairKey[] = ['2', '3', '4', '5', '6', '7', '8', '9', '
 // Chart shorthand. Surrender is 'R', not the BJA charts' 'SUR': ten columns
 // have to fit a 320px screen, where three glyphs in one cell overrun into its
 // neighbour. The legend and each cell's aria-label spell it out.
-const ACTION_SYMBOLS: Readonly<Record<Exclude<Action, 'INS'>, string>> = {
+const ACTION_SYMBOLS: Readonly<Record<Action, string>> = {
   H: 'H',
   S: 'S',
   D: 'D',
   P: 'P',
   SUR: 'R',
+  INS: 'I',
 };
+
+export type ChartMode = 'basic' | 'deviations';
+
+export const CHART_MODES: readonly { value: ChartMode; label: string }[] = [
+  { value: 'basic', label: 'Basic strategy' },
+  { value: 'deviations', label: 'Deviations' },
+];
+
+// Section order for the deviation list, matching how the source chart reads.
+const DEVIATION_CATEGORIES: readonly { id: DeviationCategory; title: string }[] = [
+  { id: 'insurance', title: 'Insurance' },
+  { id: 'hard', title: 'Hard totals' },
+  { id: 'soft', title: 'Soft totals' },
+  { id: 'pair', title: 'Pairs' },
+  { id: 'surrender', title: 'Surrender' },
+];
 
 export const LEGEND: readonly { action: Exclude<Action, 'INS'>; label: string }[] = (
   ['H', 'S', 'D', 'P', 'SUR'] as const
@@ -66,6 +86,20 @@ interface ChartSectionView {
   readonly rows: readonly ChartRowView[];
 }
 
+interface DeviationRowView {
+  readonly hand: string;
+  readonly threshold: string;
+  readonly action: Action;
+  readonly symbol: string;
+  readonly label: string;
+}
+
+interface DeviationSectionView {
+  readonly id: DeviationCategory;
+  readonly title: string;
+  readonly rows: readonly DeviationRowView[];
+}
+
 // The chart the drills grade against, rendered rather than re-encoded: every
 // cell is the engine's own decision for a representative hand under the
 // player's live rule set, so the page cannot drift from what a miss is scored
@@ -81,64 +115,122 @@ interface ChartSectionView {
         <h1 class="chart__title">Strategy chart</h1>
       </header>
 
+      <div class="chart__modes" role="group" aria-label="Chart">
+        @for (option of modes; track option.value) {
+          <button
+            type="button"
+            class="chart__mode"
+            [class.chart__mode--on]="mode() === option.value"
+            [attr.aria-pressed]="mode() === option.value"
+            (click)="setMode(option.value)"
+          >
+            {{ option.label }}
+          </button>
+        }
+      </div>
+
       <p class="chart__rules">
         <span class="chart__chip">{{ ruleSetLabel() }}</span>
-        <span class="chart__chip">{{ dasLabel() }}</span>
-        <span class="chart__chip">{{ surrenderLabel() }}</span>
+        @if (mode() === 'basic') {
+          <span class="chart__chip">{{ dasLabel() }}</span>
+          <span class="chart__chip">{{ surrenderLabel() }}</span>
+        }
         <button type="button" class="chart__settings" (click)="openSettings()">Change rules</button>
       </p>
 
-      @for (section of sections(); track section.id) {
-        <section class="chart__section">
-          <table class="chart__table">
-            <caption class="chart__caption">
-              {{
-                section.title
-              }}
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col" class="chart__corner">{{ section.rowHeader }}</th>
-                @for (upcard of dealerUpcards; track upcard) {
-                  <th scope="col" class="chart__upcard">{{ upcard }}</th>
-                }
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of section.rows; track row.label) {
+      @if (mode() === 'deviations') {
+        @for (section of deviationSections(); track section.id) {
+          <section class="chart__section">
+            <table class="chart__table chart__table--rules">
+              <caption class="chart__caption">
+                {{
+                  section.title
+                }}
+              </caption>
+              <thead>
                 <tr>
-                  <th scope="row" class="chart__hand">{{ row.label }}</th>
-                  @for (cell of row.cells; track $index) {
-                    <td
-                      class="chart__cell"
-                      [class]="'chart__cell--' + cell.action.toLowerCase()"
-                      [attr.aria-label]="cell.label"
-                    >
-                      {{ cell.symbol }}
+                  <th scope="col">Hand</th>
+                  <th scope="col">True count</th>
+                  <th scope="col">Play</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (rule of section.rows; track rule.hand) {
+                  <tr>
+                    <th scope="row" class="chart__rule-hand">{{ rule.hand }}</th>
+                    <td class="chart__index">{{ rule.threshold }}</td>
+                    <td class="chart__play">
+                      <span
+                        class="chart__cell chart__cell--{{ rule.action.toLowerCase() }}"
+                        aria-hidden="true"
+                        >{{ rule.symbol }}</span
+                      >
+                      {{ rule.label }}
                     </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </section>
+        }
+
+        <p class="chart__note">
+          Deviations override basic strategy only once the true count reaches the index. Everything
+          not listed here is played straight off the chart, at any count.
+        </p>
+      } @else {
+        @for (section of sections(); track section.id) {
+          <section class="chart__section">
+            <table class="chart__table">
+              <caption class="chart__caption">
+                {{
+                  section.title
+                }}
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="chart__corner">{{ section.rowHeader }}</th>
+                  @for (upcard of dealerUpcards; track upcard) {
+                    <th scope="col" class="chart__upcard">{{ upcard }}</th>
                   }
                 </tr>
-              }
-            </tbody>
-          </table>
-        </section>
-      }
-
-      <ul class="chart__legend">
-        @for (entry of legend; track entry.action) {
-          <li>
-            <span class="chart__cell chart__cell--{{ entry.action.toLowerCase() }}">{{
-              symbolFor(entry.action)
-            }}</span>
-            {{ entry.label }}
-          </li>
+              </thead>
+              <tbody>
+                @for (row of section.rows; track row.label) {
+                  <tr>
+                    <th scope="row" class="chart__hand">{{ row.label }}</th>
+                    @for (cell of row.cells; track $index) {
+                      <td
+                        class="chart__cell"
+                        [class]="'chart__cell--' + cell.action.toLowerCase()"
+                        [attr.aria-label]="cell.label"
+                      >
+                        {{ cell.symbol }}
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </section>
         }
-      </ul>
 
-      <p class="chart__note">
-        Every cell is the play for a two-card starting hand under the rules above. Pair rows show
-        the split decision, or the play the hand falls back to when the chart says not to split.
-      </p>
+        <ul class="chart__legend">
+          @for (entry of legend; track entry.action) {
+            <li>
+              <span class="chart__cell chart__cell--{{ entry.action.toLowerCase() }}">{{
+                symbolFor(entry.action)
+              }}</span>
+              {{ entry.label }}
+            </li>
+          }
+        </ul>
+
+        <p class="chart__note">
+          Every cell is the play for a two-card starting hand under the rules above. Pair rows show
+          the split decision, or the play the hand falls back to when the chart says not to split.
+        </p>
+      }
     </main>
   `,
   styleUrl: './chart-page.component.scss',
@@ -150,6 +242,9 @@ export class ChartPageComponent {
 
   protected readonly dealerUpcards = DEALER_UPCARDS;
   protected readonly legend = LEGEND;
+  protected readonly modes = CHART_MODES;
+
+  protected readonly mode = signal<ChartMode>('basic');
 
   private readonly prefs = this.prefsService.prefs;
 
@@ -189,8 +284,23 @@ export class ChartPageComponent {
     ];
   });
 
+  // The deviation chart for the active rule set, grouped the way its source
+  // PDF is: insurance first, then the playing decisions, then surrender.
+  protected readonly deviationSections = computed<readonly DeviationSectionView[]>(() => {
+    const rules = deviationsFor(this.prefs().ruleSet);
+    return DEVIATION_CATEGORIES.map(({ id, title }) => ({
+      id,
+      title,
+      rows: rules.filter((rule) => rule.category === id).map(deviationRow),
+    })).filter((section) => section.rows.length > 0);
+  });
+
   protected symbolFor(action: Exclude<Action, 'INS'>): string {
     return ACTION_SYMBOLS[action];
+  }
+
+  protected setMode(mode: ChartMode): void {
+    this.mode.set(mode);
   }
 
   protected goHome(): void {
@@ -261,4 +371,35 @@ export function softHandFor(key: SoftKey): readonly [Card, Card] {
 
 export function pairHandFor(key: PairKey): readonly [Card, Card] {
   return [card(key as Rank), card(key as Rank, 'hearts')];
+}
+
+// ─── the deviation list (exported for tests) ─────────────────────────────
+
+// "Take at +3 or above" reads as "≥ +3"; the two count-sign directions carry
+// no index at all, so they print the comparison the chart legend uses.
+export function formatDeviationThreshold(rule: DeviationRule): string {
+  switch (rule.direction) {
+    case 'positive':
+      return '> 0';
+    case 'negative':
+      return '< 0';
+    case 'at-or-above':
+      return `≥ ${formatSignedCount(rule.index)}`;
+    case 'at-or-below':
+      return `≤ ${formatSignedCount(rule.index)}`;
+  }
+}
+
+function deviationRow(rule: DeviationRule): DeviationRowView {
+  return {
+    // Insurance has no player hand — the dealer's ace is the whole scenario.
+    hand:
+      rule.category === 'insurance'
+        ? 'Dealer ace'
+        : `${rule.playerHandLabel} vs ${rule.dealerUpcard}`,
+    threshold: formatDeviationThreshold(rule),
+    action: rule.deviationAction,
+    symbol: ACTION_SYMBOLS[rule.deviationAction],
+    label: ACTION_LABELS[rule.deviationAction],
+  };
 }
