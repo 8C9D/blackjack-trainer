@@ -118,6 +118,12 @@ describe('App', () => {
       expect(el.querySelectorAll('.chart__table')).toHaveLength(3);
     });
 
+    it('resolves the progress route', async () => {
+      const el = await rendered('/progress');
+      expect(el.querySelector('.progress__title')?.textContent).toContain('Progress');
+      expect(el.querySelectorAll('.progress__bar')).toHaveLength(7);
+    });
+
     it('resolves each lazy drill route to its trainer', async () => {
       const basic = await rendered('/drill/basic-strategy');
       expect(basic.querySelector('.topbar__name')?.textContent).toBe('Basic Strategy');

@@ -16,6 +16,12 @@ export const APP_ROUTES: Routes = [
     title: 'Strategy Chart — Blackjack Trainer',
   },
   {
+    path: 'progress',
+    loadComponent: () =>
+      import('./features/progress/progress-page.component').then((m) => m.ProgressPageComponent),
+    title: 'Progress — Blackjack Trainer',
+  },
+  {
     path: 'settings',
     loadComponent: () =>
       import('./features/settings/settings-page.component').then((m) => m.SettingsPageComponent),

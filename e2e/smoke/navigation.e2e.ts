@@ -45,6 +45,18 @@ test.describe('navigation & routing', () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
+  test('progress opens from home and counts a practised hand', async ({ page }) => {
+    // One graded hand, so the week strip and the trainer table have something
+    // real in them rather than the empty state.
+    await page.getByRole('button', { name: /Continue/ }).click();
+    await page.getByRole('button', { name: 'Hit' }).click();
+    await page.goto('/progress');
+
+    await expect(page).toHaveTitle(/Progress/);
+    await expect(page.getByRole('rowheader', { name: 'Basic Strategy' })).toBeVisible();
+    await expect(page.getByText(/hands all time/)).toContainText('1 hands all time');
+  });
+
   test('pre-Flow trainer URLs redirect into the flow', async ({ page }) => {
     await page.goto('/card-counting');
     await expect(page).toHaveURL(/\/drill\/card-counting$/);
@@ -104,5 +116,11 @@ test.describe('navigation & routing', () => {
     // "c" opens the strategy chart.
     await page.keyboard.press('c');
     await expect(page).toHaveURL(/\/chart$/);
+
+    await page.goto('/');
+    await ready();
+    // "p" opens Progress.
+    await page.keyboard.press('p');
+    await expect(page).toHaveURL(/\/progress$/);
   });
 });

@@ -71,6 +71,10 @@ interface TrainerCard {
             <kbd class="kcap">C</kbd>
             Chart
           </button>
+          <button type="button" class="home__quiet home__progress" (click)="openProgress()">
+            <kbd class="kcap">P</kbd>
+            Progress
+          </button>
           <button type="button" class="home__quiet home__settings" (click)="openSettings()">
             <kbd class="kcap">,</kbd>
             Settings
@@ -148,6 +152,10 @@ export class HomePageComponent {
     void this.router.navigate(['/chart']);
   }
 
+  protected openProgress(): void {
+    void this.router.navigate(['/progress']);
+  }
+
   private accuracyFor(id: TrainerId): number | null {
     switch (id) {
       case 'basic-strategy':
@@ -183,6 +191,11 @@ export class HomePageComponent {
     if (event.key.toLowerCase() === 'c') {
       event.preventDefault();
       this.openChart();
+      return;
+    }
+    if (event.key.toLowerCase() === 'p') {
+      event.preventDefault();
+      this.openProgress();
       return;
     }
     const others = this.otherTrainers();

@@ -149,6 +149,16 @@ describe('HomePageComponent', () => {
     });
   });
 
+  describe('progress', () => {
+    it('is a quiet link, also on the P key', () => {
+      const { fixture, c, navigate } = createPage();
+      (fixture.nativeElement.querySelector('.home__progress') as HTMLButtonElement).click();
+      expect(navigate).toHaveBeenCalledWith(['/progress']);
+      c.onKeyDown(new KeyboardEvent('keydown', { key: 'p' }));
+      expect(navigate).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('streak strip', () => {
     it('renders seven dots and the streak label', () => {
       const { fixture } = createPage();

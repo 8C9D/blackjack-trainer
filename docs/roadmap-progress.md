@@ -266,6 +266,20 @@ only for systems that carry one (KO alone today).
   the web engine — and `CountingParityTests` grades the Swift
   `evaluateKeyCount` against them.
 
+### Post-roadmap continued: the Progress screen (2026-08-02)
+
+Eleven stores had been recording for months behind two accuracy chips on Home and a session summary that vanished on the next round.
+`/progress` (`P` from Home) is the read-only place they surface.
+
+- **This week** is seven bars, scaled against `max(dailyGoal, week's peak)` so a week spent under the goal does not render as a full bar; met days take the accent, the rest the muted foreground (a raised surface sat a hair off the track and read as empty), and today keeps an outline.
+  The line under it carries the streak, the goal, and lifetime hands.
+- **Trainers** is one table over all six `StatsStore`s — both drills plus running count, true count, deck estimate, and the key-count advantage call — as hands / accuracy / best run, with an em dash until a store has an attempt.
+- **The showdown** card appears only once a hand has been played, and its chip line only once something was wagered, so a tally-only player never sees a bankroll.
+- **Weak spots** repeat the Done screen's list per trainer, but persistently and in full: outstanding worst-first with "missed 3 of 7", plus the week's cleared scenarios.
+- **A specificity bug caught by rendering, not by a test:** `.progress__good` (the ≥85% green) lost to `.progress__table td`'s own `--ink-2`, so the class applied and the colour did not.
+  The unit test asserted the class, which is all jsdom can see without the global palette; nesting the rule inside the table block fixed it.
+- **Validation.** +11 unit tests (958 total). `/progress` joined the E2E route sweep (contrast, landmark, heading) plus two navigation specs; 67 E2E, run four times.
+
 ### Post-roadmap continued: the deviation chart reference (2026-08-02)
 
 The chart screen grew a second tab, so the Deviations trainer has a reference too.

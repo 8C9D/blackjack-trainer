@@ -278,9 +278,11 @@ no-ops at runtime but document the chart cell.
 - **Light and dark themes** — one semantic token set in two palettes (`src/styles.scss`). The palette follows `prefers-color-scheme`; Settings → Appearance pins it, which `ThemeService` applies as `data-theme` on `<html>` and mirrors into the `theme-color` meta so the browser chrome matches.
 - **Accessibility** — grading is announced through a live region (the action grid conveys it with color and position alone), the Done screen takes focus when it replaces the drill, every screen carries a level-1 heading, focus rings clear 3:1 in both themes, and `prefers-reduced-motion` is honored.
 - **Persistent lifetime stats per trainer** — attempts, correct count, accuracy, current streak, longest streak, each under its own `localStorage` key.
+- **Progress screen** (`/progress`, `P` from home): the week as bars scaled against the daily goal, every stat store's lifetime hands / accuracy / best run (both drills plus the four counting modes), the showdown's W-L-P record and chip position once either exists, and the outstanding and cleared weak spots per trainer.
+  Read-only, and each section hides itself until there is something to show.
 - **Real card images** — 52 SVGs + face-down back from
   [richardschneider/cardsJS](https://github.com/richardschneider/cardsJS).
-- **Routing** — `/` (home), `/drill/*`, `/chart`, `/settings`; pre-Flow trainer URLs redirect into the flow. Each route's component is destroyed and recreated by Angular's router, so in-memory drill state (current cards, in-progress answer, the live shoe) resets on navigation; persisted state is rehydrated from `localStorage` on reinit.
+- **Routing** — `/` (home), `/drill/*`, `/chart`, `/progress`, `/settings`; pre-Flow trainer URLs redirect into the flow. Each route's component is destroyed and recreated by Angular's router, so in-memory drill state (current cards, in-progress answer, the live shoe) resets on navigation; persisted state is rehydrated from `localStorage` on reinit.
 - **Installable PWA** — production builds ship the Angular service worker (`ngsw-config.json`; registered when the app goes stable), so the app works offline and installs from the browser. Once a complete new version is cached, a dismissible prompt reloads into it without force-activating a mixed bundle. The manifest carries 192/512 maskable icons derived from the iOS app icon, plus an `apple-touch-icon`; the page shells pad both safe-area insets so the top bars stay clear of the status bar in iOS standalone mode.
 
 ## iOS app
@@ -350,7 +352,9 @@ src/app/
 │   ├── settings/
 │   │   └── settings-page.component.ts           all configuration (goal, rules, drill settings)
 │   ├── chart/
-│   │   └── chart-page.component.ts              read-only strategy grids for the active rules
+│   │   └── chart-page.component.ts              read-only strategy grids + deviation list
+│   ├── progress/
+│   │   └── progress-page.component.ts           week bars, per-store stats, weak spots
 │   ├── drill/
 │   │   ├── basic-strategy-drill-page.component.ts  Basic Strategy in the Flow loop
 │   │   ├── deviations-drill-page.component.ts   Deviations in the Flow loop
