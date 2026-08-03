@@ -1,5 +1,13 @@
 import Foundation
 
+/// The verdict on one playing decision, as the felt shows it. Mirrors the web
+/// `PlayVerdict`.
+struct PlayVerdict: Equatable {
+    let correct: Bool
+    let expected: Action
+    let reason: String
+}
+
 /// Post-count showdown outcome.
 enum ShowdownOutcome: String {
     case win

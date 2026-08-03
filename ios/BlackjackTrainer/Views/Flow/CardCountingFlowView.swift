@@ -13,6 +13,10 @@ final class CardCountingFlowModel {
     @ObservationIgnored private let prefs: FlowPrefsStore
     @ObservationIgnored private let history: PracticeHistoryStore
     @ObservationIgnored let showdownBankroll: BankrollStore
+    /// The chart the post-count showdown grades its playing decisions against,
+    /// and where that accuracy is kept.
+    @ObservationIgnored let strategy: BasicStrategyEngine?
+    @ObservationIgnored let showdownPlayStats: SessionStatsStore?
     let session = DrillSession()
     private(set) var target = 0
     private(set) var done = false
@@ -21,11 +25,15 @@ final class CardCountingFlowModel {
         counting: CountingModel,
         prefs: FlowPrefsStore,
         history: PracticeHistoryStore,
-        bankroll: BankrollStore = BankrollStore()
+        bankroll: BankrollStore = BankrollStore(),
+        strategy: BasicStrategyEngine? = nil,
+        showdownPlayStats: SessionStatsStore? = nil
     ) {
         self.counting = counting
         self.prefs = prefs
         self.history = history
+        self.strategy = strategy
+        self.showdownPlayStats = showdownPlayStats
         showdownBankroll = bankroll
         prefs.setLastTrainer(.cardCounting)
         // Configure the drill entirely from the pre-made decisions.
@@ -55,7 +63,9 @@ final class CardCountingFlowModel {
             counting: counting,
             prefs: app.flowPrefs,
             history: app.practiceHistory,
-            bankroll: app.showdownBankroll
+            bankroll: app.showdownBankroll,
+            strategy: app.basicStrategy,
+            showdownPlayStats: app.showdownPlayStats
         )
     }
 
@@ -327,7 +337,9 @@ struct CardCountingFlowView: View {
                 options: model.tableOptions,
                 spots: model.counting.showdownSpots,
                 betting: model.counting.showdownBetting,
-                bankroll: model.showdownBankroll
+                bankroll: model.showdownBankroll,
+                strategy: model.strategy,
+                playStats: model.showdownPlayStats
             ) { dealtCards in
                 model.exitShowdown(dealtCards)
             }

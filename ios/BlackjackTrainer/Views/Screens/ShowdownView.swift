@@ -11,10 +11,11 @@ struct ShowdownView: View {
     init(shoe: Shoe, ruleSet: RuleSet, stats: ShowdownStatsStore,
          options: EngineOptions = .default, spots: Int = 1,
          betting: Bool = false, bankroll: BankrollStore = BankrollStore(),
+         strategy: BasicStrategyEngine? = nil, playStats: SessionStatsStore? = nil,
          onExit: @escaping ([Card]) -> Void) {
         _model = State(initialValue: ShowdownModel(
             shoe: shoe, ruleSet: ruleSet, stats: stats, options: options, spots: spots,
-            betting: betting, bankroll: bankroll
+            betting: betting, bankroll: bankroll, strategy: strategy, playStats: playStats
         ))
         self.onExit = onExit
     }
@@ -65,7 +66,15 @@ struct ShowdownView: View {
                 if model.phase == .playerTurn {
                     ActionButtonsView(actions: playerActions) { model.onAction($0) }
                 }
+                // The verdict on the last decision. The play still stands —
+                // this is a table, not a quiz — so it coaches rather than blocks.
+                if let verdict = model.lastPlay {
+                    PlayCoachView(verdict: verdict)
+                }
                 if model.phase == .resolved {
+                    if !model.roundMisplays.isEmpty {
+                        MisplayListView(misplays: model.roundMisplays)
+                    }
                     dealAnotherControls
                 }
             }

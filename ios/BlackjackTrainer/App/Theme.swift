@@ -31,6 +31,9 @@ enum Theme {
     static let onAccent = Color(hex: 0x1A1408)
     static let good = Color(dark: 0x4CC38A, light: 0x0F7247)
     static let bad = Color(dark: 0xE5665F, light: 0xB32B23)
+    /// A wash of `bad` behind a whole line, mirroring the web `--bad-tint`.
+    /// Text over it still takes `bad` or `midInk`, both of which clear AA here.
+    static let badTint = Color(dark: 0xE5665F, light: 0xB32B23, opacity: 0.12)
 
     // Strategy-chart cell fills — one hue per action, always under `ink`.
     // Tints only: the letter carries the meaning, the fill only groups.

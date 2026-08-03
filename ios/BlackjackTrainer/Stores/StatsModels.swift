@@ -13,6 +13,7 @@ enum StatsKeys {
     static let deckSpeed = "blackjack-deck-speed-stats" // the countdown's count
     static let deckSpeedBest = "blackjack-deck-speed-best" // fastest correct countdown
     static let showdown = "blackjack-showdown-stats"
+    static let showdownPlay = "blackjack-showdown-play-stats" // basic strategy at the table
     static let showdownBankroll = "blackjack-showdown-bankroll"
 
     // Flow redesign stores (additive; mirror the web's new localStorage keys).

@@ -43,6 +43,16 @@ extension ShowdownModel {
         return parts.joined(separator: ", ")
     }
 
+    var showdownStats: ShowdownStats {
+        stats.stats
+    }
+
+    var winRate: String {
+        let current = stats.stats
+        guard current.hands > 0 else { return "—" }
+        return "\(Int((Double(current.wins) / Double(current.hands) * 100).rounded()))%"
+    }
+
     func verdict(_ hand: PlayerHand) -> String {
         guard let result = hand.settlement else { return "" }
         if hand.surrendered {

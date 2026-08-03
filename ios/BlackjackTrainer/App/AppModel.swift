@@ -24,6 +24,10 @@ final class AppModel {
     let deckSpeedStats: SessionStatsStore
     let deckSpeedBest: DeckSpeedBestStore
     let showdownStats: ShowdownStatsStore
+    /// Accuracy of the playing decisions made at the showdown table, apart from
+    /// the win/lose/push tally: one measures how the cards fell, the other
+    /// whether the hand was played right. Only the second is a skill.
+    let showdownPlayStats: SessionStatsStore
     let showdownBankroll: BankrollStore
 
     /// Flow redesign stores: the pre-made decisions, the daily-goal/streak
@@ -68,6 +72,7 @@ final class AppModel {
         let deckSpeedStats = SessionStatsStore(key: StatsKeys.deckSpeed, cloud: cloud)
         let deckSpeedBest = DeckSpeedBestStore(cloud: cloud)
         let showdownStats = ShowdownStatsStore(key: StatsKeys.showdown, cloud: cloud)
+        let showdownPlayStats = SessionStatsStore(key: StatsKeys.showdownPlay, cloud: cloud)
         let showdownBankroll = BankrollStore(key: StatsKeys.showdownBankroll, cloud: cloud)
         self.basicStrategyStats = basicStrategyStats
         self.runningCountStats = runningCountStats
@@ -79,6 +84,7 @@ final class AppModel {
         self.deckSpeedStats = deckSpeedStats
         self.deckSpeedBest = deckSpeedBest
         self.showdownStats = showdownStats
+        self.showdownPlayStats = showdownPlayStats
         self.showdownBankroll = showdownBankroll
 
         let flowPrefs = FlowPrefsStore(cloud: cloud, systems: loaded.systems)
@@ -91,7 +97,7 @@ final class AppModel {
         cloudSync = StatsCloudSync(cloud: cloud, stores: [
             basicStrategyStats, runningCountStats, trueCountStats,
             deviationStats, deckEstimationStats, keyCountStats, betSpreadStats,
-            deckSpeedStats, deckSpeedBest, showdownStats, showdownBankroll,
+            deckSpeedStats, deckSpeedBest, showdownStats, showdownPlayStats, showdownBankroll,
             flowPrefs, practiceHistory, missTally
         ])
         // Built after cloud adoption so the seeded snapshot reflects any value
@@ -109,7 +115,7 @@ final class AppModel {
         for store in [
             basicStrategyStats, deviationStats, runningCountStats,
             trueCountStats, deckEstimationStats, keyCountStats, betSpreadStats,
-            deckSpeedStats
+            deckSpeedStats, showdownPlayStats
         ] {
             store.reset()
         }

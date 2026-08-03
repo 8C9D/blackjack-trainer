@@ -47,9 +47,21 @@ final class ShowdownModel {
     private(set) var dealerCards: [Card] = []
     private(set) var phase: Phase = .playerTurn
     private(set) var remaining = 0
+    /// Verdict on the most recent playing decision, shown until the next one
+    /// replaces it. Nil before the first decision of a round.
+    private(set) var lastPlay: PlayVerdict?
+    /// Every misplay of the round just dealt, named in the result panel — a
+    /// verdict that scrolls past as the next hand is played would be no use.
+    private(set) var roundMisplays: [String] = []
 
     @ObservationIgnored private let shoe: Shoe
-    @ObservationIgnored private let stats: ShowdownStatsStore
+    /// Not `private`: the win/lose/push readers live in `+Presentation`.
+    @ObservationIgnored let stats: ShowdownStatsStore
+    /// Optional so a spec (and the `#Preview`s) can build a model without the
+    /// charts; grading is simply skipped when either is absent. Not `private`:
+    /// the scoring lives in `ShowdownModel+Grading.swift`.
+    @ObservationIgnored let strategy: BasicStrategyEngine?
+    @ObservationIgnored private let playStats: SessionStatsStore?
     @ObservationIgnored let bankrollStore: BankrollStore
     /// Every card this showdown dealt, in order, handed back on exit so the
     /// counting drill can fold their running-count value into its carried count —
@@ -63,11 +75,15 @@ final class ShowdownModel {
         options: EngineOptions = .default,
         spots: Int = 1,
         betting: Bool = false,
-        bankroll: BankrollStore = BankrollStore()
+        bankroll: BankrollStore = BankrollStore(),
+        strategy: BasicStrategyEngine? = nil,
+        playStats: SessionStatsStore? = nil
     ) {
         self.shoe = shoe
         self.ruleSet = ruleSet
         self.options = options
+        self.strategy = strategy
+        self.playStats = playStats
         self.stats = stats
         self.spots = Showdown.clampSpots(spots)
         self.betting = betting
@@ -105,17 +121,16 @@ final class ShowdownModel {
         phase = .betting
     }
 
-    var showdownStats: ShowdownStats {
-        stats.stats
-    }
-
-    var winRate: String {
-        let current = stats.stats
-        guard current.hands > 0 else { return "—" }
-        return "\(Int((Double(current.wins) / Double(current.hands) * 100).rounded()))%"
-    }
-
     func onAction(_ action: Action) {
+        // Graded before the action is taken: the decision is about the hand as
+        // it stands, and hit/split have already changed it by the time they
+        // return. `private(set)` is file-scoped, so the scoring lives next door
+        // but the recording of it has to happen here.
+        if let graded = grade(action) {
+            playStats?.recordAttempt(correct: graded.verdict.correct)
+            lastPlay = graded.verdict
+            if let misplay = graded.misplay { roundMisplays.append(misplay) }
+        }
         switch action {
         case .hit: hit()
         case .stand: stand()
@@ -185,6 +200,8 @@ final class ShowdownModel {
         let posted = betting ? bet : 0
         roundNet = 0
         insuranceNet = nil
+        lastPlay = nil
+        roundMisplays = []
         hands = boxes.enumerated().map { PlayerHand(cards: $1, box: $0, bet: posted) }
         dealerCards = dealer
         activeIndex = 0

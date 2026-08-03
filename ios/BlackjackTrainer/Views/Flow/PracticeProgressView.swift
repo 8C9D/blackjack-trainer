@@ -34,7 +34,10 @@ struct PracticeProgressView: View {
             ProgressSummary.row("Deck estimate", model.deckEstimationStats.stats),
             ProgressSummary.row("Key count call", model.keyCountStats.stats),
             ProgressSummary.row("Bet spread", model.betSpreadStats.stats),
-            ProgressSummary.row("Deck speed", model.deckSpeedStats.stats)
+            ProgressSummary.row("Deck speed", model.deckSpeedStats.stats),
+            // Not a drill of its own — it is basic strategy, scored where the
+            // hands are actually played out rather than dealt two at a time.
+            ProgressSummary.row("Showdown play", model.showdownPlayStats.stats)
         ]
     }
 
