@@ -229,3 +229,51 @@ extension ShowdownModel {
         return "True count \(count) is \(at) the insurance index\(named)."
     }
 }
+
+/// Leaving the table. Every count-dependent verdict here — the bet, the
+/// insurance call, the index plays — was scored against a count this model kept,
+/// and the trainee was never asked for theirs. So the way out runs through it,
+/// once, on the count as they could see it. Mirrors the web
+/// `returnToCounting` / `onCountCheck`.
+///
+/// Reads only, like the rest of this file: the phase change and the recording
+/// live in `ShowdownModel`.
+extension ShowdownModel {
+    /// Cards the player has actually seen face up. The hole card of an
+    /// unresolved round is dealt but not shown, so it is not one of them.
+    var cardsSeen: Int {
+        dealtCards.count - (pendingHoleCard == nil ? 0 : 1)
+    }
+
+    /// Wong Halves and friends run on half-points, so the answer box has to take
+    /// them — the same rule the counting drill's own form follows.
+    var fractionalCount: Bool {
+        guard let system else { return false }
+        return CountingEngine().isFractionalSystem(system)
+    }
+
+    /// Whether leaving should stop at the count check. Only between rounds:
+    /// mid-hand the dealer's hole card is dealt but face down, so there is no
+    /// single count both sides could agree is right.
+    var asksForTheCount: Bool {
+        countCheck && !dealtCards.isEmpty && phase != .playerTurn
+    }
+
+    /// The count they leave with against the one the table kept. This is the
+    /// running-count skill the drill measures, so the caller feeds the same
+    /// store: a count held through a played-out shoe is the same count, harder.
+    func gradeCountCheck(_ answer: Double) -> PlayVerdict {
+        let actual = visibleRunningCount
+        let drift = answer - actual
+        let points = abs(drift) == 1 ? "point" : "points"
+        return PlayVerdict(
+            correct: drift == 0,
+            headline: "The running count is \(CountFormat.signedCount(actual)).",
+            reason: drift == 0
+                ? "You carried it through \(cardsSeen) cards at the table."
+                : "You said \(CountFormat.signedCount(answer)) — "
+                + "\(CountFormat.count(abs(drift))) \(points) "
+                + "\(drift > 0 ? "high" : "low") over \(cardsSeen) cards."
+        )
+    }
+}

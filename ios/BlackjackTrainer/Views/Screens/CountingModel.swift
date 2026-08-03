@@ -21,6 +21,8 @@ final class CountingModel {
     var showdownSpots = 1
     /// Whether the showdown opens each round on a bet, pushed in from prefs.
     var showdownBetting = false
+    /// Whether leaving the showdown asks what its cards did to the count.
+    var showdownCountCheck = true
     private(set) var state: DrillState = .idle
     private(set) var cards: [Card] = []
     private(set) var currentIndex = 0

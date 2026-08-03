@@ -68,6 +68,10 @@ struct CountingPrefs: Equatable {
     /// Bet sizing in the showdown: each round opens on a bet and settles against a
     /// persisted bankroll. Off by default.
     var showdownBetting: Bool
+    /// Ask for the running count on the way out of the showdown. On by default:
+    /// the table deals dozens of cards past the count the drill just graded, and
+    /// keeping it through them is the skill the whole screen is for.
+    var showdownCountCheck: Bool
 
     /// The `CountingDrillSettings` the drill/engine consume (systemId stripped,
     /// mirroring the web's `const { systemId, ...settings } = counting`).
@@ -125,7 +129,8 @@ extension FlowPrefs {
             penetration: ShoeConstants.defaultPenetration,
             betRamp: BetRamp.default,
             showdownSpots: 1,
-            showdownBetting: false
+            showdownBetting: false,
+            showdownCountCheck: true
         )
     )
 }
