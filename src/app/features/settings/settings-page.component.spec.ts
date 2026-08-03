@@ -172,7 +172,7 @@ describe('SettingsPageComponent', () => {
 
     function seedPractice(): void {
       TestBed.inject(BasicStrategyStatsService).recordAttempt(true);
-      TestBed.inject(PracticeHistoryService).recordHand();
+      TestBed.inject(PracticeHistoryService).recordHand(true);
       TestBed.inject(MissTallyService).record(
         'basic-strategy',
         { kind: 'hard', hand: '16', dealer: '10' },

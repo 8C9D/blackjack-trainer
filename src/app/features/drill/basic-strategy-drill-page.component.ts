@@ -184,7 +184,7 @@ export class BasicStrategyDrillPageComponent {
     );
     this.result.set(result);
     this.stats.recordAttempt(result.correct);
-    this.history.recordHand();
+    this.history.recordHand(result.correct);
     this.missTally.record(
       'basic-strategy',
       scenarioRefFor(this.scenario().player, this.scenario().dealerUpcard),

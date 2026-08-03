@@ -115,6 +115,19 @@
   color: var(--ink-2);
 }
 
+.progress__accuracy {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+
+.progress__trend {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
 .progress__table {
   width: 100%;
   border-collapse: collapse;

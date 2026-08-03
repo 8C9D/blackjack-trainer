@@ -37,6 +37,12 @@ interface DayBar extends StreakDot {
   readonly height: number;
 }
 
+// This week's accuracy against last week's, as a direction and a sentence.
+interface Trend {
+  readonly direction: 'up' | 'down' | 'level';
+  readonly label: string;
+}
+
 // Weak spots are per trainer, and naming the trainer is what makes the list
 // actionable ("16 vs 10" means different work in each drill).
 interface WeakSpotGroup {
@@ -73,10 +79,27 @@ interface WeakSpotGroup {
                 ></div>
               </div>
               <span class="progress__weekday">{{ day.weekday }}</span>
-              <span class="sr-only">{{ day.hands }} hands</span>
+              <span class="sr-only">{{ dayLabel(day) }}</span>
             </div>
           }
         </div>
+        <!-- The bars are volume. Every one of those hands was graded, so the
+             half of practice that actually improves is the accuracy — and a
+             week beside the week before it is the only thing here that answers
+             whether it is going up. -->
+        @if (weekAccuracy() !== null) {
+          <p class="progress__accuracy">
+            <b>{{ weekAccuracy() }}% correct</b> this week
+            @if (trend(); as t) {
+              <span
+                class="progress__trend"
+                [class.progress__good]="t.direction === 'up'"
+                [class.progress__bad]="t.direction === 'down'"
+                >{{ t.label }}</span
+              >
+            }
+          </p>
+        }
         <p class="progress__week-note">
           {{ streakLabel() }} · goal {{ goal() }} hands/day · {{ totalHands() }} hands all time
         </p>
@@ -202,6 +225,24 @@ export class ProgressPageComponent {
     }));
   });
 
+  protected readonly weekAccuracy = computed(() => {
+    this.history.days();
+    return this.history.accuracyLast7();
+  });
+
+  // How this week compares with the one before it. Null until there are two
+  // weeks with graded reps in them — a single week's figure is a reading, not
+  // yet a direction.
+  protected readonly trend = computed<Trend | null>(() => {
+    this.history.days();
+    const now = this.weekAccuracy();
+    const before = this.history.accuracyLast7(1);
+    if (now === null || before === null) return null;
+    if (now === before) return { direction: 'level', label: 'level with the week before' };
+    const direction = now > before ? 'up' : 'down';
+    return { direction, label: `${direction} from ${before}% the week before` };
+  });
+
   protected readonly streakLabel = computed(() => {
     this.history.days();
     const streak = this.history.streak(this.goal());
@@ -248,6 +289,13 @@ export class ProgressPageComponent {
       }))
       .filter((group) => group.outstanding.length > 0 || group.cleared.length > 0);
   });
+
+  // The bars carry only height, so the screen-reader text is where a day's
+  // numbers actually live.
+  protected dayLabel(day: DayBar): string {
+    const hands = `${day.hands} hands`;
+    return day.accuracy === null ? hands : `${hands}, ${day.accuracy}% correct`;
+  }
 
   protected clearedLabel(cleared: readonly WeakSpot[]): string {
     const shown = cleared.slice(0, 3).map((spot) => spot.label);

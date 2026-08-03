@@ -61,7 +61,7 @@ describe('HomePageComponent', () => {
       const prefs = TestBed.inject(FlowPrefsService);
       prefs.setLastTrainer('basic-strategy');
       const history = TestBed.inject(PracticeHistoryService);
-      for (let i = 0; i < 14; i++) history.recordHand();
+      for (let i = 0; i < 14; i++) history.recordHand(true);
 
       const { fixture } = createPage();
       expect(text(fixture, '.home__primary')).toContain('Continue — Basic Strategy');
@@ -83,8 +83,8 @@ describe('HomePageComponent', () => {
     it('celebrates a met goal instead of nagging', () => {
       TestBed.inject(FlowPrefsService).setDailyGoal(2);
       const history = TestBed.inject(PracticeHistoryService);
-      history.recordHand();
-      history.recordHand();
+      history.recordHand(true);
+      history.recordHand(true);
       const { fixture } = createPage();
       expect(text(fixture, '.home__primary')).toContain('goal met — one more round?');
     });

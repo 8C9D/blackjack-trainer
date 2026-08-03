@@ -219,7 +219,7 @@ export class DeviationsDrillPageComponent {
     );
     this.result.set(result);
     this.stats.recordAttempt(result.correct);
-    this.history.recordHand();
+    this.history.recordHand(result.correct);
     this.missTally.record(
       'deviations',
       scenarioRefFor(this.scenario().player, this.scenario().dealerUpcard),

@@ -16,6 +16,12 @@ export interface PracticeDay {
   // Local calendar date, 'YYYY-MM-DD'.
   readonly date: string;
   readonly hands: number;
+  // Reps whose verdict was recorded, and how many of those were right.
+  // Counted separately from `hands` because a day written by a build that only
+  // tallied volume has no verdicts at all: dividing its correct count by its
+  // hands would report a week of real practice as 0% rather than as unmeasured.
+  readonly graded: number;
+  readonly correct: number;
 }
 
 // One dot of the home screen's 7-day strip. `met` is whether that day reached
@@ -25,6 +31,14 @@ export interface StreakDot {
   readonly hands: number;
   readonly met: boolean;
   readonly isToday: boolean;
+  // Correct share of that day's graded reps, or null when the day graded none.
+  readonly accuracy: number | null;
+}
+
+// Percentage of graded reps that were right, or null when nothing was graded —
+// an unpractised (or pre-grading) window is unmeasured, not zero.
+function accuracyOf(graded: number, correct: number): number | null {
+  return graded === 0 ? null : Math.round((correct / graded) * 100);
 }
 
 // Local (not UTC) calendar date key — a hand practiced at 23:30 belongs to the
@@ -54,13 +68,16 @@ export class PracticeHistoryService {
     this.now = fn;
   }
 
-  recordHand(): void {
+  // One graded rep. The verdict is the same one the session streak counts, so a
+  // counting round that answers two questions is one rep, right only if both
+  // were.
+  recordHand(correct: boolean): void {
     const today = localDateKey(this.now());
     const days = this._days();
     const existing = days.find((d) => d.date === today);
     const next = existing
-      ? days.map((d) => (d.date === today ? { date: d.date, hands: d.hands + 1 } : d))
-      : [...days, { date: today, hands: 1 }];
+      ? days.map((d) => (d.date === today ? addRep(d, correct) : d))
+      : [...days, { date: today, hands: 1, graded: 1, correct: correct ? 1 : 0 }];
     const pruned = this.prune(next);
     this._days.set(pruned);
     this.persist(pruned);
@@ -79,10 +96,37 @@ export class PracticeHistoryService {
     const dots: StreakDot[] = [];
     for (let back = 6; back >= 0; back--) {
       const date = this.dateKeyDaysAgo(back);
-      const hands = this.handsOn(date);
-      dots.push({ date, hands, met: hands >= goal, isToday: back === 0 });
+      const day = this.dayOn(date);
+      const hands = day?.hands ?? 0;
+      dots.push({
+        date,
+        hands,
+        met: hands >= goal,
+        isToday: back === 0,
+        accuracy: accuracyOf(day?.graded ?? 0, day?.correct ?? 0),
+      });
     }
     return dots;
+  }
+
+  // How well the seven days ending `weeksBack` weeks ago went. Volume is
+  // already on the screen; this is the half of practice the app grades every
+  // rep of and has never said anything about — and a week beside the week
+  // before it is the only way the app can answer "am I getting better?".
+  accuracyLast7(weeksBack = 0): number | null {
+    let graded = 0;
+    let correct = 0;
+    const first = weeksBack * 7;
+    for (let back = first; back < first + 7; back++) {
+      const day = this.dayOn(this.dateKeyDaysAgo(back));
+      graded += day?.graded ?? 0;
+      correct += day?.correct ?? 0;
+    }
+    return accuracyOf(graded, correct);
+  }
+
+  private dayOn(date: string): PracticeDay | undefined {
+    return this._days().find((d) => d.date === date);
   }
 
   // Consecutive goal-met days ending today (if today's goal is already met)
@@ -119,15 +163,13 @@ export class PracticeHistoryService {
     return readJson(PRACTICE_HISTORY_KEY, [] as readonly PracticeDay[], (raw) => {
       const parsed = raw as { days?: unknown };
       if (!Array.isArray(parsed.days)) return [];
-      const byDate = new Map<string, number>();
+      const byDate = new Map<string, PracticeDay>();
       for (const candidate of parsed.days) {
-        if (!isPracticeDay(candidate)) continue;
-        const previous = byDate.get(candidate.date) ?? 0;
-        byDate.set(candidate.date, Math.min(Number.MAX_SAFE_INTEGER, previous + candidate.hands));
+        const day = toPracticeDay(candidate);
+        if (day === null) continue;
+        byDate.set(day.date, mergeDays(byDate.get(day.date), day));
       }
-      return [...byDate.entries()]
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([date, hands]) => ({ date, hands }));
+      return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
     });
   }
 
@@ -142,10 +184,46 @@ export class PracticeHistoryService {
   }
 }
 
-function isPracticeDay(value: unknown): value is PracticeDay {
-  if (typeof value !== 'object' || value === null) return false;
-  const day = value as PracticeDay;
-  return isLocalDateKey(day.date) && Number.isSafeInteger(day.hands) && day.hands >= 0;
+function addRep(day: PracticeDay, correct: boolean): PracticeDay {
+  return {
+    date: day.date,
+    hands: day.hands + 1,
+    graded: day.graded + 1,
+    correct: day.correct + (correct ? 1 : 0),
+  };
+}
+
+function mergeDays(a: PracticeDay | undefined, b: PracticeDay): PracticeDay {
+  if (a === undefined) return b;
+  return {
+    date: b.date,
+    hands: capped(a.hands + b.hands),
+    graded: capped(a.graded + b.graded),
+    correct: capped(a.correct + b.correct),
+  };
+}
+
+function capped(value: number): number {
+  return Math.min(Number.MAX_SAFE_INTEGER, value);
+}
+
+// Coerce one untrusted stored entry. The verdict counts are optional: days
+// written before the app recorded them read as ungraded (and so as unmeasured)
+// rather than as a day nothing was got right on. Both are clamped into
+// `correct ≤ graded ≤ hands` so no stored file can produce an accuracy over
+// 100%.
+function toPracticeDay(value: unknown): PracticeDay | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const day = value as Partial<PracticeDay>;
+  if (!isLocalDateKey(day.date)) return null;
+  const hands = count(day.hands);
+  if (hands === null) return null;
+  const graded = Math.min(hands, count(day.graded) ?? 0);
+  return { date: day.date, hands, graded, correct: Math.min(graded, count(day.correct) ?? 0) };
+}
+
+function count(value: unknown): number | null {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
 export function isLocalDateKey(value: unknown): value is string {
