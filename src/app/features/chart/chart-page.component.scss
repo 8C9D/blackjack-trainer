@@ -257,6 +257,16 @@
   color: var(--muted);
 }
 
+// The system-mismatch advisory: a correctness warning, so it reads at full
+// body contrast rather than the muted grey the ordinary footnote uses.
+.chart__note--warn {
+  margin-top: 0.6rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  color: var(--ink-2);
+}
+
 .chart__back,
 .chart__settings {
   &:focus-visible {

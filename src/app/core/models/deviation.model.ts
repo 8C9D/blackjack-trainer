@@ -1,5 +1,25 @@
 import type { Scenario } from './card.model';
+import type { CountingSystem } from './counting-system.model';
 import type { Action, DealerUpcard, RuleSet } from './strategy.model';
+
+// The counting system every index in this app is written for. BJA publishes
+// the Illustrious 18 and Fab 4 as Hi-Lo true counts, and a different system
+// reads a different number off the same shoe — so the same index is a
+// different decision. An index shown without naming its system is a trap, and
+// a trainee counting something else has to be told the numbers are not theirs.
+export const DEVIATION_INDEX_SYSTEM_ID = 'hi-lo';
+export const DEVIATION_INDEX_SYSTEM_NAME = 'Hi-Lo';
+
+// The advisory for a trainee whose counting system is not the one the indices
+// are written for, or null when it is. Unbalanced systems get the stronger
+// wording because they have no true count at all to compare against.
+export function deviationIndexNote(system: CountingSystem): string | null {
+  if (system.id === DEVIATION_INDEX_SYSTEM_ID) return null;
+  const lead = `These indices are ${DEVIATION_INDEX_SYSTEM_NAME} true counts, and you count ${system.name}`;
+  return system.balanced
+    ? `${lead}, which reads a different true count off the same shoe. Its own indices are not these numbers.`
+    : `${lead}, which is unbalanced and has no true count. These numbers do not carry over to it.`;
+}
 
 // How a deviation rule compares its index against the current true count.
 //

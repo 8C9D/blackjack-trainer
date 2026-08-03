@@ -1,7 +1,7 @@
 import { ALL_RANKS, ALL_SUITS, type Rank } from '../core/models/card.model';
 import type { CountingSystem } from '../core/models/counting-system.model';
 import { SHOE_DECK_OPTIONS } from '../core/models/shoe.model';
-import { COUNTING_SYSTEMS, KO } from './counting-systems';
+import { COUNTING_SYSTEMS, KO, countingSystemById } from './counting-systems';
 
 // Sum of every card in a single 52-card deck for the given system: each rank
 // appears once per suit. A balanced system sums to 0; KO (unbalanced) to +4.
@@ -216,5 +216,20 @@ describe('KO key-count schedule (golden)', () => {
         schedule.pivot,
       );
     }
+  });
+});
+
+describe('countingSystemById', () => {
+  it('resolves every registered id to its own descriptor', () => {
+    for (const system of COUNTING_SYSTEMS) {
+      expect(countingSystemById(system.id).id, system.id).toBe(system.id);
+    }
+  });
+
+  // Prefs carry a stored id, which can outlive the build that wrote it. Every
+  // screen resolves through here so they agree on what a stale id means.
+  it('falls back to Hi-Lo for an id this build does not ship', () => {
+    expect(countingSystemById('does-not-exist').id).toBe('hi-lo');
+    expect(countingSystemById('').id).toBe('hi-lo');
   });
 });

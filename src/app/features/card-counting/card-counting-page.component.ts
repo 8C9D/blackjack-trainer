@@ -13,7 +13,7 @@ import { resolveKeyCounts, type CountingSystem } from '../../core/models/countin
 import { DECK_SPEED_CARDS } from '../../core/models/deck-speed.model';
 import { CARDS_PER_DECK, type Shoe } from '../../core/models/shoe.model';
 import { minCardsForSpots } from '../../core/models/showdown.model';
-import { COUNTING_SYSTEMS, HI_LO } from '../../data/counting-systems';
+import { countingSystemById } from '../../data/counting-systems';
 import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.service';
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
 import { DeckSpeedStatsService } from '../../core/services/deck-speed-stats.service';
@@ -248,8 +248,8 @@ export class CardCountingPageComponent {
   // not say what is coming.
   protected readonly modeLabel = computed(() => DRILL_MODE_LABELS[this.settings().mode]);
 
-  protected readonly system = computed<CountingSystem>(
-    () => COUNTING_SYSTEMS.find((s) => s.id === this.prefs.prefs().counting.systemId) ?? HI_LO,
+  protected readonly system = computed<CountingSystem>(() =>
+    countingSystemById(this.prefs.prefs().counting.systemId),
   );
 
   // Dealer rule for the optional post-count showdown, from the shared table

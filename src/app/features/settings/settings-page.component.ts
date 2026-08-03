@@ -11,7 +11,8 @@ import {
 } from '../../core/models/card-counting.model';
 import { PENETRATION_PRESETS, SHOE_DECK_OPTIONS } from '../../core/models/shoe.model';
 import type { RuleSet } from '../../core/models/strategy.model';
-import { COUNTING_SYSTEMS } from '../../data/counting-systems';
+import { deviationIndexNote } from '../../core/models/deviation.model';
+import { COUNTING_SYSTEMS, countingSystemById } from '../../data/counting-systems';
 import { CountingEngineService } from '../../core/services/counting-engine.service';
 import { modeAllowedFor } from '../../core/models/counting-system.model';
 import {
@@ -122,6 +123,9 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
 
       <section class="settings__group" aria-label="Deviations trainer">
         <h2 class="settings__heading">Deviations</h2>
+        @if (indexNote(); as note) {
+          <p class="settings__advisory" role="note">{{ note }}</p>
+        }
         <label>
           <input
             type="radio"
@@ -272,6 +276,13 @@ export class SettingsPageComponent {
 
   private readonly selectedSystem = computed(() =>
     this.systems.find((s) => s.id === this.prefs().counting.systemId),
+  );
+
+  // Shown in the Deviations section rather than beside the system picker: the
+  // picker is a card-counting choice, and this is what it costs the trainer
+  // two sections down.
+  protected readonly indexNote = computed(() =>
+    deviationIndexNote(countingSystemById(this.prefs().counting.systemId)),
   );
 
   private readonly countingSettings = computed<CountingDrillSettings>(() => {

@@ -4,7 +4,12 @@ import { Router } from '@angular/router';
 import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
 import { formatSignedCount } from '../../core/models/card-counting.model';
 import type { Card, Rank, Suit } from '../../core/models/card.model';
-import type { DeviationCategory, DeviationRule } from '../../core/models/deviation.model';
+import {
+  DEVIATION_INDEX_SYSTEM_NAME,
+  deviationIndexNote,
+  type DeviationCategory,
+  type DeviationRule,
+} from '../../core/models/deviation.model';
 import {
   ACTION_LABELS,
   type Action,
@@ -18,6 +23,7 @@ import {
 import { BasicStrategyEngineService } from '../../core/services/basic-strategy-engine.service';
 import { deviationsFor } from '../../core/services/deviation-engine.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
+import { countingSystemById } from '../../data/counting-systems';
 
 export const DEALER_UPCARDS: readonly DealerUpcard[] = [
   '2',
@@ -175,9 +181,14 @@ interface DeviationSectionView {
         }
 
         <p class="chart__note">
-          Deviations override basic strategy only once the true count reaches the index. Everything
-          not listed here is played straight off the chart, at any count.
+          Every index here is a {{ indexSystemName }} true count. Deviations override basic strategy
+          only once the true count reaches the index. Everything not listed here is played straight
+          off the chart, at any count.
         </p>
+
+        @if (indexNote(); as note) {
+          <p class="chart__note chart__note--warn" role="note">{{ note }}</p>
+        }
       } @else {
         @for (section of sections(); track section.id) {
           <section class="chart__section">
@@ -283,6 +294,14 @@ export class ChartPageComponent {
       },
     ];
   });
+
+  protected readonly indexSystemName = DEVIATION_INDEX_SYSTEM_NAME;
+
+  // Named on the reference screen too, not just in the drill: reading an index
+  // off this chart while counting another system is the same mistake.
+  protected readonly indexNote = computed(() =>
+    deviationIndexNote(countingSystemById(this.prefs().counting.systemId)),
+  );
 
   // The deviation chart for the active rule set, grouped the way its source
   // PDF is: insurance first, then the playing decisions, then surrender.

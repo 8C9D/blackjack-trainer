@@ -332,4 +332,40 @@ describe('DeviationsDrillPageComponent', () => {
       expect(c.handsToday()).toBe(0);
     });
   });
+
+  // The drill grades against Hi-Lo indices whatever the counting trainer is
+  // set to. Silence there would have a Wong Halves counter drilling numbers
+  // their count never produces.
+  describe('counting-system advisory', () => {
+    const advisory = (fixture: ComponentFixture<DeviationsDrillPageComponent>) =>
+      fixture.nativeElement.querySelector('.drill__advisory') as HTMLElement | null;
+
+    it('stays quiet for a Hi-Lo counter', () => {
+      const { fixture } = createPage();
+      expect(advisory(fixture)).toBeNull();
+    });
+
+    it('names the mismatched system for every hand of the round', () => {
+      TestBed.inject(FlowPrefsService).updateCounting({ systemId: 'wong-halves' });
+      const { fixture, c } = createPage();
+
+      expect(advisory(fixture)!.textContent).toContain('Wong Halves');
+      expect(advisory(fixture)!.textContent).toContain('Hi-Lo');
+
+      // Still up after answering, not a one-off shown on the first hand.
+      c.scenario.set(SIXTEEN_V_TEN_TC0);
+      fixture.detectChanges();
+      c.answer('S');
+      vi.advanceTimersByTime(ADVANCE_MS);
+      fixture.detectChanges();
+      expect(advisory(fixture)).not.toBeNull();
+    });
+
+    it('says nothing for a stored system id this build no longer ships', () => {
+      TestBed.inject(FlowPrefsService).updateCounting({ systemId: 'does-not-exist' });
+      const { fixture } = createPage();
+      // That id resolves to Hi-Lo everywhere, so there is no mismatch to warn about.
+      expect(advisory(fixture)).toBeNull();
+    });
+  });
 });

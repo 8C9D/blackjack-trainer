@@ -1460,3 +1460,11 @@ export const COUNTING_SYSTEMS: readonly CountingSystem[] = [
   ...COLOR_SYSTEMS,
   ...NOVELTY_SYSTEMS,
 ] as const;
+
+// A stored system id resolved against the registry, falling back to Hi-Lo for
+// an id this build no longer ships. Every screen that reads
+// `counting.systemId` off the prefs goes through here, so they cannot disagree
+// about what an unknown id means.
+export function countingSystemById(id: string): CountingSystem {
+  return COUNTING_SYSTEMS.find((system) => system.id === id) ?? HI_LO;
+}

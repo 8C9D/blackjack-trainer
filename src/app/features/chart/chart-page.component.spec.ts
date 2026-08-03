@@ -286,4 +286,47 @@ describe('ChartPageComponent', () => {
       input.remove();
     });
   });
+
+  // The reference screen prints bare index numbers, so it has to say whose
+  // count they are — and warn a trainee counting anything else.
+  describe('index attribution', () => {
+    const showDeviations = (fixture: ComponentFixture<ChartPageComponent>) => {
+      const tab = [...fixture.nativeElement.querySelectorAll('button')].find(
+        (b) => (b as HTMLElement).textContent!.trim() === 'Deviations',
+      ) as HTMLButtonElement;
+      tab.click();
+      fixture.detectChanges();
+    };
+    const notes = (fixture: ComponentFixture<ChartPageComponent>) =>
+      [...fixture.nativeElement.querySelectorAll('.chart__note')].map((n) =>
+        (n as HTMLElement).textContent!.trim(),
+      );
+
+    it('names Hi-Lo as the system every index is written for', () => {
+      const { fixture } = createPage();
+      showDeviations(fixture);
+      expect(notes(fixture)[0]).toContain('Hi-Lo true count');
+    });
+
+    it('adds no warning for a Hi-Lo counter', () => {
+      const { fixture } = createPage();
+      showDeviations(fixture);
+      expect(fixture.nativeElement.querySelector('.chart__note--warn')).toBeNull();
+    });
+
+    it('warns a counter using another system, naming it', () => {
+      TestBed.inject(FlowPrefsService).updateCounting({ systemId: 'ko' });
+      const { fixture } = createPage();
+      showDeviations(fixture);
+      const warn = fixture.nativeElement.querySelector('.chart__note--warn') as HTMLElement;
+      expect(warn.textContent).toContain('KO');
+      expect(warn.textContent).toContain('unbalanced');
+    });
+
+    it('keeps the advisory off the basic-strategy chart, which carries no indices', () => {
+      TestBed.inject(FlowPrefsService).updateCounting({ systemId: 'ko' });
+      const { fixture } = createPage();
+      expect(fixture.nativeElement.querySelector('.chart__note--warn')).toBeNull();
+    });
+  });
 });
