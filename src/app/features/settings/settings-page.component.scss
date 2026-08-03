@@ -78,7 +78,11 @@
   gap: 0.5rem;
 }
 
-.settings__warning {
+// `warning` is a status line the app writes in response to an action;
+// `hint` is standing explanatory text. They read the same, but only one of
+// them is ever a live region, so they stay separately selectable.
+.settings__warning,
+.settings__hint {
   margin: 0;
   font-size: 0.82rem;
   line-height: 1.5;

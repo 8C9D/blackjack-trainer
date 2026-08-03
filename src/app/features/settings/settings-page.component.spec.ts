@@ -1,6 +1,7 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 
+import { BackupService } from '../../core/services/backup.service';
 import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.service';
 import { BankrollService } from '../../core/services/bankroll.service';
 import { BasicStrategyStatsService } from '../../core/services/basic-strategy-stats.service';
@@ -247,6 +248,96 @@ describe('SettingsPageComponent', () => {
       prefs.updateCounting({ systemId: 'hi-lo' });
       fixture.detectChanges();
       expect(advisory(fixture)).toBeNull();
+    });
+  });
+
+  // localStorage is the web build's only persistence, so the backup pair is
+  // the whole answer to a cleared browser or a second device.
+  describe('backup', () => {
+    const button = (fixture: ComponentFixture<SettingsPageComponent>, label: string) => {
+      const el = [...fixture.nativeElement.querySelectorAll('button')].find(
+        (b) => (b as HTMLElement).textContent!.trim() === label,
+      ) as HTMLButtonElement | undefined;
+      if (!el) throw new Error(`No button "${label}"`);
+      return el;
+    };
+    const status = (fixture: ComponentFixture<SettingsPageComponent>) =>
+      fixture.nativeElement.querySelector(
+        '[role="status"].settings__warning',
+      ) as HTMLElement | null;
+
+    it('names the file it saved', () => {
+      const download = vi
+        .spyOn(TestBed.inject(BackupService), 'download')
+        .mockReturnValue('b.json');
+      const { fixture } = createPage();
+
+      button(fixture, 'Export backup').click();
+      fixture.detectChanges();
+
+      expect(download).toHaveBeenCalledOnce();
+      expect(status(fixture)!.textContent).toContain('b.json');
+    });
+
+    it('opens the file dialog from the Restore button, not from the input itself', () => {
+      const { fixture } = createPage();
+      const input = fixture.nativeElement.querySelector('input[type="file"]') as HTMLInputElement;
+      const click = vi.spyOn(input, 'click').mockImplementation(() => {});
+
+      button(fixture, 'Restore from backup').click();
+
+      expect(click).toHaveBeenCalledOnce();
+      // Out of the tab order (the visible button is the control) but still
+      // named, so it is not an anonymous input in the accessibility tree.
+      expect(input.getAttribute('tabindex')).toBe('-1');
+      expect(input.getAttribute('aria-label')).toBe('Backup file');
+    });
+
+    it('restores the chosen file', async () => {
+      const restore = vi
+        .spyOn(TestBed.inject(BackupService), 'restore')
+        .mockReturnValue({ ok: true });
+      const { fixture } = createPage();
+      const c = fixture.componentInstance as unknown as {
+        onBackupFileChosen(e: Event): Promise<void>;
+      };
+      const file = new File(['{"app":"blackjack-trainer"}'], 'b.json');
+
+      await c.onBackupFileChosen({
+        target: { files: [file], value: 'b.json' },
+      } as unknown as Event);
+
+      expect(restore).toHaveBeenCalledWith('{"app":"blackjack-trainer"}');
+    });
+
+    it('shows why a bad file was refused', async () => {
+      vi.spyOn(TestBed.inject(BackupService), 'restore').mockReturnValue({
+        ok: false,
+        error: 'That file is not JSON.',
+      });
+      const { fixture } = createPage();
+      const c = fixture.componentInstance as unknown as {
+        onBackupFileChosen(e: Event): Promise<void>;
+      };
+
+      await c.onBackupFileChosen({
+        target: { files: [new File(['nope'], 'b.json')], value: '' },
+      } as unknown as Event);
+      fixture.detectChanges();
+
+      expect(status(fixture)!.textContent).toContain('not JSON');
+    });
+
+    it('does nothing when the file dialog is dismissed', async () => {
+      const restore = vi.spyOn(TestBed.inject(BackupService), 'restore');
+      const { fixture } = createPage();
+      const c = fixture.componentInstance as unknown as {
+        onBackupFileChosen(e: Event): Promise<void>;
+      };
+
+      await c.onBackupFileChosen({ target: { files: [], value: '' } } as unknown as Event);
+
+      expect(restore).not.toHaveBeenCalled();
     });
   });
 
