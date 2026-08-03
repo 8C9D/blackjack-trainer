@@ -217,6 +217,50 @@ test.describe('post-count showdown', () => {
     await expect(spots.locator('li').first()).toContainText('missed 1 of 1');
   });
 
+  // The showdown is the one place a live count meets an actual hand, so the play
+  // is graded against the deviation chart laid over basic strategy. Seed 15
+  // deals a hard 16 vs a king off the top of an untouched shoe, where the true count is
+  // 0 — which is exactly the index for that cell, and the opposite of what basic
+  // strategy alone says.
+  test('the count decides the play, and the verdict names the index', async ({ page }) => {
+    await configure(page, '1');
+    await runCountingRound(page, 85);
+    await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+
+    await page
+      .getByRole('group', { name: 'Player actions' })
+      .getByRole('button', { name: /Stand/ })
+      .click();
+
+    // Basic strategy alone hits 16 vs 10; the index stands it, and says so.
+    const coach = page.locator('.showdown__coach');
+    await expect(coach).toContainText('Correct.');
+    await expect(coach).toContainText('0 or higher');
+    await expect(coach).toContainText('Basic strategy alone would hit');
+    await expect(coach).not.toHaveClass(/showdown__coach--wrong/);
+  });
+
+  test('an index miss becomes a Deviations weak spot, not a basic-strategy one', async ({
+    page,
+  }) => {
+    await configure(page, '1');
+    await runCountingRound(page, 85);
+    await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+
+    await page
+      .getByRole('group', { name: 'Player actions' })
+      .getByRole('button', { name: /Hit/ })
+      .click();
+
+    await expect(page.locator('.showdown__coach')).toHaveClass(/showdown__coach--wrong/);
+
+    await page.goto('/progress');
+    const deviations = page.getByRole('region', { name: 'Deviations weak spots' });
+    await expect(deviations).toBeVisible();
+    await expect(deviations.locator('li').first()).toContainText('16 vs 10');
+    await expect(page.getByRole('region', { name: 'Basic Strategy weak spots' })).toBeHidden();
+  });
+
   test('a hand can be surrendered for an immediate loss', async ({ page }) => {
     await configureCounting(page, '1');
     await page.getByLabel('Late Surrender').check();

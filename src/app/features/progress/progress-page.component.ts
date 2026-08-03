@@ -221,8 +221,9 @@ export class ProgressPageComponent {
     row('Key count call', this.keyCountStats.stats()),
     row('Bet spread', this.betSpreadStats.stats()),
     row('Deck speed', this.deckSpeedStats.stats()),
-    // Not a drill of its own — it is basic strategy, scored where the hands are
-    // actually played out rather than dealt two at a time.
+    // Not a drill of its own — it is every decision at a table, scored where the
+    // hands are actually played out rather than dealt two at a time: basic
+    // strategy, the indices laid over it, and the insurance call.
     row('Showdown play', this.showdownPlayStats.stats()),
   ]);
 
