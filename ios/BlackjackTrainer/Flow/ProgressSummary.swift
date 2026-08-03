@@ -27,6 +27,18 @@ struct ProgressDayBar: Identifiable {
     /// Height as a fraction (0…1) of the goal or the week's peak, whichever is
     /// larger.
     let height: Double
+    /// Correct share of that day's graded reps, or nil when it graded none.
+    var accuracy: Int?
+}
+
+/// This week's accuracy against last week's, as a direction and a sentence.
+struct ProgressTrend {
+    enum Direction {
+        case up, down, level
+    }
+
+    let direction: Direction
+    let label: String
 }
 
 /// Weak spots are per trainer, and naming the trainer is what makes the list
@@ -69,9 +81,33 @@ enum ProgressSummary {
                 hands: dot.hands,
                 met: dot.met,
                 isToday: dot.isToday,
-                height: dot.hands == 0 ? 0 : max(0.06, Double(dot.hands) / Double(peak))
+                height: dot.hands == 0 ? 0 : max(0.06, Double(dot.hands) / Double(peak)),
+                accuracy: dot.accuracy
             )
         }
+    }
+
+    /// How this week compares with the one before it. Nil until there are two
+    /// weeks with graded reps in them — a single week's figure is a reading, not
+    /// yet a direction. Mirrors the web `trend`.
+    static func trend(thisWeek: Int?, weekBefore: Int?) -> ProgressTrend? {
+        guard let thisWeek, let weekBefore else { return nil }
+        guard thisWeek != weekBefore else {
+            return ProgressTrend(direction: .level, label: "level with the week before")
+        }
+        let up = thisWeek > weekBefore
+        return ProgressTrend(
+            direction: up ? .up : .down,
+            label: "\(up ? "up" : "down") from \(weekBefore)% the week before"
+        )
+    }
+
+    /// The bars carry only height, so the accessibility label is where a day's
+    /// numbers actually live.
+    static func dayLabel(_ bar: ProgressDayBar) -> String {
+        let hands = "\(bar.weekday): \(bar.hands) hands"
+        guard let accuracy = bar.accuracy else { return hands }
+        return "\(hands), \(accuracy)% correct"
     }
 
     /// "2026-08-02" → "S". Parsed as a local date so the letter matches the day

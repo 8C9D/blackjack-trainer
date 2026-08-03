@@ -25,6 +25,17 @@ struct PracticeProgressView: View {
         model.practiceHistory.days.reduce(0) { $0 + $1.hands }
     }
 
+    private var weekAccuracy: Int? {
+        model.practiceHistory.accuracyLast7()
+    }
+
+    private var trend: ProgressTrend? {
+        ProgressSummary.trend(
+            thisWeek: weekAccuracy,
+            weekBefore: model.practiceHistory.accuracyLast7(weeksBack: 1)
+        )
+    }
+
     private var rows: [ProgressStatRow] {
         [
             ProgressSummary.row("Basic Strategy", model.basicStrategyStats.stats),
@@ -63,6 +74,8 @@ struct PracticeProgressView: View {
                     streakLabel: streakLabel,
                     goal: goal,
                     totalHands: totalHands,
+                    weekAccuracy: weekAccuracy,
+                    trend: trend,
                     rows: rows,
                     showdown: model.showdownStats.stats,
                     bankroll: model.showdownBankroll.state,
@@ -90,6 +103,10 @@ struct ProgressBodyView: View {
     let streakLabel: String
     let goal: Int
     let totalHands: Int
+    /// Nil until something has been graded — the strip still draws, it just has
+    /// nothing to say about how the week went.
+    var weekAccuracy: Int?
+    var trend: ProgressTrend?
     let rows: [ProgressStatRow]
     let showdown: ShowdownStats
     let bankroll: BankrollState
@@ -145,12 +162,38 @@ struct ProgressBodyView: View {
                             .foregroundStyle(Theme.muted)
                     }
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("\(bar.weekday): \(bar.hands) hands")
+                    .accessibilityLabel(ProgressSummary.dayLabel(bar))
                 }
+            }
+            // The bars are volume. Every one of those hands was graded, so the
+            // half of practice that actually improves is the accuracy — and a
+            // week beside the week before it is the only thing here that answers
+            // whether it is going up.
+            if let weekAccuracy {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(weekAccuracy)% correct").fontWeight(.semibold)
+                        + Text(" this week")
+                    if let trend {
+                        Text(trend.label)
+                            .font(.system(size: 12))
+                            .foregroundStyle(trendColor(trend.direction))
+                    }
+                }
+                .font(.system(size: 14))
+                .foregroundStyle(Theme.midInk)
+                .accessibilityElement(children: .combine)
             }
             Text("\(streakLabel) · goal \(goal) hands/day · \(totalHands) hands all time")
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.midInk)
+        }
+    }
+
+    private func trendColor(_ direction: ProgressTrend.Direction) -> Color {
+        switch direction {
+        case .up: Theme.good
+        case .down: Theme.bad
+        case .level: Theme.muted
         }
     }
 

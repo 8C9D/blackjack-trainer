@@ -123,7 +123,7 @@ final class CardCountingFlowModel {
         guard counting.state == .answering else { return }
         counting.answer(value)
         if let result = counting.result {
-            history.recordHand()
+            history.recordHand(correct: result.isCorrect)
             session.record(result.isCorrect)
         }
     }
@@ -133,7 +133,7 @@ final class CardCountingFlowModel {
         guard counting.state == .advantage else { return }
         counting.answerAdvantage(saidYes)
         if let result = counting.result {
-            history.recordHand()
+            history.recordHand(correct: result.isCorrect)
             session.record(result.isCorrect)
         }
     }
@@ -149,7 +149,7 @@ final class CardCountingFlowModel {
         guard counting.state == .betting else { return }
         counting.answerBet(units)
         if let result = counting.result {
-            history.recordHand()
+            history.recordHand(correct: result.isCorrect)
             session.record(result.isCorrect)
         }
     }

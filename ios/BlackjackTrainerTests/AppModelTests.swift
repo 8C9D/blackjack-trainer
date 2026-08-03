@@ -35,7 +35,7 @@ struct AppModelTests {
         model.keyCountStats.recordAttempt(correct: true)
         model.showdownStats.record(outcome: .win)
         model.showdownBankroll.record(stake: 10, payout: -10)
-        model.practiceHistory.recordHand()
+        model.practiceHistory.recordHand(correct: true)
         model.missTally.record(
             .basicStrategy,
             ref: ScenarioRef(kind: "hard", hand: "16", dealer: "10"),

@@ -47,6 +47,26 @@ struct ProgressSummaryTests {
         #expect(bars[0].height == 0.06)
     }
 
+    @Test func barsCarryTheDaysAccuracyIntoItsLabel() {
+        var day = dot("2026-08-02", 12, goal: 20)
+        day.accuracy = 75
+        let bars = ProgressSummary.bars(dots: [day, dot("2026-08-03", 0, goal: 20)], goal: 20)
+        #expect(ProgressSummary.dayLabel(bars[0]) == "S: 12 hands, 75% correct")
+        #expect(ProgressSummary.dayLabel(bars[1]) == "M: 0 hands")
+    }
+
+    /// One week is a reading; two are a direction.
+    @Test func trendNamesTheDirectionAgainstTheWeekBefore() {
+        #expect(ProgressSummary.trend(thisWeek: 88, weekBefore: nil) == nil)
+        #expect(ProgressSummary.trend(thisWeek: nil, weekBefore: 80) == nil)
+        #expect(ProgressSummary.trend(thisWeek: 88, weekBefore: 80)?.label
+            == "up from 80% the week before")
+        #expect(ProgressSummary.trend(thisWeek: 88, weekBefore: 80)?.direction == .up)
+        #expect(ProgressSummary.trend(thisWeek: 71, weekBefore: 80)?.direction == .down)
+        #expect(ProgressSummary.trend(thisWeek: 80, weekBefore: 80)?.label
+            == "level with the week before")
+    }
+
     @Test func weekdayInitialReadsTheDateKeyAsALocalDay() {
         // 2026-08-02 is a Sunday; a UTC parse would slip to Saturday west of GMT.
         #expect(ProgressSummary.weekdayInitial("2026-08-02") == "S")
