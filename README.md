@@ -234,6 +234,8 @@ the **same persistent shoe**, depleting it further:
 
 - **And it says whose numbers these are** — a playing index is a Hi-Lo true count, so a trainee counting anything else is told once, before a card is dealt, that the indices are not theirs and what this table can still grade: basic strategy for every hand, plus KO's own running-count trigger for the insurance call where its book publishes one. The same advisory the Deviations drill, the deviation chart and Settings carry, now on the fourth screen where indices matter.
 
+- **The count check on the way out** — Settings → Card counting → **Ask for the count on the way out** (on by default). Every count-dependent verdict above is scored against a count the table keeps for you, so leaving stops on one question: what the running count is now, over the cards this table turned face up. Answering is the exit — the bypass is hidden while the question is up — and the verdict names the count and how far the answer drifted, in points and direction. It only asks between rounds: mid-hand the dealer's hole card is dealt but face down, so there is no single count both sides could agree on. The answer feeds the same running-count accuracy the counting drill keeps, because it is the same skill through played-out hands, and only the first answer counts.
+
 Returning from the showdown keeps the depletion it caused, so the next count
 round may reshuffle past the cut card.
 
