@@ -27,4 +27,24 @@ struct HomeHelpersTests {
         let weekday = date.formatted(.dateTime.weekday(.wide))
         #expect(formatDayLabel(date) == "\(weekday) morning")
     }
+
+    @Test func countingAccuracySumsEveryCountingStore() {
+        func stats(_ attempts: Int, _ correct: Int) -> SessionStats {
+            SessionStats(attempts: attempts, correct: correct, streak: 0, longestStreak: correct)
+        }
+        // 4 of 5 across the five stores.
+        let mixed = [stats(1, 1), stats(1, 0), stats(1, 1), stats(1, 1), stats(1, 1)]
+        #expect(countingAccuracy(mixed) == 80)
+        // A trainee who has only ever drilled the newest mode still gets a
+        // number, not "new".
+        #expect(countingAccuracy([stats(0, 0), stats(0, 0), stats(0, 0), stats(0, 0),
+                                  stats(2, 2)]) == 100)
+        #expect(countingAccuracy([stats(0, 0), stats(0, 0)]) == nil)
+    }
+
+    @Test func everyDrillModeHasItsOwnLabel() {
+        let labels = DrillMode.allCases.map(\.label)
+        #expect(labels == ["Running count", "True count", "Key count", "Bet spread", "Deck speed"])
+        #expect(Set(labels).count == DrillMode.allCases.count)
+    }
 }

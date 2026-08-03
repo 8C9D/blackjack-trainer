@@ -23,6 +23,19 @@ enum DrillMode: String, CaseIterable {
         self == .keyCount || (asksTrueCount && source == .liveShoe)
     }
 
+    /// The label every surface uses — Settings' picker, and the drill's idle
+    /// screen, which names the mode it is about to run now that they differ
+    /// this much.
+    var label: String {
+        switch self {
+        case .runningCount: "Running count"
+        case .trueCount: "True count"
+        case .keyCount: "Key count"
+        case .betSpread: "Bet spread"
+        case .deckSpeed: "Deck speed"
+        }
+    }
+
     /// Modes whose answer is a true count: the true-count drill and the
     /// bet-spread drill built on top of it. They share the decks-remaining
     /// configuration, the deck estimate, and the true-count stat store.
