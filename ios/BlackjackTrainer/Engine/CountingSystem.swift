@@ -67,13 +67,14 @@ struct CountingSystem: Decodable, Equatable {
         return values[card.rank.rawValue] ?? 0
     }
 
-    /// Whether this system can host the requested drill mode: true count
-    /// requires a balanced system, the key-count drill a published schedule;
-    /// running count is always available. Mirrors the web `modeAllowedFor`.
+    /// Whether this system can host the requested drill mode: true count — and
+    /// the bet spread drilled on top of it — requires a balanced system, the
+    /// key-count drill a published schedule; running count is always available.
+    /// Mirrors the web `modeAllowedFor`.
     func allows(_ mode: DrillMode) -> Bool {
         switch mode {
         case .runningCount: true
-        case .trueCount: balanced
+        case .trueCount, .betSpread: balanced
         case .keyCount: keyCounts != nil
         }
     }

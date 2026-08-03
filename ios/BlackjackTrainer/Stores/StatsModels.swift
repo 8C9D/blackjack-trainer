@@ -9,6 +9,7 @@ enum StatsKeys {
     static let deviation = "blackjack-deviation-stats"
     static let deckEstimation = "blackjack-deck-estimation-stats"
     static let keyCount = "blackjack-key-count-stats" // advantage calls
+    static let betSpread = "blackjack-bet-spread-stats" // the bet vs your ramp
     static let showdown = "blackjack-showdown-stats"
     static let showdownBankroll = "blackjack-showdown-bankroll"
 

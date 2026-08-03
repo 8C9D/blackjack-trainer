@@ -4,17 +4,27 @@ import Foundation
 /// the live-shoe true-count drill: the shoe's running count starts at the
 /// system's published IRC and the player calls whether it has reached the key
 /// count. Only offered for systems carrying a `KeyCountSchedule` (KO).
+/// `betSpread` is the true-count drill plus the question the count is for: how
+/// many units to bet. Balanced systems only, since it grades a true count first.
 enum DrillMode: String, CaseIterable {
     case runningCount = "running-count"
     case trueCount = "true-count"
     case keyCount = "key-count"
+    case betSpread = "bet-spread"
 
-    /// The shoe-driven modes: key count always reads a live shoe; true count
-    /// only with the live-shoe source. The one predicate behind the settings
-    /// fields, the prefs clamp, and the engine's shoe checks (mirrors the web
-    /// `usesLiveShoe`).
+    /// The shoe-driven modes: key count always reads a live shoe; the two
+    /// true-count modes only with the live-shoe source. The one predicate behind
+    /// the settings fields, the prefs clamp, and the engine's shoe checks
+    /// (mirrors the web `usesLiveShoe`).
     func usesLiveShoe(source: TrueCountSource) -> Bool {
-        self == .keyCount || (self == .trueCount && source == .liveShoe)
+        self == .keyCount || (asksTrueCount && source == .liveShoe)
+    }
+
+    /// Modes whose answer is a true count: the true-count drill and the
+    /// bet-spread drill built on top of it. They share the decks-remaining
+    /// configuration, the deck estimate, and the true-count stat store.
+    var asksTrueCount: Bool {
+        self == .trueCount || self == .betSpread
     }
 }
 
@@ -33,6 +43,8 @@ struct CountingDrillSettings: Equatable {
     var millisecondsBetweenCards: Int = 1000
     /// Decks remaining for classic (preset) true-count mode.
     var decksRemaining: Double = 1
+    /// Units per true-count band, graded against in bet-spread mode.
+    var betRamp: [Int] = BetRamp.default
     var trueCountSource: TrueCountSource = .liveShoe
     var numberOfDecks: Int = ShoeConstants.defaultNumberOfDecks
     var penetration: Double = ShoeConstants.defaultPenetration
@@ -93,17 +105,51 @@ struct KeyCountDrillResult: Equatable {
     let isCorrect: Bool
 }
 
+/// The player's two-part bet-spread answer: the true count they read and the
+/// units they would put out.
+struct BetSpreadAnswer: Equatable {
+    let trueCount: Int
+    let units: Int
+}
+
+/// Graded bet-spread round: a true-count round (same count, decks, and estimate
+/// fields) plus the bet it was for. The units are graded against the ramp at the
+/// *correct* true count, not the one the player claimed — a miscount that leads
+/// to the wrong bet is exactly the failure the drill is there to catch, as with
+/// the key-count advantage call. Mirrors `BetSpreadDrillResult`.
+struct BetSpreadDrillResult: Equatable {
+    let cards: [Card]
+    let correctRunningCount: Double
+    let decksRemaining: Double
+    let correctTrueCount: Int
+    let userTrueCount: Int
+    let countCorrect: Bool
+    var priorRunningCount: Double = 0
+    var deckEstimate: Double?
+    var deckEstimateWithinBand: Bool?
+    /// The ramp the round was graded against, kept on the result so the feedback
+    /// can show the whole spread without re-reading prefs.
+    let ramp: [Int]
+    let correctUnits: Int
+    let userUnits: Int
+    let betCorrect: Bool
+    /// The rep is correct only when both the true count and the bet are.
+    let isCorrect: Bool
+}
+
 /// A graded round in any mode (the web's discriminated union).
 enum CountingDrillResult: Equatable {
     case running(RunningCountDrillResult)
     case trueCount(TrueCountDrillResult)
     case keyCount(KeyCountDrillResult)
+    case betSpread(BetSpreadDrillResult)
 
     var cards: [Card] {
         switch self {
         case let .running(result): result.cards
         case let .trueCount(result): result.cards
         case let .keyCount(result): result.cards
+        case let .betSpread(result): result.cards
         }
     }
 
@@ -112,6 +158,7 @@ enum CountingDrillResult: Equatable {
         case let .running(result): result.isCorrect
         case let .trueCount(result): result.isCorrect
         case let .keyCount(result): result.isCorrect
+        case let .betSpread(result): result.isCorrect
         }
     }
 
@@ -122,6 +169,7 @@ enum CountingDrillResult: Equatable {
         case .running: 0
         case let .trueCount(result): result.priorRunningCount
         case let .keyCount(result): result.priorRunningCount
+        case let .betSpread(result): result.priorRunningCount
         }
     }
 }

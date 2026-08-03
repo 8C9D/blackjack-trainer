@@ -133,6 +133,43 @@ struct CountingEngine {
         )
     }
 
+    /// Grade one round of the bet-spread drill: the claimed true count exactly
+    /// as `evaluateTrueCount` does, and the claimed bet against the player's ramp
+    /// at the correct true count. The rep counts as correct only when both are
+    /// right. Mirrors `evaluateBetSpread`.
+    func evaluateBetSpread(
+        _ cards: [Card],
+        answer: BetSpreadAnswer,
+        decksRemaining: Double,
+        system: CountingSystem,
+        ramp: [Int],
+        priorRunningCount: Double = 0
+    ) -> BetSpreadDrillResult {
+        let counted = evaluateTrueCount(
+            cards,
+            userTrueCount: answer.trueCount,
+            decksRemaining: decksRemaining,
+            system: system,
+            priorRunningCount: priorRunningCount
+        )
+        let correctUnits = BetRamp.units(trueCount: counted.correctTrueCount, ramp: ramp)
+        let betCorrect = answer.units == correctUnits
+        return BetSpreadDrillResult(
+            cards: cards,
+            correctRunningCount: counted.correctRunningCount,
+            decksRemaining: counted.decksRemaining,
+            correctTrueCount: counted.correctTrueCount,
+            userTrueCount: counted.userTrueCount,
+            countCorrect: counted.isCorrect,
+            priorRunningCount: priorRunningCount,
+            ramp: ramp,
+            correctUnits: correctUnits,
+            userUnits: answer.units,
+            betCorrect: betCorrect,
+            isCorrect: counted.isCorrect && betCorrect
+        )
+    }
+
     /// Validate drill settings, returning every error at once. Mirrors
     /// `validateSettings`; `numberOfCards` is an `Int` here so the "whole number"
     /// guard the web needs for free-form inputs is unnecessary. The decks/shoe
@@ -153,13 +190,19 @@ struct CountingEngine {
             )
         }
 
+        // The ramp is only graded against in bet-spread mode, so a nonsense ramp
+        // only blocks that drill.
+        if settings.mode == .betSpread {
+            errors.append(contentsOf: BetRamp.validate(settings.betRamp))
+        }
+
         // The key-count drill always reads a live shoe, so it shares the
-        // shoe-configuration checks with live-shoe true count.
-        if settings.mode == .trueCount, settings.trueCountSource == .classic {
+        // shoe-configuration checks with the true-count modes.
+        if settings.mode.asksTrueCount, settings.trueCountSource == .classic {
             if settings.decksRemaining <= 0 {
                 errors.append("Decks remaining must be greater than 0.")
             }
-        } else if settings.mode == .trueCount || settings.mode == .keyCount {
+        } else if settings.mode.asksTrueCount || settings.mode == .keyCount {
             validateLiveShoe(settings, into: &errors)
         }
 

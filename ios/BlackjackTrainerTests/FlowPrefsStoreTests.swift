@@ -213,6 +213,7 @@ struct FlowPrefsStoreTests {
                 "trueCountSource": "live-shoe",
                 "numberOfDecks": 2,
                 "penetration": 0.8,
+                "betRamp": [1, 3, 6, 10, 20],
                 "showdownSpots": 2,
                 "showdownBetting": true
             ]
@@ -226,9 +227,35 @@ struct FlowPrefsStoreTests {
             trueCountSource: .liveShoe,
             numberOfDecks: 2,
             penetration: 0.8,
+            betRamp: [1, 3, 6, 10, 20],
             showdownSpots: 2,
             showdownBetting: true
         ))
+    }
+
+    @Test func normalizesAStoredBetSpreadBandByBand() {
+        #expect(
+            FlowPrefs.merged(from: ["counting": ["betRamp": [2, 4, 8, 16, 32]]])
+                .counting.betRamp == [2, 4, 8, 16, 32]
+        )
+        // A junk band falls back to the default's; the rest survive.
+        #expect(
+            FlowPrefs.merged(from: ["counting": ["betRamp": [2, "x", 8, 16, 32]]])
+                .counting.betRamp == [2, BetRamp.default[1], 8, 16, 32]
+        )
+        // Prefs written before the spread existed get the default.
+        #expect(FlowPrefs.merged(from: ["dailyGoal": 15]).counting.betRamp == BetRamp.default)
+    }
+
+    @Test func keepsBetSpreadForABalancedSystemAndCoercesItAwayOtherwise() {
+        #expect(
+            FlowPrefs.merged(from: ["counting": ["systemId": "hi-lo", "mode": "bet-spread"]])
+                .counting.mode == .betSpread
+        )
+        #expect(
+            FlowPrefs.merged(from: ["counting": ["systemId": "ko", "mode": "bet-spread"]])
+                .counting.mode == .runningCount
+        )
     }
 
     @Test func roundTripsTheThemeAndBoxCountThroughTheStoredShape() {

@@ -10,7 +10,7 @@ import SwiftUI
 @Observable
 final class CountingModel {
     enum DrillState {
-        case idle, streaming, estimating, answering, advantage, feedback, showdown
+        case idle, streaming, estimating, answering, advantage, betting, feedback, showdown
     }
 
     var system: CountingSystem
@@ -33,17 +33,20 @@ final class CountingModel {
     @ObservationIgnored private(set) var shoe: Shoe?
     @ObservationIgnored private(set) var actualDecksRemaining: Double = 0
     @ObservationIgnored private(set) var deckEstimate: Double?
-    /// Key-count mode: the count answer held while the advantage question is
-    /// up, graded together with the advantage call in `answerAdvantage`.
+    /// Key-count and bet-spread modes: the count answer held while the second
+    /// question is up, graded with it in `answerAdvantage` / `answerBet`.
     @ObservationIgnored private var pendingUserCount: Double = 0
 
     @ObservationIgnored let systems: [CountingSystem]
     @ObservationIgnored let showdownStatsStore: ShowdownStatsStore
-    @ObservationIgnored private let engine: CountingEngine
-    @ObservationIgnored private let runningStore: SessionStatsStore
-    @ObservationIgnored private let trueCountStore: SessionStatsStore
-    @ObservationIgnored private let deckEstimationStore: SessionStatsStore
-    @ObservationIgnored private let keyCountStore: SessionStatsStore
+    // Internal rather than private so the read-only accessors can live in
+    // CountingModel+Presentation.swift (private is file-scoped in Swift).
+    @ObservationIgnored let engine: CountingEngine
+    @ObservationIgnored let runningStore: SessionStatsStore
+    @ObservationIgnored let trueCountStore: SessionStatsStore
+    @ObservationIgnored let deckEstimationStore: SessionStatsStore
+    @ObservationIgnored let keyCountStore: SessionStatsStore
+    @ObservationIgnored let betSpreadStore: SessionStatsStore
     @ObservationIgnored private let generator: CardGenerator
     @ObservationIgnored let shoeFactory: ShoeFactory
     @ObservationIgnored private var streamTask: Task<Void, Never>?
@@ -55,6 +58,7 @@ final class CountingModel {
         trueCountStore: SessionStatsStore,
         deckEstimationStore: SessionStatsStore,
         keyCountStore: SessionStatsStore,
+        betSpreadStore: SessionStatsStore,
         showdownStatsStore: ShowdownStatsStore,
         generator: CardGenerator = CardGenerator(),
         shoeFactory: ShoeFactory = ShoeFactory()
@@ -65,106 +69,11 @@ final class CountingModel {
         self.trueCountStore = trueCountStore
         self.deckEstimationStore = deckEstimationStore
         self.keyCountStore = keyCountStore
+        self.betSpreadStore = betSpreadStore
         self.showdownStatsStore = showdownStatsStore
         self.generator = generator
         self.shoeFactory = shoeFactory
         system = systems.first { $0.id == "hi-lo" } ?? systems[0]
-    }
-
-    var trueCountAvailable: Bool {
-        system.balanced
-    }
-
-    /// The system's schedule resolved for the configured shoe, or nil when the
-    /// drill is not in key-count mode or the system/deck pairing has no
-    /// published values (an invalid configuration; `validation` blocks it).
-    var keyCountSchedule: ResolvedKeyCounts? {
-        guard settings.mode == .keyCount else { return nil }
-        return system.keyCounts?.resolved(decks: settings.numberOfDecks)
-    }
-
-    var keyCountDrill: Bool {
-        keyCountSchedule != nil
-    }
-
-    /// The two shoe-driven drills share the persistent live shoe (and the
-    /// post-count showdown that deals from it).
-    var usesLiveShoe: Bool {
-        liveShoeTrueCount || keyCountDrill
-    }
-
-    /// What the carried count resets to on a reshuffle: the IRC in key-count
-    /// mode, 0 otherwise — surfaced in the reshuffle notice.
-    var countResetLabel: String {
-        guard let schedule = keyCountSchedule else { return "0" }
-        return "\(CountFormat.signedCount(Double(schedule.irc))) (the IRC)"
-    }
-
-    /// Fractional running counts (Wong Halves) need decimal input; true counts
-    /// are always whole, so this only applies in running-count mode.
-    var fractionalAnswers: Bool {
-        settings.mode == .runningCount && engine.isFractionalSystem(system)
-    }
-
-    /// A balanced-system true-count drill reading a live, depleting shoe (vs the
-    /// classic preset). Gates the deck-estimate step, the shoe, and the showdown.
-    var liveShoeTrueCount: Bool {
-        settings.mode == .trueCount
-            && settings.trueCountSource == .liveShoe
-            && system.balanced
-    }
-
-    /// Engine validation plus the schedule gate the settings shape cannot
-    /// express (it carries no system): key-count mode needs a schedule row for
-    /// the configured shoe.
-    var validation: SettingsValidation {
-        let v = engine.validateSettings(settings)
-        if settings.mode == .keyCount, keyCountSchedule == nil {
-            return SettingsValidation(
-                valid: false,
-                errors: v.errors + ["This system has no key-count schedule for this shoe."]
-            )
-        }
-        return v
-    }
-
-    var isDrillActive: Bool {
-        state == .streaming || state == .estimating || state == .answering
-            || state == .advantage
-    }
-
-    var settingsLocked: Bool {
-        isDrillActive || state == .showdown
-    }
-
-    var currentCard: Card? {
-        currentIndex >= 0 && currentIndex < cards.count ? cards[currentIndex] : nil
-    }
-
-    var liveDecksRemaining: Double {
-        shoe?.decksRemaining ?? Double(settings.numberOfDecks)
-    }
-
-    /// The key-count drill's count answer is a running-count rep, so it shares
-    /// the running store; only the advantage call has its own store.
-    private var activeStore: SessionStatsStore {
-        settings.mode == .trueCount ? trueCountStore : runningStore
-    }
-
-    var activeStats: SessionStats {
-        activeStore.stats
-    }
-
-    var trueCountStats: SessionStats {
-        trueCountStore.stats
-    }
-
-    var deckEstimationStats: SessionStats {
-        deckEstimationStore.stats
-    }
-
-    var keyCountStats: SessionStats {
-        keyCountStore.stats
     }
 
     /// Whether the post-count showdown has enough cards left to deal an opening
@@ -195,7 +104,7 @@ final class CountingModel {
             if Task.isCancelled { return }
             let next = currentIndex + 1
             if next >= cards.count {
-                state = liveShoeTrueCount ? .estimating : .answering
+                state = asksDeckEstimate ? .estimating : .answering
                 return
             }
             currentIndex = next
@@ -218,6 +127,11 @@ final class CountingModel {
             // graded together in answerAdvantage.
             pendingUserCount = value
             state = .advantage
+            return
+        case .betSpread:
+            // Same hold, but the second question is the bet.
+            pendingUserCount = value
+            state = .betting
             return
         case .trueCount:
             if liveShoeTrueCount {
@@ -262,6 +176,38 @@ final class CountingModel {
         runningStore.recordAttempt(correct: evaluated.countCorrect)
         keyCountStore.recordAttempt(correct: evaluated.advantageCorrect)
         shoeRunningCount = evaluated.correctRunningCount
+        state = .feedback
+    }
+
+    /// Grade the bet-spread round: the held true-count answer exactly as the
+    /// true-count drill grades it (deck estimate included off a live shoe), and
+    /// the bet against the player's ramp at the correct true count. The count
+    /// feeds the true-count store, the bet its own store, and the caller reads
+    /// `result.isCorrect` (both right) for the session rep.
+    func answerBet(_ units: Int) {
+        guard state == .betting else { return }
+        let live = liveShoeBetSpread
+        let decks = live ? actualDecksRemaining : settings.decksRemaining
+        var evaluated = engine.evaluateBetSpread(
+            cards,
+            answer: BetSpreadAnswer(trueCount: Int(pendingUserCount), units: units),
+            decksRemaining: decks,
+            system: system,
+            ramp: settings.betRamp,
+            priorRunningCount: live ? shoeRunningCount : 0
+        )
+        if live, let estimate = deckEstimate {
+            let within = engine.scoreDeckEstimate(estimate: estimate, actual: decks)
+            evaluated.deckEstimate = estimate
+            evaluated.deckEstimateWithinBand = within
+            deckEstimationStore.recordAttempt(correct: within)
+        }
+        result = .betSpread(evaluated)
+        trueCountStore.recordAttempt(correct: evaluated.countCorrect)
+        betSpreadStore.recordAttempt(correct: evaluated.betCorrect)
+        if live {
+            shoeRunningCount = evaluated.correctRunningCount
+        }
         state = .feedback
     }
 

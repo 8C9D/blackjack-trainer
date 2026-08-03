@@ -55,6 +55,7 @@ extension FlowPrefs {
                 "trueCountSource": counting.trueCountSource.rawValue,
                 "numberOfDecks": counting.numberOfDecks,
                 "penetration": counting.penetration,
+                "betRamp": counting.betRamp,
                 "showdownSpots": counting.showdownSpots,
                 "showdownBetting": counting.showdownBetting
             ]
@@ -86,8 +87,8 @@ private func mergedCounting(
     let system = systems.first { $0.id == requestedSystemId }
         ?? systems.first { $0.id == defaults.systemId }
     let requestedMode = oneOf(raw["mode"], DrillMode.self, defaults.mode)
-    // True count needs a balanced system; the key-count drill a published
-    // IRC/key-count schedule (KO).
+    // True count — and the bet spread built on it — needs a balanced system;
+    // the key-count drill a published IRC/key-count schedule (KO).
     let mode: DrillMode = system?.allows(requestedMode) == true ? requestedMode : .runningCount
     let source = oneOf(raw["trueCountSource"], TrueCountSource.self, defaults.trueCountSource)
     let decks = intValue(raw["numberOfDecks"])
@@ -114,6 +115,7 @@ private func mergedCounting(
         penetration: numberValue(raw["penetration"])
             .flatMap { ShoeConstants.penetrationPresets.contains($0) ? $0 : nil }
             ?? defaults.penetration,
+        betRamp: BetRamp.normalized(raw["betRamp"]),
         showdownSpots: Showdown.clampSpots(
             intValue(raw["showdownSpots"]) ?? defaults.showdownSpots
         ),

@@ -78,10 +78,13 @@
 		8BF8225B5B5683063C0901C3 /* deviation-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = 15F33EF1E2388D4C0EE28E6B /* deviation-vectors.json */; };
 		8F6FD9EB91B2EBBFAE4EC568 /* StrategyChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78DC33D28D09EB8697F6D833 /* StrategyChart.swift */; };
 		92B298BC5D3D877D16326218 /* CardCountingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE50DEB7576D2B5A6C544838 /* CardCountingFlowView.swift */; };
+		92B9061EFF5C52916413D91D /* BetSpreadDrillTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8796B4C1EA1A80789FDA51D6 /* BetSpreadDrillTests.swift */; };
+		933C1B7510CAB3FA0FEAF5EE /* BetRamp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8620E0BCFDFF00572CD05598 /* BetRamp.swift */; };
 		94843E9634E49F20DAD75618 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45B95CDB1F240EEC3FC88326 /* AppModel.swift */; };
 		94A043188027320FBD0E92AB /* MissTally.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3FF9EB17A9713215F67B6B /* MissTally.swift */; };
 		965A2A3BC3BC2994FDE0D8C8 /* ShowdownModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F34FE14AC0C70AE7B5CDF936 /* ShowdownModel.swift */; };
 		9695E3114F049A577095071C /* DeviationsDrillView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7244BE12FDAD7DBD620EFE49 /* DeviationsDrillView.swift */; };
+		974C7DD1655D9790DB91650C /* BetRampTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6ECAFC722FB651D606EE514 /* BetRampTests.swift */; };
 		988378D0421E203A0233C3B7 /* BlackjackWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2AC3CF9F36E63A1B0EF4A6 /* BlackjackWidgetBundle.swift */; };
 		98D26850C6A96B642A438808 /* BasicStrategyParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 825AB70D2C6317662368AC83 /* BasicStrategyParityTests.swift */; };
 		9C4B22D42A6A12BC4DC5C62E /* ShoeFactoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D44944317BBDF4871E4996D /* ShoeFactoryTests.swift */; };
@@ -92,10 +95,12 @@
 		A1A15FE9D46824C3D9167D3C /* HomeHelpersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D6A6BE6AD0BE9426D92EAA5 /* HomeHelpersTests.swift */; };
 		A330D15B4F3E03518F3DD213 /* DrillHandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 732250420D9C90F9AD665184 /* DrillHandTests.swift */; };
 		A4CD0E138201F88E6F7CF012 /* StrategyChartGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = E94790EFB509F167A0BADD27 /* StrategyChartGrid.swift */; };
+		A542F2F109C80162E36A0A22 /* BetRampEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E91B02DF126680C1AD1E1DB /* BetRampEditor.swift */; };
 		A72B5C6E116DC9D70E9F7055 /* RemindersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 980E7AECAB91B60175930CD3 /* RemindersView.swift */; };
 		A92CDBEB90E70B6B983D8C5D /* Keyboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9F3808F8AC15DEF1BE4DE1B /* Keyboard.swift */; };
 		AD5CA329F1BC4A32BF660060 /* DeviationParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18C6C68585013F882B690DA5 /* DeviationParityTests.swift */; };
 		AE6F2FE0E95A40C9E21207A8 /* CardImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DAE402AA61CF04300B0AF9 /* CardImage.swift */; };
+		AEAEFC3279D6B11388006331 /* CountingModel+Presentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ECFF5FEA322560635D1875A /* CountingModel+Presentation.swift */; };
 		B5858C42E92C2DBF9419764B /* CountingModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E087668BAE429A0E764D17 /* CountingModel.swift */; };
 		B8CD7A731B0C59B641BDA69E /* CardCountingFlowModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00AC67AEB95F5EB8D4B8A72 /* CardCountingFlowModelTests.swift */; };
 		BA5DE4E164B9DD95D3D4D36A /* BasicStrategyEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 412EEBB6BE3B2274CC4757FB /* BasicStrategyEngine.swift */; };
@@ -191,6 +196,7 @@
 		1965DF5EA178C870607212F6 /* FlowStageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowStageView.swift; sourceTree = "<group>"; };
 		1A1FB0D0470FEEDD9AABEFE2 /* FlowPrefsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowPrefsStoreTests.swift; sourceTree = "<group>"; };
 		1BD7421E78295DC500F5D504 /* CloudSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncTests.swift; sourceTree = "<group>"; };
+		1E91B02DF126680C1AD1E1DB /* BetRampEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetRampEditor.swift; sourceTree = "<group>"; };
 		1F8840CC6E0B7C1C81FB294A /* FlowAdvanceScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowAdvanceScheduler.swift; sourceTree = "<group>"; };
 		22F61940A575094590E7A1D7 /* CardHandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardHandTests.swift; sourceTree = "<group>"; };
 		232402DABC1D385D19FC8B05 /* CountAnswerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountAnswerView.swift; sourceTree = "<group>"; };
@@ -243,9 +249,12 @@
 		786E4951CEEAFF7A09457F30 /* ShowdownParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownParityTests.swift; sourceTree = "<group>"; };
 		78DC33D28D09EB8697F6D833 /* StrategyChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrategyChart.swift; sourceTree = "<group>"; };
 		7B1046B13D6373233EEA1F35 /* CardCounting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardCounting.swift; sourceTree = "<group>"; };
+		7ECFF5FEA322560635D1875A /* CountingModel+Presentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CountingModel+Presentation.swift"; sourceTree = "<group>"; };
 		80916791F08727E4F1F41C6E /* DeviationFeedbackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationFeedbackTests.swift; sourceTree = "<group>"; };
 		81F4236F3DD46FE168D9EB8F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		825AB70D2C6317662368AC83 /* BasicStrategyParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicStrategyParityTests.swift; sourceTree = "<group>"; };
+		8620E0BCFDFF00572CD05598 /* BetRamp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetRamp.swift; sourceTree = "<group>"; };
+		8796B4C1EA1A80789FDA51D6 /* BetSpreadDrillTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetSpreadDrillTests.swift; sourceTree = "<group>"; };
 		8C574B4537F0D533478F29ED /* ShowdownInsuranceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownInsuranceTests.swift; sourceTree = "<group>"; };
 		9027A7C8DD13E222350D437B /* PracticeProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeProgressView.swift; sourceTree = "<group>"; };
 		92869AF24C67B01CE515A238 /* StatsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsStore.swift; sourceTree = "<group>"; };
@@ -283,6 +292,7 @@
 		D33F7F71F87D6F8DE7DB2A52 /* StreakDotsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakDotsView.swift; sourceTree = "<group>"; };
 		D52EF9B7479E51758C09565B /* basic-strategy-vectors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "basic-strategy-vectors.json"; sourceTree = "<group>"; };
 		D646C0CD8526C8E211E25C42 /* COPYING.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = COPYING.txt; sourceTree = "<group>"; };
+		D6ECAFC722FB651D606EE514 /* BetRampTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetRampTests.swift; sourceTree = "<group>"; };
 		D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingParityTests.swift; sourceTree = "<group>"; };
 		D9BB02017204C216ACEDAB62 /* counting-systems.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "counting-systems.json"; sourceTree = "<group>"; };
 		E88F670393606D951F122EFA /* AdvantageCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvantageCallView.swift; sourceTree = "<group>"; };
@@ -370,6 +380,7 @@
 				232402DABC1D385D19FC8B05 /* CountAnswerView.swift */,
 				3F0F142E7986FA01C30FBDC9 /* CountFeedbackView.swift */,
 				58E087668BAE429A0E764D17 /* CountingModel.swift */,
+				7ECFF5FEA322560635D1875A /* CountingModel+Presentation.swift */,
 				70E0FD3BB6A069CD721C48F8 /* CountStreamView.swift */,
 				501FF9BB16087E1BE634AD19 /* DeckEstimateView.swift */,
 				9A576A159E244EEAB02C8B93 /* PlayerHand.swift */,
@@ -390,6 +401,8 @@
 				3D00C6D052C93224128C4A71 /* BankrollTests.swift */,
 				13DB5EC9A8B7DDB14C65D4A7 /* BasicStrategyDrillModelTests.swift */,
 				825AB70D2C6317662368AC83 /* BasicStrategyParityTests.swift */,
+				D6ECAFC722FB651D606EE514 /* BetRampTests.swift */,
+				8796B4C1EA1A80789FDA51D6 /* BetSpreadDrillTests.swift */,
 				B00AC67AEB95F5EB8D4B8A72 /* CardCountingFlowModelTests.swift */,
 				D07A16802F2169B099AE3D66 /* CardGeneratorTests.swift */,
 				22F61940A575094590E7A1D7 /* CardHandTests.swift */,
@@ -451,6 +464,7 @@
 			children = (
 				4588AAD1A15A2860A7CB9FBE /* Bankroll.swift */,
 				412EEBB6BE3B2274CC4757FB /* BasicStrategyEngine.swift */,
+				8620E0BCFDFF00572CD05598 /* BetRamp.swift */,
 				AC3A18A1400C61F3B32D13F1 /* Card.swift */,
 				7B1046B13D6373233EEA1F35 /* CardCounting.swift */,
 				2705BBD8AAF017C2486055AE /* CardGenerator.swift */,
@@ -487,6 +501,7 @@
 			isa = PBXGroup;
 			children = (
 				31A3931F83E76A168859F1C6 /* BasicStrategyDrillView.swift */,
+				1E91B02DF126680C1AD1E1DB /* BetRampEditor.swift */,
 				EE50DEB7576D2B5A6C544838 /* CardCountingFlowView.swift */,
 				5B05E37DDD485FFB7F97B52C /* ChartView.swift */,
 				7244BE12FDAD7DBD620EFE49 /* DeviationsDrillView.swift */,
@@ -721,6 +736,8 @@
 				BD0F595480611F372EDB9D8E /* Bankroll.swift in Sources */,
 				20CA9282665753BDF1BEBD7D /* BasicStrategyDrillView.swift in Sources */,
 				BA5DE4E164B9DD95D3D4D36A /* BasicStrategyEngine.swift in Sources */,
+				933C1B7510CAB3FA0FEAF5EE /* BetRamp.swift in Sources */,
+				A542F2F109C80162E36A0A22 /* BetRampEditor.swift in Sources */,
 				DDEAA480768F763AC0404C2B /* BlackjackTrainerApp.swift in Sources */,
 				ED40B991FC2DEDC8BA58ADD7 /* Card.swift in Sources */,
 				C800EE2297C6AF0CB9999B6A /* CardCounting.swift in Sources */,
@@ -733,6 +750,7 @@
 				846B2EEF3BB562DEE492DE65 /* CountFeedbackView.swift in Sources */,
 				4A47A66E72212E35E00844CD /* CountStreamView.swift in Sources */,
 				F6C919CA4ED0021197E1F128 /* CountingEngine.swift in Sources */,
+				AEAEFC3279D6B11388006331 /* CountingModel+Presentation.swift in Sources */,
 				B5858C42E92C2DBF9419764B /* CountingModel.swift in Sources */,
 				5DB30E135B7A136CDC249DC4 /* CountingSystem.swift in Sources */,
 				2DE5D31F660953706B611AC6 /* DeckEstimateView.swift in Sources */,
@@ -806,6 +824,8 @@
 				650C300DD2E06F00A261366D /* BankrollTests.swift in Sources */,
 				6707750559B3D005954977F8 /* BasicStrategyDrillModelTests.swift in Sources */,
 				98D26850C6A96B642A438808 /* BasicStrategyParityTests.swift in Sources */,
+				974C7DD1655D9790DB91650C /* BetRampTests.swift in Sources */,
+				92B9061EFF5C52916413D91D /* BetSpreadDrillTests.swift in Sources */,
 				B8CD7A731B0C59B641BDA69E /* CardCountingFlowModelTests.swift in Sources */,
 				751F87683B0C43F746AE71BE /* CardGeneratorTests.swift in Sources */,
 				55C4A5D71E0995E7E51A7E45 /* CardHandTests.swift in Sources */,

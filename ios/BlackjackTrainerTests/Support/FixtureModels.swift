@@ -33,6 +33,17 @@ struct CountingVectorsFile: Decodable {
     let systems: [CountingVectorSystem]
     let deckEstimateCases: [DeckEstimateCase]
     let keyCountCases: [KeyCountCaseSystem]
+    let betRampCases: [BetRampCase]
+}
+
+struct BetRampCase: Decodable {
+    let ramp: [Int]
+    let calls: [BetRampCall]
+}
+
+struct BetRampCall: Decodable {
+    let trueCount: Int
+    let units: Int
 }
 
 struct KeyCountCaseSystem: Decodable {
