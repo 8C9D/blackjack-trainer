@@ -44,6 +44,11 @@ import {
 } from '../../core/models/strategy.model';
 import { CardImageComponent } from '../../shared/card-image.component';
 import { BankrollService } from '../../core/services/bankroll.service';
+import {
+  BasicStrategyEngineService,
+  normalizeUpcardKey,
+} from '../../core/services/basic-strategy-engine.service';
+import { ShowdownPlayStatsService } from '../../core/services/showdown-play-stats.service';
 import { ShowdownStatsService } from '../../core/services/showdown-stats.service';
 
 // 'player-turn': the player is acting on the active hand. 'resolved': every hand
@@ -101,6 +106,14 @@ function freshHand(
     done: false,
     settlement: null,
   };
+}
+
+// The verdict on one playing decision, as the felt shows it.
+interface PlayVerdict {
+  readonly correct: boolean;
+  readonly expected: Exclude<Action, 'INS'>;
+  readonly reason: string;
+  readonly hand: string;
 }
 
 // Post-count showdown: deals one to three boxes from the persistent shoe the
@@ -276,8 +289,42 @@ function freshHand(
           </div>
         }
 
+        <!-- The verdict on the last decision. The play still stands — this is
+             a table, not a quiz — so it coaches rather than blocks. -->
+        @if (lastPlay(); as v) {
+          <p
+            class="showdown__coach"
+            [class.showdown__coach--wrong]="!v.correct"
+            role="status"
+            aria-live="polite"
+          >
+            @if (v.correct) {
+              <b>Correct.</b> {{ v.reason }}
+            } @else {
+              <b>{{ labelFor(v.expected) }} was the play.</b> {{ v.reason }}
+            }
+          </p>
+        }
+
         @if (phase() === 'resolved') {
           <section class="showdown__result" role="status">
+            @if (roundMistakes().length > 0) {
+              <div class="showdown__misplays">
+                <p class="showdown__misplays-head">
+                  {{
+                    roundMistakes().length === 1
+                      ? 'One misplay'
+                      : roundMistakes().length + ' misplays'
+                  }}
+                  this round
+                </p>
+                <ul class="showdown__misplay-list">
+                  @for (m of roundMistakes(); track $index) {
+                    <li>{{ m }}</li>
+                  }
+                </ul>
+              </div>
+            }
             @if (roundSummary(); as summary) {
               <p class="showdown__summary">
                 {{ summary }}
@@ -321,6 +368,9 @@ export class ShowdownComponent implements OnInit {
   protected readonly stats = inject(ShowdownStatsService);
   // The persisted chip position, only touched when betting is on.
   protected readonly bankrollService = inject(BankrollService);
+  // Accuracy of the playing decisions, recorded whether or not chips are on.
+  private readonly playStats = inject(ShowdownPlayStatsService);
+  private readonly engine = inject(BasicStrategyEngineService);
 
   // The persistent shoe the player just counted; the showdown deals from it so
   // its depletion carries back to the counting drill.
@@ -354,6 +404,12 @@ export class ShowdownComponent implements OnInit {
   protected readonly bet = signal(MIN_BET);
   // Net chips of the round just resolved, for the result line.
   protected readonly roundNet = signal(0);
+  // Verdict on the most recent playing decision, shown until the next one
+  // replaces it. Null before the first decision of a round.
+  protected readonly lastPlay = signal<PlayVerdict | null>(null);
+  // Every misplay of the round just dealt, named in the result panel — a
+  // verdict that scrolls past as the next hand is played would be no use.
+  protected readonly roundMistakes = signal<readonly string[]>([]);
   // Net chips the round's insurance bet returned, or null when no insurance was
   // taken. Settled the moment the hole card is checked, before play continues.
   protected readonly insuranceNet = signal<number | null>(null);
@@ -546,11 +602,47 @@ export class ShowdownComponent implements OnInit {
   }
 
   protected onAction(action: Action): void {
+    // Graded before the action is taken: the decision is about the hand as it
+    // stands, and hit/split have already changed it by the time they return.
+    this.gradePlay(action);
     if (action === 'H') this.hit();
     else if (action === 'S') this.stand();
     else if (action === 'D') this.double();
     else if (action === 'P') this.split();
     else if (action === 'SUR') this.surrender();
+  }
+
+  // The showdown is the only place the app lets a hand be played out, and until
+  // now it accepted anything. It still does — this is a table, not a quiz, so a
+  // wrong play stands and is settled — but the play is now scored against the
+  // same chart the Basic Strategy drill grades on, and said out loud.
+  private gradePlay(action: Action): void {
+    const hand = this.activeHand();
+    const upcard = this.dealerUpcard();
+    if (hand === null || upcard === null) return;
+    const correct = this.engine.decidePlay({
+      player: hand.cards,
+      dealerUpcard: upcard,
+      ruleSet: this.ruleSet(),
+      options: this.options(),
+      canDouble: this.canDouble(),
+      canSplit: this.canSplit(),
+      canSurrender: this.canSurrender(),
+    });
+    const wasRight = action === correct.action;
+    this.playStats.recordAttempt(wasRight);
+    this.lastPlay.set({
+      correct: wasRight,
+      expected: correct.action,
+      reason: correct.reason,
+      hand: correct.handDescription,
+    });
+    if (!wasRight) {
+      this.roundMistakes.update((list) => [
+        ...list,
+        `${correct.handDescription} vs ${normalizeUpcardKey(upcard)}: ${ACTION_LABELS[correct.action]}, not ${ACTION_LABELS[action as Exclude<Action, 'INS'>]}`,
+      ]);
+    }
   }
 
   // Between rounds, betting returns to the bet: the count has moved on, so the
@@ -587,6 +679,8 @@ export class ShowdownComponent implements OnInit {
     const bet = this.betting() ? this.bet() : 0;
     this.roundNet.set(0);
     this.insuranceNet.set(null);
+    this.lastPlay.set(null);
+    this.roundMistakes.set([]);
     this.hands.set(boxes.map((cards, box) => freshHand(cards, { box, bet })));
     this.dealerCards.set(dealer);
     this.activeIndex.set(0);

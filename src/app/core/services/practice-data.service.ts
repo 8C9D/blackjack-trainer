@@ -10,6 +10,7 @@ import { DeviationStatsService } from './deviation-stats.service';
 import { KeyCountStatsService } from './key-count-stats.service';
 import { MissTallyService } from './miss-tally.service';
 import { PracticeHistoryService } from './practice-history.service';
+import { ShowdownPlayStatsService } from './showdown-play-stats.service';
 import { ShowdownStatsService } from './showdown-stats.service';
 import { TrueCountStatsService } from './true-count-stats.service';
 
@@ -29,6 +30,7 @@ export class PracticeDataService {
     inject(BetSpreadStatsService),
     inject(DeckSpeedStatsService),
     inject(ShowdownStatsService),
+    inject(ShowdownPlayStatsService),
     inject(BankrollService),
     inject(PracticeHistoryService),
     inject(MissTallyService),

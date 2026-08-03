@@ -230,6 +230,53 @@
     opacity: 0.8;
   }
 
+  // The verdict on the last decision. Coaching, not grading: the play stands
+  // either way, so a miss is tinted rather than shouted.
+  &__coach {
+    margin: 0.6rem auto 0;
+    padding: 0.5rem 0.8rem;
+    max-width: 46ch;
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    text-align: center;
+    color: var(--ink-2);
+
+    b {
+      color: var(--good);
+    }
+
+    &--wrong {
+      background: var(--bad-tint);
+      border-color: var(--bad-edge);
+
+      b {
+        color: var(--bad);
+      }
+    }
+  }
+
+  &__misplays {
+    margin: 0 0 0.7rem;
+    text-align: left;
+  }
+
+  &__misplays-head {
+    margin: 0 0 0.25rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--bad);
+  }
+
+  &__misplay-list {
+    margin: 0;
+    padding-left: 1.1rem;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--ink-2);
+  }
+
   &__next {
     background: var(--accent);
     color: var(--on-accent);

@@ -210,6 +210,32 @@ test.describe('accessibility', () => {
     });
   }
 
+  // The showdown's play verdict has a tinted "wrong" variant the sweep above
+  // only reaches by luck — standing three boxes may happen to be correct every
+  // time. Seed 2 deals a hand where hitting is a misplay under these settings,
+  // so both the tinted verdict and the round's misplay list are measured.
+  // (Re-probe if the misplay assertion ever fails: the seeds are settings-
+  // dependent.)
+  for (const scheme of ['dark', 'light'] as const) {
+    test(`the showdown's play verdict meets WCAG AA in the ${scheme} theme`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await configureCounting(page, '1');
+      await runCountingRound(page, 2);
+      await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+      await page
+        .getByRole('group', { name: 'Player actions' })
+        .getByRole('button', { name: /Hit/ })
+        .click();
+
+      await expect(page.locator('.showdown__coach--wrong')).toBeVisible();
+      expect(await contrastFailures(page), `misplay verdict (${scheme})`).toEqual([]);
+
+      await standEveryBox(page);
+      await expect(page.locator('.showdown__misplay-list li').first()).toBeVisible();
+      expect(await contrastFailures(page), `misplay list (${scheme})`).toEqual([]);
+    });
+  }
+
   // The walk above plays with betting off, so the chip surfaces — the bet
   // ladder, the bankroll line, the stake chips, the insurance decision and its
   // settled note, the per-hand payouts — are never measured by it. Seed 41
