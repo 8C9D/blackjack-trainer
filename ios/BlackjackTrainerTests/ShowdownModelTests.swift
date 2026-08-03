@@ -239,4 +239,52 @@ struct ShowdownModelTests {
         #expect(model.playerCards.map(\.highValue) == [8, 8])
         #expect(model.canSplit) // re-split available
     }
+
+    /// No table deals a round past the cut card: the round in progress when it
+    /// surfaces is the shoe's last. The showdown used to deal on down to the
+    /// last four cards, which also divides the true count by a sliver of a shoe
+    /// — a +2 over a tenth of a deck reads as +20 — and grades bets and index
+    /// plays against counts no casino ever deals.
+    @Test func dealsTheRoundTheCutCardFallsInAndNoRoundAfterIt() {
+        // 12 cards, cut after 6: the first round of four is short of it, the
+        // second crosses it. Both rounds are pat (player 19, dealer 18), so no
+        // draw moves the boundary.
+        let ranks: [Rank] = [.ten, .ten, .nine, .eight, .ten, .ten, .nine, .eight]
+        let cards = ranks.map { card($0) }
+            + Array(repeating: card(.five, .clubs), count: 4)
+        let model = ShowdownModel(
+            shoe: Shoe(cards: cards, penetration: 0.5), ruleSet: .s17, stats: store()
+        )
+        model.onAction(.stand)
+        #expect(model.remaining == 8) // four dealt, cut card still in the shoe
+        #expect(!model.cutCardOut)
+        #expect(model.canDealAnother)
+
+        model.dealAnother()
+        model.onAction(.stand)
+
+        // Eight dealt, past the cut: four cards remain, enough to deal — and a
+        // table would not.
+        #expect(model.remaining == 4)
+        #expect(model.cutCardOut)
+        #expect(!model.canDealAnother)
+    }
+
+    @Test func stillFinishesTheHandItIsInWhenTheCutCardSurfaces() {
+        // 6 cards, cut after 3: the opening deal alone crosses it, and the hand
+        // still plays out — a dealer stops at the cut, never mid-round.
+        let ranks: [Rank] = [.nine, .ten, .seven, .six, .ten, .five]
+        let model = ShowdownModel(
+            shoe: Shoe(cards: ranks.map { card($0) }, penetration: 0.5),
+            ruleSet: .s17,
+            stats: store()
+        )
+        #expect(model.cutCardOut)
+
+        model.onAction(.hit) // 16 + 10 = 26, bust: the draw is served
+
+        #expect(model.phase == .resolved)
+        #expect(model.settlement?.outcome == .lose)
+        #expect(!model.canDealAnother)
+    }
 }
