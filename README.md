@@ -236,8 +236,13 @@ the **same persistent shoe**, depleting it further:
 
 - **The count check on the way out** — Settings → Card counting → **Ask for the count on the way out** (on by default). Every count-dependent verdict above is scored against a count the table keeps for you, so leaving stops on one question: what the running count is now, over the cards this table turned face up. Answering is the exit — the bypass is hidden while the question is up — and the verdict names the count and how far the answer drifted, in points and direction. It only asks between rounds: mid-hand the dealer's hole card is dealt but face down, so there is no single count both sides could agree on. The answer feeds the same running-count accuracy the counting drill keeps, because it is the same skill through played-out hands, and only the first answer counts.
 
+- **The cut card stops the table, as it stops a dealer** — the round in progress when the cut card surfaces still plays out and settles, and no round is dealt after it: "Deal another" is refused, and the counting screen offers no showdown off a shoe already past its cut. Dealing on would be a game no casino deals, and it would divide the true count by a sliver of a shoe — a +2 over a tenth of a deck reads as +20, which is what the bet and every index play would then be graded against.
+
 Returning from the showdown keeps the depletion it caused, so the next count
-round may reshuffle past the cut card.
+round may reshuffle past the cut card. What comes back with you is what the
+table turned face up: a round you walk away from mid-hand leaves the dealer's
+hole card dealt but never shown, and a card you were never shown cannot be in
+your count — it is gone from the shoe and uncounted, exactly like a burn card.
 
 ### Deviations Trainer (v4)
 
