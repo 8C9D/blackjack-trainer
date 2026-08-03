@@ -178,6 +178,8 @@ type DrillState =
               [options]="tableOptions()"
               [spots]="showdownSpots()"
               [betting]="showdownBetting()"
+              [system]="system()"
+              [entryRunningCount]="shoeRunningCount()"
               (exit)="exitShowdown($event)"
             />
           }
