@@ -26,3 +26,13 @@ line_length:
   warning: 120
   error: 160
   ignores_comments: true
+
+# Same principle as line_length's ignores_comments: the budget is on how much
+# code one file holds, not on how well it is explained. These files run ~25%
+# doc comment by design (the why, and what the web original does), and counting
+# that against the cap has already cost real encapsulation once — CountingModel
+# was split at 301 lines of code, which forced its stores to drop `private`.
+file_length:
+  warning: 400
+  error: 1000
+  ignore_comment_only_lines: true

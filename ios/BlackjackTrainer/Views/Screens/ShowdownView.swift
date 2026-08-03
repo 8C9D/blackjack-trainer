@@ -12,10 +12,13 @@ struct ShowdownView: View {
          options: EngineOptions = .default, spots: Int = 1,
          betting: Bool = false, bankroll: BankrollStore = BankrollStore(),
          strategy: BasicStrategyEngine? = nil, playStats: SessionStatsStore? = nil,
+         system: CountingSystem? = nil, deviations: DeviationEngine? = nil,
+         entryRunningCount: Double = 0,
          onExit: @escaping ([Card]) -> Void) {
         _model = State(initialValue: ShowdownModel(
             shoe: shoe, ruleSet: ruleSet, stats: stats, options: options, spots: spots,
-            betting: betting, bankroll: bankroll, strategy: strategy, playStats: playStats
+            betting: betting, bankroll: bankroll, strategy: strategy, playStats: playStats,
+            system: system, deviations: deviations, entryRunningCount: entryRunningCount
         ))
         self.onExit = onExit
     }

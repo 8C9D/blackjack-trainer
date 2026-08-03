@@ -1,11 +1,62 @@
 import Foundation
 
-/// The verdict on one playing decision, as the felt shows it. Mirrors the web
+/// The verdict on one decision at the table, as the felt shows it. The headline
+/// is a sentence rather than an `Action` because not every decision here is one:
+/// declining insurance is a correct play with no action to name. Mirrors the web
 /// `PlayVerdict`.
 struct PlayVerdict: Equatable {
     let correct: Bool
-    let expected: Action
+    let headline: String
     let reason: String
+}
+
+/// Whether the count the showdown is carrying can be graded against, and how.
+///
+/// The insurance index is a Hi-Lo true count and the playing indices are the
+/// same — a level-2 or fractional system reads a different number off the same
+/// shoe (see `DeviationIndexSystem.note`). KO is the one other system the app can
+/// grade, because its book publishes a running-count schedule of its own.
+/// Everything else is dealt and settled exactly as before, ungraded, rather than
+/// scored against numbers that are not its own. Mirrors the web `CountBasis`.
+enum CountBasis: Equatable {
+    case trueCount(Int)
+    case runningCount(count: Double, insuranceAt: Int)
+    case ungraded
+
+    /// The basis for a system, the count as the player can see it, and how much
+    /// shoe is left. Mirrors `countBasisFor`.
+    static func of(system: CountingSystem?, runningCount: Double,
+                   decksRemaining: Double) -> CountBasis {
+        guard let system else { return .ungraded }
+        if system.id == DeviationIndexSystem.id {
+            // A shoe dealt to the felt has no decks left to divide by; nothing is
+            // dealt from it either, so the value is never actually consumed.
+            guard decksRemaining > 0 else { return .ungraded }
+            return .trueCount(Int((runningCount / decksRemaining).rounded(.towardZero)))
+        }
+        guard let insuranceAt = system.keyCounts?.insuranceCount else { return .ungraded }
+        return .runningCount(count: runningCount, insuranceAt: insuranceAt)
+    }
+
+    /// The true count the Hi-Lo index is tested against; zero when this basis
+    /// carries no true count, where the verdict comes from the running-count
+    /// schedule instead and the index is never consulted.
+    var trueCountForIndex: Int {
+        if case let .trueCount(value) = self { return value }
+        return 0
+    }
+
+    /// Whether the count says to take insurance, or nil when this system's count
+    /// is not one the app can grade. The Hi-Lo threshold is not written here: it
+    /// is read off the deviation chart by the caller, which is where the index
+    /// lives. Mirrors `insuranceIsCorrect`.
+    func insuranceIsCorrect(hiLoThresholdMet: Bool) -> Bool? {
+        switch self {
+        case .trueCount: hiLoThresholdMet
+        case let .runningCount(count, insuranceAt): count >= Double(insuranceAt)
+        case .ungraded: nil
+        }
+    }
 }
 
 /// Post-count showdown outcome.

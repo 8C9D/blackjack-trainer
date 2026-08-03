@@ -109,6 +109,7 @@
 		B5858C42E92C2DBF9419764B /* CountingModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E087668BAE429A0E764D17 /* CountingModel.swift */; };
 		B8CD7A731B0C59B641BDA69E /* CardCountingFlowModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00AC67AEB95F5EB8D4B8A72 /* CardCountingFlowModelTests.swift */; };
 		BA5DE4E164B9DD95D3D4D36A /* BasicStrategyEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 412EEBB6BE3B2274CC4757FB /* BasicStrategyEngine.swift */; };
+		BC46AA5B7837F04392A96542 /* ShowdownInsuranceGradingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84EBA0E6501785FC8B4A82E /* ShowdownInsuranceGradingTests.swift */; };
 		BD0F595480611F372EDB9D8E /* Bankroll.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4588AAD1A15A2860A7CB9FBE /* Bankroll.swift */; };
 		BD6E7BF5AA767DA6D790CF8D /* CountingModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01B4AFDADA3CF8230C9FA589 /* CountingModelTests.swift */; };
 		C800EE2297C6AF0CB9999B6A /* CardCounting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1046B13D6373233EEA1F35 /* CardCounting.swift */; };
@@ -325,6 +326,7 @@
 		F2F1362A78116791974E6D3E /* ShowdownModel+Presentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ShowdownModel+Presentation.swift"; sourceTree = "<group>"; };
 		F34FE14AC0C70AE7B5CDF936 /* ShowdownModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownModel.swift; sourceTree = "<group>"; };
 		F423E49F3EE23CE7C3E35ABB /* DeviationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationEngine.swift; sourceTree = "<group>"; };
+		F84EBA0E6501785FC8B4A82E /* ShowdownInsuranceGradingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownInsuranceGradingTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -452,6 +454,7 @@
 				0B1F3C9E741253484F3D5474 /* RemindersTests.swift */,
 				645F62DA06D6384BB1E98209 /* SharedComponentsTests.swift */,
 				3D44944317BBDF4871E4996D /* ShoeFactoryTests.swift */,
+				F84EBA0E6501785FC8B4A82E /* ShowdownInsuranceGradingTests.swift */,
 				8C574B4537F0D533478F29ED /* ShowdownInsuranceTests.swift */,
 				B1A14FE863E2084BF0AC794D /* ShowdownModelTests.swift */,
 				57A574AA683108F8EF54F104 /* ShowdownMultiBoxTests.swift */,
@@ -890,6 +893,7 @@
 				D1FF42D81F430C0468DF7729 /* RemindersTests.swift in Sources */,
 				30715FEEF950524036747DC0 /* SharedComponentsTests.swift in Sources */,
 				9C4B22D42A6A12BC4DC5C62E /* ShoeFactoryTests.swift in Sources */,
+				BC46AA5B7837F04392A96542 /* ShowdownInsuranceGradingTests.swift in Sources */,
 				5CA5173D12D8A87017D4B99E /* ShowdownInsuranceTests.swift in Sources */,
 				D2AB7ED7BE3625300AACE48F /* ShowdownModelTests.swift in Sources */,
 				E89681A0A7CDFDB53BD9F974 /* ShowdownMultiBoxTests.swift in Sources */,
