@@ -55,6 +55,7 @@ final class CardCountingFlowModel {
         counting.settings = prefs.prefs.counting.drillSettings
         counting.showdownSpots = prefs.prefs.counting.showdownSpots
         counting.showdownBetting = prefs.prefs.counting.showdownBetting
+        counting.showdownCountCheck = prefs.prefs.counting.showdownCountCheck
         if let system = counting.systems.first(where: { $0.id == prefs.prefs.counting.systemId }) {
             counting.system = system
         }
@@ -379,7 +380,11 @@ struct CardCountingFlowView: View {
                 entryRunningCount: model.counting.shoeRunningCount,
                 missTally: model.missTally,
                 betRamp: model.counting.settings.betRamp,
-                betSpreadStats: model.betSpreadStats
+                betSpreadStats: model.betSpreadStats,
+                countCheck: model.counting.showdownCountCheck,
+                // The count carried off the table is the same running count the
+                // drill measures, so it lands in the same store.
+                countStats: model.counting.runningStore
             ) { dealtCards in
                 model.exitShowdown(dealtCards)
             }

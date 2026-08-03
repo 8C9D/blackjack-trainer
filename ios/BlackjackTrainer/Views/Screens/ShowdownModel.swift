@@ -18,7 +18,9 @@ final class ShowdownModel {
         /// round waits for a bet before any card is dealt (the point of
         /// practising against the count), and a dealer ace pauses the deal on
         /// the insurance decision before the hole card is checked.
-        case betting, insurance, playerTurn, resolved, exhausted
+        /// `countCheck` is the way out: the table asks what the cards it dealt
+        /// did to the count before handing the shoe back.
+        case betting, insurance, playerTurn, resolved, exhausted, countCheck
     }
 
     /// Most a pair can be split to (3 splits → 4 hands), the common casino cap.
@@ -53,6 +55,15 @@ final class ShowdownModel {
     /// Every misplay of the round just dealt, named in the result panel — a
     /// verdict that scrolls past as the next hand is played would be no use.
     private(set) var roundMisplays: [String] = []
+    /// Verdict on the count carried off the table, once it has been answered.
+    private(set) var countVerdict: PlayVerdict?
+    /// Ask for the running count on the way out. On by default: this table has
+    /// been keeping the count for the player, and holding it through played-out
+    /// hands is the skill they came here for.
+    let countCheck: Bool
+    /// And the count carried off the table is the same skill the running-count
+    /// drill measures.
+    @ObservationIgnored private let countStats: SessionStatsStore?
 
     /// Not `private`: `+Grading` divides the count by what is left of it.
     @ObservationIgnored let shoe: Shoe
@@ -67,7 +78,9 @@ final class ShowdownModel {
     /// over — insurance is decided before it is seen, and grading against a card
     /// the player cannot see would be grading a different game.
     @ObservationIgnored private(set) var visibleRunningCount: Double
-    @ObservationIgnored private var pendingHoleCard: Card?
+    /// Readable outside this file: `+Grading` counts the cards the player has
+    /// actually seen, and a face-down hole card is not one of them.
+    @ObservationIgnored private(set) var pendingHoleCard: Card?
     /// Not `private`: the win/lose/push readers live in `+Presentation`.
     @ObservationIgnored let stats: ShowdownStatsStore
     /// Optional so a spec (and the `#Preview`s) can build a model without the
@@ -103,8 +116,12 @@ final class ShowdownModel {
         entryRunningCount: Double = 0,
         missTally: MissTallyStore? = nil,
         betRamp: [Int] = BetRamp.default,
-        betSpreadStats: SessionStatsStore? = nil
+        betSpreadStats: SessionStatsStore? = nil,
+        countCheck: Bool = true,
+        countStats: SessionStatsStore? = nil
     ) {
+        self.countCheck = countCheck
+        self.countStats = countStats
         self.missTally = missTally
         self.betRamp = betRamp
         self.betSpreadStats = betSpreadStats
@@ -479,5 +496,31 @@ extension ShowdownModel {
         if let graded = gradeInsurance(took: false) { record(graded) }
         phase = .playerTurn
         peekAndContinue()
+    }
+}
+
+/// The way out. Same file as the model — the mutators drive the file-scoped
+/// `private(set)` state — but outside the class body to respect the repo's
+/// type-length limit; the reads it acts on live in `+Grading`.
+@MainActor
+extension ShowdownModel {
+    /// The exit button's decision, mirroring the web `returnToCounting`: stop on
+    /// the count question when the table has cards to answer for. Returns
+    /// whether the table is finished with the player, so the caller — which owns
+    /// the handing back of the cards — knows whether to leave.
+    func requestExit() -> Bool {
+        guard asksForTheCount else { return true }
+        countVerdict = nil
+        phase = .countCheck
+        return false
+    }
+
+    /// One answer, graded and recorded. A second guess at the same question is
+    /// ignored — the verdict it would revise is already on screen.
+    func answerCountCheck(_ answer: Double) {
+        guard phase == .countCheck, countVerdict == nil else { return }
+        let verdict = gradeCountCheck(answer)
+        countStats?.recordAttempt(correct: verdict.correct)
+        countVerdict = verdict
     }
 }

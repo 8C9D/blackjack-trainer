@@ -217,6 +217,7 @@ struct SettingsView: View {
                     }
                 }
                 Toggle("Bet sizing (bankroll)", isOn: showdownBettingBinding)
+                Toggle("Ask for the count on the way out", isOn: showdownCountCheckBinding)
             }
 
             ForEach(countingErrors, id: \.self) { error in
@@ -373,6 +374,15 @@ extension SettingsView {
             get: { prefs.counting.showdownBetting },
             set: { value in
                 model.flowPrefs.updateCounting { $0.showdownBetting = value }
+            }
+        )
+    }
+
+    private var showdownCountCheckBinding: Binding<Bool> {
+        Binding(
+            get: { prefs.counting.showdownCountCheck },
+            set: { value in
+                model.flowPrefs.updateCounting { $0.showdownCountCheck = value }
             }
         )
     }

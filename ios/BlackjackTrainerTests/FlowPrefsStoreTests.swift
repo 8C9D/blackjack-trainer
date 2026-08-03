@@ -120,6 +120,17 @@ struct FlowPrefsStoreTests {
         #expect(!FlowPrefs.merged(from: ["dailyGoal": 15]).counting.showdownBetting)
     }
 
+    /// The one showdown setting that defaults on: the table has always kept the
+    /// count for the player, and asking for it is the point of the screen.
+    @Test func asksForTheCountOnTheWayOutUnlessExplicitlyTurnedOff() {
+        #expect(!FlowPrefs.merged(from: ["counting": ["showdownCountCheck": false]])
+            .counting.showdownCountCheck)
+        #expect(FlowPrefs.merged(from: ["counting": ["showdownCountCheck": "no"]])
+            .counting.showdownCountCheck)
+        // Prefs written before the setting existed get asked.
+        #expect(FlowPrefs.merged(from: ["dailyGoal": 15]).counting.showdownCountCheck)
+    }
+
     @Test func fallsBackFromAnUnknownCountingSystem() {
         let counting = FlowPrefs.merged(from: [
             "counting": ["systemId": "missing-system"]
@@ -215,7 +226,8 @@ struct FlowPrefsStoreTests {
                 "penetration": 0.8,
                 "betRamp": [1, 3, 6, 10, 20],
                 "showdownSpots": 2,
-                "showdownBetting": true
+                "showdownBetting": true,
+                "showdownCountCheck": false
             ]
         ]).counting
         #expect(counting == CountingPrefs(
@@ -229,7 +241,8 @@ struct FlowPrefsStoreTests {
             penetration: 0.8,
             betRamp: [1, 3, 6, 10, 20],
             showdownSpots: 2,
-            showdownBetting: true
+            showdownBetting: true,
+            showdownCountCheck: false
         ))
     }
 
@@ -263,9 +276,11 @@ struct FlowPrefsStoreTests {
         prefs.theme = .light
         prefs.counting.showdownSpots = 2
         prefs.counting.showdownBetting = true
+        prefs.counting.showdownCountCheck = false
         let restored = FlowPrefs.merged(from: prefs.jsonObject)
         #expect(restored.theme == .light)
         #expect(restored.counting.showdownSpots == 2)
         #expect(restored.counting.showdownBetting)
+        #expect(!restored.counting.showdownCountCheck)
     }
 }

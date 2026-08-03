@@ -15,12 +15,14 @@ struct ShowdownView: View {
          system: CountingSystem? = nil, deviations: DeviationEngine? = nil,
          entryRunningCount: Double = 0, missTally: MissTallyStore? = nil,
          betRamp: [Int] = BetRamp.default, betSpreadStats: SessionStatsStore? = nil,
+         countCheck: Bool = true, countStats: SessionStatsStore? = nil,
          onExit: @escaping ([Card]) -> Void) {
         _model = State(initialValue: ShowdownModel(
             shoe: shoe, ruleSet: ruleSet, stats: stats, options: options, spots: spots,
             betting: betting, bankroll: bankroll, strategy: strategy, playStats: playStats,
             system: system, deviations: deviations, entryRunningCount: entryRunningCount,
-            missTally: missTally, betRamp: betRamp, betSpreadStats: betSpreadStats
+            missTally: missTally, betRamp: betRamp, betSpreadStats: betSpreadStats,
+            countCheck: countCheck, countStats: countStats
         ))
         self.onExit = onExit
     }
@@ -60,7 +62,9 @@ struct ShowdownView: View {
                 bankrollLine
             }
 
-            if model.phase == .exhausted {
+            if model.phase == .countCheck {
+                countCheckStage
+            } else if model.phase == .exhausted {
                 Text("The shoe is too low to deal a hand. Return to counting to reshuffle.")
                     .foregroundStyle(Theme.muted)
             } else if model.phase == .betting {
@@ -92,9 +96,13 @@ struct ShowdownView: View {
                 }
             }
 
-            Button("Back to counting") { onExit(model.dealtCards) }
-                .buttonStyle(.bordered)
-                .tint(Theme.accentInk)
+            // No bypass while the count question is up: the way out runs
+            // through it, and the answer's own button leaves.
+            if model.phase != .countCheck {
+                Button("Back to counting") { leave() }
+                    .buttonStyle(.bordered)
+                    .tint(Theme.accentInk)
+            }
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -195,6 +203,21 @@ struct ShowdownView: View {
         }
     }
 
+    private var countCheckStage: some View {
+        CountCheckView(
+            cardsSeen: model.cardsSeen,
+            allowFractions: model.fractionalCount,
+            verdict: model.countVerdict,
+            onAnswer: { model.answerCountCheck($0) },
+            onLeave: { onExit(model.dealtCards) }
+        )
+    }
+
+    /// Leaving: the count question first, when the table has cards to answer for.
+    private func leave() {
+        if model.requestExit() { onExit(model.dealtCards) }
+    }
+
     private var insuranceStage: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Dealer shows an ace. Insurance costs \(Chips.format(model.insuranceTotal)) "
@@ -219,8 +242,13 @@ struct ShowdownView: View {
             }
         }
     }
+}
 
-    private var bankrollLine: some View {
+/// The chips half of the screen — the bankroll line and the bet the round opens
+/// on. In an extension so the view stays inside the repo's type-body budget,
+/// following the split `SettingsView` already uses for its bindings.
+extension ShowdownView {
+    var bankrollLine: some View {
         let state = model.bankrollStore.state
         return Text(state.wagered > 0
             ? "Bankroll \(Chips.format(state.bankroll))  ·  wagered "
@@ -230,7 +258,7 @@ struct ShowdownView: View {
             .foregroundStyle(Theme.midInk)
     }
 
-    @ViewBuilder private var bettingStage: some View {
+    @ViewBuilder var bettingStage: some View {
         if model.bankrollStore.bustedOut {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Out of chips. Reset the bankroll to keep practising.")

@@ -60,6 +60,7 @@
 		5ACE6A73BE71B4664EF7B2BD /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CDF8C0414B1B8AF850B0DF5 /* SmokeTests.swift */; };
 		5AF9B9674E93ACAEF2C9D226 /* Deviation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0896F4168F59A3A9EBFF7CDE /* Deviation.swift */; };
 		5AFF5BA555AFAA622588A5DB /* ChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B05E37DDD485FFB7F97B52C /* ChartView.swift */; };
+		5C7245639BE28FE6E28B62CE /* CountCheckView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F18AC1357664D06B2D334545 /* CountCheckView.swift */; };
 		5CA5173D12D8A87017D4B99E /* ShowdownInsuranceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C574B4537F0D533478F29ED /* ShowdownInsuranceTests.swift */; };
 		5DB30E135B7A136CDC249DC4 /* CountingSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12BE32AD13FB36B33BAA1B8A /* CountingSystem.swift */; };
 		5F8498BABF2D152C9679928E /* PlayerHand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A576A159E244EEAB02C8B93 /* PlayerHand.swift */; };
@@ -68,6 +69,7 @@
 		650C300DD2E06F00A261366D /* BankrollTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D00C6D052C93224128C4A71 /* BankrollTests.swift */; };
 		6513222E1254F0172453951E /* DataLayerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA0B879E8B1D853622E0CC86 /* DataLayerTests.swift */; };
 		65D49FF023B11E415D09DEA6 /* StreakDotsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F7F71F87D6F8DE7DB2A52 /* StreakDotsView.swift */; };
+		6687D84E9BC87582D2BCA631 /* ShowdownCountCheckTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D69B2C9F248B27642F989D9D /* ShowdownCountCheckTests.swift */; };
 		66FBEF52BC2D391180E3FC62 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 355840D6D85CBA4C7903ED7C /* HomeView.swift */; };
 		6707750559B3D005954977F8 /* BasicStrategyDrillModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13DB5EC9A8B7DDB14C65D4A7 /* BasicStrategyDrillModelTests.swift */; };
 		67B514D49F759770828DD436 /* ShowdownDeviationGradingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CF142868E668E0EEDDF798F /* ShowdownDeviationGradingTests.swift */; };
@@ -330,6 +332,7 @@
 		D33F7F71F87D6F8DE7DB2A52 /* StreakDotsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakDotsView.swift; sourceTree = "<group>"; };
 		D52EF9B7479E51758C09565B /* basic-strategy-vectors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "basic-strategy-vectors.json"; sourceTree = "<group>"; };
 		D646C0CD8526C8E211E25C42 /* COPYING.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = COPYING.txt; sourceTree = "<group>"; };
+		D69B2C9F248B27642F989D9D /* ShowdownCountCheckTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownCountCheckTests.swift; sourceTree = "<group>"; };
 		D6ECAFC722FB651D606EE514 /* BetRampTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetRampTests.swift; sourceTree = "<group>"; };
 		D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingParityTests.swift; sourceTree = "<group>"; };
 		D9BB02017204C216ACEDAB62 /* counting-systems.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "counting-systems.json"; sourceTree = "<group>"; };
@@ -340,6 +343,7 @@
 		EA44A857F312C0801027DE52 /* DrillHand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillHand.swift; sourceTree = "<group>"; };
 		EE50DEB7576D2B5A6C544838 /* CardCountingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardCountingFlowView.swift; sourceTree = "<group>"; };
 		EEF70F593374993ECA4C38A4 /* Shoe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shoe.swift; sourceTree = "<group>"; };
+		F18AC1357664D06B2D334545 /* CountCheckView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountCheckView.swift; sourceTree = "<group>"; };
 		F20056C4A5972F33161BAEB4 /* BackupSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupSection.swift; sourceTree = "<group>"; };
 		F2F1362A78116791974E6D3E /* ShowdownModel+Presentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ShowdownModel+Presentation.swift"; sourceTree = "<group>"; };
 		F34FE14AC0C70AE7B5CDF936 /* ShowdownModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownModel.swift; sourceTree = "<group>"; };
@@ -398,6 +402,7 @@
 			children = (
 				6A64DE6664C81E82AA4D8054 /* ActionButtonsView.swift */,
 				1652BE128D76A29D29A202BA /* AdvisoryNoteView.swift */,
+				F18AC1357664D06B2D334545 /* CountCheckView.swift */,
 				56D03F7A78236CB3E5505245 /* HardwareKeyboard.swift */,
 				256C8187D4AA033E9DB51FC3 /* PlayCoachView.swift */,
 			);
@@ -477,6 +482,7 @@
 				645F62DA06D6384BB1E98209 /* SharedComponentsTests.swift */,
 				3D44944317BBDF4871E4996D /* ShoeFactoryTests.swift */,
 				845607FBD58C5B41D4707206 /* ShowdownBetGradingTests.swift */,
+				D69B2C9F248B27642F989D9D /* ShowdownCountCheckTests.swift */,
 				8CF142868E668E0EEDDF798F /* ShowdownDeviationGradingTests.swift */,
 				F84EBA0E6501785FC8B4A82E /* ShowdownInsuranceGradingTests.swift */,
 				8C574B4537F0D533478F29ED /* ShowdownInsuranceTests.swift */,
@@ -813,6 +819,7 @@
 				5AFF5BA555AFAA622588A5DB /* ChartView.swift in Sources */,
 				4F34564EAD24EB9CA97E6818 /* CloudKeyValueStore.swift in Sources */,
 				2D528424128E711BB0F538BD /* CountAnswerView.swift in Sources */,
+				5C7245639BE28FE6E28B62CE /* CountCheckView.swift in Sources */,
 				846B2EEF3BB562DEE492DE65 /* CountFeedbackView.swift in Sources */,
 				4A47A66E72212E35E00844CD /* CountStreamView.swift in Sources */,
 				F6C919CA4ED0021197E1F128 /* CountingEngine.swift in Sources */,
@@ -928,6 +935,7 @@
 				30715FEEF950524036747DC0 /* SharedComponentsTests.swift in Sources */,
 				9C4B22D42A6A12BC4DC5C62E /* ShoeFactoryTests.swift in Sources */,
 				BA6F07283A2ED76D98474D93 /* ShowdownBetGradingTests.swift in Sources */,
+				6687D84E9BC87582D2BCA631 /* ShowdownCountCheckTests.swift in Sources */,
 				67B514D49F759770828DD436 /* ShowdownDeviationGradingTests.swift in Sources */,
 				BC46AA5B7837F04392A96542 /* ShowdownInsuranceGradingTests.swift in Sources */,
 				5CA5173D12D8A87017D4B99E /* ShowdownInsuranceTests.swift in Sources */,

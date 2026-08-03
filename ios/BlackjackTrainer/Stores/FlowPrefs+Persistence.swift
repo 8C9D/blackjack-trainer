@@ -57,7 +57,8 @@ extension FlowPrefs {
                 "penetration": counting.penetration,
                 "betRamp": counting.betRamp,
                 "showdownSpots": counting.showdownSpots,
-                "showdownBetting": counting.showdownBetting
+                "showdownBetting": counting.showdownBetting,
+                "showdownCountCheck": counting.showdownCountCheck
             ]
         ]
     }
@@ -119,7 +120,8 @@ private func mergedCounting(
         showdownSpots: Showdown.clampSpots(
             intValue(raw["showdownSpots"]) ?? defaults.showdownSpots
         ),
-        showdownBetting: boolValue(raw["showdownBetting"]) ?? defaults.showdownBetting
+        showdownBetting: boolValue(raw["showdownBetting"]) ?? defaults.showdownBetting,
+        showdownCountCheck: boolValue(raw["showdownCountCheck"]) ?? defaults.showdownCountCheck
     )
 }
 
