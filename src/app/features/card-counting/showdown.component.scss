@@ -78,6 +78,13 @@
     font-size: 0.95rem;
   }
 
+  // Why a dealt card is in neither the tally nor the count being asked for.
+  &__count-note {
+    margin: -0.4rem 0 0;
+    color: var(--ink-2);
+    font-size: 0.85rem;
+  }
+
   &__bets {
     display: flex;
     flex-wrap: wrap;

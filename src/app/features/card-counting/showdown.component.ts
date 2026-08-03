@@ -205,6 +205,14 @@ interface PlayVerdict {
           <p class="showdown__bet-prompt">
             {{ cardsSeen() }} cards came out at this table. Take the count with you.
           </p>
+          @if (holeCardUnseen()) {
+            <!-- Leaving before the peek: the hole card was dealt but never
+                 turned over, so it is out of this number and out of the count
+                 that leaves with you — a burn card, in effect. -->
+            <p class="showdown__count-note">
+              The dealer's hole card was never turned over, so it is in neither.
+            </p>
+          }
           @if (countVerdict(); as v) {
             <p
               class="showdown__coach"
@@ -488,11 +496,14 @@ export class ShowdownComponent implements OnInit {
   readonly countCheck = input(true);
 
   // Emitted when the player returns to the counting drill, carrying every card
-  // this showdown dealt (in order) so the drill can fold their running-count
-  // value back into the shoe's carried count — the cards really left the shoe.
+  // this showdown turned face up (in order) so the drill can fold their
+  // running-count value back into the shoe's carried count — the cards really
+  // left the shoe. A hole card never turned over is the one exclusion; see
+  // `seenCards`.
   readonly exit = output<readonly Card[]>();
 
-  // Every card dealt during this showdown session, accumulated for the exit.
+  // Every card dealt during this showdown session; `seenCards()` is what the
+  // exit carries back.
   private readonly dealt: Card[] = [];
 
   // The count as the player can actually see it: the count carried in from the
@@ -501,7 +512,10 @@ export class ShowdownComponent implements OnInit {
   // insurance is decided before it is seen, and grading against a card the
   // player cannot see would be grading a different game.
   private readonly visibleRunningCount = signal(0);
-  private pendingHoleCard: Card | null = null;
+  // Index into `dealt` of the hole card still face down, or null when the round
+  // has none outstanding. An index rather than the card itself because `dealt`
+  // is what leaves with the player, and the one card that must not is this one.
+  private pendingHoleIndex: number | null = null;
 
   protected readonly countBasis = computed(() =>
     countBasisFor(this.system(), this.visibleRunningCount(), this.shoe().decksRemaining),
@@ -1178,11 +1192,17 @@ export class ShowdownComponent implements OnInit {
   // round graded against a count one card behind the felt — and a player who
   // counted the card they can see marked wrong for it.
   private resolveRound(): void {
-    if (this.pendingHoleCard) {
-      this.countVisible(this.pendingHoleCard);
-      this.pendingHoleCard = null;
+    const hole = this.pendingHoleCard();
+    if (hole) {
+      this.countVisible(hole);
+      this.pendingHoleIndex = null;
     }
     this.phase.set('resolved');
+  }
+
+  // The hole card still face down, if the round has one.
+  private pendingHoleCard(): Card | null {
+    return this.pendingHoleIndex === null ? null : (this.dealt[this.pendingHoleIndex] ?? null);
   }
 
   private updateHand(i: number, fn: (h: PlayerHand) => PlayerHand): void {
@@ -1207,7 +1227,7 @@ export class ShowdownComponent implements OnInit {
     const card = this.draw();
     if (card) {
       this.uncountVisible(card);
-      this.pendingHoleCard = card;
+      this.pendingHoleIndex = this.dealt.length - 1;
     }
     return card;
   }
@@ -1239,13 +1259,30 @@ export class ShowdownComponent implements OnInit {
   // Return to counting, handing back every card this showdown dealt so the
   // drill's carried running count stays consistent with the depleted shoe.
   protected leaveTable(): void {
-    this.exit.emit(this.dealt);
+    this.exit.emit(this.seenCards());
+  }
+
+  // What leaves with the player: every card this table turned face up. A round
+  // walked away from mid-hand leaves the dealer's hole card dealt but never
+  // shown — it is gone from the shoe, but a counter who never saw it cannot
+  // have it in their count, exactly as a burn card is gone and uncounted.
+  // Handing it back would move the drill's carried count by a card the table
+  // never showed, and mark the next answer wrong for it.
+  private seenCards(): readonly Card[] {
+    const hole = this.pendingHoleIndex;
+    return hole === null ? this.dealt : this.dealt.filter((_, i) => i !== hole);
   }
 
   // Cards the player has actually seen face up. The hole card of an unresolved
   // round is dealt but not shown, so it is not one of them.
   protected cardsSeen(): number {
-    return this.dealt.length - (this.pendingHoleCard ? 1 : 0);
+    return this.seenCards().length;
+  }
+
+  // Whether the round being left still holds a face-down hole card, so the
+  // count check can say why it is not in the number it is asking for.
+  protected holeCardUnseen(): boolean {
+    return this.pendingHoleIndex !== null;
   }
 
   // Wong Halves and friends run on half-points, so the answer box has to take

@@ -168,6 +168,31 @@ test.describe('post-count showdown', () => {
     await expect(page.locator('.showdown__bankroll')).toContainText('496');
   });
 
+  // Walking away before the peek. The hole card is dealt but never turned over,
+  // so it is in neither the tally of what came out nor the count that leaves
+  // with the trainee — the table says so rather than moving their count by a
+  // card it never showed them.
+  test('leaving before the peek leaves the hole card out of the count', async ({ page }) => {
+    await configureCounting(page, '1', true);
+    await runCountingRound(page, 41);
+    await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+    await page.getByRole('button', { name: '8', exact: true }).click();
+    await page.getByRole('button', { name: /^Deal/ }).click();
+    await expect(page.getByRole('group', { name: 'Insurance' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Back to counting' }).click();
+
+    // Four cards were dealt to one box; the hole card is not one of the three
+    // the trainee is being asked to have counted.
+    const check = page.locator('.showdown__count-check');
+    await expect(check).toContainText('3 cards came out');
+    await expect(page.locator('.showdown__count-note')).toContainText('never turned over');
+
+    await page.getByLabel('What is the running count?').fill('99');
+    await page.getByRole('button', { name: /^Submit/ }).click();
+    await expect(page.locator('.showdown__coach')).toContainText('over 3 cards');
+  });
+
   // Insurance is the one decision at this table that is purely about the count,
   // and the showdown hangs off the drill that just practised it. At the top of
   // an untouched shoe the count is nowhere near the index, so taking it is a
