@@ -1,5 +1,11 @@
 import type { Card, Rank, Suit } from './card.model';
-import { cardCountValue, type CountingSystem } from './counting-system.model';
+import {
+  cardCountValue,
+  formatCorrelation,
+  metricsParts,
+  type CountingSystem,
+} from './counting-system.model';
+import { countingSystemById } from '../../data/counting-systems';
 
 const card = (rank: Rank, suit: Suit): Card => ({ rank, suit });
 
@@ -11,6 +17,7 @@ const COLOR_SYSTEM: CountingSystem = {
   id: 'test-color',
   name: 'Test Color',
   description: 'Synthetic color system for cardCountValue tests.',
+  metrics: { bettingCorrelation: 0.9, playingEfficiency: 0.5, insuranceCorrelation: 0.7 },
   balanced: false,
   values: {
     '2': 1,
@@ -52,5 +59,29 @@ describe('cardCountValue', () => {
     const rankOnly: CountingSystem = { ...COLOR_SYSTEM, colorValues: undefined };
     expect(cardCountValue(rankOnly, card('7', 'hearts'))).toBe(0.5);
     expect(cardCountValue(rankOnly, card('7', 'spades'))).toBe(0.5);
+  });
+});
+
+describe('formatCorrelation', () => {
+  // The published table's own form: two decimals, no leading zero. These are
+  // dimensionless correlations, never quantities, so the leading zero would
+  // only suggest arithmetic that is never done on them.
+  it.each([
+    [0.97, '.97'],
+    [0.4, '.40'],
+    [0, '.00'],
+    [1, '1.00'],
+  ])('renders %s as %s', (value, expected) => {
+    expect(formatCorrelation(value)).toBe(expected);
+  });
+});
+
+describe('metricsParts', () => {
+  it('names all three figures in the order a hand meets them', () => {
+    expect(metricsParts(countingSystemById('hi-lo'))).toEqual([
+      { label: 'Betting correlation', value: '.97' },
+      { label: 'Playing efficiency', value: '.51' },
+      { label: 'Insurance correlation', value: '.76' },
+    ]);
   });
 });

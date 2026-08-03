@@ -37,6 +37,26 @@ test.describe('card counting drill', () => {
     await expect(progress).toHaveAttribute('aria-valuenow', '1');
   });
 
+  // Which system to count is the most consequential setting here, and the tags
+  // alone say nothing about what each one trades away. The three published
+  // correlations do, next to the picker and again before the drill starts.
+  test('the picker says what the chosen system is good at', async ({ page }) => {
+    await page.goto('/settings');
+    const metrics = page.locator('.settings__metrics');
+    await expect(metrics).toContainText('Betting correlation .97');
+    await expect(metrics).toContainText('Playing efficiency .51');
+    await expect(metrics).toContainText('Insurance correlation .76');
+
+    // A system that barely tracks anything says so, in the same three figures.
+    await page.getByLabel('Counting system').selectOption('revere-five-count');
+    await expect(metrics).toContainText('Betting correlation .43');
+    await expect(metrics).toContainText('Playing efficiency .15');
+
+    // And they follow the choice onto the screen the drill starts from.
+    await page.goto('/drill/card-counting');
+    await expect(page.locator('.count__metrics')).toContainText('Betting correlation .43');
+  });
+
   test('a live-shoe true-count round inserts the deck-estimate step', async ({ page }) => {
     await shrinkDrill(page);
     await page

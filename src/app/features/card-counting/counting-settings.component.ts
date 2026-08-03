@@ -15,7 +15,7 @@ import {
   type DrillMode,
   type TrueCountSource,
 } from '../../core/models/card-counting.model';
-import type { CountingSystem } from '../../core/models/counting-system.model';
+import { metricsParts, type CountingSystem } from '../../core/models/counting-system.model';
 import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.model';
 
 @Component({
@@ -31,6 +31,18 @@ import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.mo
           }
         </select>
       </label>
+      <!-- Which system to count is the most consequential setting here, and the
+           tags alone say nothing about what each one is for. These three do. -->
+      <p class="settings__metrics">
+        @for (part of metrics(); track part.label) {
+          <span class="settings__metric">{{ part.label }} {{ part.value }}</span>
+        }
+      </p>
+      <p class="settings__metrics-note">
+        What this system's tags are good at: sizing the bet, indexing a playing decision, and
+        calling insurance — the three things drilled here. Published figures for the tags alone, not
+        a verdict on the system: a count you keep accurately beats a stronger one you do not.
+      </p>
       <div class="settings__modes" role="radiogroup" aria-label="Drill mode">
         @for (option of modeOptions; track option.mode) {
           <label class="settings__mode">
@@ -302,6 +314,13 @@ export class CountingSettingsComponent {
   protected readonly usesLiveShoe = computed(() =>
     usesLiveShoe(this.mode(), this.trueCountSource()),
   );
+
+  // The selected system's published correlations. Falls back to the first
+  // system if the id somehow names none, the same way the picker would.
+  protected readonly metrics = computed(() => {
+    const selected = this.systems().find((s) => s.id === this.systemId()) ?? this.systems()[0];
+    return selected ? metricsParts(selected) : [];
+  });
 
   protected onSystemChange(event: Event): void {
     this.systemChange.emit((event.target as HTMLSelectElement).value);

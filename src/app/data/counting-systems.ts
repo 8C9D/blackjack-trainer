@@ -1,5 +1,16 @@
 import type { CountingSystem } from '../core/models/counting-system.model';
 
+// Every system's `metrics` — betting correlation, playing efficiency and
+// insurance correlation — is transcribed from the same table this registry's
+// card values came from:
+//
+//   Blackjack Review, "Card Counting System Comparisons"
+//   https://www.blackjackreview.com/wp/encyclopedia/card-counting-system-comparisons/
+//
+// The figures are the table's own, unrounded and unrescaled. Where two systems
+// share a tag vector the source still publishes each its own row, and each
+// entry here carries the row under its own name.
+
 // Hi-Lo card counting system.
 //
 // Source: Blackjack Apprenticeship, "Hi-Lo Card Counting System"
@@ -14,6 +25,7 @@ import type { CountingSystem } from '../core/models/counting-system.model';
 // twelve 0 cards, twenty -1 cards across all four suits).
 export const HI_LO: CountingSystem = {
   id: 'hi-lo',
+  metrics: { bettingCorrelation: 0.97, playingEfficiency: 0.51, insuranceCorrelation: 0.76 },
   name: 'Hi-Lo',
   description:
     'Balanced level-1 system. Low cards (2–6) count as +1, neutrals (7–9) as 0, tens and aces as −1.',
@@ -63,6 +75,7 @@ export const HI_LO: CountingSystem = {
 // key count is +1").
 export const KO: CountingSystem = {
   id: 'ko',
+  metrics: { bettingCorrelation: 0.98, playingEfficiency: 0.55, insuranceCorrelation: 0.78 },
   name: 'KO',
   description:
     'Unbalanced level-1 system (Knock-Out). Low cards (2–7) count as +1, neutrals (8–9) as 0, tens and aces as −1. Trained as a running count, with the book’s IRC/key-count schedule in place of a true count.',
@@ -109,6 +122,7 @@ export const KO: CountingSystem = {
 // level-1 range used by Hi-Lo and KO.
 export const OMEGA_II: CountingSystem = {
   id: 'omega-ii',
+  metrics: { bettingCorrelation: 0.92, playingEfficiency: 0.67, insuranceCorrelation: 0.85 },
   name: 'Omega II',
   description:
     'Balanced level-2 system. 2/3/7 count as +1, 4/5/6 as +2, 8 and aces as 0, 9 as −1, tens and faces as −2.',
@@ -154,6 +168,7 @@ export const OMEGA_II: CountingSystem = {
 // app uses the natural fractional representation.)
 export const WONG_HALVES: CountingSystem = {
   id: 'wong-halves',
+  metrics: { bettingCorrelation: 0.99, playingEfficiency: 0.57, insuranceCorrelation: 0.72 },
   name: 'Wong Halves',
   description:
     'Balanced level-3 system. 2 and 7 count as +0.5, 3/4/6 as +1, 5 as +1.5, 8 as 0, 9 as −0.5, tens and aces as −1. The running count uses fractional (half-point) values.',
@@ -184,6 +199,7 @@ export const WONG_HALVES: CountingSystem = {
 const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   {
     id: 'ace-mt',
+    metrics: { bettingCorrelation: 0.89, playingEfficiency: 0.49, insuranceCorrelation: 0.84 },
     name: 'AceMT',
     // A,tens = -1; 2-9 = 0. Unbalanced (deck sum -20).
     description:
@@ -207,6 +223,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'awk',
+    metrics: { bettingCorrelation: 0.96, playingEfficiency: 0.4, insuranceCorrelation: 0.6 },
     name: 'AWK',
     // 2/3/4/6 = +1, 5 = +2, tens = -1, A = -2. Balanced (deck sum 0).
     description:
@@ -230,6 +247,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'ambition',
+    metrics: { bettingCorrelation: 0.99, playingEfficiency: 0.55, insuranceCorrelation: 0.74 },
     name: 'Ambition',
     // 2-6 = +1, 7 = +0.5, 9 = -0.5, tens/A = -1. Balanced (deck sum 0). Fractional.
     description:
@@ -253,6 +271,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'ambition-u',
+    metrics: { bettingCorrelation: 0.95, playingEfficiency: 0.57, insuranceCorrelation: 0.82 },
     name: 'Ambition-U',
     // 2-6 = +1, tens = -1, A = -0.5. Unbalanced (deck sum 2). Fractional.
     description:
@@ -276,6 +295,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'andersen',
+    metrics: { bettingCorrelation: 0.97, playingEfficiency: 0.45, insuranceCorrelation: 0.57 },
     name: 'Andersen',
     // 2/3/4/6/7 = +1, 5 = +2, 9/tens = -1, A = -2. Balanced (deck sum 0).
     description:
@@ -299,6 +319,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'archer',
+    metrics: { bettingCorrelation: 0.72, playingEfficiency: 0.61, insuranceCorrelation: 1 },
     name: 'Archer',
     // Every non-ten (incl. A) = +1, tens = -2. Unbalanced (deck sum 4).
     description:
@@ -322,6 +343,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'brh-0',
+    metrics: { bettingCorrelation: 0.98, playingEfficiency: 0.54, insuranceCorrelation: 0.78 },
     name: 'BRH-0',
     // 2-6 = +2, 7 = +1, tens/A = -2. Unbalanced (deck sum 4).
     description:
@@ -345,6 +367,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'brh-i',
+    metrics: { bettingCorrelation: 0.99, playingEfficiency: 0.56, insuranceCorrelation: 0.76 },
     name: 'BRH-I',
     // 3/4/6 = +2, 5 = +3, 2/7 = +1, tens/A = -2. Unbalanced (deck sum 4).
     description:
@@ -368,6 +391,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'brh-ii',
+    metrics: { bettingCorrelation: 0.91, playingEfficiency: 0.67, insuranceCorrelation: 0.9 },
     name: 'BRH-II',
     // 4/5/6 = +2, 2/3/7 = +1, tens = -2. Unbalanced (deck sum 4).
     description:
@@ -391,6 +415,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'bushido',
+    metrics: { bettingCorrelation: 0.97, playingEfficiency: 0.6, insuranceCorrelation: 0.84 },
     name: 'Bushido',
     // 2-6 = +2, 7 = +1, tens = -2, A = -1. Unbalanced (deck sum 8).
     description:
@@ -414,6 +439,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'canfield-expert',
+    metrics: { bettingCorrelation: 0.87, playingEfficiency: 0.63, insuranceCorrelation: 0.76 },
     name: 'Canfield Expert',
     // 3-7 = +1, 9/tens = -1. Balanced (deck sum 0).
     description:
@@ -437,6 +463,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'ck-precision',
+    metrics: { bettingCorrelation: 0.97, playingEfficiency: 0.62, insuranceCorrelation: 0.8 },
     name: 'C-K (Precision)',
     // 3-6 = +2, 2/7 = +1, 9 = -1, tens = -2, A = -1. Balanced (deck sum 0).
     description:
@@ -460,6 +487,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'c-r',
+    metrics: { bettingCorrelation: 0.98, playingEfficiency: 0.56, insuranceCorrelation: 0.78 },
     name: 'C-R',
     // 3-6 = +1, 2/7 = +0.5, tens/A = -1. Balanced (deck sum 0). Fractional.
     description:
@@ -483,6 +511,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'dhm',
+    metrics: { bettingCorrelation: 0.86, playingEfficiency: 0.56, insuranceCorrelation: 0.85 },
     name: 'DHM',
     // 2-5 = +1, tens = -1. Balanced (deck sum 0).
     description:
@@ -506,6 +535,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'dmpro',
+    metrics: { bettingCorrelation: 0.99, playingEfficiency: 0.57, insuranceCorrelation: 0.72 },
     name: 'DMPro',
     // 3/4/6 = +2, 5 = +3, 2/7 = +1, 9 = -1, tens/A = -2. Balanced (deck sum 0).
     description:
@@ -529,6 +559,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'ebj-ii',
+    metrics: { bettingCorrelation: 0.99, playingEfficiency: 0.55, insuranceCorrelation: 0.74 },
     name: 'EBJ II',
     // 2-6 = +2, 7 = +1, 9 = -1, tens/A = -2. Balanced (deck sum 0).
     description:
@@ -552,6 +583,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'ebj-ii-u',
+    metrics: { bettingCorrelation: 0.98, playingEfficiency: 0.54, insuranceCorrelation: 0.78 },
     name: 'EBJ II-U',
     // 2-6 = +2, 7 = +1, tens/A = -2. Unbalanced (deck sum 4).
     description:
@@ -575,6 +607,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'ebj-iii',
+    metrics: { bettingCorrelation: 0.99, playingEfficiency: 0.56, insuranceCorrelation: 0.72 },
     name: 'EBJ III',
     // 3/4/6 = +2, 5 = +3, 2/7 = +1, 9 = -1, tens/A = -2. Balanced (deck sum 0).
     description:
@@ -598,6 +631,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'ebj-iii-u',
+    metrics: { bettingCorrelation: 0.99, playingEfficiency: 0.55, insuranceCorrelation: 0.73 },
     name: 'EBJ III-U',
     // 2/3/4/6 = +2, 5 = +3, 7 = +1, 9 = -1, tens/A = -2. Unbalanced (deck sum 4).
     description:
@@ -621,6 +655,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'graham-2',
+    metrics: { bettingCorrelation: 0.96, playingEfficiency: 0.42, insuranceCorrelation: 0.64 },
     name: 'Graham 2',
     // 2-7 = +1, tens = -1, A = -2. Balanced (deck sum 0).
     description: 'Balanced level-2 system (Graham 2). 2–7 = +1, tens = −1, aces = −2; 8/9 neutral.',
@@ -643,6 +678,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'griffin',
+    metrics: { bettingCorrelation: 0.84, playingEfficiency: 0.64, insuranceCorrelation: 0.85 },
     name: 'Griffin',
     // 4-7 = +1, tens = -1. Balanced (deck sum 0).
     description:
@@ -666,6 +702,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'griffin-3',
+    metrics: { bettingCorrelation: 0.9, playingEfficiency: 0.69, insuranceCorrelation: 0.9 },
     name: 'Griffin 3',
     // 3/4/6/7 = +2, 5 = +3, 2/8 = +1, 9 = -1, tens = -3. Balanced (deck sum 0).
     description:
@@ -689,6 +726,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'griffin-4',
+    metrics: { bettingCorrelation: 0.9, playingEfficiency: 0.69, insuranceCorrelation: 0.9 },
     name: 'Griffin 4',
     // 5 = +4, 4/6/7 = +3, 3 = +2, 2/8 = +1, 9 = -1, tens = -4. Balanced (deck sum 0).
     description:
@@ -712,6 +750,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'griffin-5',
+    metrics: { bettingCorrelation: 0.91, playingEfficiency: 0.69, insuranceCorrelation: 0.91 },
     name: 'Griffin 5',
     // 5 = +5, 4/6 = +4, 7 = +3, 2/3 = +2, 8 = +1, 9 = -1, tens = -5. Balanced (deck sum 0).
     description:
@@ -735,6 +774,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'hi-opt-i',
+    metrics: { bettingCorrelation: 0.88, playingEfficiency: 0.61, insuranceCorrelation: 0.85 },
     name: 'Hi-Opt I',
     // 3-6 = +1, tens = -1. Balanced (deck sum 0). Ace side count not modeled.
     description:
@@ -758,6 +798,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'hi-opt-ii',
+    metrics: { bettingCorrelation: 0.91, playingEfficiency: 0.67, insuranceCorrelation: 0.91 },
     name: 'Hi-Opt II',
     // 4/5 = +2, 2/3/6/7 = +1, tens = -2. Balanced (deck sum 0). Ace side count not modeled.
     description:
@@ -781,6 +822,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'hnf',
+    metrics: { bettingCorrelation: 0.83, playingEfficiency: 0.67, insuranceCorrelation: 0.93 },
     name: 'HNF',
     // 4/5 = +2, 2/3/6/7 = +1, A = +1, tens = -2. Unbalanced (deck sum 4).
     description:
@@ -804,6 +846,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'j-noir',
+    metrics: { bettingCorrelation: 0.89, playingEfficiency: 0.49, insuranceCorrelation: 0.84 },
     name: 'J. Noir',
     // 2-9 = +1, tens/A = -2. Unbalanced (deck sum -8).
     description:
@@ -827,6 +870,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'lima',
+    metrics: { bettingCorrelation: 0.82, playingEfficiency: 0.27, insuranceCorrelation: 0.34 },
     name: 'Lima',
     // 3-7 = +1, A = -1. Unbalanced (deck sum 16).
     description:
@@ -850,6 +894,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'mentor',
+    metrics: { bettingCorrelation: 0.97, playingEfficiency: 0.62, insuranceCorrelation: 0.8 },
     name: 'Mentor',
     // 3-6 = +2, 2/7 = +1, 9 = -1, tens = -2, A = -1. Balanced (deck sum 0).
     description:
@@ -873,6 +918,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'olsen-trucount',
+    metrics: { bettingCorrelation: 0.96, playingEfficiency: 0.52, insuranceCorrelation: 0.76 },
     name: 'Olsen TruCount',
     // 5 = +2, 2/3/4/6 = +1, 7/9 = +0.5, tens/A = -1. Unbalanced (deck sum 8). Fractional.
     description:
@@ -896,6 +942,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'revere-five-count',
+    metrics: { bettingCorrelation: 0.43, playingEfficiency: 0.15, insuranceCorrelation: 0.19 },
     name: 'Revere Five-Count',
     // 5 = +1, everything else 0. Unbalanced (deck sum 4).
     description:
@@ -919,6 +966,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'revere-plus-minus',
+    metrics: { bettingCorrelation: 0.89, playingEfficiency: 0.59, insuranceCorrelation: 0.76 },
     name: 'Revere Plus-Minus',
     // 2-6 = +1, 9/tens = -1. Balanced (deck sum 0).
     description:
@@ -942,6 +990,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'revere-point-count',
+    metrics: { bettingCorrelation: 0.98, playingEfficiency: 0.56, insuranceCorrelation: 0.78 },
     name: 'Revere Point Count',
     // 3-6 = +2, 2/7 = +1, tens/A = -2. Balanced (deck sum 0).
     description:
@@ -965,6 +1014,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'silver-fox',
+    metrics: { bettingCorrelation: 0.96, playingEfficiency: 0.54, insuranceCorrelation: 0.69 },
     name: 'Silver Fox',
     // 2-7 = +1, 9/tens/A = -1. Balanced (deck sum 0).
     description:
@@ -988,6 +1038,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 't-hop-1',
+    metrics: { bettingCorrelation: 0.88, playingEfficiency: 0.65, insuranceCorrelation: 0.87 },
     name: 'T-Hop 1',
     // 3-7 = +1, tens = -1. Unbalanced (deck sum 4).
     description:
@@ -1011,6 +1062,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 't-hop-2',
+    metrics: { bettingCorrelation: 0.91, playingEfficiency: 0.67, insuranceCorrelation: 0.9 },
     name: 'T-Hop 2',
     // 4/5/6 = +2, 2/3/7 = +1, tens = -2. Unbalanced (deck sum 4).
     description:
@@ -1034,6 +1086,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'tri-level',
+    metrics: { bettingCorrelation: 0.97, playingEfficiency: 0.45, insuranceCorrelation: 0.57 },
     name: 'Tri-Level',
     // 2/3/4/6/7 = +1, 5 = +2, 9/tens = -1, A = -2. Balanced (deck sum 0).
     description:
@@ -1057,6 +1110,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'ubz-ii',
+    metrics: { bettingCorrelation: 0.94, playingEfficiency: 0.61, insuranceCorrelation: 0.82 },
     name: 'UBZ II',
     // 3-6 = +2, 2/7 = +1, tens = -2, A = -1. Unbalanced (deck sum 4).
     description:
@@ -1080,6 +1134,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'uston-ace-five',
+    metrics: { bettingCorrelation: 0.54, playingEfficiency: 0.05, insuranceCorrelation: 0 },
     name: 'Uston Ace-Five',
     // 5 = +1, A = -1. Balanced (deck sum 0).
     description:
@@ -1103,6 +1158,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'uston-adv-plus-minus',
+    metrics: { bettingCorrelation: 0.95, playingEfficiency: 0.55, insuranceCorrelation: 0.76 },
     name: 'Uston Adv Plus-Minus',
     // 3-7 = +1, tens/A = -1. Balanced (deck sum 0).
     description:
@@ -1126,6 +1182,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'uston-apc',
+    metrics: { bettingCorrelation: 0.9, playingEfficiency: 0.69, insuranceCorrelation: 0.9 },
     name: 'Uston APC',
     // 5 = +3, 3/4/6/7 = +2, 2/8 = +1, 9 = -1, tens = -3. Balanced (deck sum 0). Ace side count not modeled.
     description:
@@ -1149,6 +1206,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'uston-ss',
+    metrics: { bettingCorrelation: 0.99, playingEfficiency: 0.56, insuranceCorrelation: 0.73 },
     name: 'Uston SS',
     // 5 = +3, 2/3/4/6 = +2, 7 = +1, 9 = -1, tens/A = -2. Unbalanced (deck sum 4).
     description:
@@ -1172,6 +1230,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'victor-apc',
+    metrics: { bettingCorrelation: 0.92, playingEfficiency: 0.68, insuranceCorrelation: 0.89 },
     name: 'Victor Adv Point',
     // 5 = +3, 2/3/4/6/7 = +2, 9 = -1, tens = -3. Balanced (deck sum 0).
     description:
@@ -1195,6 +1254,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'zen',
+    metrics: { bettingCorrelation: 0.96, playingEfficiency: 0.63, insuranceCorrelation: 0.85 },
     name: 'Zen Count',
     // 4/5/6 = +2, 2/3/7 = +1, tens = -2, A = -1. Balanced (deck sum 0).
     description:
@@ -1228,6 +1288,7 @@ const STANDARD_SYSTEMS: readonly CountingSystem[] = [
 const COLOR_SYSTEMS: readonly CountingSystem[] = [
   {
     id: 'red-seven',
+    metrics: { bettingCorrelation: 0.98, playingEfficiency: 0.54, insuranceCorrelation: 0.78 },
     name: 'Red Seven',
     // 2-6 = +1, red 7 = +1 / black 7 = 0 (avg +0.5), tens/A = -1. Unbalanced (deck sum 2).
     description:
@@ -1252,6 +1313,7 @@ const COLOR_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'kiss-2',
+    metrics: { bettingCorrelation: 0.9, playingEfficiency: 0.62, insuranceCorrelation: 0.87 },
     name: 'KISS 2',
     // black 2 = +1 / red 2 = 0 (avg +0.5), 3-6 = +1, tens = -1. Unbalanced (deck sum 2).
     description:
@@ -1276,6 +1338,7 @@ const COLOR_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'kiss-3',
+    metrics: { bettingCorrelation: 0.97, playingEfficiency: 0.56, insuranceCorrelation: 0.78 },
     name: 'KISS 3',
     // black 2 = +1 / red 2 = 0 (avg +0.5), 3-7 = +1, tens/A = -1. Unbalanced (deck sum 2).
     description:
@@ -1310,6 +1373,7 @@ const COLOR_SYSTEMS: readonly CountingSystem[] = [
 const NOVELTY_SYSTEMS: readonly CountingSystem[] = [
   {
     id: 'griffin-ultimate',
+    metrics: { bettingCorrelation: 1, playingEfficiency: 0.54, insuranceCorrelation: 0.72 },
     name: 'Griffin Ultimate',
     // A=-60, 2=37, 3=45, 4=52, 5=70, 6=46, 7=27, 8=0, 9=-17, tens=-50. Balanced (deck sum 0). Computer-only.
     description:
@@ -1333,6 +1397,7 @@ const NOVELTY_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'thorp-ultimate',
+    metrics: { bettingCorrelation: 1, playingEfficiency: 0.53, insuranceCorrelation: 0.7 },
     name: 'Thorp Ultimate',
     // A=-9, 2=5, 3=6, 4=8, 5=11, 6=6, 7=4, 8=0, 9=-3, tens=-7. Balanced (deck sum 0). Computer-only.
     description:
@@ -1356,6 +1421,7 @@ const NOVELTY_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'graham-7',
+    metrics: { bettingCorrelation: 1, playingEfficiency: 0.54, insuranceCorrelation: 0.73 },
     name: 'Graham 7',
     // A=-6, 2=4, 3=4, 4=5, 5=7, 6=4, 7=3, 8=0, 9=-1, tens=-5. Balanced (deck sum 0). Impractically high level.
     description:
@@ -1379,6 +1445,7 @@ const NOVELTY_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'griffin-7',
+    metrics: { bettingCorrelation: 1, playingEfficiency: 0.54, insuranceCorrelation: 0.72 },
     name: 'Griffin 7',
     // A=-6, 2=4, 3=4, 4=5, 5=7, 6=5, 7=3, 8=0, 9=-2, tens=-5. Balanced (deck sum 0). Impractically high level.
     description:
@@ -1402,6 +1469,7 @@ const NOVELTY_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'teks',
+    metrics: { bettingCorrelation: 0.96, playingEfficiency: 0.54, insuranceCorrelation: 0.69 },
     name: "Tek's",
     // A=1, 2-7=-1, 8=0, 9=1, tens=1. Balanced (deck sum 0). Inverted ("opposite of traditional").
     description:
@@ -1425,6 +1493,7 @@ const NOVELTY_SYSTEMS: readonly CountingSystem[] = [
   },
   {
     id: 'wilson-apc',
+    metrics: { bettingCorrelation: 0.8, playingEfficiency: 0.21, insuranceCorrelation: 0.45 },
     name: 'Wilson APC',
     // A=4, 2-9=-1, tens=1. Balanced (deck sum 0). Inverted ("opposite of traditional").
     description:

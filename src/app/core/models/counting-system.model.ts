@@ -38,6 +38,27 @@ export interface KeyCountSchedule {
   readonly insuranceCount: number;
 }
 
+// The three published correlations that say what a system is *for*. Choosing
+// between 58 systems is the most consequential setting this app has, and the
+// tags alone do not tell a trainee what they are trading away — these do, and
+// each one lines up with a drill the app already runs.
+//
+// All three are correlations in [0, 1], transcribed from the same Blackjack
+// Review comparison table the registry itself came from. They rank a system's
+// *tags*, never a trainee: a level-3 count read wrong beats nothing, and the
+// highest numbers on this table belong to counts no human can keep.
+export interface SystemMetrics {
+  // How closely the count tracks the shifting edge — what the bet is sized on.
+  // The bet-spread drill and the showdown's bet are this number in practice.
+  readonly bettingCorrelation: number;
+  // How well the count indexes a playing decision, which is what a deviation
+  // is. The Deviations trainer is this number in practice.
+  readonly playingEfficiency: number;
+  // How well the count calls the insurance bet, the one decision that is purely
+  // a count of tens.
+  readonly insuranceCorrelation: number;
+}
+
 // Counting system descriptor. New systems (KO, Knock-Out, etc.) can be added
 // as additional entries in data/counting-systems.ts without touching the
 // engine — the engine reads values purely off this object.
@@ -45,6 +66,8 @@ export interface CountingSystem {
   readonly id: string;
   readonly name: string;
   readonly description: string;
+  // Required, so a system cannot be added without saying what it is good at.
+  readonly metrics: SystemMetrics;
   readonly values: Readonly<Record<Rank, CountValue>>;
   // Optional per-color overrides for color-dependent systems. Omit for the
   // common case where the count depends on rank alone.
@@ -52,6 +75,34 @@ export interface CountingSystem {
   readonly balanced: boolean;
   // Optional published IRC/key-count schedule (unbalanced systems only).
   readonly keyCounts?: KeyCountSchedule;
+}
+
+// A correlation as the published table writes it: two decimals, no leading
+// zero. The form is the source's, and it is the right one — these are
+// dimensionless figures between 0 and 1, never quantities to be summed.
+export function formatCorrelation(value: number): string {
+  return value.toFixed(2).replace(/^0\./, '.');
+}
+
+// The three figures as label/value pairs, in the order a trainee meets them:
+// you size a bet before you play a hand, and you only decide insurance when the
+// dealer shows an ace.
+//
+// Pairs rather than one string so a narrow screen can wrap between the figures
+// and never inside one — "Insurance" on one line and "correlation .76" on the
+// next reads as two different things.
+export interface SystemMetricLabel {
+  readonly label: string;
+  readonly value: string;
+}
+
+export function metricsParts(system: CountingSystem): readonly SystemMetricLabel[] {
+  const { bettingCorrelation, playingEfficiency, insuranceCorrelation } = system.metrics;
+  return [
+    { label: 'Betting correlation', value: formatCorrelation(bettingCorrelation) },
+    { label: 'Playing efficiency', value: formatCorrelation(playingEfficiency) },
+    { label: 'Insurance correlation', value: formatCorrelation(insuranceCorrelation) },
+  ];
 }
 
 // Per-card count contribution, honoring any color override. Ranks without a

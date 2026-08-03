@@ -101,6 +101,40 @@
     text-align: center;
   }
 
+  // The selected system's published correlations, directly under the picker
+  // they explain. Figures rather than prose, so they take tabular spacing.
+  // Prose under the figures. Its own class rather than `__note`, which the
+  // conditional mode explanations own.
+  &__metrics-note {
+    margin: 0 0 0.75rem;
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-align: center;
+  }
+
+  &__metrics {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.15rem 0.7rem;
+    margin: 0 0 0.35rem;
+    color: var(--ink);
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // One figure. Never breaks internally, and carries its own separator so the
+  // list needs no markup between the items.
+  &__metric {
+    white-space: nowrap;
+
+    &:not(:last-child)::after {
+      content: ' ·';
+      color: var(--muted);
+    }
+  }
+
   // The bet spread: one narrow units field per true-count band, on one line at
   // any width the bands fit (they wrap to two rows on a small phone).
   &__ramp {

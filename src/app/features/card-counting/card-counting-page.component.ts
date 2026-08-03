@@ -9,7 +9,11 @@ import {
   type CountingDrillResult,
   type CountingDrillSettings,
 } from '../../core/models/card-counting.model';
-import { resolveKeyCounts, type CountingSystem } from '../../core/models/counting-system.model';
+import {
+  metricsParts,
+  resolveKeyCounts,
+  type CountingSystem,
+} from '../../core/models/counting-system.model';
 import { DECK_SPEED_CARDS } from '../../core/models/deck-speed.model';
 import { CARDS_PER_DECK, type Shoe } from '../../core/models/shoe.model';
 import { minCardsForSpots } from '../../core/models/showdown.model';
@@ -97,6 +101,11 @@ type DrillState =
               <h2 class="count__system">{{ system().name }}</h2>
               <p class="count__mode">{{ modeLabel() }}</p>
               <p class="count__desc">{{ system().description }}</p>
+              <p class="count__metrics">
+                @for (part of metrics(); track part.label) {
+                  <span class="count__metric">{{ part.label }} {{ part.value }}</span>
+                }
+              </p>
               @if (isValid()) {
                 <button type="button" class="count__start" (click)="start()">
                   Start counting <kbd class="kcap kcap--on-accent">⏎</kbd>
@@ -258,6 +267,10 @@ export class CardCountingPageComponent {
   protected readonly system = computed<CountingSystem>(() =>
     countingSystemById(this.prefs.prefs().counting.systemId),
   );
+
+  // What this system is for, on the screen where the drill is about to start —
+  // the same three figures Settings shows next to the picker.
+  protected readonly metrics = computed(() => metricsParts(this.system()));
 
   // Dealer rule for the optional post-count showdown, from the shared table
   // rules.

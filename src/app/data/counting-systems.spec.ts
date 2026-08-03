@@ -233,3 +233,52 @@ describe('countingSystemById', () => {
     expect(countingSystemById('').id).toBe('hi-lo');
   });
 });
+
+// The three published correlations are the only basis this app gives a trainee
+// for choosing among 58 systems, so they have to be present and in range for
+// every one of them — a system added without them would silently claim a
+// perfect score under `Number` coercion, or blank the line entirely.
+describe('published system metrics', () => {
+  it.each(COUNTING_SYSTEMS.map((s) => [s.id, s] as const))(
+    '%s carries three correlations in [0, 1]',
+    (_id, system) => {
+      const { bettingCorrelation, playingEfficiency, insuranceCorrelation } = system.metrics;
+      for (const value of [bettingCorrelation, playingEfficiency, insuranceCorrelation]) {
+        expect(Number.isFinite(value)).toBe(true);
+        expect(value).toBeGreaterThanOrEqual(0);
+        expect(value).toBeLessThanOrEqual(1);
+      }
+    },
+  );
+
+  // Spot-checks against the Blackjack Review comparison table the whole registry
+  // is transcribed from, chosen to pin the extremes and the four defaults: a
+  // silent shift in any of these means the transcription drifted.
+  it.each([
+    ['hi-lo', 0.97, 0.51, 0.76],
+    ['ko', 0.98, 0.55, 0.78],
+    ['omega-ii', 0.92, 0.67, 0.85],
+    ['wong-halves', 0.99, 0.57, 0.72],
+    // The floor of the table: a system that barely tracks anything.
+    ['revere-five-count', 0.43, 0.15, 0.19],
+    // A perfect betting correlation that no human can keep — the reason these
+    // figures are labelled as measuring the tags, not the counter.
+    ['griffin-ultimate', 1.0, 0.54, 0.72],
+  ] as const)('%s matches the published row', (id, bc, pe, ic) => {
+    expect(countingSystemById(id).metrics).toEqual({
+      bettingCorrelation: bc,
+      playingEfficiency: pe,
+      insuranceCorrelation: ic,
+    });
+  });
+
+  // Hi-Lo is the app's own worked example of the trade-off: it bets almost as
+  // well as anything on the table and plays worse than most, which is why its
+  // indices are the ones the Deviations trainer ships.
+  it('shows Hi-Lo trading playing efficiency for betting correlation', () => {
+    const hiLo = countingSystemById('hi-lo').metrics;
+    const omega = countingSystemById('omega-ii').metrics;
+    expect(hiLo.bettingCorrelation).toBeGreaterThan(omega.bettingCorrelation);
+    expect(hiLo.playingEfficiency).toBeLessThan(omega.playingEfficiency);
+  });
+});
