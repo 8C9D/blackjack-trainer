@@ -429,11 +429,16 @@ interface PlayVerdict {
             </button>
             @if (!canDealAnother()) {
               <p class="showdown__note">
-                {{
-                  spots() > 1
-                    ? 'Shoe too low for another round — return to counting to reshuffle.'
-                    : 'Shoe too low for another hand — return to counting to reshuffle.'
-                }}
+                @if (cutCardOut()) {
+                  The cut card is out — that was the shoe's last
+                  {{ spots() > 1 ? 'round' : 'hand' }}. Return to counting to reshuffle.
+                } @else {
+                  {{
+                    spots() > 1
+                      ? 'Shoe too low for another round — return to counting to reshuffle.'
+                      : 'Shoe too low for another hand — return to counting to reshuffle.'
+                  }}
+                }
               </p>
             }
           </section>
@@ -645,8 +650,21 @@ export class ShowdownComponent implements OnInit {
 
   protected readonly dealerTotal = computed(() => handTotal(this.dealerCards()));
   protected readonly dealerUpcard = computed<Card | null>(() => this.dealerCards()[0] ?? null);
+  // A table deals no round past the cut card: the round in progress when it
+  // surfaces is the shoe's last, and the next one is off a fresh shoe. Dealing
+  // on would also divide the true count by a sliver of a shoe — a +2 over a
+  // tenth of a deck reads as +20 — and grade bets and index plays against
+  // counts no casino ever deals.
+  protected readonly cutCardOut = computed(() => {
+    // `remaining` is the reactive mirror of the shoe, which is mutated in
+    // place: reading it first is what makes this re-evaluate as cards leave,
+    // and `needsReshuffle` can only change when they do.
+    this.remaining();
+    return this.shoe().needsReshuffle;
+  });
+
   protected readonly canDealAnother = computed(
-    () => this.remaining() >= minCardsForSpots(this.spots()),
+    () => !this.cutCardOut() && this.remaining() >= minCardsForSpots(this.spots()),
   );
 
   // Backward-compatible views of the active/first hand for the single-hand path.

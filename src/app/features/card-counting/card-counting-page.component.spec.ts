@@ -767,6 +767,25 @@ describe('CardCountingPageComponent', () => {
       expect(fixture.nativeElement.querySelector('.count__showdown-button')).not.toBeNull();
     });
 
+    // A hand dealt after the cut card is a hand no table deals, and it would be
+    // graded on a true count divided by a sliver of a shoe. When the round just
+    // counted crossed the cut, the offer is withdrawn and the reason given.
+    it('offers no showdown once the cut card is out', () => {
+      configureLiveShoe({ numberOfDecks: 1, numberOfCards: 30, penetration: 0.5 });
+      const { fixture, c } = createPage();
+      toLiveShoeFeedback(c);
+
+      expect(c.shoe!.needsReshuffle).toBe(true);
+      // The shoe is not short of cards — it is past its cut card.
+      expect(c.shoe!.cardsRemaining).toBeGreaterThan(4);
+      expect(c.showdownAvailable()).toBe(false);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.count__showdown-button')).toBeNull();
+      expect(
+        (fixture.nativeElement.querySelector('.count__shoe-spent') as HTMLElement).textContent,
+      ).toContain('cut card is out');
+    });
+
     it('enters the showdown and deals from the same persistent shoe', () => {
       configureLiveShoe({ numberOfDecks: 6, numberOfCards: 10 });
       const { fixture, c } = createPage();

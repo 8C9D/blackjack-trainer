@@ -177,6 +177,11 @@ type DrillState =
                   }}
                 </button>
               </div>
+            } @else if (usesLiveShoe() && shoeSpent()) {
+              <p class="count__shoe-spent">
+                The cut card is out — no hand to play off this shoe. The next round deals from a
+                fresh one.
+              </p>
             }
           }
 
@@ -685,12 +690,23 @@ export class CardCountingPageComponent {
     return evaluated.isCorrect;
   }
 
-  // Whether a post-count showdown can be offered: a live shoe exists with
-  // enough cards to deal an opening round to every configured box. (`shoe` is
-  // mutated in place, so this is a method, re-read each change-detection pass
-  // rather than a memoized computed.)
+  // Whether a post-count showdown can be offered: a live shoe still short of
+  // its cut card, with enough cards to deal an opening round to every
+  // configured box. (`shoe` is mutated in place, so this is a method, re-read
+  // each change-detection pass rather than a memoized computed.)
   protected showdownAvailable(): boolean {
-    return this.shoe !== null && this.shoe.cardsRemaining >= minCardsForSpots(this.showdownSpots());
+    return (
+      this.shoe !== null &&
+      !this.shoe.needsReshuffle &&
+      this.shoe.cardsRemaining >= minCardsForSpots(this.showdownSpots())
+    );
+  }
+
+  // The cut card surfaced during the round just counted, so there is no hand to
+  // play off this shoe — the next round is dealt from a fresh one. Said where
+  // the showdown button would have been, rather than letting it vanish.
+  protected shoeSpent(): boolean {
+    return this.shoe !== null && this.shoe.needsReshuffle;
   }
 
   // Enter the showdown off the persistent live shoe after a shoe-driven
