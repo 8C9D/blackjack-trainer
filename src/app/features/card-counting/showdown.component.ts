@@ -848,6 +848,10 @@ export class ShowdownComponent implements OnInit {
   // let the player place.
   private gradeBet(trueCount: number | null, bet: number): void {
     if (trueCount === null) return;
+    // A shrinking bankroll clamps the carried bet to whatever it can still back,
+    // which need not land on a rung. The ladder is the only way to place a bet,
+    // so a figure that is not on it is one the player never chose.
+    if (!this.betOptions().includes(bet)) return;
     const called = betUnitsForTrueCount(trueCount, this.betRamp());
     if (called * this.spots() > this.bankrollService.bankroll()) return;
     const correct = bet === called;

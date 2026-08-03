@@ -111,6 +111,17 @@ struct ShowdownBetGradingTests {
         #expect(h.betSpreadStats.stats.attempts == 0)
     }
 
+    /// A losing run clamps the carried bet down to whatever the stack can still
+    /// back, which need not land on a rung. Scoring that would mark a figure the
+    /// player never chose — the ladder is the only way to place a bet.
+    @Test func skipsABetTheBankrollClampedOffTheLadder() throws {
+        // 7 chips left: the carried 8 clamps to 7, which is on no rung.
+        let h = try placing(8, entryRunningCount: 0, bankroll: 7)
+        #expect(h.model.bet == 7)
+        #expect(h.model.lastPlay == nil)
+        #expect(h.betSpreadStats.stats.attempts == 0)
+    }
+
     /// The rung is offered disabled once the stack cannot back it, so scoring it
     /// would mark a bet the table never let the player place.
     @Test func skipsACalledBetTheBankrollCouldNotHaveCovered() throws {
