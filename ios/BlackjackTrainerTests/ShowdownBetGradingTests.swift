@@ -154,4 +154,49 @@ struct ShowdownBetGradingTests {
         #expect(h.model.lastPlay == nil)
         #expect(h.betSpreadStats.stats.attempts == 0)
     }
+
+    /// The hole card is face up on the felt the moment the round pays, so a
+    /// counter has it in their count before the next bet goes out. Grading that
+    /// bet against a count still missing it marks a correctly-sized bet wrong.
+    @Test func countsTheRevealedHoleCardBeforeGradingTheNextBet() throws {
+        let suite = "bet-hole-card-\(UUID().uuidString)"
+        let store = try #require(UserDefaults(suiteName: suite))
+        store.removePersistentDomain(forName: suite)
+        let app = TestEngines.shared
+        // Player [10,6], dealer 10 up / 5 in the hole, then a 10 to bust on. The
+        // 57 cards leave exactly one deck once the round is over, so the running
+        // count at the second bet *is* the true count.
+        let opening = [card(.ten), card(.ten), card(.six), card(.five), card(.ten)]
+        let model = try ShowdownModel(
+            shoe: Shoe(
+                cards: opening + Array(repeating: card(.eight, .clubs), count: 52),
+                penetration: 0.9
+            ),
+            ruleSet: .s17,
+            stats: ShowdownStatsStore(key: StatsKeys.showdown, defaults: store),
+            betting: true,
+            bankroll: BankrollStore(key: StatsKeys.showdownBankroll, defaults: store),
+            strategy: app.basicStrategy,
+            system: #require(app.countingSystems.system(withId: DeviationIndexSystem.id)),
+            entryRunningCount: 3,
+            betSpreadStats: SessionStatsStore(key: StatsKeys.betSpread, defaults: store)
+        )
+        model.setBet(2)
+        model.dealAfterBet()
+        // Bust the hand: the dealer never draws, but the hole card is turned over.
+        model.onAction(.hit)
+        #expect(model.phase == .resolved)
+        #expect(model.dealerCards.map(\.rank) == [.ten, .five])
+
+        // Seen: 10, 10, 6, 5, 10 → a carried +3 becomes +2 over one deck, which
+        // is the band the spread bets 2 units in.
+        model.dealAnother()
+        model.setBet(2)
+        model.dealAfterBet()
+        let verdict = try #require(model.lastPlay)
+        #expect(verdict.correct)
+        let saysBand = verdict.reason.contains("TC +2")
+        #expect(saysBand)
+        #expect(model.roundMisplays.isEmpty)
+    }
 }
