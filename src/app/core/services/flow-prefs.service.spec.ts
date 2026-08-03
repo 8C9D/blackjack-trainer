@@ -138,6 +138,19 @@ describe('FlowPrefsService', () => {
       expect(mergePrefs({ dailyGoal: 15 }).counting.showdownBetting).toBe(false);
     });
 
+    // The one showdown setting that defaults on: the table has always kept the
+    // count for the player, and asking for it is the point of the screen.
+    it('asks for the count on the way out unless it was explicitly turned off', () => {
+      expect(
+        mergePrefs({ counting: { showdownCountCheck: false } }).counting.showdownCountCheck,
+      ).toBe(false);
+      expect(
+        mergePrefs({ counting: { showdownCountCheck: 'no' } }).counting.showdownCountCheck,
+      ).toBe(true);
+      // Prefs written before the setting existed get asked.
+      expect(mergePrefs({ dailyGoal: 15 }).counting.showdownCountCheck).toBe(true);
+    });
+
     it('normalizes a stored bet spread band by band', () => {
       expect(mergePrefs({ counting: { betRamp: [2, 4, 8, 16, 32] } }).counting.betRamp).toEqual([
         2, 4, 8, 16, 32,
@@ -255,6 +268,7 @@ describe('FlowPrefsService', () => {
           betRamp: [1, 3, 6, 10, 20],
           showdownSpots: 2,
           showdownBetting: true,
+          showdownCountCheck: false,
         },
       }).counting;
       expect(counting).toEqual({
@@ -269,6 +283,7 @@ describe('FlowPrefsService', () => {
         betRamp: [1, 3, 6, 10, 20],
         showdownSpots: 2,
         showdownBetting: true,
+        showdownCountCheck: false,
       });
     });
   });

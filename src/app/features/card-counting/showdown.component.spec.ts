@@ -67,6 +67,12 @@ type Internals = {
   stats: { stats(): ShowdownStats; reset(): void };
   playStats: { stats(): SessionStats };
   betSpreadStats: { stats(): SessionStats };
+  countStats: { stats(): SessionStats };
+  countVerdict(): { correct: boolean; headline: string; reason: string } | null;
+  onCountCheck(answer: number): void;
+  leaveTable(): void;
+  returnToCounting(): void;
+  cardsSeen(): number;
   betOptions(): readonly number[];
   lastPlay(): { correct: boolean; headline: string; reason: string } | null;
   roundMistakes(): readonly string[];
@@ -86,7 +92,7 @@ function createShowdown(
   spots = 1,
   betting = false,
   options: EngineOptions = { doubleAfterSplit: true, lateSurrender: true },
-  count: { systemId?: string; entryRunningCount?: number } = {},
+  count: { systemId?: string; entryRunningCount?: number; countCheck?: boolean } = {},
 ): { fixture: ComponentFixture<ShowdownComponent>; c: Internals } {
   const fixture = TestBed.createComponent(ShowdownComponent);
   fixture.componentRef.setInput('shoe', shoe);
@@ -96,6 +102,7 @@ function createShowdown(
   fixture.componentRef.setInput('betting', betting);
   fixture.componentRef.setInput('system', countingSystemById(count.systemId ?? 'hi-lo'));
   fixture.componentRef.setInput('entryRunningCount', count.entryRunningCount ?? 0);
+  fixture.componentRef.setInput('countCheck', count.countCheck ?? true);
   fixture.detectChanges();
   return { fixture, c: fixture.componentInstance as unknown as Internals };
 }
@@ -790,6 +797,91 @@ describe('ShowdownComponent', () => {
     // The opening deal drew all four cards from the shoe (player, dealer, ×2),
     // and they carry back so the drill can fold their count into the shoe.
     expect(emitted!.map((c) => c.rank)).toEqual(['9', '10', '7', '6']);
+  });
+
+  // Every count-dependent verdict at this table — the bet, the insurance call,
+  // the index plays — was scored against a count the component kept, and the
+  // trainee was never once asked for theirs.
+  describe('the count check on the way out', () => {
+    // Player [10,9]=19 vs dealer 10; the hole 6 and the dealer's K take the
+    // visible Hi-Lo count to −2 over five cards.
+    const round: readonly Rank[] = ['10', '10', '9', '6', 'K'];
+
+    function played(count: { entryRunningCount?: number; countCheck?: boolean } = {}) {
+      const created = createShowdown(makeShoe(round), 'S17', 1, false, undefined, count);
+      created.c.onAction('S');
+      created.c.returnToCounting();
+      return created;
+    }
+
+    it('asks for the count instead of leaving, and says so in cards', () => {
+      const { fixture, c } = played();
+      fixture.detectChanges();
+      expect(c.phase()).toBe('count-check');
+      expect(c.cardsSeen()).toBe(5);
+      expect(
+        (fixture.nativeElement.querySelector('.showdown__bet-prompt') as HTMLElement).textContent,
+      ).toContain('5 cards');
+      // No bypass while the question is up.
+      expect(fixture.nativeElement.querySelector('.showdown__exit')).toBeNull();
+    });
+
+    it('confirms the count carried off the table', () => {
+      const { c } = played();
+      c.onCountCheck(-2);
+      expect(c.countVerdict()).toMatchObject({
+        correct: true,
+        headline: 'The running count is -2.',
+      });
+      expect(c.countStats.stats()).toMatchObject({ attempts: 1, correct: 1 });
+    });
+
+    it('names the count and how far the answer drifted', () => {
+      const { c } = played();
+      c.onCountCheck(0);
+      expect(c.countVerdict()).toMatchObject({ correct: false });
+      expect(c.countVerdict()!.reason).toBe('You said 0 — 2 points high over 5 cards.');
+      expect(c.countStats.stats()).toMatchObject({ attempts: 1, correct: 0 });
+    });
+
+    it('leaves with every dealt card once the count is answered', () => {
+      const { fixture, c } = played();
+      let emitted: readonly Card[] | undefined;
+      fixture.componentInstance.exit.subscribe((cards) => (emitted = cards));
+      c.onCountCheck(-2);
+      fixture.detectChanges();
+      (fixture.nativeElement.querySelector('.showdown__next') as HTMLButtonElement).click();
+      expect(emitted!.map((x) => x.rank)).toEqual([...round]);
+    });
+
+    it('takes one answer, not a second guess at the same question', () => {
+      const { c } = played();
+      c.onCountCheck(0);
+      c.onCountCheck(-2);
+      expect(c.countVerdict()).toMatchObject({ correct: false });
+      expect(c.countStats.stats().attempts).toBe(1);
+    });
+
+    it('leaves straight away when the setting is off', () => {
+      const { c } = played({ countCheck: false });
+      expect(c.phase()).toBe('resolved');
+      expect(c.countStats.stats().attempts).toBe(0);
+    });
+
+    // Mid-hand the dealer's hole card is dealt but face down, so there is no
+    // single count both sides could agree is right.
+    it('does not ask in the middle of a hand', () => {
+      const { c } = createShowdown(makeShoe(round));
+      c.returnToCounting();
+      expect(c.phase()).toBe('player-turn');
+    });
+
+    it('does not ask when the table dealt nothing', () => {
+      // Betting on: the first round opens on the bet, before any card.
+      const { c } = createShowdown(makeShoe(round), 'S17', 1, true);
+      c.returnToCounting();
+      expect(c.phase()).toBe('betting');
+    });
   });
 
   it('hosts no rule controls — the dealer rule comes from the shared table rules', () => {

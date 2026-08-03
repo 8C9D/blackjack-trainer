@@ -77,6 +77,10 @@ export interface CountingPrefs {
   // persisted bankroll. Off by default — the showdown stays a pure hand tally
   // until the player asks to practise spreading.
   readonly showdownBetting: boolean;
+  // Ask for the running count on the way out of the showdown. On by default:
+  // the table deals dozens of cards past the count the drill just graded, and
+  // keeping it through them is the skill the whole screen is for.
+  readonly showdownCountCheck: boolean;
 }
 
 export interface FlowPrefs {
@@ -117,6 +121,7 @@ export const DEFAULT_FLOW_PREFS: FlowPrefs = {
     betRamp: DEFAULT_BET_RAMP,
     showdownSpots: 1,
     showdownBetting: false,
+    showdownCountCheck: true,
   },
 };
 
@@ -272,6 +277,7 @@ export function mergePrefs(parsed: unknown): FlowPrefs {
       betRamp: normalizeBetRamp(cnt['betRamp']),
       showdownSpots: clampSpots(num(cnt['showdownSpots'], d.counting.showdownSpots)),
       showdownBetting: bool(cnt['showdownBetting'], d.counting.showdownBetting),
+      showdownCountCheck: bool(cnt['showdownCountCheck'], d.counting.showdownCountCheck),
     },
   };
 }

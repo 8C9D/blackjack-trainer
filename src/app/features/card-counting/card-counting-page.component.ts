@@ -187,6 +187,7 @@ type DrillState =
               [options]="tableOptions()"
               [spots]="showdownSpots()"
               [betting]="showdownBetting()"
+              [countCheck]="showdownCountCheck()"
               [betRamp]="betRamp()"
               [system]="system()"
               [entryRunningCount]="shoeRunningCount()"
@@ -244,6 +245,7 @@ export class CardCountingPageComponent {
       systemId: _systemId,
       showdownSpots: _showdownSpots,
       showdownBetting: _showdownBetting,
+      showdownCountCheck: _showdownCountCheck,
       ...settings
     } = this.prefs.prefs().counting;
     return settings;
@@ -254,6 +256,11 @@ export class CardCountingPageComponent {
 
   // Whether the showdown opens each round on a bet, from the Settings screen.
   protected readonly showdownBetting = computed(() => this.prefs.prefs().counting.showdownBetting);
+
+  // Whether leaving the showdown asks what the count is now.
+  protected readonly showdownCountCheck = computed(
+    () => this.prefs.prefs().counting.showdownCountCheck,
+  );
 
   // The spread the showdown offers as its bet ladder, and grades the bet
   // against — the same one the bet-spread drill uses.

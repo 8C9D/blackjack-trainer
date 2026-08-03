@@ -227,6 +227,14 @@ import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.mo
           />
           <span>Bet sizing (bankroll)</span>
         </label>
+        <label class="settings__check">
+          <input
+            type="checkbox"
+            [checked]="showdownCountCheck()"
+            (change)="onShowdownCountCheckChange($event)"
+          />
+          <span>Ask for the count on the way out</span>
+        </label>
       }
       @if (errors().length > 0) {
         <ul class="settings__errors" role="alert">
@@ -265,6 +273,8 @@ export class CountingSettingsComponent {
   readonly showdownSpots = input(1);
   // Bet sizing: each showdown round opens on a bet, settled against a bankroll.
   readonly showdownBetting = input(false);
+  // Whether leaving the showdown asks what its cards did to the count.
+  readonly showdownCountCheck = input(true);
   readonly errors = input<readonly string[]>([]);
   readonly disabled = input(false);
 
@@ -278,6 +288,7 @@ export class CountingSettingsComponent {
   readonly penetrationChange = output<number>();
   readonly showdownSpotsChange = output<number>();
   readonly showdownBettingChange = output<boolean>();
+  readonly showdownCountCheckChange = output<boolean>();
   readonly betRampChange = output<BetRamp>();
 
   protected readonly spotOptions = SHOWDOWN_SPOT_OPTIONS;
@@ -380,6 +391,10 @@ export class CountingSettingsComponent {
 
   protected onShowdownBettingChange(event: Event): void {
     this.showdownBettingChange.emit((event.target as HTMLInputElement).checked);
+  }
+
+  protected onShowdownCountCheckChange(event: Event): void {
+    this.showdownCountCheckChange.emit((event.target as HTMLInputElement).checked);
   }
 
   // Half-deck presets render as e.g. "0.5"; whole decks render as e.g. "1".

@@ -63,6 +63,16 @@
     margin-bottom: 1rem;
   }
 
+  // The way out: the answer box, then the verdict in its place.
+  &__count-check {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
   &__bet-prompt {
     margin: 0 0 0.6rem;
     font-size: 0.95rem;
