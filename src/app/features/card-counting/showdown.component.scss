@@ -230,6 +230,17 @@
     opacity: 0.8;
   }
 
+  // Said once, before any card is dealt: what this table cannot grade for a
+  // trainee counting something other than Hi-Lo. Quiet — it is a caveat, not a
+  // verdict on a hand.
+  &__index-note {
+    margin: 0 0 0.75rem;
+    max-width: 52ch;
+    color: var(--muted);
+    font-size: 0.8rem;
+    text-align: center;
+  }
+
   // The verdict on the last decision. Coaching, not grading: the play stands
   // either way, so a miss is tinted rather than shouted.
   &__coach {

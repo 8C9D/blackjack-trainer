@@ -261,6 +261,28 @@ test.describe('post-count showdown', () => {
     await expect(page.getByRole('region', { name: 'Basic Strategy weak spots' })).toBeHidden();
   });
 
+  // A playing index is a Hi-Lo true count. Three other screens already tell a
+  // trainee counting something else that the numbers are not theirs; this is the
+  // fourth place indices matter, and the only one that applies them to a hand.
+  test('a non-Hi-Lo counter is told what this table cannot grade', async ({ page }) => {
+    await configure(page, '1');
+    await page.getByLabel('Counting system').selectOption('omega-ii');
+    await runCountingRound(page, 85);
+    await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+
+    const note = page.locator('.showdown__index-note');
+    await expect(note).toContainText('you count Omega II');
+    await expect(note).toContainText('graded on basic strategy alone');
+
+    // The same hand under Hi-Lo has nothing to warn about: these are its numbers.
+    await page.goto('/settings');
+    await page.getByLabel('Counting system').selectOption('hi-lo');
+    await runCountingRound(page, 85);
+    await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+    await expect(page.getByRole('group', { name: 'Player actions' })).toBeVisible();
+    await expect(page.locator('.showdown__index-note')).toHaveCount(0);
+  });
+
   test('a hand can be surrendered for an immediate loss', async ({ page }) => {
     await configureCounting(page, '1');
     await page.getByLabel('Late Surrender').check();

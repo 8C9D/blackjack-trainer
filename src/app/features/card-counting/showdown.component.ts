@@ -34,6 +34,7 @@ import {
 import { formatSignedCount } from '../../core/models/card-counting.model';
 import { cardHighValue, isAce, type Card } from '../../core/models/card.model';
 import { cardCountValue, type CountingSystem } from '../../core/models/counting-system.model';
+import { deviationIndexNote } from '../../core/models/deviation.model';
 import { handTotal, isBlackjack, isBust } from '../../core/models/hand.model';
 import { Shoe } from '../../core/models/shoe.model';
 import {
@@ -165,6 +166,13 @@ interface PlayVerdict {
           }}
         </h2>
       </header>
+
+      <!-- The indices are Hi-Lo numbers, so a trainee counting anything else has
+           to be told what this table can and cannot say about their play — the
+           same advisory the Deviations drill, the chart and Settings carry. -->
+      @if (indexNote(); as note) {
+        <p class="showdown__index-note">{{ note }}</p>
+      }
 
       @if (betting()) {
         <p class="showdown__bankroll">
@@ -447,6 +455,25 @@ export class ShowdownComponent implements OnInit {
   protected readonly countBasis = computed(() =>
     countBasisFor(this.system(), this.visibleRunningCount(), this.shoe().decksRemaining),
   );
+
+  // What this table cannot say about this trainee's play, and why. A playing
+  // index is a Hi-Lo true count, so every other system is graded on basic
+  // strategy alone — said once here rather than left to be inferred from
+  // verdicts that quietly never mention an index.
+  //
+  // The reason is the shared advisory the Deviations drill, the chart and
+  // Settings already show; only the consequence at this table is added.
+  protected readonly indexNote = computed(() => {
+    const basis = this.countBasis();
+    if (basis.kind === 'true-count') return null;
+    const note = deviationIndexNote(this.system());
+    if (note === null) return null;
+    const graded =
+      basis.kind === 'running-count'
+        ? ` Hands here are graded on basic strategy, and the insurance call against ${this.system().name}'s own running-count trigger.`
+        : ' Hands here are graded on basic strategy alone, and the insurance call is left ungraded.';
+    return note + graded;
+  });
 
   // The true count the bet is graded on — this system's own, not Hi-Lo's.
   private readonly betTrueCount = computed(() =>
