@@ -75,6 +75,58 @@ struct DeviationEngine {
                                  deviationApplied: false, matchedRule: rule, trueCount: trueCount)
     }
 
+    /// The same question asked at a table instead of off a chart: the hand may
+    /// be three cards deep and doubling, splitting or surrender may already be
+    /// gone, so it wraps `decidePlay` rather than `decide`. The showdown is
+    /// where the count a trainee has been keeping finally meets a hand, and
+    /// grading that hand on basic strategy alone would mark the Illustrious 18
+    /// wrong at the one table the app owns.
+    ///
+    /// The index only overrides a play the felt is actually offering. A
+    /// deviation calling for a double the bankroll cannot back, or a split past
+    /// the box's four-hand cap, is not a play the trainee declined — so the
+    /// chart's own answer stands. Mirrors `resolvePlayDecision`.
+    func resolvePlayDecision(_ input: PlayInput, trueCount: Int) -> PlayDeviationDecision {
+        let basic = basic.decidePlay(input)
+        let opening = input.player.count == 2
+        guard let classified = Self.classifyPlayForDeviation(
+            input.player, splitOnOffer: opening && input.canSplit
+        ) else {
+            return PlayDeviationDecision(decision: basic, deviationApplied: false, matchedRule: nil)
+        }
+        let dealerKey = normalizeUpcardKey(input.dealerUpcard)
+
+        // Surrender deviations are hard-total rules over a first-two-card
+        // action, so the overlay is gated the way `decidePlay` gates the chart's
+        // own SUR cells — see `resolveDeviationDecision` for why category
+        // matters here.
+        let surrenderOffered = opening && input.canSurrender && input.options.lateSurrender
+        let surrenderRule = classified.category == "hard" && surrenderOffered
+            ? findRule(ruleSet: input.ruleSet, category: "surrender",
+                       playerHand: classified.playerHand, dealerUpcard: dealerKey)
+            : nil
+        if let surrenderRule, isThresholdMet(surrenderRule, trueCount: trueCount),
+           let play = Self.deviationPlay(surrenderRule, input) {
+            return Self.deviated(basic, rule: surrenderRule, action: play, trueCount: trueCount)
+        }
+
+        // A surrender the chart already calls for is not downgraded to a stand
+        // or a hit by a natural-category index — the same precedence the
+        // trainer keeps.
+        if basic.action == .surrender {
+            return PlayDeviationDecision(decision: basic, deviationApplied: false,
+                                         matchedRule: surrenderRule)
+        }
+
+        let rule = findRule(ruleSet: input.ruleSet, category: classified.category,
+                            playerHand: classified.playerHand, dealerUpcard: dealerKey)
+        if let rule, isThresholdMet(rule, trueCount: trueCount),
+           let play = Self.deviationPlay(rule, input) {
+            return Self.deviated(basic, rule: rule, action: play, trueCount: trueCount)
+        }
+        return PlayDeviationDecision(decision: basic, deviationApplied: false, matchedRule: rule)
+    }
+
     /// Insurance overlay (dealer Ace only). Declines unless the insurance rule's
     /// threshold (TC ≥ +3) is met.
     func resolveInsuranceDecision(trueCount: Int, ruleSet: RuleSet) -> DeviationDecision {
@@ -105,6 +157,57 @@ struct DeviationEngine {
             return ("soft", String(11 + softNonAceValue(player)))
         }
         return ("hard", String(player.first.highValue + player.second.highValue))
+    }
+
+    /// The same classification for a hand mid-round, which may be more than two
+    /// cards. An index is written against a total, so a three-card 16 vs 10 is
+    /// the same chart cell as a two-card one; only the pair row needs the hand
+    /// to still be two cards with the split on offer, mirroring how `decidePlay`
+    /// takes a lapsed split straight to the total. Nil when there is no cell to
+    /// look up: a single card, or a hand already past 21.
+    static func classifyPlayForDeviation(_ cards: [Card], splitOnOffer: Bool)
+        -> (category: String, playerHand: String)? {
+        guard cards.count >= 2 else { return nil }
+        if cards.count == 2, splitOnOffer,
+           let pairKey = HandClassification.pairKey(TwoCardHand(cards[0], cards[1])) {
+            return ("pair", pairKey)
+        }
+        let total = Hand.total(cards)
+        guard total <= 21 else { return nil }
+        return (Hand.isSoft(cards) ? "soft" : "hard", String(total))
+    }
+
+    /// The play a rule calls for, or nil when the felt is not offering it.
+    /// Insurance is filtered here too: it has its own overlay and its own
+    /// decision point, and must never surface as a playing action.
+    private static func deviationPlay(_ rule: DeviationRule, _ input: PlayInput) -> Action? {
+        let opening = input.player.count == 2
+        switch action(rule.deviationAction) {
+        case .insurance: return nil
+        case .double: return input.canDouble && opening ? .double : nil
+        case .split: return input.canSplit && opening ? .split : nil
+        case .surrender:
+            return input.canSurrender && opening && input.options.lateSurrender ? .surrender : nil
+        case let other: return other
+        }
+    }
+
+    private static func deviated(_ basic: StrategyDecision, rule: DeviationRule,
+                                 action: Action, trueCount: Int) -> PlayDeviationDecision {
+        // The index is quoted from the rule that just fired rather than
+        // restated, so a corrected chart cannot leave this sentence citing a
+        // stale number.
+        let reason = "\(rule.playerHandLabel) vs dealer \(rule.dealerUpcard): "
+            + "\(action.label.lowercased()) \(rule.thresholdClause), and the count is "
+            + "\(CountFormat.signedCount(Double(trueCount))). "
+            + "Basic strategy alone would \(basic.action.label.lowercased())."
+        let decision = StrategyDecision(
+            action: action,
+            source: DecisionSource(rawValue: rule.category) ?? .hard,
+            handDescription: basic.handDescription,
+            reason: reason
+        )
+        return PlayDeviationDecision(decision: decision, deviationApplied: true, matchedRule: rule)
     }
 
     private static func action(_ raw: String) -> Action {
