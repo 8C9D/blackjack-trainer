@@ -111,6 +111,30 @@ struct ShowdownBetGradingTests {
         #expect(h.betSpreadStats.stats.attempts == 0)
     }
 
+    /// Pressing Deal into a shoe that cannot serve the round leaves the table on
+    /// `.exhausted` with nothing dealt. There was no round to bet into.
+    @Test func saysNothingWhenTheShoeWasTooLowToDealTheRound() throws {
+        let suite = "bet-exhausted-\(UUID().uuidString)"
+        let store = try #require(UserDefaults(suiteName: suite))
+        store.removePersistentDomain(forName: suite)
+        let app = TestEngines.shared
+        let betSpreadStats = SessionStatsStore(key: StatsKeys.betSpread, defaults: store)
+        let model = try ShowdownModel(
+            shoe: Shoe(cards: [card(.nine), card(.ten), card(.seven)], penetration: 0.9),
+            ruleSet: .s17,
+            stats: ShowdownStatsStore(key: StatsKeys.showdown, defaults: store),
+            betting: true,
+            bankroll: BankrollStore(key: StatsKeys.showdownBankroll, defaults: store),
+            system: #require(app.countingSystems.system(withId: DeviationIndexSystem.id)),
+            betSpreadStats: betSpreadStats
+        )
+        model.setBet(1)
+        model.dealAfterBet()
+        #expect(model.phase == .exhausted)
+        #expect(model.lastPlay == nil)
+        #expect(betSpreadStats.stats.attempts == 0)
+    }
+
     /// A losing run clamps the carried bet down to whatever the stack can still
     /// back, which need not land on a rung. Scoring that would mark a figure the
     /// player never chose — the ladder is the only way to place a bet.

@@ -1039,6 +1039,17 @@ describe('ShowdownComponent', () => {
       expect(c.betSpreadStats.stats().attempts).toBe(0);
     });
 
+    // Pressing Deal into a shoe that cannot serve the round leaves the table on
+    // 'exhausted' with nothing dealt. There was no round to bet into.
+    it('says nothing when the shoe was too low to deal the round', () => {
+      const { c } = createShowdown(makeShoe(['9', '10', '7']), 'S17', 1, true);
+      c.setBet(1);
+      c.dealAfterBet();
+      expect(c.phase()).toBe('exhausted');
+      expect(c.lastPlay()).toBeNull();
+      expect(c.betSpreadStats.stats().attempts).toBe(0);
+    });
+
     // A losing run clamps the carried bet down to whatever the stack can still
     // back, which need not land on a rung. Scoring that would mark a figure the
     // player never chose — the ladder is the only way to place a bet.

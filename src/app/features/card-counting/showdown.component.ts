@@ -649,6 +649,10 @@ export class ShowdownComponent implements OnInit {
     const trueCount = this.betTrueCount();
     const bet = this.bet();
     this.dealHand();
+    // A shoe too low to serve the round leaves the table on 'exhausted' with
+    // nothing dealt. There is no round to have bet into, so there is nothing to
+    // grade — and the round's misplay list was never cleared either.
+    if (this.phase() === 'exhausted') return;
     this.gradeBet(trueCount, bet);
   }
 
