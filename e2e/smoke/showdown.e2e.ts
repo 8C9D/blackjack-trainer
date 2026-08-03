@@ -168,6 +168,21 @@ test.describe('post-count showdown', () => {
     await expect(page.locator('.showdown__bankroll')).toContainText('496');
   });
 
+  // No table deals a round past the cut card, and a hand dealt after it would be
+  // graded on a true count divided by a sliver of a shoe. One deck cut at half
+  // its length, counted 26 cards deep, puts the cut card out in a single round.
+  test('no hand is offered off a shoe past its cut card', async ({ page }) => {
+    await configureCounting(page, '1');
+    await page.goto('/settings');
+    await page.getByLabel('Number of decks').selectOption('1');
+    await page.getByLabel('Penetration').selectOption('0.5');
+    await page.getByLabel('Number of cards').fill('26');
+    await runCountingRound(page);
+
+    await expect(page.getByRole('button', { name: 'Play a hand vs the dealer' })).toBeHidden();
+    await expect(page.locator('.count__shoe-spent')).toContainText('cut card is out');
+  });
+
   // Walking away before the peek. The hole card is dealt but never turned over,
   // so it is in neither the tally of what came out nor the count that leaves
   // with the trainee — the table says so rather than moving their count by a

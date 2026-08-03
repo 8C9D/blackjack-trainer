@@ -56,6 +56,7 @@ type Internals = {
   activeIndex(): number;
   remaining(): number;
   canDealAnother(): boolean;
+  cutCardOut(): boolean;
   onAction(a: Action): void;
   onKeyDown(event: KeyboardEvent): void;
   dealAnother(): void;
@@ -204,6 +205,63 @@ describe('ShowdownComponent', () => {
     expect(c.canDealAnother()).toBe(false);
     c.dealAnother();
     expect(c.phase()).toBe('exhausted');
+  });
+
+  // No table deals a round past the cut card: the round in progress when it
+  // surfaces is the shoe's last. The showdown used to deal on down to the last
+  // four cards, which also divides the true count by a sliver of a shoe — a +2
+  // over a tenth of a deck reads as +20 — and grades bets and index plays
+  // against counts no casino ever deals.
+  describe('the cut card', () => {
+    // 12 cards, cut after 6: the first round of four is short of it, the second
+    // crosses it. Both rounds are pat (player 19, dealer 18), so no draw moves
+    // the boundary.
+    function cutAfterSixCards(): Shoe {
+      const ranks: readonly Rank[] = ['10', '10', '9', '8', '10', '10', '9', '8'];
+      const cards: Card[] = [...ranks, '5', '5', '5', '5'].map((rank) => ({
+        rank: rank as Rank,
+        suit: 'spades' as Suit,
+      }));
+      return new Shoe(cards, 0.5);
+    }
+
+    it('deals the round the cut card falls in, and no round after it', () => {
+      const { fixture, c } = createShowdown(cutAfterSixCards());
+      c.onAction('S');
+      expect(c.remaining()).toBe(8); // four dealt, cut card still in the shoe
+      expect(c.cutCardOut()).toBe(false);
+      expect(c.canDealAnother()).toBe(true);
+
+      c.dealAnother();
+      c.onAction('S');
+
+      // Eight dealt, past the cut: four cards remain, enough to deal — and a
+      // table would not.
+      expect(c.remaining()).toBe(4);
+      expect(c.cutCardOut()).toBe(true);
+      expect(c.canDealAnother()).toBe(false);
+      fixture.detectChanges();
+      expect(
+        (fixture.nativeElement.querySelector('.showdown__note') as HTMLElement).textContent,
+      ).toContain('cut card is out');
+    });
+
+    it('still finishes the hand it is in when the cut card surfaces', () => {
+      // 6 cards, cut after 3: the opening deal alone crosses it, and the hand
+      // still plays out — a dealer stops at the cut, never mid-round.
+      const cards: Card[] = (['9', '10', '7', '6', '10', '5'] as Rank[]).map((rank) => ({
+        rank,
+        suit: 'spades' as Suit,
+      }));
+      const { c } = createShowdown(new Shoe(cards, 0.5));
+      expect(c.cutCardOut()).toBe(true);
+
+      c.onAction('H'); // 16 + 10 = 26, bust: the draw is served
+
+      expect(c.phase()).toBe('resolved');
+      expect(c.settlement()!.outcome).toBe('lose');
+      expect(c.canDealAnother()).toBe(false);
+    });
   });
 
   describe('double down', () => {
