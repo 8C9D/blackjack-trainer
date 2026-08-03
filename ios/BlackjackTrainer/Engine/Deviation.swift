@@ -16,6 +16,31 @@ struct DeviationRule: Decodable, Equatable {
     let source: String
 }
 
+/// The counting system every index in this app is written for. BJA publishes
+/// the Illustrious 18 and Fab 4 as Hi-Lo true counts, and a different system
+/// reads a different number off the same shoe — so the same index is a
+/// different decision. An index shown without naming its system is a trap, and
+/// a trainee counting something else has to be told the numbers are not theirs.
+/// Mirrors the `DEVIATION_INDEX_SYSTEM_*` constants in `deviation.model.ts`.
+enum DeviationIndexSystem {
+    static let id = "hi-lo"
+    static let name = "Hi-Lo"
+
+    /// The advisory for a trainee whose counting system is not the one the
+    /// indices are written for, or nil when it is. Unbalanced systems get the
+    /// stronger wording because they have no true count at all to compare
+    /// against. Mirrors `deviationIndexNote`.
+    static func note(for system: CountingSystem) -> String? {
+        guard system.id != id else { return nil }
+        let lead = "These indices are \(name) true counts, and you count \(system.name)"
+        return system.balanced
+            ? lead + ", which reads a different true count off the same shoe. "
+            + "Its own indices are not these numbers."
+            : lead + ", which is unbalanced and has no true count. "
+            + "These numbers do not carry over to it."
+    }
+}
+
 /// Result of the playing-decision deviation resolution.
 struct DeviationDecision {
     let basicAction: Action

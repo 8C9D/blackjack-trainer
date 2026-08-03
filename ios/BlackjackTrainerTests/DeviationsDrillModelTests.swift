@@ -30,10 +30,13 @@ struct DeviationsDrillModelTests {
         let missTally: MissTallyStore
     }
 
-    private func makeHarness(dailyGoal: Int = 20) -> Harness {
+    private func makeHarness(dailyGoal: Int = 20, systemId: String? = nil) -> Harness {
         let defaults = freshDefaults()
         let prefs = FlowPrefsStore(defaults: defaults)
         prefs.setDailyGoal(Double(dailyGoal))
+        if let systemId {
+            prefs.updateCounting { $0.systemId = systemId }
+        }
         let history = PracticeHistoryStore(defaults: defaults)
         let missTally = MissTallyStore(defaults: defaults)
         let stats = SessionStatsStore(key: StatsKeys.deviation, defaults: defaults)
@@ -45,6 +48,7 @@ struct DeviationsDrillModelTests {
             prefs: prefs,
             history: history,
             missTally: missTally,
+            systems: TestEngines.shared.countingSystems,
             scheduler: scheduler,
             advanceDelay: .zero
         )
@@ -137,5 +141,26 @@ struct DeviationsDrillModelTests {
         h.model.oneMoreRound()
         #expect(h.model.phase == .question)
         #expect(h.model.target == 4)
+    }
+
+    /// The drill grades against Hi-Lo indices whatever the counting trainer is
+    /// set to. Silence there would have a Wong Halves counter drilling numbers
+    /// their count never produces.
+    @Test func staysQuietForAHiLoCounter() {
+        let h = makeHarness()
+        #expect(h.model.indexNote == nil)
+    }
+
+    @Test func namesAMismatchedCountingSystem() throws {
+        let h = makeHarness(systemId: "wong-halves")
+        let note = try #require(h.model.indexNote)
+        #expect(note.contains("Wong Halves"))
+        #expect(note.contains("Hi-Lo"))
+    }
+
+    @Test func staysQuietForAStoredSystemIdThisBuildDoesNotShip() {
+        // That id resolves to Hi-Lo everywhere, so there is no mismatch to warn about.
+        let h = makeHarness(systemId: "does-not-exist")
+        #expect(h.model.indexNote == nil)
     }
 }

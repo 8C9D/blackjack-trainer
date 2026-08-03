@@ -27,6 +27,14 @@ struct ChartView: View {
         )
     }
 
+    /// Named on the reference screen too, not just in the drill: reading an
+    /// index off this chart while counting another system is the same mistake.
+    private var indexNote: String? {
+        model.countingSystems
+            .system(withId: prefs.counting.systemId)
+            .flatMap(DeviationIndexSystem.note)
+    }
+
     /// The DAS and Late-Surrender chips are dropped in the deviation list: no
     /// deviation rule reads either option.
     private var ruleChips: [String] {
@@ -48,7 +56,8 @@ struct ChartView: View {
                     mode: $mode,
                     sections: sections,
                     deviationSections: deviationSections,
-                    ruleChips: ruleChips
+                    ruleChips: ruleChips,
+                    indexNote: indexNote
                 ) {
                     router.go(.settings)
                 }
@@ -74,6 +83,9 @@ struct ChartGridView: View {
     let sections: [ChartSection]
     let deviationSections: [DeviationSection]
     let ruleChips: [String]
+    /// Set when the trainee's counting system is not the one the indices are
+    /// written for; nil (the common case) leaves the list unadorned.
+    var indexNote: String?
     let onChangeRules: () -> Void
 
     private let rowHeaderWidth: CGFloat = 46
@@ -94,10 +106,14 @@ struct ChartGridView: View {
                     deviationCard(section)
                 }
                 note(
-                    "Deviations override basic strategy only once the true count reaches the "
-                        + "index. Everything not listed here is played straight off the chart, "
-                        + "at any count."
+                    "Every index here is a \(DeviationIndexSystem.name) true count. Deviations "
+                        + "override basic strategy only once the true count reaches the index. "
+                        + "Everything not listed here is played straight off the chart, at any "
+                        + "count."
                 )
+                if let indexNote {
+                    AdvisoryNoteView(text: indexNote, alignment: .leading)
+                }
             } else {
                 ForEach(sections) { section in
                     card(section)
