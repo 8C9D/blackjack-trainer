@@ -1222,6 +1222,47 @@ describe('ShowdownComponent', () => {
       });
     });
 
+    // Three other screens already tell a trainee counting something else that
+    // the indices are not theirs. This is the fourth place indices matter, and
+    // the only one that applies them to a hand they actually played.
+    describe('saying whose numbers these are', () => {
+      function noteFor(systemId: string): string | null {
+        const { fixture } = createShowdown(
+          makeShoe(['9', '10', '7', '6']),
+          'S17',
+          1,
+          false,
+          undefined,
+          {
+            systemId,
+          },
+        );
+        const el = fixture.nativeElement.querySelector('.showdown__index-note');
+        return el === null ? null : (el.textContent as string).replace(/\s+/g, ' ').trim();
+      }
+
+      it('says nothing to a Hi-Lo counter, whose numbers these are', () => {
+        expect(noteFor('hi-lo')).toBeNull();
+      });
+
+      it('tells a balanced counter their true count is a different number', () => {
+        const note = noteFor('omega-ii');
+        expect(note).toContain('Omega II');
+        expect(note).toContain('different true count');
+        expect(note).toContain('graded on basic strategy alone');
+        expect(note).toContain('insurance call is left ungraded');
+      });
+
+      // KO is the one other system this table can grade at all, and only for
+      // insurance — so its note has to promise less than the others, not more.
+      it('credits KO with the one decision its book does publish', () => {
+        const note = noteFor('ko');
+        expect(note).toContain('unbalanced and has no true count');
+        expect(note).toContain("KO's own running-count trigger");
+        expect(note).not.toContain('left ungraded');
+      });
+    });
+
     // The count carried in from the drill is the whole reason this table exists,
     // and the Deviations trainer teaches standing 16 vs 10 at 0 or higher. A
     // table that marked that wrong would be teaching two different games.
