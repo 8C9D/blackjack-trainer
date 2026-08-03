@@ -150,6 +150,10 @@ final class ShowdownModel {
         let trueCount = betTrueCount
         let placed = bet
         dealHand()
+        // A shoe too low to serve the round leaves the table on `.exhausted`
+        // with nothing dealt. There is no round to have bet into, so there is
+        // nothing to grade — and the misplay list was never cleared either.
+        guard phase != .exhausted else { return }
         if let graded = gradeBet(trueCount: trueCount, bet: placed) {
             betSpreadStats?.recordAttempt(correct: graded.verdict.correct)
             lastPlay = graded.verdict
