@@ -1221,5 +1221,100 @@ describe('ShowdownComponent', () => {
         expect(filed()).toEqual([]);
       });
     });
+
+    // The count carried in from the drill is the whole reason this table exists,
+    // and the Deviations trainer teaches standing 16 vs 10 at 0 or higher. A
+    // table that marked that wrong would be teaching two different games.
+    describe('against the count', () => {
+      // The same hand at two counts. Padded to leave exactly one deck behind, so
+      // the true count equals the running count; the filler is 8s, worth zero in
+      // both Hi-Lo and KO. Player [9,7]=16 vs dealer 10 (hole 6, held out of the
+      // visible count), so the visible running count is the entry count less the
+      // dealer's ten.
+      const SIXTEEN_V_TEN: readonly Rank[] = [
+        '9',
+        '10',
+        '7',
+        '6',
+        ...(Array<Rank>(52).fill('8') as Rank[]),
+      ];
+      // Late surrender off: with it on, 16 vs 10 is a basic-strategy surrender
+      // and the index is not allowed to downgrade it — its own case below.
+      const noSurrender: EngineOptions = { doubleAfterSplit: true, lateSurrender: false };
+
+      function atCount(entryRunningCount: number, systemId = 'hi-lo') {
+        return createShowdown(makeShoe(SIXTEEN_V_TEN), 'S17', 1, false, noSurrender, {
+          systemId,
+          entryRunningCount,
+        });
+      }
+
+      it('stands 16 vs 10 at the index, and says which index and what basic would do', () => {
+        const { c } = atCount(1); // visible RC 0 over one deck → TC 0
+        c.onAction('S');
+        expect(c.lastPlay()).toMatchObject({ correct: true, headline: 'Stand was the play.' });
+        expect(c.lastPlay()!.reason).toContain('0 or higher');
+        expect(c.lastPlay()!.reason).toContain('Basic strategy alone would hit');
+      });
+
+      it('hits the same hand one count lower, where the index does not fire', () => {
+        const { c } = atCount(0); // visible RC -1 → TC -1
+        c.onAction('S');
+        expect(c.lastPlay()).toMatchObject({ correct: false, headline: 'Hit was the play.' });
+      });
+
+      it('names an index miss as such in the round’s misplays', () => {
+        const { c } = atCount(1);
+        c.onAction('H');
+        expect(c.roundMistakes()).toHaveLength(1);
+        expect(c.roundMistakes()[0]).toContain('Stand, not Hit');
+        expect(c.roundMistakes()[0]).toContain('(index play)');
+      });
+
+      // An index play is a Deviations question. Filing it under Basic Strategy
+      // would seed that drill a hand whose chart answer the trainee got right.
+      it('files an index miss as a Deviations weak spot, not a basic-strategy one', () => {
+        const { c } = atCount(1);
+        c.onAction('H');
+        const tallies = TestBed.inject(MissTallyService);
+        expect(tallies.weakSpots('deviations')[0]).toMatchObject({
+          label: '16 vs 10',
+          misses: 1,
+        });
+        expect(tallies.weakSpots('basic-strategy')).toEqual([]);
+      });
+
+      it('still files an ordinary miss under Basic Strategy', () => {
+        const { c } = atCount(0);
+        c.onAction('S');
+        const tallies = TestBed.inject(MissTallyService);
+        expect(tallies.weakSpots('basic-strategy')[0]).toMatchObject({ label: '16 vs 10' });
+        expect(tallies.weakSpots('deviations')).toEqual([]);
+      });
+
+      // A playing index is a Hi-Lo true count. KO's book publishes an insurance
+      // trigger and no playing schedule, so its running count grades that one
+      // decision and leaves the hand to basic strategy.
+      it('grades another system’s hand on basic strategy alone', () => {
+        const { c } = atCount(1, 'ko');
+        c.onAction('S');
+        expect(c.lastPlay()).toMatchObject({ correct: false, headline: 'Hit was the play.' });
+      });
+
+      // The index for 16 vs 10 assumes surrender was unavailable; the BJA late-
+      // surrender overlay says give the hand up at any count.
+      it('does not let the index downgrade a surrender the chart already wants', () => {
+        const { c } = createShowdown(
+          makeShoe(SIXTEEN_V_TEN),
+          'S17',
+          1,
+          false,
+          { doubleAfterSplit: true, lateSurrender: true },
+          { entryRunningCount: 1 },
+        );
+        c.onAction('S');
+        expect(c.lastPlay()).toMatchObject({ correct: false, headline: 'Surrender was the play.' });
+      });
+    });
   });
 });

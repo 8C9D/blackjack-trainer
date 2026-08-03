@@ -1,10 +1,15 @@
 import type { Card, Rank, Suit } from '../models/card.model';
 import type { DeviationRule } from '../models/deviation.model';
 import type { EngineOptions, RuleSet } from '../models/strategy.model';
-import { BasicStrategyEngineService, type EngineInput } from './basic-strategy-engine.service';
+import {
+  BasicStrategyEngineService,
+  type EngineInput,
+  type PlayInput,
+} from './basic-strategy-engine.service';
 import {
   DeviationEngineService,
   classifyForDeviation,
+  classifyPlayForDeviation,
   deviationsFor,
 } from './deviation-engine.service';
 
@@ -26,6 +31,21 @@ const scenario = (
   dealerUpcard: card(up),
   ruleSet,
   options: { ...baseOptions, ...options },
+});
+
+// The same scenario at a table: every action on offer unless a test takes one
+// away, which is the state an opening showdown hand is actually dealt into.
+const play = (
+  c1: Rank,
+  c2: Rank,
+  up: Rank,
+  ruleSet: RuleSet = 'S17',
+  options: Partial<EngineOptions> = {},
+): PlayInput => ({
+  ...scenario(c1, c2, up, ruleSet, options),
+  canDouble: true,
+  canSplit: true,
+  canSurrender: true,
 });
 
 // Synthetic rules used for direction tests — keep these isolated from the
@@ -744,6 +764,139 @@ describe('DeviationEngineService', () => {
         category: 'pair',
         playerHand: '10',
       });
+    });
+  });
+
+  // ─── classifyPlayForDeviation helper ──────────────────────────────────
+  describe('classifyPlayForDeviation', () => {
+    it('classifies a three-card 16 by its total', () => {
+      expect(classifyPlayForDeviation([card('5'), card('4'), card('7')], false)).toEqual({
+        category: 'hard',
+        playerHand: '16',
+      });
+    });
+
+    it('classifies a three-card A,4,4 as soft 19', () => {
+      expect(classifyPlayForDeviation([card('A'), card('4'), card('4')], false)).toEqual({
+        category: 'soft',
+        playerHand: '19',
+      });
+    });
+
+    it('classifies a pair as a pair only while the split is on offer', () => {
+      expect(classifyPlayForDeviation([card('K'), card('Q')], true)).toEqual({
+        category: 'pair',
+        playerHand: '10',
+      });
+      // Split gone (box at its cap, bankroll short): the hand is its total, the
+      // same fall-through decidePlay makes.
+      expect(classifyPlayForDeviation([card('K'), card('Q')], false)).toEqual({
+        category: 'hard',
+        playerHand: '20',
+      });
+    });
+
+    it('has no cell for a single card or a busted hand', () => {
+      expect(classifyPlayForDeviation([card('5')], true)).toBeNull();
+      expect(classifyPlayForDeviation([card('10'), card('6'), card('9')], false)).toBeNull();
+    });
+  });
+
+  // ─── resolvePlayDecision: the table's count-aware answer ──────────────
+  describe('resolvePlayDecision', () => {
+    it('applies the 16 v 10 index at the table, and not below it', () => {
+      expect(engine.resolvePlayDecision(play('10', '6', '10'), -1).action).toBe('H');
+      const at0 = engine.resolvePlayDecision(play('10', '6', '10'), 0);
+      expect(at0.action).toBe('S');
+      expect(at0.deviationApplied).toBe(true);
+      expect(at0.matchedRule?.source).toBeTruthy();
+      // The verdict names the index it fired on and what basic strategy alone
+      // would have done, so the line teaches rather than just scores.
+      expect(at0.reason).toContain('0 or higher');
+      expect(at0.reason).toContain('hit');
+    });
+
+    it('applies a hard-total index to a hand more than two cards deep', () => {
+      // 5,4,7 is the same 16 v 10 the chart indexes; only the pair row needs
+      // the hand to still be two cards.
+      const input = { ...play('10', '6', '10'), player: [card('5'), card('4'), card('7')] };
+      expect(engine.resolvePlayDecision(input, 0).action).toBe('S');
+      expect(engine.resolvePlayDecision(input, -1).action).toBe('H');
+    });
+
+    it('leaves a deviation the felt is not offering alone', () => {
+      // Hard 10 v 10 doubles at +4 — but only where doubling is on the table.
+      expect(engine.resolvePlayDecision(play('6', '4', '10'), 4).action).toBe('D');
+      const noDouble = engine.resolvePlayDecision({ ...play('6', '4', '10'), canDouble: false }, 4);
+      expect(noDouble.action).toBe('H');
+      expect(noDouble.deviationApplied).toBe(false);
+      // A three-card 10 cannot double whatever the caller passes.
+      const threeCard = { ...play('6', '4', '10'), player: [card('4'), card('3'), card('3')] };
+      expect(engine.resolvePlayDecision(threeCard, 4).action).toBe('H');
+    });
+
+    it('splits 10s at the index only while the split is on offer', () => {
+      expect(engine.resolvePlayDecision(play('K', 'Q', '6'), 4).action).toBe('P');
+      expect(engine.resolvePlayDecision(play('K', 'Q', '6'), 3).action).toBe('S');
+      const capped = engine.resolvePlayDecision({ ...play('K', 'Q', '6'), canSplit: false }, 4);
+      expect(capped.action).toBe('S');
+      expect(capped.deviationApplied).toBe(false);
+    });
+
+    it('doubles soft 19 v 5 at +1, and stands when doubling has lapsed', () => {
+      expect(engine.resolvePlayDecision(play('A', '8', '5'), 1).action).toBe('D');
+      expect(engine.resolvePlayDecision(play('A', '8', '5'), 0).action).toBe('S');
+      const drawn = { ...play('A', '8', '5'), player: [card('A'), card('4'), card('4')] };
+      expect(engine.resolvePlayDecision(drawn, 1).action).toBe('S');
+    });
+
+    it('fires the surrender overlay only when the table still offers surrender', () => {
+      // 16 v 8 surrenders at +4; basic strategy hits it at any count.
+      const withLs = play('10', '6', '8', 'S17', { lateSurrender: true });
+      expect(engine.resolvePlayDecision(withLs, 4).action).toBe('SUR');
+      expect(engine.resolvePlayDecision(withLs, 3).action).toBe('H');
+      // Split hands never surrender, so the overlay is off the table with them.
+      expect(engine.resolvePlayDecision({ ...withLs, canSurrender: false }, 4).action).toBe('H');
+      // Nor does it fire where the house does not offer surrender at all.
+      expect(engine.resolvePlayDecision(play('10', '6', '8'), 4).action).toBe('H');
+    });
+
+    it('does not let a hard index downgrade a surrender the chart already wants', () => {
+      // 16 v 10 with LS on is a basic-strategy surrender, and the stand-at-0+
+      // index assumes surrender was unavailable — the same precedence the
+      // trainer keeps.
+      const withLs = play('10', '6', '10', 'S17', { lateSurrender: true });
+      const at2 = engine.resolvePlayDecision(withLs, 2);
+      expect(at2.action).toBe('SUR');
+      expect(at2.deviationApplied).toBe(false);
+      // Once the felt withholds surrender the hand is back to hit-or-stand, and
+      // the index decides between them.
+      expect(engine.resolvePlayDecision({ ...withLs, canSurrender: false }, 2).action).toBe('S');
+    });
+
+    it('never returns insurance as a playing action', () => {
+      for (const tc of [-5, 0, 3, 8]) {
+        expect(engine.resolvePlayDecision(play('10', '6', 'A'), tc).action).not.toBe('INS');
+        expect(engine.resolvePlayDecision(play('A', '8', 'A'), tc).action).not.toBe('INS');
+      }
+    });
+
+    it('matches decidePlay exactly on a hand the chart does not index', () => {
+      const basic = new BasicStrategyEngineService();
+      for (const tc of [-8, -1, 0, 3, 10]) {
+        const input = play('3', '4', '6');
+        expect(engine.resolvePlayDecision(input, tc)).toEqual({
+          ...basic.decidePlay(input),
+          deviationApplied: false,
+          matchedRule: undefined,
+        });
+      }
+    });
+
+    it('surfaces the candidate rule the count fell short of', () => {
+      const below = engine.resolvePlayDecision(play('10', '6', '9'), 0);
+      expect(below.deviationApplied).toBe(false);
+      expect(below.matchedRule?.index).toBe(4);
     });
   });
 

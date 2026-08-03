@@ -1,3 +1,4 @@
+import { formatSignedCount } from './card-counting.model';
 import type { Scenario } from './card.model';
 import type { CountingSystem } from './counting-system.model';
 import type { Action, DealerUpcard, RuleSet } from './strategy.model';
@@ -67,6 +68,23 @@ export interface DeviationRule {
   readonly deviationAction: Action;
   // Source citation (e.g. "BJA S17 Deviations chart, Illustrious 18 #5").
   readonly source: string;
+}
+
+// A rule's threshold as a clause inside a sentence ("stand at true count 0 or
+// higher"). The chart page renders the same thresholds as symbols (`≥ +3`),
+// which is right for a table column and wrong mid-sentence — two renderings of
+// one field, deliberately, rather than one that reads badly in both places.
+export function describeDeviationThreshold(rule: DeviationRule): string {
+  switch (rule.direction) {
+    case 'at-or-above':
+      return `at true count ${formatSignedCount(rule.index)} or higher`;
+    case 'at-or-below':
+      return `at true count ${formatSignedCount(rule.index)} or lower`;
+    case 'positive':
+      return 'at any positive true count';
+    case 'negative':
+      return 'at any negative true count';
+  }
 }
 
 export interface DeviationDecision {
