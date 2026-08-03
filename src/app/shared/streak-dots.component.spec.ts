@@ -5,7 +5,7 @@ import type { StreakDot } from '../core/services/practice-history.service';
 import { StreakDotsComponent } from './streak-dots.component';
 
 function dot(partial: Partial<StreakDot> & { date: string }): StreakDot {
-  return { hands: 0, met: false, isToday: false, ...partial };
+  return { hands: 0, met: false, isToday: false, accuracy: null, ...partial };
 }
 
 const SIX_DAY_RUN: StreakDot[] = [

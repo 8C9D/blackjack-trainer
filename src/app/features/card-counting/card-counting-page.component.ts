@@ -579,7 +579,7 @@ export class CardCountingPageComponent {
       isCorrect = evaluated.isCorrect;
     }
     // Every graded rep is one hand toward the daily goal.
-    this.history.recordHand();
+    this.history.recordHand(isCorrect);
     this.session.record(isCorrect);
     this.state.set('feedback');
   }
@@ -603,7 +603,7 @@ export class CardCountingPageComponent {
     this.result.set(evaluated);
     this.statsService.recordAttempt(evaluated.countCorrect);
     this.keyCountStatsService.recordAttempt(evaluated.advantageCorrect);
-    this.history.recordHand();
+    this.history.recordHand(evaluated.isCorrect);
     this.session.record(evaluated.isCorrect);
     this.shoeRunningCount.set(evaluated.correctRunningCount);
     this.state.set('feedback');
@@ -640,7 +640,7 @@ export class CardCountingPageComponent {
       this.deckEstimationStatsService.recordAttempt(withinBand);
     }
     this.betSpreadStatsService.recordAttempt(evaluated.betCorrect);
-    this.history.recordHand();
+    this.history.recordHand(evaluated.isCorrect);
     this.session.record(evaluated.isCorrect);
     if (live) {
       this.shoeRunningCount.set(evaluated.correctRunningCount);

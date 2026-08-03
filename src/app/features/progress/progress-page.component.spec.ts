@@ -73,8 +73,8 @@ describe('ProgressPageComponent', () => {
       const prefs = TestBed.inject(FlowPrefsService);
       prefs.setDailyGoal(2);
       const history = TestBed.inject(PracticeHistoryService);
-      history.recordHand();
-      history.recordHand();
+      history.recordHand(true);
+      history.recordHand(true);
       const { fixture } = createPage();
 
       expect(fixture.nativeElement.querySelectorAll('.progress__bar')).toHaveLength(7);
@@ -87,7 +87,7 @@ describe('ProgressPageComponent', () => {
       const prefs = TestBed.inject(FlowPrefsService);
       prefs.setDailyGoal(20);
       const history = TestBed.inject(PracticeHistoryService);
-      for (let i = 0; i < 5; i++) history.recordHand();
+      for (let i = 0; i < 5; i++) history.recordHand(true);
       const { fixture } = createPage();
 
       const bars = [...fixture.nativeElement.querySelectorAll('.progress__bar')] as HTMLElement[];
@@ -96,6 +96,53 @@ describe('ProgressPageComponent', () => {
       expect(bars[6].style.height).toBe('25%');
       expect(bars[6].classList.contains('progress__bar--today')).toBe(true);
       expect(bars[6].classList.contains('progress__bar--met')).toBe(false);
+    });
+
+    // The bars are volume. Accuracy is the half that says whether the practice
+    // is working, and it is on none of them.
+    it('says how much of the week was right', () => {
+      const history = TestBed.inject(PracticeHistoryService);
+      history.recordHand(true);
+      history.recordHand(true);
+      history.recordHand(false);
+      const { fixture } = createPage();
+
+      expect(text(fixture, '.progress__accuracy')).toContain('67% correct');
+      // One week is a reading, not yet a direction.
+      expect(fixture.nativeElement.querySelector('.progress__trend')).toBeNull();
+    });
+
+    it('names the direction once there is a week before to compare with', () => {
+      const history = TestBed.inject(PracticeHistoryService);
+      let now = new Date(2026, 6, 10, 12, 0);
+      history.setNowSource(() => now);
+      history.recordHand(false);
+      history.recordHand(true);
+      now = new Date(2026, 6, 18, 12, 0);
+      history.recordHand(true);
+      const { fixture } = createPage();
+
+      const trend = fixture.nativeElement.querySelector('.progress__trend') as HTMLElement;
+      expect(trend.textContent!.trim()).toBe('up from 50% the week before');
+      expect(trend.classList.contains('progress__good')).toBe(true);
+    });
+
+    it('says nothing about accuracy before anything is graded', () => {
+      const { fixture } = createPage();
+      expect(fixture.nativeElement.querySelector('.progress__accuracy')).toBeNull();
+    });
+
+    it('reads a day of numbers out for a screen reader', () => {
+      const history = TestBed.inject(PracticeHistoryService);
+      history.recordHand(true);
+      history.recordHand(false);
+      const { fixture } = createPage();
+
+      const labels = [...fixture.nativeElement.querySelectorAll('.progress__day .sr-only')].map(
+        (el) => (el as HTMLElement).textContent!.trim(),
+      );
+      expect(labels[6]).toBe('2 hands, 50% correct');
+      expect(labels[0]).toBe('0 hands');
     });
   });
 

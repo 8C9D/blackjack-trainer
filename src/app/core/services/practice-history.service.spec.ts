@@ -36,27 +36,27 @@ describe('PracticeHistoryService', () => {
     it('starts at zero and counts hands recorded today', () => {
       const s = createService(() => current);
       expect(s.handsToday()).toBe(0);
-      s.recordHand();
-      s.recordHand();
-      s.recordHand();
+      s.recordHand(true);
+      s.recordHand(true);
+      s.recordHand(true);
       expect(s.handsToday()).toBe(3);
     });
 
     it('rolls over to a fresh count when the day changes', () => {
       const s = createService(() => current);
-      s.recordHand();
+      s.recordHand(true);
       expect(s.handsToday()).toBe(1);
       current = new Date(2026, 6, 11, 9, 0);
       expect(s.handsToday()).toBe(0);
-      s.recordHand();
+      s.recordHand(true);
       expect(s.handsToday()).toBe(1);
       expect(s.handsOn('2026-07-10')).toBe(1);
     });
 
     it('persists across service instances via localStorage', () => {
       const s = createService(() => current);
-      s.recordHand();
-      s.recordHand();
+      s.recordHand(true);
+      s.recordHand(true);
 
       const raw = localStorage.getItem(PRACTICE_HISTORY_KEY);
       expect(raw).not.toBeNull();
@@ -73,7 +73,7 @@ describe('PracticeHistoryService', () => {
       const recent = { date: '2026-07-09', hands: 2 };
       localStorage.setItem(PRACTICE_HISTORY_KEY, JSON.stringify({ days: [old, recent] }));
       const s = createService(() => current);
-      s.recordHand();
+      s.recordHand(true);
       expect(s.days().some((d) => d.date === '2024-01-01')).toBe(false);
       expect(s.handsOn('2026-07-09')).toBe(2);
     });
@@ -82,7 +82,7 @@ describe('PracticeHistoryService', () => {
       localStorage.setItem(PRACTICE_HISTORY_KEY, 'not-json{');
       const s = createService(() => current);
       expect(s.handsToday()).toBe(0);
-      s.recordHand();
+      s.recordHand(true);
       expect(s.handsToday()).toBe(1);
     });
 
@@ -104,10 +104,75 @@ describe('PracticeHistoryService', () => {
       const s = createService(() => current);
 
       expect(s.days()).toEqual([
-        { date: '2026-07-09', hands: 1 },
-        { date: '2026-07-10', hands: 6 },
+        { date: '2026-07-09', hands: 1, graded: 0, correct: 0 },
+        { date: '2026-07-10', hands: 6, graded: 0, correct: 0 },
       ]);
       expect(s.handsToday()).toBe(6);
+    });
+  });
+
+  // Volume was all the history ever kept, so the app could say how much was
+  // practised and never how well.
+  describe('accuracyLast7', () => {
+    it('is null before anything is graded', () => {
+      const s = createService(() => current);
+      expect(s.accuracyLast7()).toBeNull();
+    });
+
+    it('is the correct share of the week just practised', () => {
+      const s = createService(() => current);
+      s.recordHand(true);
+      s.recordHand(true);
+      s.recordHand(false);
+      expect(s.accuracyLast7()).toBe(67);
+    });
+
+    it('reads the week before it separately', () => {
+      const s = createService(() => current);
+      s.recordHand(true);
+      // Eight days on: the earlier rep has fallen out of this week into the last.
+      current = new Date(2026, 6, 18, 18, 30);
+      s.recordHand(false);
+      expect(s.accuracyLast7()).toBe(0);
+      expect(s.accuracyLast7(1)).toBe(100);
+    });
+
+    // A day recorded by a build that only counted volume has no verdicts at
+    // all. Reading its hands as ungraded reports it as unmeasured; dividing by
+    // them would report a week of real practice as 0% correct.
+    it('leaves a day written before grading unmeasured', () => {
+      localStorage.setItem(
+        PRACTICE_HISTORY_KEY,
+        JSON.stringify({ days: [{ date: '2026-07-09', hands: 20 }] }),
+      );
+      const s = createService(() => current);
+      expect(s.accuracyLast7()).toBeNull();
+      expect(s.last7(20)[5].accuracy).toBeNull();
+      // A rep recorded today is measured on its own, not against those 20.
+      s.recordHand(true);
+      expect(s.accuracyLast7()).toBe(100);
+    });
+
+    it('carries each day of the strip its own accuracy', () => {
+      const s = createService(() => current);
+      s.recordHand(true);
+      s.recordHand(false);
+      const today = s.last7(1)[6];
+      expect(today.isToday).toBe(true);
+      expect(today.accuracy).toBe(50);
+      expect(s.last7(1)[0].accuracy).toBeNull();
+    });
+
+    // The file is user-supplied (a restored backup can be hand-edited), and an
+    // accuracy over 100% would be nonsense on the screen.
+    it('clamps a stored day to correct ≤ graded ≤ hands', () => {
+      localStorage.setItem(
+        PRACTICE_HISTORY_KEY,
+        JSON.stringify({ days: [{ date: '2026-07-10', hands: 4, graded: 9, correct: 9 }] }),
+      );
+      const s = createService(() => current);
+      expect(s.days()[0]).toEqual({ date: '2026-07-10', hands: 4, graded: 4, correct: 4 });
+      expect(s.accuracyLast7()).toBe(100);
     });
   });
 
@@ -140,7 +205,7 @@ describe('PracticeHistoryService', () => {
       const longRun: Record<number, number> = {};
       for (let back = 0; back < 40; back++) longRun[back] = 20;
       const s = seed(longRun);
-      s.recordHand(); // today 20 -> 21, still met; prunes on write
+      s.recordHand(true); // today 20 -> 21, still met; prunes on write
       expect(s.streak(20)).toBe(40);
     });
 
@@ -174,7 +239,7 @@ describe('PracticeHistoryService', () => {
   describe('last7', () => {
     it('returns seven dots oldest-first with today flagged last', () => {
       const s = createService(() => current);
-      s.recordHand();
+      s.recordHand(true);
       const dots = s.last7(1);
       expect(dots).toHaveLength(7);
       expect(dots[6].isToday).toBe(true);
@@ -199,8 +264,8 @@ describe('PracticeHistoryService', () => {
   describe('reset', () => {
     it('empties the history and the stored payload', () => {
       const s = createService(() => current);
-      s.recordHand();
-      s.recordHand();
+      s.recordHand(true);
+      s.recordHand(true);
       expect(s.handsToday()).toBe(2);
 
       s.reset();
