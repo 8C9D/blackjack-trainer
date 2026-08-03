@@ -510,3 +510,13 @@ Three decisions are made at that table — how much to bet, whether to insure, h
 - **A bug this surfaced:** `gradeInsurance` used to null `lastPlay` when it had nothing to say. With the bet graded first, that wiped a verdict that was still true. It now leaves the panel alone.
 - **Validation.** +7 unit tests (1158 total), +1 E2E (84) asserting the rungs are the spread and the verdict names the called bet; both verdict states rendered.
 - **iOS mirror.** `Bankroll.betOptions(for:)`, `trueCountFor`, and `gradeBet` alongside the play and insurance scoring in `ShowdownModel+Grading.swift`. +7 Swift tests (378 total).
+
+### Post-roadmap continued: iOS backs up to the web's file (2026-08-03)
+
+The web's file backup shipped without an iOS mirror, and the reasoning was recorded at the time: "the iOS app has iCloud sync, the web has this". That is right about what iCloud does — carry a trainee between their own devices, silently — and wrong about what it does not. iCloud cannot carry them **off** the platform: onto the web app, onto someone else's phone, or into a file kept before deleting the app.
+
+- **The same file, not a second format.** Every store on both sides persists JSON under the same `blackjack-`-prefixed key; iOS holds it as `Data` whose bytes are exactly the string the web holds in `localStorage`. So `BackupStore` reads `defaults.data(forKey:)` as UTF-8 text and writes it back the same way, and one file restores on either platform. `FlowPrefs.jsonObject` was already documented as "matching the web's key/value forms", which is what makes the settings half of the file portable too.
+- **Defined by the prefix, as the web's is.** A list of stores would silently omit whatever store is added next.
+- **The live stores are re-read, not relaunched.** The web restores by reloading the page; iOS has no reload to hide behind, and asking for a relaunch would be a worse answer than doing the work. `ReloadableStore` is the counterpart to the `reset()` every store already has, and `AppModel` lists them for the same reason `resetPracticeData` does — so a store added later cannot be left holding stale state.
+- **Rolled back on a failed write,** matching the web: `UserDefaults` has no transaction either, so the namespace is snapshotted, replaced, and verified, and a mismatch puts the snapshot back rather than leaving a profile half of each.
+- **Validation.** +13 Swift tests (392 total), including a round-trip through `UserDefaults` and a check that the live store keeps stale state until told to re-read. The section was photographed in the simulator in both themes — `ImageRenderer` cannot draw a `Form`, so Settings is always shot rather than rendered.
