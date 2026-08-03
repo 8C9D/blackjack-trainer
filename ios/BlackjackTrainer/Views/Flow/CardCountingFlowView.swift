@@ -17,6 +17,9 @@ final class CardCountingFlowModel {
     /// and where that accuracy is kept.
     @ObservationIgnored let strategy: BasicStrategyEngine?
     @ObservationIgnored let showdownPlayStats: SessionStatsStore?
+    /// The chart the showdown's insurance call is graded against — the same
+    /// indices the Deviations drill uses.
+    @ObservationIgnored let deviations: DeviationEngine?
     let session = DrillSession()
     private(set) var target = 0
     private(set) var done = false
@@ -27,13 +30,15 @@ final class CardCountingFlowModel {
         history: PracticeHistoryStore,
         bankroll: BankrollStore = BankrollStore(),
         strategy: BasicStrategyEngine? = nil,
-        showdownPlayStats: SessionStatsStore? = nil
+        showdownPlayStats: SessionStatsStore? = nil,
+        deviations: DeviationEngine? = nil
     ) {
         self.counting = counting
         self.prefs = prefs
         self.history = history
         self.strategy = strategy
         self.showdownPlayStats = showdownPlayStats
+        self.deviations = deviations
         showdownBankroll = bankroll
         prefs.setLastTrainer(.cardCounting)
         // Configure the drill entirely from the pre-made decisions.
@@ -65,7 +70,8 @@ final class CardCountingFlowModel {
             history: app.practiceHistory,
             bankroll: app.showdownBankroll,
             strategy: app.basicStrategy,
-            showdownPlayStats: app.showdownPlayStats
+            showdownPlayStats: app.showdownPlayStats,
+            deviations: app.deviations
         )
     }
 
@@ -339,7 +345,10 @@ struct CardCountingFlowView: View {
                 betting: model.counting.showdownBetting,
                 bankroll: model.showdownBankroll,
                 strategy: model.strategy,
-                playStats: model.showdownPlayStats
+                playStats: model.showdownPlayStats,
+                system: model.counting.system,
+                deviations: model.deviations,
+                entryRunningCount: model.counting.shoeRunningCount
             ) { dealtCards in
                 model.exitShowdown(dealtCards)
             }

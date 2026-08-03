@@ -12,6 +12,9 @@ final class AppModel {
 
     let basicStrategy: BasicStrategyEngine
     let counting = CountingEngine()
+    /// The Deviations drill grades through the evaluator; the showdown's
+    /// insurance call needs the engine underneath it, so both are held.
+    let deviations: DeviationEngine
     let deviationEvaluator: DeviationEvaluator
 
     let basicStrategyStats: SessionStatsStore
@@ -57,9 +60,9 @@ final class AppModel {
         countingSystems = loaded.systems
         let basicStrategyEngine = BasicStrategyEngine(charts: loaded.charts)
         basicStrategy = basicStrategyEngine
-        deviationEvaluator = DeviationEvaluator(
-            engine: DeviationEngine(basic: basicStrategyEngine, charts: loaded.charts)
-        )
+        let deviationEngine = DeviationEngine(basic: basicStrategyEngine, charts: loaded.charts)
+        deviations = deviationEngine
+        deviationEvaluator = DeviationEvaluator(engine: deviationEngine)
 
         let cloud = UbiquitousKeyValueStore()
         let basicStrategyStats = SessionStatsStore(key: StatsKeys.basicStrategy, cloud: cloud)

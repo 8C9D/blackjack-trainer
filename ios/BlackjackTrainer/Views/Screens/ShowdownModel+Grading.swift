@@ -33,12 +33,68 @@ extension ShowdownModel {
         let wasRight = action == correct.action
         let verdict = PlayVerdict(
             correct: wasRight,
-            expected: correct.action,
+            headline: "\(correct.action.label) was the play.",
             reason: correct.reason
         )
         guard !wasRight else { return GradedPlay(verdict: verdict, misplay: nil) }
         let misplay = "\(correct.handDescription) vs \(normalizeUpcardKey(upcard)): "
             + "\(correct.action.label), not \(action.label)"
         return GradedPlay(verdict: verdict, misplay: misplay)
+    }
+
+    /// The count as this table can grade it, on the shoe as it now stands.
+    var countBasis: CountBasis {
+        CountBasis.of(system: system, runningCount: visibleRunningCount,
+                      decksRemaining: shoe.decksRemaining)
+    }
+
+    /// Insurance is the one decision at this table that is purely about the
+    /// count, and the showdown hangs off the drill that just practised it — so
+    /// this is where a trainee finds out whether the number they were carrying
+    /// was worth acting on. It is graded on the count as they could see it:
+    /// every card face up at this moment, and not the hole card the bet is
+    /// about.
+    ///
+    /// Whether the bet won is beside the point. Insurance at +3 that loses was
+    /// still right, and that is exactly the lesson.
+    ///
+    /// Nil when there is nothing to grade against — no charts, or a system whose
+    /// count the app has no published trigger for.
+    func gradeInsurance(took: Bool) -> GradedPlay? {
+        guard let deviations else { return nil }
+        let basis = countBasis
+        let decision = deviations.resolveInsuranceDecision(
+            trueCount: basis.trueCountForIndex, ruleSet: ruleSet
+        )
+        guard let shouldTake = basis.insuranceIsCorrect(
+            hiLoThresholdMet: decision.deviationApplied
+        ) else { return nil }
+        let correct = took == shouldTake
+        let verdict = PlayVerdict(
+            correct: correct,
+            headline: shouldTake ? "Insurance was the play." : "Declining was the play.",
+            reason: insuranceReason(basis, shouldTake: shouldTake,
+                                    index: decision.matchedRule?.index)
+        )
+        guard !correct else { return GradedPlay(verdict: verdict, misplay: nil) }
+        let misplay = "Insurance: \(shouldTake ? "take it" : "decline"), "
+            + "not \(took ? "take" : "decline")"
+        return GradedPlay(verdict: verdict, misplay: misplay)
+    }
+
+    private func insuranceReason(_ basis: CountBasis, shouldTake: Bool, index: Int?) -> String {
+        let at = shouldTake ? "at or above" : "below"
+        if case let .runningCount(count, insuranceAt) = basis {
+            let name = system?.name ?? DeviationIndexSystem.name
+            let trigger = CountFormat.signedCount(Double(insuranceAt))
+            return "Running count \(CountFormat.signedCount(count)) is \(at) "
+                + "\(name)'s insurance count of \(trigger)."
+        }
+        // The index is quoted from the chart the grading just consulted, never
+        // restated here, so a corrected chart cannot leave this sentence citing
+        // a number the verdict no longer uses.
+        let named = index.map { " of \(CountFormat.signedCount(Double($0)))" } ?? ""
+        let count = CountFormat.signedCount(Double(basis.trueCountForIndex))
+        return "True count \(count) is \(at) the insurance index\(named)."
     }
 }

@@ -24,7 +24,7 @@ struct PlayCoachView: View {
     }
 
     private var line: Text {
-        let head = verdict.correct ? "Correct." : "\(verdict.expected.label) was the play."
+        let head = verdict.correct ? "Correct." : verdict.headline
         return Text(head).bold().foregroundStyle(verdict.correct ? Theme.good : Theme.bad)
             + Text(" ")
             + Text(verdict.reason).foregroundStyle(Theme.midInk)
@@ -56,7 +56,7 @@ struct MisplayListView: View {
 #Preview {
     VStack(spacing: 12) {
         PlayCoachView(verdict: PlayVerdict(
-            correct: false, expected: .stand,
+            correct: false, headline: "Stand was the play.",
             reason: "Hard 15 vs dealer 3 under S17: stand."
         ))
         MisplayListView(misplays: ["Hard 15 vs 3: Stand, not Double"])

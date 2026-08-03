@@ -50,7 +50,7 @@ struct ShowdownPlayGradingTests {
         h.model.onAction(.stand)
         let verdict = try #require(h.model.lastPlay)
         #expect(verdict.correct)
-        #expect(verdict.expected == .stand)
+        #expect(verdict.headline == "Stand was the play.")
         // The round resolved exactly as it did before grading existed.
         #expect(h.model.settlement?.outcome == .win)
         #expect(h.model.roundMisplays.isEmpty)
@@ -64,7 +64,7 @@ struct ShowdownPlayGradingTests {
         h.model.onAction(.hit)
         let verdict = try #require(h.model.lastPlay)
         #expect(!verdict.correct)
-        #expect(verdict.expected == .stand)
+        #expect(verdict.headline == "Stand was the play.")
         // The card was still dealt: 19 + 2 = 21.
         #expect(h.model.playerCards.count == 3)
     }
@@ -91,7 +91,7 @@ struct ShowdownPlayGradingTests {
         ])
         h.model.onAction(.hit)
         h.model.onAction(.hit)
-        #expect(try #require(h.model.lastPlay).expected == .hit)
+        #expect(try #require(h.model.lastPlay).headline == "Hit was the play.")
     }
 
     @Test func collectsTheRoundsMisplaysForTheResultPanel() throws {
@@ -127,7 +127,7 @@ struct ShowdownPlayGradingTests {
         h.model.onAction(.split)
         let verdict = try #require(h.model.lastPlay)
         #expect(verdict.correct)
-        #expect(verdict.expected == .split)
+        #expect(verdict.headline == "Split was the play.")
     }
 
     /// A model built without the charts (the previews do this) simply does not

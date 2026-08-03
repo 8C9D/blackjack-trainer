@@ -54,7 +54,20 @@ final class ShowdownModel {
     /// verdict that scrolls past as the next hand is played would be no use.
     private(set) var roundMisplays: [String] = []
 
-    @ObservationIgnored private let shoe: Shoe
+    /// Not `private`: `+Grading` divides the count by what is left of it.
+    @ObservationIgnored let shoe: Shoe
+    /// The system being counted, and the chart the insurance call is graded
+    /// against. Both optional for the same reason `strategy` is: a preview or a
+    /// spec may be built without them, and grading is then skipped.
+    @ObservationIgnored let system: CountingSystem?
+    @ObservationIgnored let deviations: DeviationEngine?
+    /// The count as the player can actually see it: the count carried in from
+    /// the drill plus every card this showdown has turned face up. The dealer's
+    /// hole card is deliberately excluded until the next deal — insurance is
+    /// decided before it is seen, and grading against a card the player cannot
+    /// see would be grading a different game.
+    @ObservationIgnored private(set) var visibleRunningCount: Double
+    @ObservationIgnored private var pendingHoleCard: Card?
     /// Not `private`: the win/lose/push readers live in `+Presentation`.
     @ObservationIgnored let stats: ShowdownStatsStore
     /// Optional so a spec (and the `#Preview`s) can build a model without the
@@ -77,12 +90,19 @@ final class ShowdownModel {
         betting: Bool = false,
         bankroll: BankrollStore = BankrollStore(),
         strategy: BasicStrategyEngine? = nil,
-        playStats: SessionStatsStore? = nil
+        playStats: SessionStatsStore? = nil,
+        system: CountingSystem? = nil,
+        deviations: DeviationEngine? = nil,
+        entryRunningCount: Double = 0
     ) {
         self.shoe = shoe
         self.ruleSet = ruleSet
         self.options = options
         self.strategy = strategy
+        self.system = system
+        self.deviations = deviations
+        // The count the drill was carrying is where this table's count starts.
+        visibleRunningCount = entryRunningCount
         self.playStats = playStats
         self.stats = stats
         self.spots = Showdown.clampSpots(spots)
@@ -126,11 +146,7 @@ final class ShowdownModel {
         // it stands, and hit/split have already changed it by the time they
         // return. `private(set)` is file-scoped, so the scoring lives next door
         // but the recording of it has to happen here.
-        if let graded = grade(action) {
-            playStats?.recordAttempt(correct: graded.verdict.correct)
-            lastPlay = graded.verdict
-            if let misplay = graded.misplay { roundMisplays.append(misplay) }
-        }
+        if let graded = grade(action) { record(graded) }
         switch action {
         case .hit: hit()
         case .stand: stand()
@@ -139,6 +155,15 @@ final class ShowdownModel {
         case .surrender: surrender()
         default: break
         }
+    }
+
+    /// Post one graded decision: the running accuracy, the coach line, and the
+    /// round's misplay list. Lives here because all three are `private(set)`,
+    /// which is file-scoped, while the scoring itself is next door in `+Grading`.
+    private func record(_ graded: GradedPlay) {
+        playStats?.recordAttempt(correct: graded.verdict.correct)
+        lastPlay = graded.verdict
+        if let misplay = graded.misplay { roundMisplays.append(misplay) }
     }
 
     /// Give up the hand for half the bet. It settles as a loss on the spot — the
@@ -186,6 +211,12 @@ final class ShowdownModel {
             phase = .exhausted
             return
         }
+        // The previous round's hole card was turned over before that round paid,
+        // so it joins the visible count now rather than staying hidden forever.
+        if let hole = pendingHoleCard {
+            visibleRunningCount += system?.value(for: hole) ?? 0
+            pendingHoleCard = nil
+        }
         // The guard guarantees the whole opening round, so no draw here is nil.
         var boxes: [[Card]] = Array(repeating: [], count: spots)
         for index in boxes.indices {
@@ -195,7 +226,7 @@ final class ShowdownModel {
         for index in boxes.indices {
             boxes[index].append(contentsOf: [draw()].compactMap(\.self))
         }
-        dealer.append(contentsOf: [draw()].compactMap(\.self))
+        dealer.append(contentsOf: [drawHole()].compactMap(\.self))
 
         let posted = betting ? bet : 0
         roundNet = 0
@@ -256,6 +287,36 @@ final class ShowdownModel {
         }
     }
 
+    private func draw() -> Card? {
+        let dealt = shoe.deal(1)
+        remaining = shoe.cardsRemaining
+        if let card = dealt.first {
+            dealtCards.append(card)
+            visibleRunningCount += system?.value(for: card) ?? 0
+        }
+        return dealt.first
+    }
+
+    /// The dealer's second card, drawn face down: dealt and tracked like any
+    /// other, but held out of the visible count until the next round opens.
+    private func drawHole() -> Card? {
+        guard let card = draw() else { return nil }
+        visibleRunningCount -= system?.value(for: card) ?? 0
+        pendingHoleCard = card
+        return card
+    }
+
+    func resetStats() {
+        stats.reset()
+    }
+}
+
+/// Playing the boxes out: the player's actions, hand-to-hand progression, and
+/// the dealer's turn once every box is finished. Same file as the model — the
+/// mutators drive the file-scoped `private(set)` state — but outside the class
+/// body to respect the repo's type-length limit.
+@MainActor
+extension ShowdownModel {
     private func hit() {
         guard phase == .playerTurn, hands.indices.contains(activeIndex) else { return }
         guard let card = draw() else {
@@ -351,17 +412,6 @@ final class ShowdownModel {
         }
         phase = .resolved
     }
-
-    private func draw() -> Card? {
-        let dealt = shoe.deal(1)
-        remaining = shoe.cardsRemaining
-        if let card = dealt.first { dealtCards.append(card) }
-        return dealt.first
-    }
-
-    func resetStats() {
-        stats.reset()
-    }
 }
 
 /// The insurance decision. Same file as the model — the mutators drive the
@@ -374,6 +424,7 @@ extension ShowdownModel {
     /// and the round then continues exactly as an uninsured one.
     func takeInsurance() {
         guard phase == .insurance else { return }
+        if let graded = gradeInsurance(took: true) { record(graded) }
         let dealerBlackjack = Hand.isBlackjack(dealerCards)
         var net = 0.0
         for hand in hands {
@@ -389,6 +440,7 @@ extension ShowdownModel {
 
     func declineInsurance() {
         guard phase == .insurance else { return }
+        if let graded = gradeInsurance(took: false) { record(graded) }
         phase = .playerTurn
         peekAndContinue()
     }
