@@ -21,7 +21,7 @@ A frontend-only Angular app for practicing four blackjack skills:
 
 All four modes persist independent session stats to `localStorage` and reuse the same card model + cardsJS images.
 The web app runs as a **Flow shell**: it launches into a one-action home screen (Continue the last trainer, a daily-goal ring, and a 7-day streak strip), drills run full screen and auto-advance on correct answers, adapt to the scenarios you keep missing, and all configuration lives on a dedicated Settings screen.
-A native iOS SwiftUI mirror (with a home-screen widget, iCloud sync, and App Store metadata) lives under `ios/`, kept in lockstep with the web engines by exported parity fixtures (see [iOS app](#ios-app)).
+A native iOS SwiftUI mirror (with a home-screen widget, iCloud sync, and App Store metadata) lives under `ios/`, kept in lockstep with the web engines by exported parity fixtures (see [iOS app](#ios-app)). Both apps read and write the same backup file, so a profile moves between the browser and the phone.
 
 ## Quick start
 
