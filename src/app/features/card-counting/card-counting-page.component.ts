@@ -178,6 +178,7 @@ type DrillState =
               [options]="tableOptions()"
               [spots]="showdownSpots()"
               [betting]="showdownBetting()"
+              [betRamp]="betRamp()"
               [system]="system()"
               [entryRunningCount]="shoeRunningCount()"
               (exit)="exitShowdown($event)"
@@ -244,6 +245,10 @@ export class CardCountingPageComponent {
 
   // Whether the showdown opens each round on a bet, from the Settings screen.
   protected readonly showdownBetting = computed(() => this.prefs.prefs().counting.showdownBetting);
+
+  // The spread the showdown offers as its bet ladder, and grades the bet
+  // against — the same one the bet-spread drill uses.
+  protected readonly betRamp = computed(() => this.prefs.prefs().counting.betRamp);
 
   // The idle screen names the mode it is about to run: five modes now differ
   // enough (self-paced deck, two-part answers) that "Start counting" alone does

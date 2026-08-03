@@ -10,6 +10,8 @@ import type { BankrollState } from '../../core/services/bankroll.service';
 import { countingSystemById } from '../../data/counting-systems';
 import { deviationsFor } from '../../core/services/deviation-engine.service';
 import { MissTallyService } from '../../core/services/miss-tally.service';
+import { BankrollService } from '../../core/services/bankroll.service';
+import { DEFAULT_BET_RAMP } from '../../core/models/bet-ramp.model';
 import { ShowdownComponent } from './showdown.component';
 
 // The index the coach quotes has to be the one it graded against, so the spec
@@ -64,6 +66,8 @@ type Internals = {
   spots(): number;
   stats: { stats(): ShowdownStats; reset(): void };
   playStats: { stats(): SessionStats };
+  betSpreadStats: { stats(): SessionStats };
+  betOptions(): readonly number[];
   lastPlay(): { correct: boolean; headline: string; reason: string } | null;
   roundMistakes(): readonly string[];
 };
@@ -650,14 +654,16 @@ describe('ShowdownComponent', () => {
         c.takeInsurance();
         expect(c.lastPlay()).toMatchObject({ correct: false, headline: 'Declining was the play.' });
         expect(c.lastPlay()!.reason).toContain(`insurance index of +${INSURANCE_INDEX}`);
-        expect(c.roundMistakes()[0]).toContain('Insurance');
+        // These rounds also over-bet the spread at a flat count, which is its
+        // own misplay; the insurance call is the one under test here.
+        expect(c.roundMistakes().filter((m) => m.startsWith('Insurance'))).toHaveLength(1);
       });
 
       it('confirms declining at a low count', () => {
         const { c } = dealtWithBet(oneDeckLeft(noNatural), 10, 1, { entryRunningCount: 0 });
         c.declineInsurance();
         expect(c.lastPlay()).toMatchObject({ correct: true });
-        expect(c.roundMistakes()).toEqual([]);
+        expect(c.roundMistakes().filter((m) => m.startsWith('Insurance'))).toEqual([]);
       });
 
       // A shoe of ~0.15 decks with a carried +1 puts the true count well past
@@ -951,6 +957,94 @@ describe('ShowdownComponent', () => {
 
   // The table now says whether the hand was played right. It still settles the
   // play either way — this is a table, not a quiz.
+  // The bet-spread drill asks for a number in the abstract; this is the table
+  // where the chips actually go out, and until now a trainee could flat-bet the
+  // minimum through a rich shoe and hear nothing.
+  describe('grading the bet against the spread', () => {
+    // The bet is placed before a card is dealt, so the shoe is padded to exactly
+    // one deck *including* the round to come — that makes the true count equal
+    // the carried running count at the moment the bet is graded. 8s are zero in
+    // Hi-Lo, so the filler moves nothing.
+    const oneDeckLeft = (ranks: readonly Rank[]): Rank[] => [
+      ...ranks,
+      ...(Array<Rank>(52 - ranks.length).fill('8') as Rank[]),
+    ];
+    const hand: readonly Rank[] = ['9', '10', '7', '6'];
+
+    function bet(units: number, entryRunningCount: number) {
+      const created = createShowdown(makeShoe(oneDeckLeft(hand)), 'S17', 1, true, undefined, {
+        entryRunningCount,
+      });
+      created.c.setBet(units);
+      created.c.dealAfterBet();
+      return created;
+    }
+
+    it('offers the spread as the bet ladder, not a generic chip tray', () => {
+      const { c } = createShowdown(makeShoe(oneDeckLeft(hand)), 'S17', 1, true);
+      expect(c.betOptions()).toEqual([...DEFAULT_BET_RAMP]);
+    });
+
+    it('confirms a bet that matches the spread at this count', () => {
+      // No cards are dealt when the bet is placed, so the count is the carried
+      // one: 0 → the TC ≤ +1 band, where the default spread calls for 1 unit.
+      const { c } = bet(1, 0);
+      expect(c.lastPlay()).toMatchObject({ correct: true });
+      expect(c.roundMistakes()).toEqual([]);
+    });
+
+    it('names the bet the spread called for when it was not the one placed', () => {
+      // A carried +3 with one deck left is TC +3, where the spread calls for 4.
+      const { c } = bet(1, 3);
+      expect(c.lastPlay()).toMatchObject({ correct: false, headline: '4 units was the bet.' });
+      expect(c.lastPlay()!.reason).toContain('TC +3');
+      expect(c.roundMistakes()[0]).toBe('Bet: 4 at TC +3, not 1');
+    });
+
+    it('records the call in the bet-spread accuracy', () => {
+      const { c } = bet(1, 3);
+      expect(c.betSpreadStats.stats()).toMatchObject({ attempts: 1, correct: 0 });
+    });
+
+    // The ramp is the player's own, indexed by whatever true count they keep, so
+    // it applies to any balanced system — unlike the insurance index, which is a
+    // Hi-Lo number and is only ever applied to Hi-Lo.
+    it('grades any balanced system against its own true count', () => {
+      // Omega II is level 2: the same four cards read a different count, and the
+      // ramp is graded on that one.
+      const { c } = createShowdown(makeShoe(oneDeckLeft(hand)), 'S17', 1, true, undefined, {
+        systemId: 'omega-ii',
+        entryRunningCount: 3,
+      });
+      c.setBet(4);
+      c.dealAfterBet();
+      expect(c.lastPlay()).toMatchObject({ correct: true });
+    });
+
+    // A system with no true count at all is not scored against a ramp indexed
+    // by one — the same honesty the insurance call gets.
+    it('says nothing about the bet for a system with no true count', () => {
+      const { c } = createShowdown(makeShoe(oneDeckLeft(hand)), 'S17', 1, true, undefined, {
+        systemId: 'ko',
+        entryRunningCount: 3,
+      });
+      c.setBet(1);
+      c.dealAfterBet();
+      expect(c.lastPlay()).toBeNull();
+      expect(c.betSpreadStats.stats().attempts).toBe(0);
+    });
+
+    // The top rung is offered disabled once the stack cannot back it, so scoring
+    // it would mark a bet the table never let the player place.
+    it('skips a called bet the bankroll could not have covered', () => {
+      // Three chips left, but TC +3 calls for four.
+      TestBed.inject(BankrollService).record(0, -497);
+      const { c } = bet(1, 3);
+      expect(c.lastPlay()).toBeNull();
+      expect(c.betSpreadStats.stats().attempts).toBe(0);
+    });
+  });
+
   describe('grading the play against basic strategy', () => {
     // A dealt round with chips on, for the cases where the bankroll is what
     // withholds an action.

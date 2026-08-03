@@ -253,7 +253,7 @@ test.describe('accessibility', () => {
       await expect(page.getByRole('group', { name: 'Bet size' })).toBeVisible();
       expect(await contrastFailures(page), `bet stage (${scheme})`).toEqual([]);
 
-      await page.getByRole('button', { name: '10', exact: true }).click();
+      await page.getByRole('button', { name: '8', exact: true }).click();
       await page.getByRole('button', { name: /^Deal/ }).click();
       await expect(page.getByRole('group', { name: 'Insurance' })).toBeVisible();
       expect(await contrastFailures(page), `insurance decision (${scheme})`).toEqual([]);

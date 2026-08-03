@@ -47,6 +47,21 @@ export type CountBasis =
   | { readonly kind: 'running-count'; readonly runningCount: number; readonly insuranceAt: number }
   | { readonly kind: 'ungraded' };
 
+// This system's own true count, or null when it has none to read.
+//
+// Kept apart from `countBasisFor` because the two questions are different. A
+// deviation index is a Hi-Lo number, so only Hi-Lo may be graded against it. A
+// bet ramp is the player's own, indexed by whatever true count they are keeping
+// — so any balanced system qualifies, exactly as the bet-spread drill allows.
+export function trueCountFor(
+  system: CountingSystem,
+  runningCount: number,
+  decksRemaining: number,
+): number | null {
+  if (!system.balanced || decksRemaining <= 0) return null;
+  return Math.trunc(runningCount / decksRemaining);
+}
+
 export function countBasisFor(
   system: CountingSystem,
   runningCount: number,

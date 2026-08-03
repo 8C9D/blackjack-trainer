@@ -89,21 +89,44 @@ test.describe('post-count showdown', () => {
     await expect(page.getByRole('group', { name: 'Player actions' })).toBeHidden();
     await expect(page.locator('.showdown__bankroll')).toContainText('500');
 
-    await bets.getByRole('button', { name: '25', exact: true }).click();
+    await bets.getByRole('button', { name: '12', exact: true }).click();
     await page.getByRole('button', { name: /^Deal/ }).click();
 
     // The hand is on the felt with its stake shown.
     await expect(page.getByRole('region', { name: 'Your hand' })).toBeVisible();
-    await expect(page.locator('.showdown__stake').first()).toHaveText('25');
+    await expect(page.locator('.showdown__stake').first()).toHaveText('12');
 
     await standEveryBox(page);
     await expect(page.getByRole('button', { name: /Deal another hand/ })).toBeVisible();
-    // 25 at risk: the bankroll settled to a win, a loss, or a push.
-    await expect(page.locator('.showdown__bankroll')).toContainText(/500|525|475|537.5/);
+    // 12 at risk: the bankroll settled to a win, a loss, or a push.
+    await expect(page.locator('.showdown__bankroll')).toContainText(/500|512|488|518/);
 
     // The next round returns to the bet rather than dealing straight on.
     await page.getByRole('button', { name: /Deal another hand/ }).click();
     await expect(page.getByRole('group', { name: 'Bet size' })).toBeVisible();
+  });
+
+  // The bet-spread drill asks for a number in the abstract; this is the table
+  // where the chips go out, and a flat bet through a rich shoe used to pass
+  // without comment. The ladder is the player's own spread, so the bet the count
+  // calls for is always one the table can take.
+  test('the bet is offered as the spread and graded against the count', async ({ page }) => {
+    await configureCounting(page, '1', true);
+    await runCountingRound(page);
+    await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+
+    // The rungs are the default 1-2-4-8-12 spread, not a generic chip tray.
+    const bets = page.getByRole('group', { name: 'Bet size' });
+    await expect(bets.getByRole('button')).toHaveText(['1', '2', '4', '8', '12']);
+
+    // A fresh shoe is a flat count, where the spread calls for one unit.
+    await bets.getByRole('button', { name: '12', exact: true }).click();
+    await page.getByRole('button', { name: /^Deal/ }).click();
+
+    const coach = page.locator('.showdown__coach');
+    await expect(coach).toContainText('1 unit was the bet');
+    await expect(coach).toContainText('TC ≤ +1');
+    await expect(coach).toHaveClass(/showdown__coach--wrong/);
   });
 
   // Insurance rides on a dealer ace, so these walks pin the shuffle with the
@@ -115,7 +138,7 @@ test.describe('post-count showdown', () => {
     await configureCounting(page, '1', true);
     await runCountingRound(page, 14);
     await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
-    await page.getByRole('button', { name: '10', exact: true }).click();
+    await page.getByRole('button', { name: '8', exact: true }).click();
     await page.getByRole('button', { name: /^Deal/ }).click();
 
     // The round pauses on the decision before the hole card turns.
@@ -124,25 +147,25 @@ test.describe('post-count showdown', () => {
 
     await page.getByRole('button', { name: 'Take insurance' }).click();
     await expect(page.locator('.showdown__note[role=status]')).toHaveText(
-      /Insurance paid 2:1\s*\+10/,
+      /Insurance paid 2:1\s*\+8/,
     );
     // The dealer natural ended the box at once; the 2:1 covers the lost bet.
     await expect(page.locator('.showdown__verdict')).toHaveText(/blackjack/);
-    await expect(page.locator('.showdown__bankroll')).toContainText('wagered 15');
+    await expect(page.locator('.showdown__bankroll')).toContainText('wagered 12');
   });
 
   test('insurance is forfeited into a seeded safe hole card', async ({ page }) => {
     await configureCounting(page, '1', true);
     await runCountingRound(page, 41);
     await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
-    await page.getByRole('button', { name: '10', exact: true }).click();
+    await page.getByRole('button', { name: '8', exact: true }).click();
     await page.getByRole('button', { name: /^Deal/ }).click();
 
     await page.getByRole('button', { name: 'Take insurance' }).click();
     // No dealer natural: the premium is gone and the hand plays on.
-    await expect(page.locator('.showdown__note[role=status]')).toHaveText(/Insurance lost\s*−5/);
+    await expect(page.locator('.showdown__note[role=status]')).toHaveText(/Insurance lost\s*−4/);
     await expect(page.getByRole('group', { name: 'Player actions' })).toBeVisible();
-    await expect(page.locator('.showdown__bankroll')).toContainText('495');
+    await expect(page.locator('.showdown__bankroll')).toContainText('496');
   });
 
   // Insurance is the one decision at this table that is purely about the count,
@@ -154,7 +177,7 @@ test.describe('post-count showdown', () => {
     // Seed 14 deals a dealer ace over a natural: the insurance bet wins.
     await runCountingRound(page, 14);
     await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
-    await page.getByRole('button', { name: '10', exact: true }).click();
+    await page.getByRole('button', { name: '8', exact: true }).click();
     await page.getByRole('button', { name: /^Deal/ }).click();
 
     await page.getByRole('button', { name: 'Take insurance' }).click();
@@ -165,7 +188,11 @@ test.describe('post-count showdown', () => {
     await expect(coach).toHaveClass(/showdown__coach--wrong/);
     // The bet still paid; the call was still wrong.
     await expect(page.locator('.showdown__note[role=status]')).toContainText('Insurance paid 2:1');
-    await expect(page.locator('.showdown__misplay-list li')).toContainText('Insurance');
+    // The round also over-bets the spread at a flat count, which is its own
+    // misplay line; this test is about the insurance one.
+    await expect(
+      page.locator('.showdown__misplay-list li').filter({ hasText: 'Insurance' }),
+    ).toHaveCount(1);
   });
 
   // A misplay at the table is a basic-strategy miss on that hand. It has to
