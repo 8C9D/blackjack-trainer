@@ -48,20 +48,20 @@ struct PracticeHistoryStoreTests {
     @Test func startsAtZeroAndCountsHandsRecordedToday() {
         let s = store(freshDefaults(), now: { Self.base() })
         #expect(s.handsToday() == 0)
-        s.recordHand()
-        s.recordHand()
-        s.recordHand()
+        s.recordHand(correct: true)
+        s.recordHand(correct: true)
+        s.recordHand(correct: true)
         #expect(s.handsToday() == 3)
     }
 
     @Test func rollsOverToAFreshCountWhenTheDayChanges() {
         var current = Self.base()
         let s = store(freshDefaults(), now: { current })
-        s.recordHand()
+        s.recordHand(correct: true)
         #expect(s.handsToday() == 1)
         current = Self.makeDate(2026, 7, 11, 9, 0)
         #expect(s.handsToday() == 0)
-        s.recordHand()
+        s.recordHand(correct: true)
         #expect(s.handsToday() == 1)
         #expect(s.handsOn("2026-07-10") == 1)
     }
@@ -69,8 +69,8 @@ struct PracticeHistoryStoreTests {
     @Test func persistsAcrossInstances() {
         let defaults = freshDefaults()
         let s = store(defaults, now: { Self.base() })
-        s.recordHand()
-        s.recordHand()
+        s.recordHand(correct: true)
+        s.recordHand(correct: true)
         let reloaded = store(defaults, now: { Self.base() })
         #expect(reloaded.handsToday() == 2)
     }
@@ -82,7 +82,7 @@ struct PracticeHistoryStoreTests {
             ["date": "2026-07-09", "hands": 2]
         ])
         let s = store(defaults, now: { Self.base() })
-        s.recordHand()
+        s.recordHand(correct: true)
         #expect(!s.days.contains { $0.date == "2024-01-01" })
         #expect(s.handsOn("2026-07-09") == 2)
     }
@@ -92,7 +92,7 @@ struct PracticeHistoryStoreTests {
         defaults.set(Data("not-json{".utf8), forKey: StatsKeys.practiceHistory)
         let s = store(defaults, now: { Self.base() })
         #expect(s.handsToday() == 0)
-        s.recordHand()
+        s.recordHand(correct: true)
         #expect(s.handsToday() == 1)
     }
 
@@ -123,7 +123,7 @@ struct PracticeHistoryStoreTests {
             longRun[back] = 20
         }
         let s = seededStreakStore(longRun)
-        s.recordHand() // Prune on write while keeping every day in the run.
+        s.recordHand(correct: true) // Prune on write while keeping every day in the run.
         #expect(s.streak(goal: 20) == 40)
     }
 
@@ -157,7 +157,7 @@ struct PracticeHistoryStoreTests {
 
     @Test func returnsSevenDotsOldestFirstWithTodayFlaggedLast() {
         let s = store(freshDefaults(), now: { Self.base() })
-        s.recordHand()
+        s.recordHand(correct: true)
         let dots = s.last7(goal: 1)
         #expect(dots.count == 7)
         #expect(dots[6].isToday)
@@ -175,5 +175,75 @@ struct PracticeHistoryStoreTests {
         #expect(yesterday.hands == 19)
         #expect(!yesterday.met)
         #expect(s.last7(goal: 19)[5].met)
+    }
+
+    // Volume was all the history ever kept, so the app could say how much was
+    // practised and never how well.
+
+    @Test func accuracyIsNilBeforeAnythingIsGraded() {
+        let s = store(freshDefaults(), now: { Self.base() })
+        #expect(s.accuracyLast7() == nil)
+    }
+
+    @Test func accuracyIsTheCorrectShareOfTheWeekJustPractised() {
+        let s = store(freshDefaults(), now: { Self.base() })
+        s.recordHand(correct: true)
+        s.recordHand(correct: true)
+        s.recordHand(correct: false)
+        #expect(s.accuracyLast7() == 67)
+    }
+
+    @Test func accuracyReadsTheWeekBeforeItSeparately() {
+        var current = Self.base()
+        let s = store(freshDefaults(), now: { current })
+        s.recordHand(correct: true)
+        // Eight days on: the earlier rep has fallen out of this week into the last.
+        current = Self.makeDate(2026, 7, 18, 18, 30)
+        s.recordHand(correct: false)
+        #expect(s.accuracyLast7() == 0)
+        #expect(s.accuracyLast7(weeksBack: 1) == 100)
+    }
+
+    /// A day recorded by a build that only counted volume has no verdicts at
+    /// all. Reading its hands as ungraded reports it as unmeasured; dividing by
+    /// them would report a week of real practice as 0% correct.
+    @Test func leavesADayWrittenBeforeGradingUnmeasured() {
+        let defaults = freshDefaults()
+        seed(defaults, days: [["date": "2026-07-09", "hands": 20]])
+        let s = store(defaults, now: { Self.base() })
+        #expect(s.accuracyLast7() == nil)
+        #expect(s.last7(goal: 20)[5].accuracy == nil)
+        // A rep recorded today is measured on its own, not against those 20.
+        s.recordHand(correct: true)
+        #expect(s.accuracyLast7() == 100)
+    }
+
+    @Test func carriesEachDayOfTheStripItsOwnAccuracy() {
+        let s = store(freshDefaults(), now: { Self.base() })
+        s.recordHand(correct: true)
+        s.recordHand(correct: false)
+        #expect(s.last7(goal: 1)[6].accuracy == 50)
+        #expect(s.last7(goal: 1)[0].accuracy == nil)
+    }
+
+    /// A synced payload is not this device's to trust, and an accuracy over
+    /// 100% would be nonsense on the screen.
+    @Test func clampsAStoredDayToCorrectAtMostGradedAtMostHands() {
+        let defaults = freshDefaults()
+        seed(defaults, days: [["date": "2026-07-10", "hands": 4, "graded": 9, "correct": 9]])
+        let s = store(defaults, now: { Self.base() })
+        #expect(s.days.first == PracticeDay(date: "2026-07-10", hands: 4, graded: 4, correct: 4))
+        #expect(s.accuracyLast7() == 100)
+    }
+
+    /// The verdict counts have to survive the round trip, or a relaunch would
+    /// read every practised day back as unmeasured.
+    @Test func persistsTheVerdictCountsAcrossStoreInstances() {
+        let defaults = freshDefaults()
+        let s = store(defaults, now: { Self.base() })
+        s.recordHand(correct: true)
+        s.recordHand(correct: false)
+        let reloaded = store(defaults, now: { Self.base() })
+        #expect(reloaded.accuracyLast7() == 50)
     }
 }

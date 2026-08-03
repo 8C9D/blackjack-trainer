@@ -148,7 +148,7 @@ final class DeviationsDrillModel {
         )
         result = evaluation
         stats.recordAttempt(correct: evaluation.correct)
-        history.recordHand()
+        history.recordHand(correct: evaluation.correct)
         missTally.record(
             .deviations,
             ref: scenarioRefFor(scenario.player, dealerUpcard: scenario.dealerUpcard),

@@ -101,8 +101,8 @@ struct WidgetSnapshotTests {
             reload: { reloads += 1 }
         )
         withExtendedLifetime(publisher) {
-            history.recordHand()
-            history.recordHand()
+            history.recordHand(correct: true)
+            history.recordHand(correct: true)
         }
         #expect(writes.count == 3) // 1 seed + 2 records
         #expect(reloads == 3)
