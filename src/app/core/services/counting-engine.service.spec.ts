@@ -826,6 +826,7 @@ describe('CountingEngineService', () => {
       id: 'test-red-seven',
       name: 'Test Red Seven',
       description: 'Synthetic Red Seven for color-aware engine tests.',
+      metrics: { bettingCorrelation: 0.98, playingEfficiency: 0.54, insuranceCorrelation: 0.78 },
       balanced: false,
       values: {
         '2': 1,

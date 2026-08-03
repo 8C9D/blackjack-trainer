@@ -99,6 +99,20 @@ families, and more) — see the in-app picker for the full list:
 | **Omega II**       | 2     | yes                      | 2/3/7 = +1, 4/5/6 = +2, 8/A = 0, 9 = −1, 10–K = −2           |
 | **Wong Halves**    | 3     | yes                      | 2/7 = +0.5, 3/4/6 = +1, 5 = +1.5, 8 = 0, 9 = −0.5, 10–A = −1 |
 
+- **Every system says what it is for.** Picking among 58 is the most
+  consequential setting the app has, and the card values alone say nothing about
+  what each choice trades away. So the picker (and the drill's own start screen)
+  carries the three published correlations from the same comparison table the
+  registry came from: **betting correlation** (how closely the count tracks the
+  shifting edge — what the bet-spread drill and the showdown's bet measure),
+  **playing efficiency** (how well it indexes a playing decision — the Deviations
+  trainer), and **insurance correlation** (the one decision that is purely a
+  count of tens). Hi-Lo's `.97 / .51 / .76` is the trade-off in miniature: it
+  bets about as well as anything on the table and plays worse than most, which is
+  why it is the system the Illustrious 18 is written for. They rank a system's
+  _tags_, never a trainee — the perfect `1.00` betting correlations belong to
+  counts no human can keep, and a count you hold accurately beats a stronger one
+  you do not.
 - **True count is offered only for balanced systems.** Unbalanced systems are
   trained as a running count; the true-count radio is disabled with a note.
 - **KO adds a key-count mode** in place of a true count: the live shoe opens at

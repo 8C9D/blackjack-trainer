@@ -43,6 +43,29 @@
     font-size: 0.9rem;
   }
 
+  // The published correlations. Read as a row of figures rather than prose, so
+  // they get tabular spacing and sit a step quieter than the description.
+  &__metrics {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.15rem 0.7rem;
+    margin: 0 0 0.9rem;
+    max-width: 46ch;
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // One figure, never broken across lines; the separator rides on the item.
+  &__metric {
+    white-space: nowrap;
+
+    &:not(:last-child)::after {
+      content: ' ·';
+    }
+  }
+
   &__start {
     display: inline-flex;
     align-items: center;

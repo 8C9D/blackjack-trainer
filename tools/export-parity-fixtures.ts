@@ -169,12 +169,14 @@ function exportCharts(): void {
 function exportCountingSystems(): void {
   // Serialized verbatim. NOTE: the source CountingSystem has no "level" field
   // (the roadmap mentions one); we export the real shape — id/name/description/
-  // values/colorValues?/balanced — plus a derived isFractional flag the counting
-  // UI keys off, rather than inventing source data.
+  // metrics/values/colorValues?/balanced — plus a derived isFractional flag the
+  // counting UI keys off, rather than inventing source data.
   const systems = COUNTING_SYSTEMS.map((s) => ({
     id: s.id,
     name: s.name,
     description: s.description,
+    // Published correlations — /3 addition; the basis a trainee picks on.
+    metrics: s.metrics,
     balanced: s.balanced,
     isFractional: counting.isFractionalSystem(s),
     values: s.values,
@@ -183,7 +185,7 @@ function exportCountingSystems(): void {
     ...(s.keyCounts ? { keyCounts: s.keyCounts } : {}),
   }));
   writeJson('counting-systems.json', {
-    schema: 'counting-systems/2',
+    schema: 'counting-systems/3',
     generatedBy: 'tools/export-parity-fixtures.ts',
     description: `All ${systems.length} counting systems with per-rank and per-color values.`,
     count: systems.length,
