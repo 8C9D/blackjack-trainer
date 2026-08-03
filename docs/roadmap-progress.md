@@ -520,3 +520,12 @@ The web's file backup shipped without an iOS mirror, and the reasoning was recor
 - **The live stores are re-read, not relaunched.** The web restores by reloading the page; iOS has no reload to hide behind, and asking for a relaunch would be a worse answer than doing the work. `ReloadableStore` is the counterpart to the `reset()` every store already has, and `AppModel` lists them for the same reason `resetPracticeData` does — so a store added later cannot be left holding stale state.
 - **Rolled back on a failed write,** matching the web: `UserDefaults` has no transaction either, so the namespace is snapshotted, replaced, and verified, and a mismatch puts the snapshot back rather than leaving a profile half of each.
 - **Validation.** +13 Swift tests (392 total), including a round-trip through `UserDefaults` and a check that the live store keeps stale state until told to re-read. The section was photographed in the simulator in both themes — `ImageRenderer` cannot draw a `Form`, so Settings is always shot rather than rendered.
+
+### Post-roadmap continued: reviewing the day's own work (2026-08-03)
+
+Four features landed in one session across both platforms, so the last task was a pass over the session's own diff rather than another feature. It found three real defects, all of them in the newest code and none caught by the tests that shipped with it.
+
+- **A bet graded off the ladder.** A losing run clamps the carried bet to whatever the stack can still back, which need not be a rung — the ladder is the only way to place a bet, so that figure is one the player never chose, and scoring it marked them wrong for the bankroll's arithmetic.
+- **A bet graded into a shoe that dealt nothing.** `dealHand` bails to `exhausted` when the shoe cannot serve the round, and grading ran anyway: a verdict, a recorded attempt, and a misplay appended to the _previous_ round's list, which the early return had left uncleared.
+- **An iOS restore that iCloud could undo.** The file replaced everything locally while the cloud still held the profile it replaced, so the next external change would adopt the old values straight back. A restore now pushes the restored values up, and the practice-history and prefs reloads fire `onChange` so the home-screen widget stops showing the pre-restore numbers.
+- **The lesson worth keeping:** all three were in the seams _between_ the new code and code that already worked — a clamp, an early return, a sync path. The feature tests exercised the feature; nothing exercised what the feature now sat on top of.
