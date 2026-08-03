@@ -221,6 +221,35 @@ describe('SettingsPageComponent', () => {
     });
   });
 
+  // The system picker lives two sections down under Card counting, so the cost
+  // it carries for the Deviations trainer is stated where that trainer is set up.
+  describe('deviation index advisory', () => {
+    const advisory = (fixture: ComponentFixture<SettingsPageComponent>) =>
+      fixture.nativeElement.querySelector('.settings__advisory') as HTMLElement | null;
+
+    it('is absent on the Hi-Lo default', () => {
+      const { fixture } = createPage();
+      expect(advisory(fixture)).toBeNull();
+    });
+
+    it('appears, naming the system, as soon as another one is picked', () => {
+      const { fixture, prefs } = createPage();
+      prefs.updateCounting({ systemId: 'omega-ii' });
+      fixture.detectChanges();
+      expect(advisory(fixture)!.textContent).toContain('Omega II');
+      expect(advisory(fixture)!.textContent).toContain('Hi-Lo');
+    });
+
+    it('clears again when the system goes back to Hi-Lo', () => {
+      const { fixture, prefs } = createPage();
+      prefs.updateCounting({ systemId: 'omega-ii' });
+      fixture.detectChanges();
+      prefs.updateCounting({ systemId: 'hi-lo' });
+      fixture.detectChanges();
+      expect(advisory(fixture)).toBeNull();
+    });
+  });
+
   it('Escape and the back button return home', () => {
     const { fixture } = createPage();
     const router = TestBed.inject(Router);

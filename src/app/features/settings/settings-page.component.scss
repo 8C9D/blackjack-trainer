@@ -85,6 +85,18 @@
   color: var(--muted);
 }
 
+// Full body contrast, not the muted grey of a hint: this one says the drill
+// below it is graded against indices the trainee's count cannot produce.
+.settings__advisory {
+  margin: 0 0 0.25rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
 .settings__cancel,
 .settings__danger {
   align-self: flex-start;

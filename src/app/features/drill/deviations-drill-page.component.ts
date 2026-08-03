@@ -2,11 +2,13 @@ import { Component, DestroyRef, HostListener, computed, inject, signal } from '@
 import { Router } from '@angular/router';
 
 import { actionForKey, shouldIgnoreKeyboardEvent } from '../../core/keyboard';
-import type {
-  DeviationRule,
-  DeviationScenario,
-  DeviationTrainerResult,
+import {
+  deviationIndexNote,
+  type DeviationRule,
+  type DeviationScenario,
+  type DeviationTrainerResult,
 } from '../../core/models/deviation.model';
+import { countingSystemById } from '../../data/counting-systems';
 import { ACTION_LABELS, type Action } from '../../core/models/strategy.model';
 import { CardGeneratorService } from '../../core/services/card-generator.service';
 import {
@@ -66,6 +68,10 @@ type DrillPhase = 'question' | 'flash' | 'miss' | 'done';
           [streak]="session.streak()"
           (exit)="exitToHome()"
         />
+
+        @if (indexNote(); as note) {
+          <p class="drill__advisory" role="note">{{ note }}</p>
+        }
 
         <app-flow-stage [player]="scenario().player" [dealer]="scenario().dealerUpcard">
           @if (phase() === 'miss' && result(); as r) {
@@ -144,6 +150,13 @@ export class DeviationsDrillPageComponent {
   );
 
   protected readonly trueCountLabel = computed(() => formatTrueCount(this.scenario().trueCount));
+
+  // The counts this drill grades against are Hi-Lo. A trainee who has picked
+  // another system in Settings would otherwise drill Hi-Lo indices against a
+  // count that never produces those numbers, and nothing on screen would say so.
+  protected readonly indexNote = computed(() =>
+    deviationIndexNote(countingSystemById(this.prefs.prefs().counting.systemId)),
+  );
 
   // Surrender stays answerable regardless of the Late Surrender rule: the
   // deviation surrender overlay can expect SUR either way.

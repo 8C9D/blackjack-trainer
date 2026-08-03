@@ -30,4 +30,31 @@ test.describe('deviations drill', () => {
     await page.keyboard.press('s');
     await expect(progress).toHaveAttribute('aria-valuenow', '1');
   });
+
+  // The indices are Hi-Lo whatever the counting trainer is set to. This walks
+  // the wiring the unit specs stub: a system picked under Card counting has to
+  // reach two other screens that never read that setting before.
+  test('picking another counting system warns on Settings, the drill, and the chart', async ({
+    page,
+  }) => {
+    await page.goto('/settings');
+    await expect(page.locator('.settings__advisory')).toHaveCount(0);
+
+    await page.getByLabel('Counting system').selectOption('omega-ii');
+    await expect(page.locator('.settings__advisory')).toContainText('Omega II');
+
+    await page.goto('/drill/deviations');
+    await expect(page.locator('.drill__advisory')).toContainText('Omega II');
+
+    await page.goto('/chart');
+    await page.getByRole('button', { name: 'Deviations', exact: true }).click();
+    await expect(page.locator('.chart__note--warn')).toContainText('Omega II');
+
+    // And it goes away again when the trainee counts what the charts are for.
+    await page.goto('/settings');
+    await page.getByLabel('Counting system').selectOption('hi-lo');
+    await expect(page.locator('.settings__advisory')).toHaveCount(0);
+    await page.goto('/drill/deviations');
+    await expect(page.locator('.drill__advisory')).toHaveCount(0);
+  });
 });
