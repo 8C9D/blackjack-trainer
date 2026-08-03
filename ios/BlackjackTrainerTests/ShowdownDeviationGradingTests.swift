@@ -116,6 +116,30 @@ struct ShowdownDeviationGradingTests {
         #expect(verdict.headline == "Hit was the play.")
     }
 
+    /// Three other screens already tell a trainee counting something else that
+    /// the indices are not theirs. This is the fourth place indices matter, and
+    /// the only one that applies them to a hand they actually played.
+    @Test func saysNothingToAHiLoCounterWhoseNumbersTheseAre() throws {
+        #expect(try dealt(entryRunningCount: 1).model.indexNote == nil)
+    }
+
+    @Test func tellsABalancedCounterTheirTrueCountIsADifferentNumber() throws {
+        let note = try #require(dealt(entryRunningCount: 1, systemId: "omega-ii").model.indexNote)
+        #expect(note.contains("Omega II"))
+        #expect(note.contains("different true count"))
+        #expect(note.contains("graded on basic strategy alone"))
+        #expect(note.contains("insurance call is left ungraded"))
+    }
+
+    /// KO is the one other system this table can grade at all, and only for
+    /// insurance — so its note has to promise less than the others, not more.
+    @Test func creditsKOWithTheOneDecisionItsBookPublishes() throws {
+        let note = try #require(dealt(entryRunningCount: 1, systemId: "ko").model.indexNote)
+        #expect(note.contains("unbalanced and has no true count"))
+        #expect(note.contains("KO's own running-count trigger"))
+        #expect(!note.contains("left ungraded"))
+    }
+
     /// The index for 16 vs 10 assumes surrender was unavailable; the BJA late-
     /// surrender overlay says give the hand up at any count.
     @Test func doesNotLetTheIndexDowngradeASurrenderTheChartWants() throws {

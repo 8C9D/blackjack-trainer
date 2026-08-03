@@ -109,6 +109,25 @@ extension ShowdownModel {
         return scenarioRefFor(hand, dealerUpcard: upcard)
     }
 
+    /// What this table cannot say about this trainee's play, and why — or nil
+    /// when the indices are theirs. A playing index is a Hi-Lo true count, so
+    /// every other system is graded on basic strategy alone; said once here
+    /// rather than left to be inferred from verdicts that quietly never mention
+    /// an index. The reason is the shared advisory the Deviations drill, the
+    /// chart and Settings already show; only the consequence is added.
+    /// Mirrors the web `indexNote`.
+    var indexNote: String? {
+        let basis = countBasis
+        if case .trueCount = basis { return nil }
+        guard let system, let note = DeviationIndexSystem.note(for: system) else { return nil }
+        if case .runningCount = basis {
+            return note + " Hands here are graded on basic strategy, and the insurance "
+                + "call against \(system.name)'s own running-count trigger."
+        }
+        return note + " Hands here are graded on basic strategy alone, and the "
+            + "insurance call is left ungraded."
+    }
+
     /// The count as this table can grade it, on the shoe as it now stands.
     var countBasis: CountBasis {
         CountBasis.of(system: system, runningCount: visibleRunningCount,

@@ -48,6 +48,14 @@ struct ShowdownView: View {
                 .font(.headline)
                 .foregroundStyle(Theme.ink)
 
+            // The indices are Hi-Lo numbers, so a trainee counting anything
+            // else is told what this table can and cannot say about their play.
+            if let note = model.indexNote {
+                Text(note)
+                    .font(.caption)
+                    .foregroundStyle(Theme.muted)
+            }
+
             if model.betting {
                 bankrollLine
             }
