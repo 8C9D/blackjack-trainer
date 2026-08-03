@@ -28,20 +28,36 @@ struct ShowdownPlayGradingTests {
     private struct Harness {
         let model: ShowdownModel
         let playStats: SessionStatsStore
+        let missTally: MissTallyStore
+
+        /// Scenario keys the showdown filed, whatever their outcome — `weakSpots`
+        /// only surfaces the ones with a miss.
+        var filed: [String] {
+            (missTally.state[TalliedTrainer.basicStrategy.rawValue] ?? [:]).keys.sorted()
+        }
     }
 
     /// Cards are dealt player, dealer, player, dealer, then in draw order.
-    private func makeModel(_ cards: [Card], ruleSet: RuleSet = .s17) -> Harness {
+    private func makeModel(_ cards: [Card], ruleSet: RuleSet = .s17,
+                           betting: Bool = false, bet: Double = 0) -> Harness {
         let defaults = freshDefaults()
         let playStats = SessionStatsStore(key: StatsKeys.showdownPlay, defaults: defaults)
+        let missTally = MissTallyStore(key: StatsKeys.missTally, defaults: defaults)
         let model = ShowdownModel(
             shoe: stacked(cards),
             ruleSet: ruleSet,
             stats: ShowdownStatsStore(key: StatsKeys.showdown, defaults: defaults),
+            betting: betting,
+            bankroll: BankrollStore(key: StatsKeys.showdownBankroll, defaults: defaults),
             strategy: TestEngines.shared.basicStrategy,
-            playStats: playStats
+            playStats: playStats,
+            missTally: missTally
         )
-        return Harness(model: model, playStats: playStats)
+        if betting {
+            model.setBet(bet)
+            model.dealAfterBet()
+        }
+        return Harness(model: model, playStats: playStats, missTally: missTally)
     }
 
     @Test func confirmsACorrectDecisionWithoutChangingWhatHappens() throws {
@@ -142,5 +158,65 @@ struct ShowdownPlayGradingTests {
         model.onAction(.stand)
         #expect(model.lastPlay == nil)
         #expect(model.settlement != nil)
+    }
+
+    // A misplay at the table is a basic-strategy miss on that hand, so it has to
+    // reach the weak-spot tally — otherwise the verdict is said once and lost,
+    // and the drill never learns what the trainee actually gets wrong in play.
+
+    @Test func filesAMisplayUnderTheHandItWasMadeOn() throws {
+        // Player [10,9]=19 vs dealer 10: standing is correct, so hitting is not.
+        let h = makeModel([
+            card(.ten), card(.ten, .hearts), card(.nine), card(.six), card(.two), card(.king)
+        ])
+        h.model.onAction(.hit)
+        let spots = h.missTally.weakSpots(.basicStrategy)
+        #expect(spots.count == 1)
+        let spot = try #require(spots.first)
+        #expect(spot.label == "19 vs 10")
+        #expect(spot.misses == 1)
+        #expect(spot.attempts == 1)
+    }
+
+    @Test func recordsACorrectPlayTooSoAWeakSpotCanClear() {
+        let h = makeModel([card(.ten), card(.ten, .hearts), card(.nine), card(.six), card(.king)])
+        h.model.onAction(.stand)
+        // Correct, so nothing is outstanding — but the attempt was filed, and its
+        // clear-streak is what eventually retires the scenario.
+        #expect(h.missTally.weakSpots(.basicStrategy).isEmpty)
+        #expect(h.filed == ["hard-19-v-10"])
+    }
+
+    /// A `ScenarioRef` names a two-card hand — it is the seed the drill re-deals
+    /// from — so a three-card total has nothing to file under.
+    @Test func leavesAThreeCardDecisionOutOfTheTally() throws {
+        // [5,4]=9 vs 6 doubles, so hitting is wrong. The hand is then a three-card
+        // 11 vs 6, where hitting is the only play there is.
+        let h = makeModel([
+            card(.five), card(.six, .hearts), card(.four), card(.ten), card(.two),
+            card(.nine), card(.five, .hearts)
+        ])
+        h.model.onAction(.hit)
+        h.model.onAction(.hit)
+        // Two decisions were graded; only the opening one was filed.
+        #expect(h.playStats.stats.attempts == 2)
+        #expect(h.filed == ["hard-9-v-6"])
+        let spot = try #require(h.missTally.weakSpots(.basicStrategy).first)
+        #expect(spot.label == "9 vs 6")
+        #expect(spot.misses == 1)
+    }
+
+    /// The felt can withhold an action the chart wants. Recording that would clear
+    /// a weak spot on a question the drill never asks.
+    @Test func skipsAHandWhoseDoubleTheFreeChipsCouldNotBack() throws {
+        // The whole bankroll rides on the box, so [5,4]=9 vs 6 cannot double and
+        // hitting becomes the best play actually on offer.
+        let h = makeModel([
+            card(.five), card(.six, .hearts), card(.four), card(.ten), card(.two),
+            card(.nine), card(.five, .hearts)
+        ], betting: true, bet: 500)
+        h.model.onAction(.hit)
+        #expect(try #require(h.model.lastPlay).correct)
+        #expect(h.filed.isEmpty)
     }
 }

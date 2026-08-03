@@ -14,6 +14,9 @@ extension ShowdownModel {
         let verdict: PlayVerdict
         /// The line for the round's misplay list, or nil when the play was right.
         let misplay: String?
+        /// The scenario to file this decision under in the weak-spot tally, or
+        /// nil when the decision has no identity the drill could re-deal.
+        var tallyRef: ScenarioRef?
     }
 
     /// Nil when there is nothing to grade against — no charts (a preview or a
@@ -36,10 +39,39 @@ extension ShowdownModel {
             headline: "\(correct.action.label) was the play.",
             reason: correct.reason
         )
-        guard !wasRight else { return GradedPlay(verdict: verdict, misplay: nil) }
+        let ref = tallyRef(for: hand.cards, upcard: upcard, played: correct.action, engine: engine)
+        guard !wasRight else {
+            return GradedPlay(verdict: verdict, misplay: nil, tallyRef: ref)
+        }
         let misplay = "\(correct.handDescription) vs \(normalizeUpcardKey(upcard)): "
             + "\(correct.action.label), not \(action.label)"
-        return GradedPlay(verdict: verdict, misplay: misplay)
+        return GradedPlay(verdict: verdict, misplay: misplay, tallyRef: ref)
+    }
+
+    /// The scenario a decision at the table should be filed under, or nil when it
+    /// has none.
+    ///
+    /// A misplay here is a basic-strategy miss on the hand it was made on, so it
+    /// belongs in the same weak-spot tally the drill keeps: play 16 vs 10 badly at
+    /// the table and the next Basic Strategy session opens on it. Without that the
+    /// verdict is said once and forgotten the moment the round settles.
+    ///
+    /// Only an opening two-card decision qualifies, and only when the table asked
+    /// the same question the drill does. A `ScenarioRef` names a two-card hand — it
+    /// is the seed the drill re-deals from — so a three-card 16 has nothing to file
+    /// under. And when the felt withheld an action the chart wanted (a double the
+    /// free chips could not back, a split past the box's four-hand cap), the
+    /// correct answer here is not the drill's, and recording it would clear a weak
+    /// spot the trainee has not actually learned.
+    private func tallyRef(for cards: [Card], upcard: Card, played: Action,
+                          engine: BasicStrategyEngine) -> ScenarioRef? {
+        guard cards.count == 2 else { return nil }
+        let hand = TwoCardHand(cards[0], cards[1])
+        let unrestricted = engine.decide(EngineInput(
+            player: hand, dealerUpcard: upcard, ruleSet: ruleSet, options: options
+        ))
+        guard unrestricted.action == played else { return nil }
+        return scenarioRefFor(hand, dealerUpcard: upcard)
     }
 
     /// The count as this table can grade it, on the shoe as it now stands.

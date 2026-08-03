@@ -75,6 +75,8 @@ final class ShowdownModel {
     /// the scoring lives in `ShowdownModel+Grading.swift`.
     @ObservationIgnored let strategy: BasicStrategyEngine?
     @ObservationIgnored private let playStats: SessionStatsStore?
+    /// Misplays here feed the same weak-spot tally the Basic Strategy drill keeps.
+    @ObservationIgnored private let missTally: MissTallyStore?
     @ObservationIgnored let bankrollStore: BankrollStore
     /// Every card this showdown dealt, in order, handed back on exit so the
     /// counting drill can fold their running-count value into its carried count —
@@ -93,8 +95,10 @@ final class ShowdownModel {
         playStats: SessionStatsStore? = nil,
         system: CountingSystem? = nil,
         deviations: DeviationEngine? = nil,
-        entryRunningCount: Double = 0
+        entryRunningCount: Double = 0,
+        missTally: MissTallyStore? = nil
     ) {
+        self.missTally = missTally
         self.shoe = shoe
         self.ruleSet = ruleSet
         self.options = options
@@ -164,6 +168,9 @@ final class ShowdownModel {
         playStats?.recordAttempt(correct: graded.verdict.correct)
         lastPlay = graded.verdict
         if let misplay = graded.misplay { roundMisplays.append(misplay) }
+        if let ref = graded.tallyRef {
+            missTally?.record(.basicStrategy, ref: ref, correct: graded.verdict.correct)
+        }
     }
 
     /// Give up the hand for half the bet. It settles as a loss on the spot — the

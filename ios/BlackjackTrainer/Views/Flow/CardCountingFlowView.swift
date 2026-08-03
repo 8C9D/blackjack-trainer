@@ -20,6 +20,9 @@ final class CardCountingFlowModel {
     /// The chart the showdown's insurance call is graded against — the same
     /// indices the Deviations drill uses.
     @ObservationIgnored let deviations: DeviationEngine?
+    /// Where a misplay at the showdown table is filed, so the Basic Strategy
+    /// drill can open on it next session.
+    @ObservationIgnored let missTally: MissTallyStore?
     let session = DrillSession()
     private(set) var target = 0
     private(set) var done = false
@@ -31,7 +34,8 @@ final class CardCountingFlowModel {
         bankroll: BankrollStore = BankrollStore(),
         strategy: BasicStrategyEngine? = nil,
         showdownPlayStats: SessionStatsStore? = nil,
-        deviations: DeviationEngine? = nil
+        deviations: DeviationEngine? = nil,
+        missTally: MissTallyStore? = nil
     ) {
         self.counting = counting
         self.prefs = prefs
@@ -39,6 +43,7 @@ final class CardCountingFlowModel {
         self.strategy = strategy
         self.showdownPlayStats = showdownPlayStats
         self.deviations = deviations
+        self.missTally = missTally
         showdownBankroll = bankroll
         prefs.setLastTrainer(.cardCounting)
         // Configure the drill entirely from the pre-made decisions.
@@ -71,7 +76,8 @@ final class CardCountingFlowModel {
             bankroll: app.showdownBankroll,
             strategy: app.basicStrategy,
             showdownPlayStats: app.showdownPlayStats,
-            deviations: app.deviations
+            deviations: app.deviations,
+            missTally: app.missTally
         )
     }
 
@@ -348,7 +354,8 @@ struct CardCountingFlowView: View {
                 playStats: model.showdownPlayStats,
                 system: model.counting.system,
                 deviations: model.deviations,
-                entryRunningCount: model.counting.shoeRunningCount
+                entryRunningCount: model.counting.shoeRunningCount,
+                missTally: model.missTally
             ) { dealtCards in
                 model.exitShowdown(dealtCards)
             }
