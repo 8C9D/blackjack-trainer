@@ -10,7 +10,7 @@ export const PRACTICE_HISTORY_KEY = 'blackjack-practice-history';
 // real 31+ day streak was silently capped at 30. 400 days (> a year) keeps the
 // stored array small while making the cap effectively unreachable. Older
 // entries are pruned on every write.
-const MAX_HISTORY_DAYS = 400;
+export const MAX_HISTORY_DAYS = 400;
 
 export interface PracticeDay {
   // Local calendar date, 'YYYY-MM-DD'.
@@ -91,7 +91,12 @@ export class PracticeHistoryService {
   streak(goal: number): number {
     let count = 0;
     let back = this.handsOn(this.dateKeyDaysAgo(0)) >= goal ? 0 : 1;
-    while (this.handsOn(this.dateKeyDaysAgo(back)) >= goal) {
+    // Bounded by the retention window rather than by the data: days past it are
+    // pruned, so no real streak can run longer, and the walk cannot spin forever
+    // on a goal of zero — which every day in history, stored or not, satisfies.
+    // The goal is clamped to at least 1 before it reaches here, so this is a
+    // backstop for a caller that stops doing that, not a live path.
+    while (back < MAX_HISTORY_DAYS && this.handsOn(this.dateKeyDaysAgo(back)) >= goal) {
       count++;
       back++;
     }
