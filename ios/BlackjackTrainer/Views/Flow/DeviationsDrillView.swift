@@ -17,6 +17,7 @@ final class DeviationsDrillModel {
     @ObservationIgnored private let missTally: MissTallyStore
     @ObservationIgnored private let scheduler: FlowAdvanceScheduler
     @ObservationIgnored private let advanceDelay: Duration
+    @ObservationIgnored private let systems: [CountingSystem]
 
     private(set) var phase: DrillPhase = .question
     private(set) var scenario: DeviationScenario
@@ -35,11 +36,13 @@ final class DeviationsDrillModel {
         prefs: FlowPrefsStore,
         history: PracticeHistoryStore,
         missTally: MissTallyStore,
+        systems: [CountingSystem] = [],
         scheduler: FlowAdvanceScheduler? = nil,
         advanceDelay: Duration = .milliseconds(500)
     ) {
         self.evaluator = evaluator
         self.generator = generator
+        self.systems = systems
         scenarioGenerator = DeviationScenarioGenerator(rulesByRuleSet: charts.deviations)
         self.stats = stats
         self.prefs = prefs
@@ -70,6 +73,7 @@ final class DeviationsDrillModel {
             prefs: app.flowPrefs,
             history: app.practiceHistory,
             missTally: app.missTally,
+            systems: app.countingSystems,
             scheduler: scheduler,
             advanceDelay: advanceDelay
         )
@@ -85,6 +89,13 @@ final class DeviationsDrillModel {
 
     var trueCountLabel: String {
         DeviationFeedback.formatTrueCount(scenario.trueCount)
+    }
+
+    /// The counts this drill grades against are Hi-Lo. A trainee who has picked
+    /// another system in Settings would otherwise drill Hi-Lo indices against a
+    /// count that never produces those numbers, and nothing on screen would say so.
+    var indexNote: String? {
+        systems.system(withId: prefs.prefs.counting.systemId).flatMap(DeviationIndexSystem.note)
     }
 
     var explanation: String {
@@ -311,6 +322,10 @@ struct DeviationsDrillView: View {
                 streak: model.session.streak,
                 onExit: leave
             )
+            if let note = model.indexNote {
+                AdvisoryNoteView(text: note)
+                    .padding(.top, 10)
+            }
             FlowStageView(player: model.scenario.player, dealer: model.scenario.dealerUpcard) {
                 DrillLineView(line: stageLine)
             }

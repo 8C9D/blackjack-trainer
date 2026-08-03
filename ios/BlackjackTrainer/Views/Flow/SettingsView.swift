@@ -38,7 +38,7 @@ struct SettingsView: View {
                 dailyGoalSection
                 appearanceSection
                 tableRulesSection
-                deviationsSection
+                DeviationsSection()
                 countingSection
                 PracticeDataSection()
                 aboutSection
@@ -94,34 +94,6 @@ struct SettingsView: View {
             }
             Toggle("Double After Split (DAS)", isOn: doubleAfterSplitBinding)
             Toggle("Late Surrender", isOn: lateSurrenderBinding)
-        }
-    }
-
-    // MARK: Deviations
-
-    private var deviationsSection: some View {
-        Section("Deviations") {
-            Picker("Practice", selection: practiceModeBinding) {
-                Text("All hands").tag(DeviationPracticeMode.allHands)
-                Text("Deviation-only").tag(DeviationPracticeMode.deviationOnly)
-            }
-            Picker("True count", selection: deviationSourceBinding) {
-                Text("Random").tag(DeviationTrueCountSource.random)
-                Text("Manual").tag(DeviationTrueCountSource.manual)
-            }
-            if prefs.deviations.trueCountSource == .manual {
-                Stepper(
-                    "Practice true count: \(DeviationFeedback.formatTrueCount(prefs.deviations.manualTrueCount))",
-                    value: intBinding(
-                        get: { prefs.deviations.manualTrueCount },
-                        set: { value in
-                            model.flowPrefs.updateDeviations { $0.manualTrueCount = value }
-                        }
-                    ),
-                    in: DeviationTrainerConstants.minManualTrueCount
-                        ... DeviationTrainerConstants.maxManualTrueCount
-                )
-            }
         }
     }
 
@@ -298,20 +270,6 @@ extension SettingsView {
                     )
                 )
             }
-        )
-    }
-
-    private var practiceModeBinding: Binding<DeviationPracticeMode> {
-        Binding(
-            get: { prefs.deviations.practiceMode },
-            set: { value in model.flowPrefs.updateDeviations { $0.practiceMode = value } }
-        )
-    }
-
-    private var deviationSourceBinding: Binding<DeviationTrueCountSource> {
-        Binding(
-            get: { prefs.deviations.trueCountSource },
-            set: { value in model.flowPrefs.updateDeviations { $0.trueCountSource = value } }
         )
     }
 
