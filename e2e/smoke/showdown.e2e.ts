@@ -301,6 +301,45 @@ test.describe('post-count showdown', () => {
     await expect(dealAnother).toBeVisible();
   });
 
+  // The table keeps the count for the player and grades every count-dependent
+  // decision against it. Leaving is where it asks for theirs.
+  test('leaving the table asks what its cards did to the count', async ({ page }) => {
+    await configureCounting(page, '1');
+    // Seed 1 opens Q+3 vs dealer 9+8: a guaranteed player turn, so the walk
+    // reaches a resolved round rather than an auto-settled natural.
+    await runCountingRound(page, 1);
+    await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+    await standEveryBox(page);
+
+    await page.getByRole('button', { name: 'Back to counting' }).click();
+
+    const answer = page.getByLabel('What is the running count?');
+    await expect(answer).toBeVisible();
+    await expect(page.locator('.showdown__count-check')).toContainText(/\d+ cards came out/);
+    // Deliberately wrong: the verdict names the count the table kept, and how
+    // far off the answer was.
+    await answer.fill('99');
+    await page.getByRole('button', { name: /^Submit/ }).click();
+    await expect(page.locator('.showdown__coach')).toContainText('The running count is');
+    await expect(page.locator('.showdown__coach')).toContainText('points high');
+
+    // Answering is the way out; the drill's feedback is waiting behind it.
+    await page.getByRole('button', { name: /Back to counting/ }).click();
+    await expect(page.getByRole('button', { name: 'Play a hand vs the dealer' })).toBeVisible();
+  });
+
+  test('the count check can be turned off in Settings', async ({ page }) => {
+    await configureCounting(page, '1');
+    await page.getByLabel('Ask for the count on the way out').uncheck();
+    await runCountingRound(page, 1);
+    await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+    await standEveryBox(page);
+
+    await page.getByRole('button', { name: 'Back to counting' }).click();
+    await expect(page.getByLabel('What is the running count?')).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Play a hand vs the dealer' })).toBeVisible();
+  });
+
   test('betting stays off unless Settings asks for it', async ({ page }) => {
     await configureCounting(page, '1');
     // Seed 1 opens Q+3 vs dealer 9+8, guaranteeing a player turn so this test

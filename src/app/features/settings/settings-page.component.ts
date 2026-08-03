@@ -205,6 +205,7 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
           [liveDecksRemaining]="prefs().counting.numberOfDecks"
           [showdownSpots]="prefs().counting.showdownSpots"
           [showdownBetting]="prefs().counting.showdownBetting"
+          [showdownCountCheck]="prefs().counting.showdownCountCheck"
           [betRamp]="prefs().counting.betRamp"
           [errors]="countingErrors()"
           (systemChange)="onSystemChange($event)"
@@ -217,6 +218,7 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
           (penetrationChange)="updateCounting({ penetration: $event })"
           (showdownSpotsChange)="updateCounting({ showdownSpots: $event })"
           (showdownBettingChange)="updateCounting({ showdownBetting: $event })"
+          (showdownCountCheckChange)="updateCounting({ showdownCountCheck: $event })"
           (betRampChange)="updateCounting({ betRamp: $event })"
         />
       </section>
@@ -445,6 +447,7 @@ export class SettingsPageComponent {
       penetration: number;
       showdownSpots: number;
       showdownBetting: boolean;
+      showdownCountCheck: boolean;
       betRamp: BetRamp;
     }>,
   ): void {

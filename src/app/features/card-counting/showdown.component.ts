@@ -75,16 +75,26 @@ import {
   type TalliedTrainer,
 } from '../../core/services/miss-tally.service';
 import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.service';
+import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
+import { CountingEngineService } from '../../core/services/counting-engine.service';
 import { ShowdownPlayStatsService } from '../../core/services/showdown-play-stats.service';
 import { ShowdownStatsService } from '../../core/services/showdown-stats.service';
+import { CountAnswerFormComponent } from './count-answer-form.component';
 
 // 'player-turn': the player is acting on the active hand. 'resolved': every hand
 // is settled and the dealer hand revealed. 'exhausted': the shoe ran too low.
 // 'betting' and 'insurance' only occur when bet sizing is on: the round waits
 // for a bet before any card is dealt (the whole point of practising against the
 // count), and a dealer ace pauses the deal on the insurance decision before the
-// hole card is checked.
-type ShowdownPhase = 'betting' | 'insurance' | 'player-turn' | 'resolved' | 'exhausted';
+// hole card is checked. 'count-check' is the way out: the table asks what the
+// cards it dealt did to the count before handing the shoe back.
+type ShowdownPhase =
+  | 'betting'
+  | 'insurance'
+  | 'player-turn'
+  | 'resolved'
+  | 'exhausted'
+  | 'count-check';
 
 // Most a pair can be split to (3 splits → 4 hands), the common casino cap. The
 // cap is per box: occupying three boxes does not shrink any one box's splits.
@@ -156,7 +166,7 @@ interface PlayVerdict {
 // side bet.
 @Component({
   selector: 'app-showdown',
-  imports: [CardImageComponent],
+  imports: [CardImageComponent, CountAnswerFormComponent],
   template: `
     <section class="showdown" aria-label="Showdown vs dealer">
       <header class="showdown__header">
@@ -186,7 +196,39 @@ interface PlayVerdict {
         </p>
       }
 
-      @if (phase() === 'exhausted') {
+      @if (phase() === 'count-check') {
+        <!-- The one thing this table has never asked. It has been keeping the
+             count for the player all along — every verdict here rests on it —
+             and holding it through played-out hands is the skill the screen is
+             for, so the way out is through it. -->
+        <div class="showdown__count-check">
+          <p class="showdown__bet-prompt">
+            {{ cardsSeen() }} cards came out at this table. Take the count with you.
+          </p>
+          @if (countVerdict(); as v) {
+            <p
+              class="showdown__coach"
+              [class.showdown__coach--wrong]="!v.correct"
+              role="status"
+              aria-live="polite"
+            >
+              @if (v.correct) {
+                <b>Correct.</b> {{ v.reason }}
+              } @else {
+                <b>{{ v.headline }}</b> {{ v.reason }}
+              }
+            </p>
+            <button type="button" class="showdown__next" (click)="leaveTable()">
+              Back to counting <span class="accent-hint">[Enter]</span>
+            </button>
+          } @else {
+            <app-count-answer-form
+              [allowFractions]="fractionalCount()"
+              (answer)="onCountCheck($event)"
+            />
+          }
+        </div>
+      } @else if (phase() === 'exhausted') {
         <p class="showdown__exhausted" role="status">
           The shoe is too low to deal a hand. Return to counting to reshuffle.
         </p>
@@ -390,9 +432,11 @@ interface PlayVerdict {
         }
       }
 
-      <button type="button" class="showdown__exit" (click)="returnToCounting()">
-        Back to counting
-      </button>
+      @if (phase() !== 'count-check') {
+        <button type="button" class="showdown__exit" (click)="returnToCounting()">
+          Back to counting
+        </button>
+      }
     </section>
   `,
   styleUrl: './showdown.component.scss',
@@ -412,6 +456,9 @@ export class ShowdownComponent implements OnInit {
   private readonly missTally = inject(MissTallyService);
   // The bet at this table is the same skill the bet-spread drill measures.
   private readonly betSpreadStats = inject(BetSpreadStatsService);
+  // And the count carried off it is the same skill the running-count drill does.
+  private readonly countStats = inject(CardCountingStatsService);
+  private readonly countingEngine = inject(CountingEngineService);
 
   // The persistent shoe the player just counted; the showdown deals from it so
   // its depletion carries back to the counting drill.
@@ -435,6 +482,10 @@ export class ShowdownComponent implements OnInit {
   // persisted bankroll. Off (the default) the showdown is the pure hand tally it
   // has always been, and no chip figure is shown.
   readonly betting = input(false);
+  // Ask for the running count on the way out. On by default: this table has
+  // been keeping the count for the player, and holding it through played-out
+  // hands is the skill they came here for.
+  readonly countCheck = input(true);
 
   // Emitted when the player returns to the counting drill, carrying every card
   // this showdown dealt (in order) so the drill can fold their running-count
@@ -492,6 +543,8 @@ export class ShowdownComponent implements OnInit {
   // Verdict on the most recent playing decision, shown until the next one
   // replaces it. Null before the first decision of a round.
   protected readonly lastPlay = signal<PlayVerdict | null>(null);
+  // Verdict on the count carried off the table, once it has been answered.
+  protected readonly countVerdict = signal<PlayVerdict | null>(null);
   // Every misplay of the round just dealt, named in the result panel — a
   // verdict that scrolls past as the next hand is played would be no use.
   protected readonly roundMistakes = signal<readonly string[]>([]);
@@ -1167,10 +1220,58 @@ export class ShowdownComponent implements OnInit {
     this.visibleRunningCount.update((count) => count - cardCountValue(this.system(), card));
   }
 
+  // Leaving the table. Every count-dependent verdict here — the bet, the
+  // insurance call, the index plays — was scored against a count this component
+  // kept, and the trainee was never asked for theirs. So the way out runs
+  // through it, once, on the count as they could see it.
+  //
+  // Only between rounds: mid-hand the dealer's hole card is dealt but face
+  // down, so there is no single count both sides can agree is right.
+  protected returnToCounting(): void {
+    if (this.countCheck() && this.dealt.length > 0 && this.phase() !== 'player-turn') {
+      this.countVerdict.set(null);
+      this.phase.set('count-check');
+      return;
+    }
+    this.leaveTable();
+  }
+
   // Return to counting, handing back every card this showdown dealt so the
   // drill's carried running count stays consistent with the depleted shoe.
-  protected returnToCounting(): void {
+  protected leaveTable(): void {
     this.exit.emit(this.dealt);
+  }
+
+  // Cards the player has actually seen face up. The hole card of an unresolved
+  // round is dealt but not shown, so it is not one of them.
+  protected cardsSeen(): number {
+    return this.dealt.length - (this.pendingHoleCard ? 1 : 0);
+  }
+
+  // Wong Halves and friends run on half-points, so the answer box has to take
+  // them — the same rule the counting drill's own form follows.
+  protected fractionalCount(): boolean {
+    return this.countingEngine.isFractionalSystem(this.system());
+  }
+
+  // Grade the count they leave with against the one the table kept. This is the
+  // running-count skill the drill measures, so it feeds the same store: a count
+  // held through a played-out shoe is the same count, harder.
+  protected onCountCheck(answer: number): void {
+    if (this.phase() !== 'count-check' || this.countVerdict() !== null) return;
+    const actual = this.visibleRunningCount();
+    const correct = answer === actual;
+    this.countStats.recordAttempt(correct);
+    const drift = answer - actual;
+    this.countVerdict.set({
+      correct,
+      headline: `The running count is ${formatSignedCount(actual)}.`,
+      reason: correct
+        ? `You carried it through ${this.cardsSeen()} cards at the table.`
+        : `You said ${formatSignedCount(answer)} — ${Math.abs(drift)} ${
+            Math.abs(drift) === 1 ? 'point' : 'points'
+          } ${drift > 0 ? 'high' : 'low'} over ${this.cardsSeen()} cards.`,
+    });
   }
 
   protected verdict(h: PlayerHand): string {
@@ -1191,6 +1292,17 @@ export class ShowdownComponent implements OnInit {
 
   @HostListener('window:keydown', ['$event'])
   protected onKeyDown(event: KeyboardEvent): void {
+    // The count check owns the keyboard while it is up: the answer box handles
+    // its own Enter (native submit), and once the verdict is in, Enter leaves.
+    // Action letters mean nothing here — there is no hand left to play.
+    if (this.phase() === 'count-check') {
+      if (shouldIgnoreKeyboardEvent(event)) return;
+      if (event.key === 'Enter' && this.countVerdict() !== null) {
+        event.preventDefault();
+        this.leaveTable();
+      }
+      return;
+    }
     // The insurance decision has its own two keys and swallows everything else,
     // so a buffered Enter or action letter can't decide a side bet by accident.
     if (this.phase() === 'insurance') {
