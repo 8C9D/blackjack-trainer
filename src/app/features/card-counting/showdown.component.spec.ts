@@ -788,15 +788,71 @@ describe('ShowdownComponent', () => {
     });
   });
 
-  it('emits exit with every dealt card when "Back to counting" is clicked', () => {
+  it('emits exit with the cards it turned face up when "Back to counting" is clicked', () => {
     const { fixture } = createShowdown(makeShoe(['9', '10', '7', '6']));
     let emitted: readonly Card[] | undefined;
     fixture.componentInstance.exit.subscribe((cards) => (emitted = cards));
     (fixture.nativeElement.querySelector('.showdown__exit') as HTMLButtonElement).click();
     expect(emitted).toBeDefined();
-    // The opening deal drew all four cards from the shoe (player, dealer, ×2),
-    // and they carry back so the drill can fold their count into the shoe.
-    expect(emitted!.map((c) => c.rank)).toEqual(['9', '10', '7', '6']);
+    // The opening deal drew all four cards, and they carry back so the drill can
+    // fold their count into the shoe — all but the hole card, which this
+    // abandoned round never turned over. See the block below.
+    expect(emitted!.map((c) => c.rank)).toEqual(['9', '10', '7']);
+  });
+
+  // A round left mid-hand still took its cards out of the shoe, but the one
+  // face down was never shown. Handing it back moved the drill's carried count
+  // by a card the table never showed, so the next count answer — correct for
+  // everything the trainee could see — was marked wrong for it.
+  describe('a hole card the table never turned over', () => {
+    // Player 9+7 = 16 vs dealer 10; the 6 in the hole is worth +1 in Hi-Lo, so
+    // carrying it back would move the count a full point.
+    const midHand: readonly Rank[] = ['9', '10', '7', '6'];
+
+    it('stays out of the cards that leave with the player', () => {
+      const { fixture, c } = createShowdown(makeShoe(midHand));
+      let emitted: readonly Card[] | undefined;
+      fixture.componentInstance.exit.subscribe((cards) => (emitted = cards));
+      expect(c.phase()).toBe('player-turn');
+
+      c.returnToCounting();
+
+      // Mid-hand there is no count check, so this leaves at once.
+      expect(emitted!.map((x) => x.rank)).toEqual(['9', '10', '7']);
+    });
+
+    it('is counted once the round resolves and shows it', () => {
+      const { fixture, c } = createShowdown(makeShoe([...midHand, '10']));
+      let emitted: readonly Card[] | undefined;
+      fixture.componentInstance.exit.subscribe((cards) => (emitted = cards));
+      c.onAction('S'); // dealer 16 draws the 10 and busts
+      c.returnToCounting();
+      c.onCountCheck(0);
+      c.leaveTable();
+
+      expect(emitted!.map((x) => x.rank)).toEqual(['9', '10', '7', '6', '10']);
+    });
+
+    it('is named at the count check, which does not count it either', () => {
+      // Betting on so a dealer ace pauses on insurance — a phase that asks for
+      // the count with the hole card still face down.
+      const { fixture, c } = createShowdown(makeShoe(['9', 'A', '7', '6']), 'S17', 1, true);
+      c.setBet(10);
+      c.dealAfterBet();
+      expect(c.phase()).toBe('insurance');
+
+      c.returnToCounting();
+      fixture.detectChanges();
+
+      expect(c.phase()).toBe('count-check');
+      expect(c.cardsSeen()).toBe(3);
+      expect(
+        (fixture.nativeElement.querySelector('.showdown__count-note') as HTMLElement).textContent,
+      ).toContain('never turned over');
+      // 9 + A + 7 = -1 in Hi-Lo; the unseen 6 would have made it 0.
+      c.onCountCheck(-1);
+      expect(c.countVerdict()).toMatchObject({ correct: true });
+    });
   });
 
   // Every count-dependent verdict at this table — the bet, the insurance call,
