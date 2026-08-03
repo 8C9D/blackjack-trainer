@@ -9,11 +9,13 @@ import {
   type CountingDrillSettings,
 } from '../../core/models/card-counting.model';
 import { resolveKeyCounts, type CountingSystem } from '../../core/models/counting-system.model';
-import { type Shoe } from '../../core/models/shoe.model';
+import { DECK_SPEED_CARDS } from '../../core/models/deck-speed.model';
+import { CARDS_PER_DECK, type Shoe } from '../../core/models/shoe.model';
 import { minCardsForSpots } from '../../core/models/showdown.model';
 import { COUNTING_SYSTEMS, HI_LO } from '../../data/counting-systems';
 import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.service';
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
+import { DeckSpeedStatsService } from '../../core/services/deck-speed-stats.service';
 import { CardGeneratorService } from '../../core/services/card-generator.service';
 import { CountingEngineService } from '../../core/services/counting-engine.service';
 import { DeckEstimationStatsService } from '../../core/services/deck-estimation-stats.service';
@@ -38,11 +40,14 @@ import { ShowdownComponent } from './showdown.component';
 // step where the player guesses the decks remaining before giving the true
 // count. 'advantage' is the key-count drill's second question (has the running
 // count reached the key count?) after the count answer, and 'betting' is the
-// bet-spread drill's second question (how many units?). 'showdown' is the
-// optional post-count hand vs the dealer off the same live shoe.
+// bet-spread drill's second question (how many units?). 'flipping' is the
+// deck-speed drill's self-paced pass through a burned deck, against a stopwatch
+// instead of the app's timer. 'showdown' is the optional post-count hand vs the
+// dealer off the same live shoe.
 type DrillState =
   | 'idle'
   | 'streaming'
+  | 'flipping'
   | 'estimating'
   | 'answering'
   | 'advantage'
@@ -110,6 +115,23 @@ type DrillState =
               [totalCards]="cards().length"
               [showProgress]="true"
             />
+          }
+
+          @if (state() === 'flipping') {
+            <div class="count__flip">
+              <app-card-stream
+                [currentCard]="currentCard()"
+                [currentIndex]="currentIndex()"
+                [totalCards]="cards().length"
+                [showProgress]="true"
+              />
+              <button type="button" class="count__next-card" (click)="flipNext()">
+                Next card <span class="accent-hint">[space]</span>
+              </button>
+              <p class="count__flip-note">
+                One card is burned. Count the rest as fast as you can — the clock is running.
+              </p>
+            </div>
           }
 
           @if (state() === 'estimating') {
@@ -190,6 +212,8 @@ export class CardCountingPageComponent {
   protected readonly keyCountStatsService = inject(KeyCountStatsService);
   // Bet accuracy for the bet-spread drill, likewise its own store.
   protected readonly betSpreadStatsService = inject(BetSpreadStatsService);
+  // Deck-speed accuracy plus the fastest correct countdown.
+  protected readonly deckSpeedStatsService = inject(DeckSpeedStatsService);
 
   protected readonly session = new DrillSession();
 
@@ -251,6 +275,10 @@ export class CardCountingPageComponent {
       this.system().balanced,
   );
 
+  // The deck-speed drill: a shuffled deck with one card burned, counted down
+  // self-paced against a stopwatch. Any system can be counted down.
+  protected readonly deckSpeedDrill = computed(() => this.settings().mode === 'deck-speed');
+
   // The bet-spread drill: a true-count round followed by the bet it is for.
   // Balanced systems only, like the true count it grades first.
   protected readonly betSpreadDrill = computed(
@@ -308,6 +336,7 @@ export class CardCountingPageComponent {
   protected readonly isDrillActive = computed(
     () =>
       this.state() === 'streaming' ||
+      this.state() === 'flipping' ||
       this.state() === 'estimating' ||
       this.state() === 'answering' ||
       this.state() === 'advantage' ||
@@ -337,6 +366,11 @@ export class CardCountingPageComponent {
   // True for the round that began with an at-cut-card reshuffle (drives the
   // visible notice).
   protected readonly reshuffleNotice = signal(false);
+  // Deck-speed state: the card held back from the deck, and the stopwatch. Both
+  // are plain fields — nothing renders them until the round is graded.
+  private burnedCard: Card | null = null;
+  private startedAtMs = 0;
+  private elapsedMs = 0;
 
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -353,15 +387,45 @@ export class CardCountingPageComponent {
     // or an in-progress showdown.
     if (this.state() !== 'idle' && this.state() !== 'feedback') return;
     if (!this.isValid()) return;
+    this.result.set(null);
+    this.deckEstimate.set(null);
+    this.currentIndex.set(0);
+    if (this.deckSpeedDrill()) {
+      this.dealBurnedDeck();
+      // No timer: the player sets the pace, and the clock starts on the first
+      // card they are already looking at.
+      this.startedAtMs = Date.now();
+      this.state.set('flipping');
+      return;
+    }
     const seq = this.usesLiveShoe()
       ? this.dealLiveShoeRound()
       : this.cardGenerator.generateSequence(this.settings().numberOfCards);
     this.cards.set(seq);
-    this.currentIndex.set(0);
-    this.result.set(null);
-    this.deckEstimate.set(null);
     this.state.set('streaming');
     this.scheduleAdvance();
+  }
+
+  // Shuffle a single deck, hold one card back, and show the other 51. The
+  // burned card is the answer's proof: a full deck sums to a known constant, so
+  // the count of the 51 is that constant minus the burned card's tag.
+  private dealBurnedDeck(): void {
+    const deck = this.shoeService.create(1, 1).deal(CARDS_PER_DECK);
+    this.burnedCard = deck[deck.length - 1];
+    this.cards.set(deck.slice(0, DECK_SPEED_CARDS));
+  }
+
+  // Advance the self-paced countdown; the last card stops the clock and asks
+  // for the count.
+  protected flipNext(): void {
+    if (this.state() !== 'flipping') return;
+    const next = this.currentIndex() + 1;
+    if (next >= this.cards().length) {
+      this.elapsedMs = Date.now() - this.startedAtMs;
+      this.state.set('answering');
+      return;
+    }
+    this.currentIndex.set(next);
   }
 
   // After feedback: another rep, or the Done moment once the session target
@@ -454,7 +518,20 @@ export class CardCountingPageComponent {
       return;
     }
     let isCorrect: boolean;
-    if (s.mode === 'true-count') {
+    if (s.mode === 'deck-speed') {
+      const previousBest = this.deckSpeedStatsService.bestMs();
+      const evaluated = this.engine.evaluateDeckSpeed(
+        this.cards(),
+        this.burnedCard!,
+        userCount,
+        this.system(),
+        this.elapsedMs,
+        previousBest,
+      );
+      this.result.set(evaluated);
+      this.deckSpeedStatsService.recordRound(evaluated.isCorrect, this.elapsedMs);
+      isCorrect = evaluated.isCorrect;
+    } else if (s.mode === 'true-count') {
       if (this.liveShoeTrueCount()) {
         isCorrect = this.answerLiveShoe(userCount);
       } else {
@@ -641,6 +718,11 @@ export class CardCountingPageComponent {
     if (event.key === 'Escape') {
       event.preventDefault();
       this.exitToHome();
+      return;
+    }
+    if (state === 'flipping' && (event.key === ' ' || event.key === 'Enter')) {
+      event.preventDefault();
+      this.flipNext();
       return;
     }
     if (event.key !== 'Enter') return;

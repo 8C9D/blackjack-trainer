@@ -2,6 +2,7 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 
 import type { Card, Rank } from '../../core/models/card.model';
 import { DEFAULT_BET_RAMP } from '../../core/models/bet-ramp.model';
+import type { DeckSpeedDrillResult } from '../../core/models/deck-speed.model';
 import type {
   BetSpreadDrillResult,
   CountingDrillResult,
@@ -81,6 +82,24 @@ function makeBetSpreadResult(overrides: Partial<BetSpreadDrillResult> = {}): Bet
     userUnits: 4,
     betCorrect: true,
     isCorrect: true,
+    ...overrides,
+  };
+}
+
+// A Hi-Lo countdown: 2..6 is +5 over the 51 shown, and the burned card was a
+// ten (−1)... which is what makes the deck come back to 0.
+function makeDeckSpeedResult(overrides: Partial<DeckSpeedDrillResult> = {}): DeckSpeedDrillResult {
+  return {
+    mode: 'deck-speed',
+    cards: seq('2', '3', '4', '5', '6'),
+    burnedCard: { rank: 'K', suit: 'hearts' },
+    correctRunningCount: 1,
+    userRunningCount: 1,
+    fullDeckCount: 0,
+    isCorrect: true,
+    elapsedMs: 27_400,
+    previousBestMs: 31_000,
+    isPersonalBest: true,
     ...overrides,
   };
 }
@@ -317,6 +336,53 @@ describe('CountFeedbackPanelComponent', () => {
         fixture.nativeElement.querySelectorAll('.feedback__running'),
       ) as HTMLElement[];
       expect(totals.map((t) => t.textContent?.trim())).toEqual(['\u2192 2', '\u2192 3']);
+    });
+  });
+
+  describe('deck-speed mode', () => {
+    it('shows the time against the record it beat', () => {
+      const fixture = createPanel(makeDeckSpeedResult());
+      const text = fixture.nativeElement.textContent ?? '';
+      expect(text).toContain('Correct');
+      expect(text).toContain('27.4s');
+      expect(text).toContain('31.0s');
+      expect(text).toContain('New personal best');
+    });
+
+    it('reveals the burned card as the proof of the count', () => {
+      const fixture = createPanel(makeDeckSpeedResult());
+      const text = fixture.nativeElement.textContent ?? '';
+      expect(text).toContain('king of hearts');
+      expect(text).toContain('worth -1');
+      expect(text).toContain('had to come to +1');
+    });
+
+    it('shows an em dash for the record when there is none yet', () => {
+      const fixture = createPanel(
+        makeDeckSpeedResult({ previousBestMs: null, isPersonalBest: true }),
+      );
+      expect(fixture.nativeElement.textContent).toContain('—');
+    });
+
+    it('claims no record on a wrong count, however fast', () => {
+      const fixture = createPanel(
+        makeDeckSpeedResult({
+          userRunningCount: 4,
+          isCorrect: false,
+          isPersonalBest: false,
+          elapsedMs: 9_000,
+        }),
+      );
+      const text = fixture.nativeElement.textContent ?? '';
+      expect(text).toContain('Incorrect');
+      expect(text).not.toContain('New personal best');
+    });
+
+    it('mentions the benchmark only under 30 seconds', () => {
+      const under = createPanel(makeDeckSpeedResult({ elapsedMs: 24_000 }));
+      expect(under.nativeElement.textContent).toContain('30-second benchmark');
+      const over = createPanel(makeDeckSpeedResult({ elapsedMs: 44_000 }));
+      expect(over.nativeElement.textContent).not.toContain('30-second benchmark');
     });
   });
 });

@@ -193,7 +193,7 @@ export function mergePrefs(parsed: unknown): FlowPrefs {
   const system = COUNTING_SYSTEMS.find((candidate) => candidate.id === systemId)!;
   const requestedMode = oneOf(
     cnt['mode'],
-    ['running-count', 'true-count', 'key-count', 'bet-spread'] as const,
+    ['running-count', 'true-count', 'key-count', 'bet-spread', 'deck-speed'] as const,
     d.counting.mode,
   );
   // True count — and the bet spread built on it — needs a balanced system; the

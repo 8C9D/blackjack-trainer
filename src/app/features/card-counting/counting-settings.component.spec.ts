@@ -113,9 +113,15 @@ describe('CountingSettingsComponent', () => {
   it('renders every mode radio', () => {
     const fixture = createSettings();
     const radios = fixture.nativeElement.querySelectorAll('input[type=radio][name=drill-mode]');
-    expect(radios.length).toBe(4);
+    expect(radios.length).toBe(5);
     const values = Array.from(radios).map((r) => (r as HTMLInputElement).value);
-    expect(values).toEqual(['running-count', 'true-count', 'key-count', 'bet-spread']);
+    expect(values).toEqual([
+      'running-count',
+      'true-count',
+      'key-count',
+      'bet-spread',
+      'deck-speed',
+    ]);
   });
 
   it('marks the active mode radio as checked', () => {
@@ -435,6 +441,38 @@ describe('CountingSettingsComponent', () => {
     it('offers the live-shoe / classic source picker in bet-spread mode too', () => {
       const fixture = createSettings({ mode: 'bet-spread' });
       expect(fixture.nativeElement.querySelector('.settings__source')).not.toBeNull();
+    });
+  });
+
+  describe('deck-speed mode', () => {
+    it('is offered for every system, balanced or not', () => {
+      const fixture = createSettings({ trueCountAvailable: false });
+      const radio = fixture.nativeElement.querySelector(
+        'input[type=radio][value="deck-speed"]',
+      ) as HTMLInputElement;
+      expect(radio.disabled).toBe(false);
+    });
+
+    it('hides the length and pacing fields, which do not apply', () => {
+      const fixture = createSettings({ mode: 'deck-speed' });
+      const labels = Array.from(fixture.nativeElement.querySelectorAll('.settings__field span'));
+      const text = labels.map((l) => (l as HTMLElement).textContent);
+      expect(text).not.toContain('Number of cards');
+      expect(text).not.toContain('Time between cards (ms)');
+    });
+
+    it('explains the drill in place of those settings', () => {
+      const fixture = createSettings({ mode: 'deck-speed' });
+      const note = fixture.nativeElement.querySelector('.settings__note');
+      expect(note).not.toBeNull();
+      expect(note!.textContent).toContain('stopwatch');
+    });
+
+    it('keeps those fields in every other mode', () => {
+      const fixture = createSettings({ mode: 'running-count' });
+      const labels = Array.from(fixture.nativeElement.querySelectorAll('.settings__field span'));
+      const text = labels.map((l) => (l as HTMLElement).textContent);
+      expect(text).toContain('Number of cards');
     });
   });
 });

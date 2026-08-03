@@ -301,6 +301,34 @@ test.describe('accessibility', () => {
     });
   }
 
+  // The deck-speed drill adds a stage of its own (the card plus its advance
+  // control) and a feedback panel with the record line.
+  for (const scheme of ['dark', 'light'] as const) {
+    test(`the deck-speed drill meets WCAG AA in the ${scheme} theme`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.goto('/settings');
+      await page
+        .getByRole('radiogroup', { name: 'Drill mode' })
+        .getByRole('radio', { name: 'Deck speed', exact: true })
+        .check();
+
+      await page.goto('/drill/card-counting');
+      await page.getByRole('button', { name: /Start counting/ }).click();
+      const next = page.getByRole('button', { name: /Next card/ });
+      await expect(next).toBeVisible();
+      expect(await contrastFailures(page), `deck-speed stage (${scheme})`).toEqual([]);
+
+      for (let i = 0; i < 51; i++) await next.click();
+      const answer = page.getByLabel('What is the running count?');
+      await expect(answer).toBeVisible();
+      await answer.fill('0');
+      await page.getByRole('button', { name: /^Submit/ }).click();
+
+      await expect(page.getByText('The burned card was the')).toBeVisible();
+      expect(await contrastFailures(page), `deck-speed feedback (${scheme})`).toEqual([]);
+    });
+  }
+
   test('a drill is fully playable from the keyboard', async ({ page }) => {
     await page.goto('/drill/basic-strategy');
     // The key handler is attached on render; pressing earlier is dropped.
