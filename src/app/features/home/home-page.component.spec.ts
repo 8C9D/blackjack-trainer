@@ -2,7 +2,10 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 
 import { BasicStrategyStatsService } from '../../core/services/basic-strategy-stats.service';
+import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.service';
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
+import { DeckSpeedStatsService } from '../../core/services/deck-speed-stats.service';
+import { KeyCountStatsService } from '../../core/services/key-count-stats.service';
 import { DeviationStatsService } from '../../core/services/deviation-stats.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
 import { PracticeHistoryService } from '../../core/services/practice-history.service';
@@ -164,6 +167,45 @@ describe('HomePageComponent', () => {
       const { fixture } = createPage();
       expect(fixture.nativeElement.querySelectorAll('.dots__dot')).toHaveLength(7);
       expect(text(fixture, '.dots__label')).toBe('No streak yet');
+    });
+  });
+
+  describe('the Card Counting accuracy chip', () => {
+    // The chip lives on the trainer's own button; find it by that button's label.
+    function countingChip(fixture: ComponentFixture<HomePageComponent>): string {
+      const button = [...fixture.nativeElement.querySelectorAll('.home__other')].find((el) =>
+        (el as HTMLElement).textContent?.includes('Card Counting'),
+      ) as HTMLElement | undefined;
+      if (!button) throw new Error('No Card Counting button');
+      return (button.querySelector('.home__chip') as HTMLElement).textContent!.trim();
+    }
+
+    it('sums every counting store, not just the two oldest', () => {
+      TestBed.inject(FlowPrefsService).setLastTrainer('basic-strategy');
+      recordCorrect(TestBed.inject(CardCountingStatsService), 1);
+      recordCorrect(TestBed.inject(TrueCountStatsService), 0, 1);
+      recordCorrect(TestBed.inject(KeyCountStatsService), 1);
+      recordCorrect(TestBed.inject(BetSpreadStatsService), 1);
+      recordCorrect(TestBed.inject(DeckSpeedStatsService), 1);
+      const { fixture } = createPage();
+      // 4 of 5 correct across the five stores.
+      expect(countingChip(fixture)).toBe('80%');
+    });
+
+    it('reads as new only when no counting store has an attempt', () => {
+      TestBed.inject(FlowPrefsService).setLastTrainer('basic-strategy');
+      const before = createPage();
+      expect(countingChip(before.fixture)).toBe('new');
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HomePageComponent],
+        providers: [provideRouter([])],
+      });
+      TestBed.inject(FlowPrefsService).setLastTrainer('basic-strategy');
+      recordCorrect(TestBed.inject(DeckSpeedStatsService), 1);
+      const after = createPage();
+      expect(countingChip(after.fixture)).toBe('100%');
     });
   });
 });

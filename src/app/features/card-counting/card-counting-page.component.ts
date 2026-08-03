@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
 import type { Card } from '../../core/models/card.model';
 import {
+  DRILL_MODE_LABELS,
   formatSignedCount,
   type CountingDrillResult,
   type CountingDrillSettings,
@@ -94,6 +95,7 @@ type DrillState =
             <div class="count__idle">
               <!-- h2: the top bar's trainer name is this screen's h1. -->
               <h2 class="count__system">{{ system().name }}</h2>
+              <p class="count__mode">{{ modeLabel() }}</p>
               <p class="count__desc">{{ system().description }}</p>
               @if (isValid()) {
                 <button type="button" class="count__start" (click)="start()">
@@ -240,6 +242,11 @@ export class CardCountingPageComponent {
 
   // Whether the showdown opens each round on a bet, from the Settings screen.
   protected readonly showdownBetting = computed(() => this.prefs.prefs().counting.showdownBetting);
+
+  // The idle screen names the mode it is about to run: five modes now differ
+  // enough (self-paced deck, two-part answers) that "Start counting" alone does
+  // not say what is coming.
+  protected readonly modeLabel = computed(() => DRILL_MODE_LABELS[this.settings().mode]);
 
   protected readonly system = computed<CountingSystem>(
     () => COUNTING_SYSTEMS.find((s) => s.id === this.prefs.prefs().counting.systemId) ?? HI_LO,

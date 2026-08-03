@@ -122,6 +122,16 @@ describe('CountingSettingsComponent', () => {
       'bet-spread',
       'deck-speed',
     ]);
+    const labels = Array.from(fixture.nativeElement.querySelectorAll('.settings__mode span')).map(
+      (el) => (el as HTMLElement).textContent,
+    );
+    expect(labels).toEqual([
+      'Running count',
+      'True count',
+      'Key count',
+      'Bet spread',
+      'Deck speed',
+    ]);
   });
 
   it('marks the active mode radio as checked', () => {
