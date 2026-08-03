@@ -63,9 +63,9 @@ final class ShowdownModel {
     @ObservationIgnored let deviations: DeviationEngine?
     /// The count as the player can actually see it: the count carried in from
     /// the drill plus every card this showdown has turned face up. The dealer's
-    /// hole card is deliberately excluded until the next deal — insurance is
-    /// decided before it is seen, and grading against a card the player cannot
-    /// see would be grading a different game.
+    /// hole card is deliberately excluded until the round resolves and turns it
+    /// over — insurance is decided before it is seen, and grading against a card
+    /// the player cannot see would be grading a different game.
     @ObservationIgnored private(set) var visibleRunningCount: Double
     @ObservationIgnored private var pendingHoleCard: Card?
     /// Not `private`: the win/lose/push readers live in `+Presentation`.
@@ -240,12 +240,6 @@ final class ShowdownModel {
             phase = .exhausted
             return
         }
-        // The previous round's hole card was turned over before that round paid,
-        // so it joins the visible count now rather than staying hidden forever.
-        if let hole = pendingHoleCard {
-            visibleRunningCount += system?.value(for: hole) ?? 0
-            pendingHoleCard = nil
-        }
         // The guard guarantees the whole opening round, so no draw here is nil.
         var boxes: [[Card]] = Array(repeating: [], count: spots)
         for index in boxes.indices {
@@ -287,7 +281,7 @@ final class ShowdownModel {
             for index in hands.indices {
                 settleHand(at: index, dealer: dealer)
             }
-            phase = .resolved
+            resolveRound()
             return
         }
         for index in hands.indices where Hand.isBlackjack(hands[index].cards) {
@@ -327,7 +321,8 @@ final class ShowdownModel {
     }
 
     /// The dealer's second card, drawn face down: dealt and tracked like any
-    /// other, but held out of the visible count until the next round opens.
+    /// other, but held out of the visible count until the round resolves and
+    /// turns it over.
     private func drawHole() -> Card? {
         guard let card = draw() else { return nil }
         visibleRunningCount -= system?.value(for: card) ?? 0
@@ -438,6 +433,18 @@ extension ShowdownModel {
         }
         for index in hands.indices {
             settleHand(at: index, dealer: dealerCards)
+        }
+        resolveRound()
+    }
+
+    /// Close the round: the hole card is on its face from here on, so it joins
+    /// the count now. Waiting for the next deal would leave the bet that opens
+    /// that round graded against a count one card behind the felt — and a player
+    /// who counted the card they can see marked wrong for it.
+    private func resolveRound() {
+        if let hole = pendingHoleCard {
+            visibleRunningCount += system?.value(for: hole) ?? 0
+            pendingHoleCard = nil
         }
         phase = .resolved
     }
