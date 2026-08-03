@@ -324,6 +324,142 @@ function exportDeviationVectors(): void {
   writeFileSync(join(OUT_DIR, 'deviation-vectors.json'), text);
 }
 
+// ─── 4b. play-deviation-vectors.json ─────────────────────────────────────────
+// The table's count-aware answer: `decidePlay` with an index laid over it. The
+// trainer's own vectors (above) cannot cover this — they assume two cards and
+// every action on offer, while a hand at the felt may be three cards deep with
+// doubling, splitting or surrender already gone, and those are exactly the two
+// places two hand-written implementations can drift.
+//
+// Only the rows where an index actually FIRES are emitted. Every other
+// combination in the declared domain must equal `decidePlay`, which the
+// basic-strategy vectors already pin exhaustively — so the delta is the whole
+// specification, and the file stays a fraction of the size of a full
+// cross-product. The Swift test walks the same domain and asserts both halves:
+// a listed combination deviates to the named action, and an unlisted one does
+// not deviate at all.
+function exportPlayDeviationVectors(): void {
+  // Three-card hands round out the domain: an index is written against a total,
+  // so a three-card 16 is the same chart cell as a two-card one, while a pair
+  // row and every first-two-card action are gone by then.
+  const multiCard: RepHand[] = [
+    { label: 'hard-16-3card', cards: [card('5', SUIT_A), card('4', SUIT_B), card('7', SUIT_A)] },
+    { label: 'hard-15-3card', cards: [card('5', SUIT_A), card('4', SUIT_B), card('6', SUIT_A)] },
+    { label: 'hard-12-3card', cards: [card('4', SUIT_A), card('3', SUIT_B), card('5', SUIT_A)] },
+    { label: 'hard-10-3card', cards: [card('4', SUIT_A), card('3', SUIT_B), card('3', SUIT_A)] },
+    { label: 'soft-19-3card', cards: [card('A', SUIT_A), card('4', SUIT_B), card('4', SUIT_A)] },
+    { label: 'soft-17-3card', cards: [card('A', SUIT_A), card('3', SUIT_B), card('3', SUIT_A)] },
+  ];
+  const hands = [...HANDS, ...multiCard];
+  // What the felt is offering. Every action on the table, then each of the
+  // three withheld in turn — the gate an index has to respect.
+  const restrictions: readonly (readonly [boolean, boolean, boolean])[] = [
+    [true, true, true],
+    [false, true, true],
+    [true, false, true],
+    [true, true, false],
+  ];
+  // Wide enough to straddle every encoded index (which run -1..+6) with a
+  // margin on both sides.
+  const trueCounts: number[] = [];
+  for (let tc = -3; tc <= 7; tc++) trueCounts.push(tc);
+
+  const sources: string[] = [];
+  const sourceIndex = new Map<string, number>();
+  const intern = (value: string): number => {
+    let idx = sourceIndex.get(value);
+    if (idx === undefined) {
+      idx = sources.length;
+      sources.push(value);
+      sourceIndex.set(value, idx);
+    }
+    return idx;
+  };
+
+  const rows: unknown[][] = [];
+  let examined = 0;
+  hands.forEach((hand, handIndex) => {
+    DEALER_UPCARDS.forEach((dealer, dealerIndex) => {
+      for (const trueCount of trueCounts) {
+        for (const ruleSet of RULE_SETS) {
+          for (const ls of BOOLS) {
+            restrictions.forEach(([canDouble, canSplit, canSurrender], restrictionIndex) => {
+              examined++;
+              const decision = deviation.resolvePlayDecision(
+                {
+                  player: hand.cards,
+                  dealerUpcard: card(dealer, SUIT_DEALER),
+                  ruleSet,
+                  // DAS is fixed on: it reaches this path only through the pair
+                  // branch of decidePlay, which the basic-strategy vectors cover
+                  // exhaustively for both settings.
+                  options: options(true, ls),
+                  canDouble,
+                  canSplit,
+                  canSurrender,
+                },
+                trueCount,
+              );
+              if (!decision.deviationApplied || !decision.matchedRule) return;
+              rows.push([
+                handIndex,
+                dealerIndex,
+                trueCount,
+                ruleSet,
+                ls,
+                restrictionIndex,
+                decision.action,
+                intern(decision.matchedRule.source),
+              ]);
+            });
+          }
+        }
+      }
+    });
+  });
+
+  const columns = [
+    'handIndex',
+    'dealerIndex',
+    'trueCount',
+    'ruleSet',
+    'lateSurrender',
+    'restrictionIndex',
+    'action',
+    'matchedRuleSourceIndex',
+  ];
+  const rowLines = rows.map((r) => '    ' + JSON.stringify(r));
+  const text =
+    '{\n' +
+    '  "schema": "play-deviation-vectors/1",\n' +
+    '  "generatedBy": "tools/export-parity-fixtures.ts",\n' +
+    '  "description": "Every combination in `domain` where a playing index fires over decidePlay, columnar per `columns`. Combinations absent from `deviations` must not deviate — the basic-strategy vectors already pin decidePlay itself, so these rows are the whole delta. Suits are arbitrary.",\n' +
+    `  "examined": ${examined},\n` +
+    `  "count": ${rows.length},\n` +
+    '  "domain": ' +
+    JSON.stringify(
+      {
+        hands: hands.map((h) => ({ label: h.label, cards: h.cards.map((c) => c.rank) })),
+        dealers: DEALER_UPCARDS,
+        trueCounts,
+        ruleSets: RULE_SETS,
+        lateSurrender: BOOLS,
+        doubleAfterSplit: true,
+        // [canDouble, canSplit, canSurrender]
+        restrictions,
+      },
+      null,
+      2,
+    ).replace(/\n/g, '\n  ') +
+    ',\n' +
+    `  "columns": ${JSON.stringify(columns)},\n` +
+    `  "sources": ${JSON.stringify(sources, null, 2).replace(/\n/g, '\n  ')},\n` +
+    '  "deviations": [\n' +
+    rowLines.join(',\n') +
+    '\n  ]\n}\n';
+  writeFileSync(join(OUT_DIR, 'play-deviation-vectors.json'), text);
+}
+
 // ─── 5. counting-vectors.json ────────────────────────────────────────────────
 function fullDeck(): Card[] {
   const cards: Card[] = [];
@@ -733,10 +869,11 @@ function main(): void {
   exportCountingSystems();
   exportBasicStrategyVectors();
   exportDeviationVectors();
+  exportPlayDeviationVectors();
   exportCountingVectors();
   exportShowdownVectors();
   // eslint-disable-next-line no-console
-  console.log(`Wrote 6 parity fixtures to ${OUT_DIR}`);
+  console.log(`Wrote 7 parity fixtures to ${OUT_DIR}`);
 }
 
 main();

@@ -217,3 +217,64 @@ struct SettleCase: Decodable {
 func cards(_ ranks: [String]) -> [Card] {
     ranks.map { card($0) }
 }
+
+/// `play-deviation-vectors.json`: the table's count-aware answer. Only the
+/// combinations where an index fires are listed; every other combination in
+/// `domain` must fall through to `decidePlay`, so the two halves together pin
+/// the whole delta (see the exporter's note).
+struct PlayDeviationVectorsFile: Decodable {
+    let count: Int
+    let examined: Int
+    let domain: PlayDeviationDomain
+    let sources: [String]
+    let deviations: [PlayDeviationRow]
+}
+
+/// One canonical hand in the domain, by label and rank list.
+struct PlayDeviationHand: Decodable {
+    let label: String
+    let cards: [String]
+}
+
+/// The combinations the fixture speaks for. The Swift walker enumerates exactly
+/// this, so a domain change on the web side surfaces as an `examined` mismatch
+/// rather than as silently thinner coverage.
+struct PlayDeviationDomain: Decodable {
+    let hands: [PlayDeviationHand]
+    let dealers: [String]
+    let trueCounts: [Int]
+    let ruleSets: [String]
+    let lateSurrender: [Bool]
+    let doubleAfterSplit: Bool
+    /// `[canDouble, canSplit, canSurrender]` per entry.
+    let restrictions: [[Bool]]
+}
+
+/// One columnar row, decoded positionally per the file's `columns`.
+struct PlayDeviationRow: Decodable {
+    let handIndex: Int
+    let dealerIndex: Int
+    let trueCount: Int
+    let ruleSet: String
+    let lateSurrender: Bool
+    let restrictionIndex: Int
+    let action: String
+    let matchedRuleSourceIndex: Int
+
+    /// The combination this row pins, as a key the walker can look up.
+    var key: String {
+        "\(handIndex)|\(dealerIndex)|\(trueCount)|\(ruleSet)|\(lateSurrender)|\(restrictionIndex)"
+    }
+
+    init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        handIndex = try container.decode(Int.self)
+        dealerIndex = try container.decode(Int.self)
+        trueCount = try container.decode(Int.self)
+        ruleSet = try container.decode(String.self)
+        lateSurrender = try container.decode(Bool.self)
+        restrictionIndex = try container.decode(Int.self)
+        action = try container.decode(String.self)
+        matchedRuleSourceIndex = try container.decode(Int.self)
+    }
+}

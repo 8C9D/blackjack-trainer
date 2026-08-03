@@ -368,6 +368,8 @@ no-ops at runtime but document the chart cell.
 `ios/` hosts a native SwiftUI mirror of the trainer (app + home-screen widget), generated with XcodeGen from `ios/project.yml`.
 It ports the Flow shell (home, drills, settings, chart, showdown) and the pure engines to Swift, syncs stats through iCloud Key-Value Store, and offers an optional daily practice reminder.
 Engine parity with the web app is enforced by fixtures: `npm run export:fixtures` (`tools/export-parity-fixtures.ts`) emits `ios/Fixtures/*.json` from the TypeScript engines, the Swift parity tests replay those vectors, and CI fails if the exported fixtures drift from the committed ones.
+Most vector files are exhaustive cross-products, but `play-deviation-vectors.json` lists only the combinations where a playing index actually fires over `decidePlay`, and declares the domain it speaks for.
+The Swift test walks that domain and asserts both halves — a listed combination deviates to the named action and rule, an unlisted one does not deviate at all — so the delta is the whole specification at a fraction of the size.
 `ios/AppStore/` holds submission collateral (privacy policy, support page, 6.9″ screenshots); the submission runbook is `docs/app-store-submission.md` and the iOS roadmap is `docs/ios-app-roadmap.md`.
 
 ## Tech stack
