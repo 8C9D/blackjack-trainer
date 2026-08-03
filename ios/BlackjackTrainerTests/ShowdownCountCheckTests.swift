@@ -26,7 +26,11 @@ struct ShowdownCountCheckTests {
         ]
     }
 
-    private func table(countCheck: Bool = true, betting: Bool = false) throws -> Harness {
+    private func table(
+        cards: [Card]? = nil,
+        countCheck: Bool = true,
+        betting: Bool = false
+    ) throws -> Harness {
         let suite = "count-check-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defaults.removePersistentDomain(forName: suite)
@@ -34,7 +38,7 @@ struct ShowdownCountCheckTests {
         let system = try #require(app.countingSystems.system(withId: DeviationIndexSystem.id))
         let countStats = SessionStatsStore(key: StatsKeys.cardCounting, defaults: defaults)
         let model = ShowdownModel(
-            shoe: Shoe(cards: round, penetration: 0.9),
+            shoe: Shoe(cards: cards ?? round, penetration: 0.9),
             ruleSet: .s17,
             stats: ShowdownStatsStore(key: StatsKeys.showdown, defaults: defaults),
             betting: betting,
@@ -122,6 +126,44 @@ struct ShowdownCountCheckTests {
         let h = try table(betting: true)
         #expect(h.model.requestExit())
         #expect(h.model.phase == .betting)
+    }
+
+    /// A round left mid-hand still took its cards out of the shoe, but the one
+    /// face down was never shown. Handing it back moved the drill's carried
+    /// count by a card the table never showed, so the next count answer —
+    /// correct for everything the trainee could see — was marked wrong for it.
+    @Test func leavesTheUnseenHoleCardOutOfTheCardsHandedBack() throws {
+        let h = try table()
+        #expect(h.model.phase == .playerTurn)
+        #expect(h.model.requestExit())
+        #expect(h.model.seenCards.map(\.rank) == [.ten, .ten, .nine])
+        #expect(h.model.holeCardUnseen)
+    }
+
+    @Test func countsTheHoleCardOnceTheRoundResolvesAndShowsIt() throws {
+        let h = try played()
+        #expect(!h.model.holeCardUnseen)
+        #expect(h.model.seenCards.map(\.rank) == round.map(\.rank))
+    }
+
+    /// The insurance decision is the one phase that asks for the count with the
+    /// hole card still face down, so it is where the table has to say so.
+    @Test func namesTheUnseenHoleCardAtTheCountCheck() throws {
+        let h = try table(
+            cards: [card(.nine), card(.ace, .hearts), card(.seven), card(.six, .clubs)],
+            betting: true
+        )
+        h.model.setBet(Bankroll.minBet)
+        h.model.dealAfterBet()
+        #expect(h.model.phase == .insurance)
+
+        #expect(!h.model.requestExit())
+        #expect(h.model.phase == .countCheck)
+        #expect(h.model.cardsSeen == 3)
+        #expect(h.model.holeCardUnseen)
+        // 9 + A + 7 = -1 in Hi-Lo; the unseen 6 would have made it 0.
+        h.model.answerCountCheck(-1)
+        #expect(h.model.countVerdict?.correct == true)
     }
 
     /// Wong Halves and friends run on half-points, so the answer box has to take

@@ -242,7 +242,13 @@ extension ShowdownModel {
     /// Cards the player has actually seen face up. The hole card of an
     /// unresolved round is dealt but not shown, so it is not one of them.
     var cardsSeen: Int {
-        dealtCards.count - (pendingHoleCard == nil ? 0 : 1)
+        seenCards.count
+    }
+
+    /// Whether the round being left still holds a face-down hole card, so the
+    /// count check can say why it is not in the number it is asking for.
+    var holeCardUnseen: Bool {
+        pendingHoleCard != nil
     }
 
     /// Wong Halves and friends run on half-points, so the answer box has to take

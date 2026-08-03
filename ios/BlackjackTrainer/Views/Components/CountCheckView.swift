@@ -9,6 +9,9 @@ import SwiftUI
 /// following `PlayCoachView`. Mirrors the web `.showdown__count-check` block.
 struct CountCheckView: View {
     let cardsSeen: Int
+    /// Leaving before the peek: the hole card was dealt but never turned over,
+    /// so it is out of this tally and out of the count that leaves with you.
+    var holeCardUnseen = false
     let allowFractions: Bool
     let verdict: PlayVerdict?
     let onAnswer: (Double) -> Void
@@ -21,6 +24,11 @@ struct CountCheckView: View {
             Text("\(cardsSeen) cards came out at this table. Take the count with you.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.ink)
+            if holeCardUnseen {
+                Text("The dealer's hole card was never turned over, so it is in neither.")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.muted)
+            }
             if let verdict {
                 PlayCoachView(verdict: verdict)
                 Button(action: onLeave) {
@@ -42,6 +50,9 @@ struct CountCheckView: View {
 
 #Preview {
     VStack(spacing: 20) {
+        CountCheckView(
+            cardsSeen: 3, holeCardUnseen: true, allowFractions: false, verdict: nil
+        ) { _ in } onLeave: {}
         CountCheckView(cardsSeen: 14, allowFractions: false, verdict: nil) { _ in } onLeave: {}
         CountCheckView(
             cardsSeen: 14,
