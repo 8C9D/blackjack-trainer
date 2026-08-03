@@ -40,6 +40,7 @@ struct SettingsView: View {
                 tableRulesSection
                 DeviationsSection()
                 countingSection
+                BackupSection()
                 PracticeDataSection()
                 aboutSection
             }

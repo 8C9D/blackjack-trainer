@@ -34,7 +34,7 @@ func localDateKey(_ date: Date) -> String {
 /// Mirrors `PracticeHistoryService`: tolerant load, 400-day prune on write, and
 /// the stat-store iCloud pattern. The stored key is additive.
 @Observable
-final class PracticeHistoryStore: CloudSyncable {
+final class PracticeHistoryStore: CloudSyncable, ReloadableStore {
     @ObservationIgnored let key: String
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let cloud: CloudKeyValueStore?
@@ -57,6 +57,10 @@ final class PracticeHistoryStore: CloudSyncable {
 
     func setNowSource(_ source: @escaping () -> Date) {
         now = source
+    }
+
+    func reloadFromDefaults() {
+        days = Self.load(key: key, defaults: defaults)
     }
 
     func recordHand() {

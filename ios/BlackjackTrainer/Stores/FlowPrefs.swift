@@ -142,7 +142,7 @@ func clampGoal(_ goal: Double) -> Int {
 /// `FlowPrefsService`: tolerant field-by-field load over defaults, write-through
 /// to iCloud KVS following the stat-store pattern.
 @Observable
-final class FlowPrefsStore: CloudSyncable {
+final class FlowPrefsStore: CloudSyncable, ReloadableStore {
     @ObservationIgnored let key: String
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let cloud: CloudKeyValueStore?
@@ -197,6 +197,10 @@ final class FlowPrefsStore: CloudSyncable {
     func updateCounting(_ mutate: (inout CountingPrefs) -> Void) {
         mutate(&prefs.counting)
         persist()
+    }
+
+    func reloadFromDefaults() {
+        prefs = Self.load(key: key, defaults: defaults, systems: systems)
     }
 
     private func persist() {
