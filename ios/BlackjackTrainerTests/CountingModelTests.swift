@@ -21,6 +21,7 @@ struct CountingModelTests {
                 defaults: defaults
             ),
             keyCountStore: SessionStatsStore(key: StatsKeys.keyCount, defaults: defaults),
+            betSpreadStore: SessionStatsStore(key: StatsKeys.betSpread, defaults: defaults),
             showdownStatsStore: ShowdownStatsStore(key: StatsKeys.showdown, defaults: defaults),
             generator: CardGenerator(random: random),
             shoeFactory: ShoeFactory(random: random)

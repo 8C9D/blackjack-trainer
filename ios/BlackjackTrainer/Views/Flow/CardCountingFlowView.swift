@@ -46,6 +46,7 @@ final class CardCountingFlowModel {
             trueCountStore: app.trueCountStats,
             deckEstimationStore: app.deckEstimationStats,
             keyCountStore: app.keyCountStats,
+            betSpreadStore: app.betSpreadStats,
             showdownStatsStore: app.showdownStats
         )
         self.init(
@@ -86,8 +87,8 @@ final class CardCountingFlowModel {
 
     /// Grade a rep, then count it as one hand toward the daily goal and record it
     /// to the session (in addition to the per-trainer stat stores the counting
-    /// model already writes). In key-count mode the count answer only advances
-    /// to the advantage question — the rep is recorded there.
+    /// model already writes). In key-count and bet-spread modes the count answer
+    /// only advances to the second question — the rep is recorded there.
     func answer(_ value: Double) {
         guard counting.state == .answering else { return }
         counting.answer(value)
@@ -101,6 +102,16 @@ final class CardCountingFlowModel {
     func advantage(_ saidYes: Bool) {
         guard counting.state == .advantage else { return }
         counting.answerAdvantage(saidYes)
+        if let result = counting.result {
+            history.recordHand()
+            session.record(result.isCorrect)
+        }
+    }
+
+    /// The bet-spread drill's bet completes the rep.
+    func bet(_ units: Int) {
+        guard counting.state == .betting else { return }
+        counting.answerBet(units)
         if let result = counting.result {
             history.recordHand()
             session.record(result.isCorrect)
@@ -214,6 +225,12 @@ struct CardCountingFlowView: View {
             ) { model.answer($0) }
         case .advantage:
             AdvantageCallView { model.advantage($0) }
+        case .betting:
+            CountAnswerView(
+                mode: model.counting.settings.mode,
+                allowFractions: false,
+                question: .bet
+            ) { model.bet(Int($0)) }
         case .feedback:
             feedbackView
         case .showdown:

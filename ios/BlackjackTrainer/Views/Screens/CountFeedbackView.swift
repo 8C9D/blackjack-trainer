@@ -80,6 +80,57 @@ struct CountFeedbackView: View {
             .foregroundStyle(Theme.muted)
         case let .keyCount(keyCount):
             keyCountDetails(keyCount)
+        case let .betSpread(betSpread):
+            betSpreadDetails(betSpread)
+        }
+    }
+
+    @ViewBuilder
+    private func betSpreadDetails(_ result: BetSpreadDrillResult) -> some View {
+        detailRow("Your true count", "\(result.userTrueCount)")
+        detailRow("Correct true count", "\(result.correctTrueCount)")
+        detailRow("Running count", CountFormat.count(result.correctRunningCount))
+        detailRow("Decks remaining", CountFormat.decks(result.decksRemaining))
+        if let estimate = result.deckEstimate {
+            detailRow("Your decks estimate", CountFormat.decks(estimate))
+            detailRow(
+                "Estimate within ±0.5",
+                (result.deckEstimateWithinBand ?? false) ? "Yes" : "No"
+            )
+        }
+        detailRow("Your bet", BetRamp.unitsLabel(result.userUnits))
+        detailRow("Your spread says", BetRamp.unitsLabel(result.correctUnits))
+        Text(
+            "Running count \(CountFormat.count(result.correctRunningCount)) ÷ "
+                + "\(CountFormat.decks(result.decksRemaining)) decks = "
+                + "true count \(result.correctTrueCount), which is the "
+                + "\(BetRamp.bandLabels[BetRamp.bandIndex(trueCount: result.correctTrueCount)]) "
+                + "band of your spread."
+        )
+        .font(.footnote)
+        .foregroundStyle(Theme.muted)
+        spread(result)
+    }
+
+    /// The whole spread with the band this round landed in filled, so a missed
+    /// bet reads as "that count was this band".
+    private func spread(_ result: BetSpreadDrillResult) -> some View {
+        let active = BetRamp.bandIndex(trueCount: result.correctTrueCount)
+        let columns = [GridItem(.adaptive(minimum: 100), spacing: 6)]
+        return LazyVGrid(columns: columns, spacing: 6) {
+            ForEach(Array(result.ramp.enumerated()), id: \.offset) { index, bandUnits in
+                VStack(spacing: 2) {
+                    Text(BetRamp.bandLabels[index])
+                        .font(.caption2)
+                    Text(BetRamp.unitsLabel(bandUnits))
+                        .font(.caption2.weight(.semibold))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 5)
+                .background(index == active ? Theme.accent : Theme.raised)
+                .foregroundStyle(index == active ? Theme.onAccent : Theme.ink)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
         }
     }
 

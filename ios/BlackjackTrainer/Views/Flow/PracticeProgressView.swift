@@ -32,7 +32,8 @@ struct PracticeProgressView: View {
             ProgressSummary.row("Running count", model.runningCountStats.stats),
             ProgressSummary.row("True count", model.trueCountStats.stats),
             ProgressSummary.row("Deck estimate", model.deckEstimationStats.stats),
-            ProgressSummary.row("Key count call", model.keyCountStats.stats)
+            ProgressSummary.row("Key count call", model.keyCountStats.stats),
+            ProgressSummary.row("Bet spread", model.betSpreadStats.stats)
         ]
     }
 

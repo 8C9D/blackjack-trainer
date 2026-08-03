@@ -60,6 +60,9 @@ struct CountingPrefs: Equatable {
     var trueCountSource: TrueCountSource
     var numberOfDecks: Int
     var penetration: Double
+    /// The player's own bet spread, in units per true-count band. Graded against
+    /// by the bet-spread drill; ignored by every other mode.
+    var betRamp: [Int]
     /// Boxes the player occupies in the optional post-count showdown (1–3).
     var showdownSpots: Int
     /// Bet sizing in the showdown: each round opens on a bet and settles against a
@@ -74,6 +77,7 @@ struct CountingPrefs: Equatable {
             numberOfCards: numberOfCards,
             millisecondsBetweenCards: millisecondsBetweenCards,
             decksRemaining: decksRemaining,
+            betRamp: betRamp,
             trueCountSource: trueCountSource,
             numberOfDecks: numberOfDecks,
             penetration: penetration
@@ -119,6 +123,7 @@ extension FlowPrefs {
             trueCountSource: .liveShoe,
             numberOfDecks: ShoeConstants.defaultNumberOfDecks,
             penetration: ShoeConstants.defaultPenetration,
+            betRamp: BetRamp.default,
             showdownSpots: 1,
             showdownBetting: false
         )

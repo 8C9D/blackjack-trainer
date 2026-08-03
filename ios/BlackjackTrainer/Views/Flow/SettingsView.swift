@@ -137,8 +137,9 @@ struct SettingsView: View {
 
             if trueCountAvailable {
                 Picker("Mode", selection: modeBinding) {
-                    Text("Running count").tag(DrillMode.runningCount)
+                    Text("Running").tag(DrillMode.runningCount)
                     Text("True count").tag(DrillMode.trueCount)
+                    Text("Bet spread").tag(DrillMode.betSpread)
                 }
                 .pickerStyle(.segmented)
             } else if keyCountAvailable {
@@ -181,7 +182,11 @@ struct SettingsView: View {
                 step: 100
             )
 
-            if prefs.counting.mode == .trueCount {
+            if prefs.counting.mode == .betSpread {
+                BetRampEditor()
+            }
+
+            if prefs.counting.mode.asksTrueCount {
                 Picker("Decks source", selection: countingSourceBinding) {
                     Text("Live shoe").tag(TrueCountSource.liveShoe)
                     Text("Classic (preset)").tag(TrueCountSource.classic)

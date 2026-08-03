@@ -20,6 +20,7 @@ final class AppModel {
     let deviationStats: SessionStatsStore
     let deckEstimationStats: SessionStatsStore
     let keyCountStats: SessionStatsStore
+    let betSpreadStats: SessionStatsStore
     let showdownStats: ShowdownStatsStore
     let showdownBankroll: BankrollStore
 
@@ -61,6 +62,7 @@ final class AppModel {
         let deviationStats = SessionStatsStore(key: StatsKeys.deviation, cloud: cloud)
         let deckEstimationStats = SessionStatsStore(key: StatsKeys.deckEstimation, cloud: cloud)
         let keyCountStats = SessionStatsStore(key: StatsKeys.keyCount, cloud: cloud)
+        let betSpreadStats = SessionStatsStore(key: StatsKeys.betSpread, cloud: cloud)
         let showdownStats = ShowdownStatsStore(key: StatsKeys.showdown, cloud: cloud)
         let showdownBankroll = BankrollStore(key: StatsKeys.showdownBankroll, cloud: cloud)
         self.basicStrategyStats = basicStrategyStats
@@ -69,6 +71,7 @@ final class AppModel {
         self.deviationStats = deviationStats
         self.deckEstimationStats = deckEstimationStats
         self.keyCountStats = keyCountStats
+        self.betSpreadStats = betSpreadStats
         self.showdownStats = showdownStats
         self.showdownBankroll = showdownBankroll
 
@@ -81,8 +84,8 @@ final class AppModel {
 
         cloudSync = StatsCloudSync(cloud: cloud, stores: [
             basicStrategyStats, runningCountStats, trueCountStats,
-            deviationStats, deckEstimationStats, keyCountStats, showdownStats, showdownBankroll,
-            flowPrefs, practiceHistory, missTally
+            deviationStats, deckEstimationStats, keyCountStats, betSpreadStats,
+            showdownStats, showdownBankroll, flowPrefs, practiceHistory, missTally
         ])
         // Built after cloud adoption so the seeded snapshot reflects any value
         // pulled from iCloud at launch. The widget mirrors the Flow home surface —
@@ -98,7 +101,7 @@ final class AppModel {
     func resetPracticeData() {
         for store in [
             basicStrategyStats, deviationStats, runningCountStats,
-            trueCountStats, deckEstimationStats, keyCountStats
+            trueCountStats, deckEstimationStats, keyCountStats, betSpreadStats
         ] {
             store.reset()
         }
