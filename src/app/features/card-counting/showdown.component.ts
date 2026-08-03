@@ -55,6 +55,7 @@ import {
   normalizeUpcardKey,
 } from '../../core/services/basic-strategy-engine.service';
 import { DeviationEngineService } from '../../core/services/deviation-engine.service';
+import { MissTallyService, scenarioRefFor } from '../../core/services/miss-tally.service';
 import { ShowdownPlayStatsService } from '../../core/services/showdown-play-stats.service';
 import { ShowdownStatsService } from '../../core/services/showdown-stats.service';
 
@@ -380,6 +381,8 @@ export class ShowdownComponent implements OnInit {
   private readonly playStats = inject(ShowdownPlayStatsService);
   private readonly engine = inject(BasicStrategyEngineService);
   private readonly deviations = inject(DeviationEngineService);
+  // Misplays here feed the same weak-spot tally the Basic Strategy drill keeps.
+  private readonly missTally = inject(MissTallyService);
 
   // The persistent shoe the player just counted; the showdown deals from it so
   // its depletion carries back to the counting drill.
@@ -659,6 +662,7 @@ export class ShowdownComponent implements OnInit {
     });
     const wasRight = action === correct.action;
     this.playStats.recordAttempt(wasRight);
+    this.tallyAgainstBasicStrategy(hand.cards, upcard, correct.action, wasRight);
     this.lastPlay.set({
       correct: wasRight,
       headline: `${ACTION_LABELS[correct.action]} was the play.`,
@@ -670,6 +674,36 @@ export class ShowdownComponent implements OnInit {
         `${correct.handDescription} vs ${normalizeUpcardKey(upcard)}: ${ACTION_LABELS[correct.action]}, not ${ACTION_LABELS[action as Exclude<Action, 'INS'>]}`,
       ]);
     }
+  }
+
+  // A misplay here is a basic-strategy miss on the hand it was made on, so it
+  // belongs in the same weak-spot tally the drill keeps: play 16 vs 10 badly at
+  // the table and the next Basic Strategy session opens on it. Without this the
+  // verdict is said once and forgotten the moment the round settles.
+  //
+  // Only an opening two-card decision is recorded, and only when the table asked
+  // the same question the drill does. A `ScenarioRef` names a two-card hand — it
+  // is the seed the drill re-deals from — so a three-card 16 has no identity to
+  // file under. And when the felt withheld an action the chart wanted (a double
+  // the free chips could not back, a split past the box's four-hand cap), the
+  // correct answer here is not the drill's, and recording it would clear a weak
+  // spot the trainee has not actually learned.
+  private tallyAgainstBasicStrategy(
+    cards: readonly Card[],
+    upcard: Card,
+    played: Action,
+    wasRight: boolean,
+  ): void {
+    if (cards.length !== 2) return;
+    const player: readonly [Card, Card] = [cards[0], cards[1]];
+    const unrestricted = this.engine.decide({
+      player,
+      dealerUpcard: upcard,
+      ruleSet: this.ruleSet(),
+      options: this.options(),
+    });
+    if (unrestricted.action !== played) return;
+    this.missTally.record('basic-strategy', scenarioRefFor(player, upcard), wasRight);
   }
 
   // Between rounds, betting returns to the bet: the count has moved on, so the

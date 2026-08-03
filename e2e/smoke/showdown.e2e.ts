@@ -168,6 +168,28 @@ test.describe('post-count showdown', () => {
     await expect(page.locator('.showdown__misplay-list li')).toContainText('Insurance');
   });
 
+  // A misplay at the table is a basic-strategy miss on that hand. It has to
+  // outlive the round: the point of naming it is that the trainee practises it
+  // next, which is what the weak-spot list is for.
+  test('a misplay at the table becomes a weak spot on Progress', async ({ page }) => {
+    await configure(page, '1');
+    // Seed 2 deals a hand where hitting is a misplay.
+    await runCountingRound(page, 2);
+    await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+    await page
+      .getByRole('group', { name: 'Player actions' })
+      .getByRole('button', { name: /Hit/ })
+      .click();
+
+    await expect(page.locator('.showdown__coach')).toHaveClass(/showdown__coach--wrong/);
+
+    await page.goto('/progress');
+    const spots = page.getByRole('region', { name: 'Basic Strategy weak spots' });
+    await expect(spots).toBeVisible();
+    // The hand is whatever the seed dealt; that it was filed at all is the point.
+    await expect(spots.locator('li').first()).toContainText('missed 1 of 1');
+  });
+
   test('a hand can be surrendered for an immediate loss', async ({ page }) => {
     await configureCounting(page, '1');
     await page.getByLabel('Late Surrender').check();

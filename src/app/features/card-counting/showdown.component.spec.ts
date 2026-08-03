@@ -9,6 +9,7 @@ import type { SessionStats } from '../../core/services/stats-store';
 import type { BankrollState } from '../../core/services/bankroll.service';
 import { countingSystemById } from '../../data/counting-systems';
 import { deviationsFor } from '../../core/services/deviation-engine.service';
+import { MissTallyService } from '../../core/services/miss-tally.service';
 import { ShowdownComponent } from './showdown.component';
 
 // The index the coach quotes has to be the one it graded against, so the spec
@@ -951,6 +952,15 @@ describe('ShowdownComponent', () => {
   // The table now says whether the hand was played right. It still settles the
   // play either way — this is a table, not a quiz.
   describe('grading the play against basic strategy', () => {
+    // A dealt round with chips on, for the cases where the bankroll is what
+    // withholds an action.
+    function withBet(ranks: readonly Rank[], bet: number) {
+      const created = createShowdown(makeShoe(ranks), 'S17', 1, true);
+      created.c.setBet(bet);
+      created.c.dealAfterBet();
+      return created;
+    }
+
     it('confirms a correct decision without changing what happens', () => {
       // Player [10,9]=19 vs dealer 10: stand. Dealer [10,6] hits K → bust.
       const { c } = createShowdown(makeShoe(['10', '10', '9', '6', 'K']));
@@ -1025,6 +1035,69 @@ describe('ShowdownComponent', () => {
       const coach = fixture.nativeElement.querySelector('.showdown__coach') as HTMLElement;
       expect(coach.textContent).toContain('Stand was the play');
       expect(coach.classList).toContain('showdown__coach--wrong');
+    });
+
+    // A misplay at the table is a basic-strategy miss on that hand, so it has to
+    // reach the weak-spot tally — otherwise the verdict is said once and lost,
+    // and the drill never learns what the trainee actually gets wrong in play.
+    describe('feeding the weak-spot tally', () => {
+      function tally(): MissTallyService {
+        return TestBed.inject(MissTallyService);
+      }
+
+      // Scenario keys the showdown filed, whatever their outcome — `weakSpots`
+      // only surfaces the ones with a miss.
+      function filed(): readonly string[] {
+        return Object.keys(tally().state()['basic-strategy'] ?? {}).sort();
+      }
+
+      it('files a misplay under the hand it was made on', () => {
+        // Player [10,9]=19 vs dealer 10: standing is correct, so hitting is not.
+        const { c } = createShowdown(makeShoe(['10', '10', '9', '6', '2', 'K']));
+        c.onAction('H');
+        const spots = tally().weakSpots('basic-strategy');
+        expect(spots).toHaveLength(1);
+        expect(spots[0]).toMatchObject({ label: '19 vs 10', misses: 1, attempts: 1 });
+      });
+
+      it('records a correct play too, so a weak spot can clear', () => {
+        const { c } = createShowdown(makeShoe(['10', '10', '9', '6', 'K']));
+        c.onAction('S');
+        // Correct, so nothing is outstanding — but the attempt was filed, and
+        // its clear-streak is what eventually retires the scenario.
+        expect(tally().weakSpots('basic-strategy')).toEqual([]);
+        expect(filed()).toEqual(['hard-19-v-10']);
+      });
+
+      // A ScenarioRef names a two-card hand — it is the seed the drill re-deals
+      // from — so a three-card total has no identity to file under.
+      it('leaves a three-card decision out of the tally', () => {
+        // [5,4]=9 vs 6 doubles, so hitting is wrong. The hand is then a
+        // three-card 11 vs 6, where hitting is the only play there is.
+        const { c } = createShowdown(makeShoe(['5', '6', '4', '10', '2', '9', '5']));
+        c.onAction('H');
+        c.onAction('H');
+        expect(c.playerCards().length).toBe(4);
+        // Two decisions were graded; only the opening one was filed.
+        expect(c.playStats.stats().attempts).toBe(2);
+        expect(filed()).toEqual(['hard-9-v-6']);
+        expect(tally().weakSpots('basic-strategy')[0]).toMatchObject({
+          label: '9 vs 6',
+          misses: 1,
+          attempts: 1,
+        });
+      });
+
+      // The felt can withhold an action the chart wants. Recording that would
+      // clear a weak spot on a question the drill never asks.
+      it('skips a hand whose double the free chips could not back', () => {
+        // The whole bankroll rides on the box, so [5,4]=9 vs 6 cannot double and
+        // hitting becomes the best play actually on offer.
+        const { c } = withBet(['5', '6', '4', '10', '2', '9', '5'], 500);
+        c.onAction('H');
+        expect(c.lastPlay()).toMatchObject({ correct: true });
+        expect(filed()).toEqual([]);
+      });
     });
   });
 });
