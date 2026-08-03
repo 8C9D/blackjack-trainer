@@ -196,7 +196,10 @@ struct ShowdownView: View {
             .keyboardShortcut(.return, modifiers: [])
             .disabled(!model.canDealAnother)
             if !model.canDealAnother {
-                Text("Shoe too low for another \(noun) — return to counting to reshuffle.")
+                Text(model.cutCardOut
+                    ? "The cut card is out — that was the shoe's last \(noun). "
+                    + "Return to counting to reshuffle."
+                    : "Shoe too low for another \(noun) — return to counting to reshuffle.")
                     .font(.footnote)
                     .foregroundStyle(Theme.muted)
             }

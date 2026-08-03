@@ -360,6 +360,12 @@ struct CardCountingFlowView: View {
                 : "Play a hand vs the dealer") { model.enterShowdown() }
                 .buttonStyle(.bordered)
                 .tint(Theme.accentInk)
+        } else if model.counting.usesLiveShoe, model.counting.shoeSpent {
+            Text("The cut card is out — no hand to play off this shoe. "
+                + "The next round deals from a fresh one.")
+                .font(.footnote)
+                .foregroundStyle(Theme.muted)
+                .multilineTextAlignment(.center)
         }
     }
 

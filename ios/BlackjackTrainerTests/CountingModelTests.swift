@@ -35,9 +35,10 @@ struct CountingModelTests {
 
     private func waitForState(
         _ model: CountingModel,
-        _ target: CountingModel.DrillState
+        _ target: CountingModel.DrillState,
+        timeout: TimeInterval = 2
     ) async throws {
-        let deadline = Date().addingTimeInterval(2)
+        let deadline = Date().addingTimeInterval(timeout)
         while model.state != target {
             if Date() > deadline {
                 Issue.record("drill never reached the \(target) state")
@@ -142,6 +143,33 @@ struct CountingModelTests {
         #expect(model.state == .showdown)
         model.exitShowdown([])
         #expect(model.state == .feedback)
+        model.cancel()
+    }
+
+    /// A hand dealt after the cut card is a hand no table deals, and it would be
+    /// graded on a true count divided by a sliver of a shoe. When the round just
+    /// counted crossed the cut, the offer is withdrawn and the reason given.
+    @Test func offersNoShowdownOnceTheCutCardIsOut() async throws {
+        let model = try make(random: { 0 })
+        model.settings.mode = .trueCount
+        model.settings.trueCountSource = .liveShoe
+        model.settings.numberOfDecks = 1
+        model.settings.penetration = 0.5 // 1 deck: the cut card sits at 26 cards
+        model.settings.numberOfCards = 26
+        model.settings.millisecondsBetweenCards = 100
+
+        model.start()
+        try await waitForState(model, .estimating, timeout: 6)
+        model.onEstimate(0.5)
+        model.answer(0)
+        #expect(model.state == .feedback)
+
+        let shoe = try #require(model.shoe)
+        #expect(shoe.needsReshuffle)
+        // The shoe is not short of cards — it is past its cut card.
+        #expect(shoe.cardsRemaining > Showdown.minCards(forSpots: 1))
+        #expect(!model.showdownAvailable)
+        #expect(model.shoeSpent)
         model.cancel()
     }
 

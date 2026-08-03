@@ -94,11 +94,19 @@ final class CountingModel {
         system = systems.first { $0.id == "hi-lo" } ?? systems[0]
     }
 
-    /// Whether the post-count showdown has enough cards left to deal an opening
-    /// round to every configured box.
+    /// Whether the post-count showdown can be offered: a live shoe still short
+    /// of its cut card, with enough cards to deal an opening round to every
+    /// configured box.
     var showdownAvailable: Bool {
-        guard let shoe else { return false }
+        guard let shoe, !shoe.needsReshuffle else { return false }
         return shoe.cardsRemaining >= Showdown.minCards(forSpots: showdownSpots)
+    }
+
+    /// The cut card surfaced during the round just counted, so there is no hand
+    /// to play off this shoe — the next round is dealt from a fresh one. Said
+    /// where the showdown button would have been, rather than letting it vanish.
+    var shoeSpent: Bool {
+        shoe?.needsReshuffle ?? false
     }
 
     /// Begin a drill (no-op while one is active or settings are invalid).

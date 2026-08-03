@@ -11,8 +11,19 @@ extension ShowdownModel {
         hands.indices.contains(activeIndex) ? hands[activeIndex] : nil
     }
 
+    /// A table deals no round past the cut card: the round in progress when it
+    /// surfaces is the shoe's last, and the next one is off a fresh shoe.
+    /// Dealing on would also divide the true count by a sliver of a shoe — a +2
+    /// over a tenth of a deck reads as +20 — and grade bets and index plays
+    /// against counts no casino ever deals. `remaining` is the observed mirror
+    /// of the shoe, so reading it here is what refreshes the view.
+    var cutCardOut: Bool {
+        _ = remaining
+        return shoe.needsReshuffle
+    }
+
     var canDealAnother: Bool {
-        remaining >= Showdown.minCards(forSpots: spots)
+        !cutCardOut && remaining >= Showdown.minCards(forSpots: spots)
     }
 
     /// Double is offered on an original fresh hand, and on a split hand only
