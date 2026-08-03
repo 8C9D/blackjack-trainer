@@ -266,6 +266,14 @@ only for systems that carry one (KO alone today).
   the web engine — and `CountingParityTests` grades the Swift
   `evaluateKeyCount` against them.
 
+### Post-roadmap continued: five modes, told honestly (2026-08-02)
+
+Adding modes quietly broke two surfaces that had been written when there were two.
+
+- **Home's Card Counting chip summed the running- and true-count stores only.** The key-count call, the bet, and the deck countdown were invisible there, so a trainee who drilled nothing but deck speed saw "new" on the card forever. It now sums every counting store.
+- **The drill's idle screen names the mode it is about to run.** Five modes differ enough — a self-paced deck, two-part answers — that "Start counting" no longer says what is coming. The labels are one shared map (`DRILL_MODE_LABELS`) that Settings' radios now render from too, so the two lists cannot drift.
+- **Validation.** +3 unit tests (1042 total).
+
 ### Post-roadmap continued: deck speed (2026-08-02)
 
 The oldest drill in counting was the one the app could not do: the timed stream sets the pace, and counting down a deck is about measuring _yours_.

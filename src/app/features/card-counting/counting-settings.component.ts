@@ -9,6 +9,8 @@ import {
   type BetRamp,
 } from '../../core/models/bet-ramp.model';
 import {
+  DRILL_MODES,
+  DRILL_MODE_LABELS,
   usesLiveShoe,
   type DrillMode,
   type TrueCountSource,
@@ -30,59 +32,19 @@ import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.mo
         </select>
       </label>
       <div class="settings__modes" role="radiogroup" aria-label="Drill mode">
-        <label class="settings__mode">
-          <input
-            type="radio"
-            name="drill-mode"
-            value="running-count"
-            [checked]="mode() === 'running-count'"
-            (change)="onModeChange('running-count')"
-          />
-          <span>Running count</span>
-        </label>
-        <label class="settings__mode">
-          <input
-            type="radio"
-            name="drill-mode"
-            value="true-count"
-            [checked]="mode() === 'true-count'"
-            [disabled]="!trueCountAvailable()"
-            (change)="onModeChange('true-count')"
-          />
-          <span>True count</span>
-        </label>
-        <label class="settings__mode">
-          <input
-            type="radio"
-            name="drill-mode"
-            value="key-count"
-            [checked]="mode() === 'key-count'"
-            [disabled]="!keyCountAvailable()"
-            (change)="onModeChange('key-count')"
-          />
-          <span>Key count</span>
-        </label>
-        <label class="settings__mode">
-          <input
-            type="radio"
-            name="drill-mode"
-            value="bet-spread"
-            [checked]="mode() === 'bet-spread'"
-            [disabled]="!trueCountAvailable()"
-            (change)="onModeChange('bet-spread')"
-          />
-          <span>Bet spread</span>
-        </label>
-        <label class="settings__mode">
-          <input
-            type="radio"
-            name="drill-mode"
-            value="deck-speed"
-            [checked]="mode() === 'deck-speed'"
-            (change)="onModeChange('deck-speed')"
-          />
-          <span>Deck speed</span>
-        </label>
+        @for (option of modeOptions; track option.mode) {
+          <label class="settings__mode">
+            <input
+              type="radio"
+              name="drill-mode"
+              [value]="option.mode"
+              [checked]="mode() === option.mode"
+              [disabled]="!modeAvailable(option.mode)"
+              (change)="onModeChange(option.mode)"
+            />
+            <span>{{ option.label }}</span>
+          </label>
+        }
       </div>
       @if (mode() === 'deck-speed') {
         <p class="settings__note">
@@ -307,6 +269,19 @@ export class CountingSettingsComponent {
   readonly betRampChange = output<BetRamp>();
 
   protected readonly spotOptions = SHOWDOWN_SPOT_OPTIONS;
+  protected readonly modeOptions = DRILL_MODES.map((mode) => ({
+    mode,
+    label: DRILL_MODE_LABELS[mode],
+  }));
+
+  // True count — and the bet spread built on it — needs a balanced system; the
+  // key-count drill a published schedule. Running count and deck speed suit any
+  // system, so they are never disabled.
+  protected modeAvailable(mode: DrillMode): boolean {
+    if (mode === 'true-count' || mode === 'bet-spread') return this.trueCountAvailable();
+    if (mode === 'key-count') return this.keyCountAvailable();
+    return true;
+  }
   protected readonly minUnits = MIN_BET_UNITS;
   protected readonly maxUnits = MAX_BET_UNITS;
 

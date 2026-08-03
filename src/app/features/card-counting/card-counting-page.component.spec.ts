@@ -1296,4 +1296,19 @@ describe('CardCountingPageComponent', () => {
       expect(c.result()).toBeNull();
     });
   });
+
+  describe('the idle screen', () => {
+    it('names the mode it is about to run', () => {
+      const { fixture } = createPage();
+      expect(
+        (fixture.nativeElement.querySelector('.count__mode') as HTMLElement).textContent,
+      ).toContain('Running count');
+
+      updateSetting('mode', 'deck-speed');
+      const speed = createPage();
+      expect(
+        (speed.fixture.nativeElement.querySelector('.count__mode') as HTMLElement).textContent,
+      ).toContain('Deck speed');
+    });
+  });
 });

@@ -2,7 +2,10 @@ import { Component, HostListener, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
+import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.service';
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
+import { DeckSpeedStatsService } from '../../core/services/deck-speed-stats.service';
+import { KeyCountStatsService } from '../../core/services/key-count-stats.service';
 import { BasicStrategyStatsService } from '../../core/services/basic-strategy-stats.service';
 import { DeviationStatsService } from '../../core/services/deviation-stats.service';
 import {
@@ -92,6 +95,9 @@ export class HomePageComponent {
   private readonly deviationStats = inject(DeviationStatsService);
   private readonly runningCountStats = inject(CardCountingStatsService);
   private readonly trueCountStats = inject(TrueCountStatsService);
+  private readonly keyCountStats = inject(KeyCountStatsService);
+  private readonly betSpreadStats = inject(BetSpreadStatsService);
+  private readonly deckSpeedStats = inject(DeckSpeedStatsService);
   private readonly router = inject(Router);
 
   // A getter, not a field: recomputed each change-detection pass so the label
@@ -163,13 +169,20 @@ export class HomePageComponent {
       case 'deviations':
         return accuracy(this.deviationStats.stats());
       case 'card-counting': {
-        // Counting persists running- and true-count drills separately;
-        // the card shows them combined.
-        const running = this.runningCountStats.stats();
-        const trueCount = this.trueCountStats.stats();
+        // Every counting mode persists separately — running count, true count,
+        // the key-count call, the bet, the deck countdown — and the card shows
+        // one number for the trainer, so it sums all of them. Leaving any out
+        // would show "new" to someone who has drilled nothing else.
+        const stores = [
+          this.runningCountStats.stats(),
+          this.trueCountStats.stats(),
+          this.keyCountStats.stats(),
+          this.betSpreadStats.stats(),
+          this.deckSpeedStats.stats(),
+        ];
         return accuracy({
-          attempts: running.attempts + trueCount.attempts,
-          correct: running.correct + trueCount.correct,
+          attempts: stores.reduce((sum, s) => sum + s.attempts, 0),
+          correct: stores.reduce((sum, s) => sum + s.correct, 0),
         });
       }
     }

@@ -33,6 +33,25 @@ export function asksTrueCount(mode: DrillMode): boolean {
   return mode === 'true-count' || mode === 'bet-spread';
 }
 
+// The modes in the order Settings offers them, with the label every surface
+// uses — the radios, and the drill's idle screen, which names the mode it is
+// about to run now that they differ this much.
+export const DRILL_MODES: readonly DrillMode[] = [
+  'running-count',
+  'true-count',
+  'key-count',
+  'bet-spread',
+  'deck-speed',
+];
+
+export const DRILL_MODE_LABELS: Readonly<Record<DrillMode, string>> = {
+  'running-count': 'Running count',
+  'true-count': 'True count',
+  'key-count': 'Key count',
+  'bet-spread': 'Bet spread',
+  'deck-speed': 'Deck speed',
+};
+
 // Signed count rendering ("+2", "-4", "0") — the web mirror of the Swift
 // CountFormat.signedCount, shared by the feedback panel and the reshuffle
 // notice.

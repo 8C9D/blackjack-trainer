@@ -121,6 +121,17 @@
 // context. Sized like the other stage controls so the layout does not jump when
 // the drill changes mode.
 .count {
+  // The mode the idle screen is about to run, between the system's name and
+  // its description.
+  &__mode {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--accent-ink);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
   &__flip {
     display: flex;
     flex-direction: column;
