@@ -136,21 +136,24 @@ struct HomeView: View {
         .buttonStyle(.plain)
     }
 
-    /// Lifetime accuracy for a trainer card. Counting combines the running-count
-    /// and true-count stores, mirroring the web.
+    /// Lifetime accuracy for a trainer card. Counting sums every one of its
+    /// stores — running count, true count, the key-count call, the bet, the deck
+    /// countdown — mirroring the web: the card shows one number for the trainer,
+    /// and leaving a mode out shows "new" to someone who has drilled only that.
     private func accuracy(for id: TrainerId) -> Int? {
         switch id {
         case .basicStrategy:
-            return flowAccuracy(model.basicStrategyStats.stats)
+            flowAccuracy(model.basicStrategyStats.stats)
         case .deviations:
-            return flowAccuracy(model.deviationStats.stats)
+            flowAccuracy(model.deviationStats.stats)
         case .cardCounting:
-            let running = model.runningCountStats.stats
-            let trueCount = model.trueCountStats.stats
-            return flowAccuracy(
-                attempts: running.attempts + trueCount.attempts,
-                correct: running.correct + trueCount.correct
-            )
+            countingAccuracy([
+                model.runningCountStats.stats,
+                model.trueCountStats.stats,
+                model.keyCountStats.stats,
+                model.betSpreadStats.stats,
+                model.deckSpeedStats.stats
+            ])
         }
     }
 }
@@ -189,6 +192,15 @@ private struct AccuracyChip: View {
         if accuracy == nil { return Theme.muted }
         return isGood ? Theme.good : Theme.midInk
     }
+}
+
+/// The Card Counting card's one number: every counting store summed. A free
+/// function so it is testable without the view.
+func countingAccuracy(_ stores: [SessionStats]) -> Int? {
+    flowAccuracy(
+        attempts: stores.reduce(0) { $0 + $1.attempts },
+        correct: stores.reduce(0) { $0 + $1.correct }
+    )
 }
 
 private func flowAccuracy(_ stats: SessionStats) -> Int? {

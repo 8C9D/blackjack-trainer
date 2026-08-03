@@ -139,16 +139,16 @@ struct SettingsView: View {
                 // Four modes no longer fit a segmented control on a phone, so
                 // this one is a menu picker like the shoe settings below it.
                 Picker("Mode", selection: modeBinding) {
-                    Text("Running count").tag(DrillMode.runningCount)
-                    Text("True count").tag(DrillMode.trueCount)
-                    Text("Bet spread").tag(DrillMode.betSpread)
-                    Text("Deck speed").tag(DrillMode.deckSpeed)
+                    Text(DrillMode.runningCount.label).tag(DrillMode.runningCount)
+                    Text(DrillMode.trueCount.label).tag(DrillMode.trueCount)
+                    Text(DrillMode.betSpread.label).tag(DrillMode.betSpread)
+                    Text(DrillMode.deckSpeed.label).tag(DrillMode.deckSpeed)
                 }
             } else if keyCountAvailable {
                 Picker("Mode", selection: modeBinding) {
-                    Text("Running count").tag(DrillMode.runningCount)
-                    Text("Key count").tag(DrillMode.keyCount)
-                    Text("Deck speed").tag(DrillMode.deckSpeed)
+                    Text(DrillMode.runningCount.label).tag(DrillMode.runningCount)
+                    Text(DrillMode.keyCount.label).tag(DrillMode.keyCount)
+                    Text(DrillMode.deckSpeed.label).tag(DrillMode.deckSpeed)
                 }
                 Text(
                     "This system is unbalanced, so there is no true count. Its published "
@@ -159,8 +159,8 @@ struct SettingsView: View {
                 .foregroundStyle(Theme.muted)
             } else {
                 Picker("Mode", selection: modeBinding) {
-                    Text("Running count").tag(DrillMode.runningCount)
-                    Text("Deck speed").tag(DrillMode.deckSpeed)
+                    Text(DrillMode.runningCount.label).tag(DrillMode.runningCount)
+                    Text(DrillMode.deckSpeed.label).tag(DrillMode.deckSpeed)
                 }
                 Text("True count is only trained for balanced systems.")
                     .font(.footnote)
