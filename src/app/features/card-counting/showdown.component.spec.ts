@@ -7,7 +7,13 @@ import type { Action, EngineOptions, RuleSet } from '../../core/models/strategy.
 import type { ShowdownStats } from '../../core/services/showdown-stats.service';
 import type { SessionStats } from '../../core/services/stats-store';
 import type { BankrollState } from '../../core/services/bankroll.service';
+import { countingSystemById } from '../../data/counting-systems';
+import { deviationsFor } from '../../core/services/deviation-engine.service';
 import { ShowdownComponent } from './showdown.component';
+
+// The index the coach quotes has to be the one it graded against, so the spec
+// reads it off the chart rather than restating it.
+const INSURANCE_INDEX = deviationsFor('S17').find((r) => r.category === 'insurance')!.index;
 
 // Protected signals/methods are plain properties at runtime; this mirror lets
 // the tests drive the hand without scattering `as any`.
@@ -57,7 +63,7 @@ type Internals = {
   spots(): number;
   stats: { stats(): ShowdownStats; reset(): void };
   playStats: { stats(): SessionStats };
-  lastPlay(): { correct: boolean; expected: Action; reason: string; hand: string } | null;
+  lastPlay(): { correct: boolean; headline: string; reason: string } | null;
   roundMistakes(): readonly string[];
 };
 
@@ -75,6 +81,7 @@ function createShowdown(
   spots = 1,
   betting = false,
   options: EngineOptions = { doubleAfterSplit: true, lateSurrender: true },
+  count: { systemId?: string; entryRunningCount?: number } = {},
 ): { fixture: ComponentFixture<ShowdownComponent>; c: Internals } {
   const fixture = TestBed.createComponent(ShowdownComponent);
   fixture.componentRef.setInput('shoe', shoe);
@@ -82,6 +89,8 @@ function createShowdown(
   fixture.componentRef.setInput('options', options);
   fixture.componentRef.setInput('spots', spots);
   fixture.componentRef.setInput('betting', betting);
+  fixture.componentRef.setInput('system', countingSystemById(count.systemId ?? 'hi-lo'));
+  fixture.componentRef.setInput('entryRunningCount', count.entryRunningCount ?? 0);
   fixture.detectChanges();
   return { fixture, c: fixture.componentInstance as unknown as Internals };
 }
@@ -550,8 +559,20 @@ describe('ShowdownComponent', () => {
     // Same upcard, but a K in the hole: a dealer natural.
     const natural: readonly Rank[] = ['9', 'A', '7', 'K'];
 
-    function dealtWithBet(ranks: readonly Rank[], bet: number, spots = 1) {
-      const created = createShowdown(makeShoe(ranks), 'S17', spots, true);
+    function dealtWithBet(
+      ranks: readonly Rank[],
+      bet: number,
+      spots = 1,
+      count: { systemId?: string; entryRunningCount?: number } = {},
+    ) {
+      const created = createShowdown(
+        makeShoe(ranks),
+        'S17',
+        spots,
+        true,
+        { doubleAfterSplit: true, lateSurrender: true },
+        count,
+      );
       created.c.setBet(bet);
       created.c.dealAfterBet();
       return created;
@@ -606,6 +627,79 @@ describe('ShowdownComponent', () => {
       expect(c.insuranceNet()).toBeNull();
       expect(c.hands()[0].settlement!.outcome).toBe('lose');
       expect(c.bankrollService.state()).toEqual({ bankroll: 490, wagered: 10, net: -10 });
+    });
+
+    // Insurance is the one decision here that is purely about the count, and the
+    // showdown hangs off the drill that just practised it. Whether the bet won
+    // is beside the point: insurance at +3 that loses was still right.
+    describe('graded against the count', () => {
+      // The true count divides by the decks actually left, so these rounds are
+      // dealt off a shoe padded to leave exactly one deck behind — which makes
+      // the true count equal the running count and keeps the arithmetic legible.
+      // The filler is 8s: zero in Hi-Lo and in KO, so it moves nothing.
+      const oneDeckLeft = (ranks: readonly Rank[]): Rank[] => [
+        ...ranks,
+        ...(Array<Rank>(52).fill('8') as Rank[]),
+      ];
+      // The opening deal of [A,?] vs one box is 4 cards; the hole card is held
+      // out of the visible count until the next round, so only 3 count here.
+      // noNatural is ['9','A','7','6'] → visible 9, A, 7 = 0 + (-1) + 0 = -1.
+      it('marks taking it at a low count as a misplay, and says the count', () => {
+        const { c } = dealtWithBet(oneDeckLeft(noNatural), 10, 1, { entryRunningCount: 0 });
+        c.takeInsurance();
+        expect(c.lastPlay()).toMatchObject({ correct: false, headline: 'Declining was the play.' });
+        expect(c.lastPlay()!.reason).toContain(`insurance index of +${INSURANCE_INDEX}`);
+        expect(c.roundMistakes()[0]).toContain('Insurance');
+      });
+
+      it('confirms declining at a low count', () => {
+        const { c } = dealtWithBet(oneDeckLeft(noNatural), 10, 1, { entryRunningCount: 0 });
+        c.declineInsurance();
+        expect(c.lastPlay()).toMatchObject({ correct: true });
+        expect(c.roundMistakes()).toEqual([]);
+      });
+
+      // A shoe of ~0.15 decks with a carried +1 puts the true count well past
+      // the index, so insurance becomes the correct call.
+      it('confirms taking it once the count reaches the index', () => {
+        // Visible A takes the carried +4 to +3, and one deck left makes that TC +3.
+        const { c } = dealtWithBet(oneDeckLeft(noNatural), 10, 1, { entryRunningCount: 4 });
+        c.takeInsurance();
+        expect(c.lastPlay()).toMatchObject({ correct: true });
+      });
+
+      // Insurance is a losing bet at a low count whether or not it happens to
+      // win — that is the whole lesson.
+      it('calls it a misplay even when the insurance bet wins', () => {
+        const { c } = dealtWithBet(oneDeckLeft(natural), 10, 1, { entryRunningCount: 0 });
+        c.takeInsurance();
+        expect(c.insuranceNet()).toBe(10);
+        expect(c.lastPlay()!.correct).toBe(false);
+      });
+
+      // KO has no true count; its book publishes a running-count trigger, and
+      // that is what a KO counter is actually taught to use.
+      it('grades KO against its own published insurance count', () => {
+        const { c } = dealtWithBet(oneDeckLeft(noNatural), 10, 1, {
+          systemId: 'ko',
+          entryRunningCount: 4,
+        });
+        c.takeInsurance();
+        expect(c.lastPlay()).toMatchObject({ correct: true });
+        expect(c.lastPlay()!.reason).toContain("KO's insurance count");
+      });
+
+      // Wong Halves reads a different count off the same shoe and the app ships
+      // no indices for it, so the decision is settled without being scored.
+      it('says nothing for a system whose indices this app does not have', () => {
+        const { c } = dealtWithBet(oneDeckLeft(noNatural), 10, 1, {
+          systemId: 'wong-halves',
+          entryRunningCount: 0,
+        });
+        c.takeInsurance();
+        expect(c.lastPlay()).toBeNull();
+        expect(c.playStats.stats().attempts).toBe(0);
+      });
     });
 
     it('ignores insurance commands after the decision phase has passed', () => {
@@ -861,7 +955,7 @@ describe('ShowdownComponent', () => {
       // Player [10,9]=19 vs dealer 10: stand. Dealer [10,6] hits K → bust.
       const { c } = createShowdown(makeShoe(['10', '10', '9', '6', 'K']));
       c.onAction('S');
-      expect(c.lastPlay()).toMatchObject({ correct: true, expected: 'S' });
+      expect(c.lastPlay()).toMatchObject({ correct: true, headline: 'Stand was the play.' });
       // The round resolved exactly as it did before grading existed.
       expect(c.settlement()!.outcome).toBe('win');
       expect(c.roundMistakes()).toEqual([]);
@@ -871,7 +965,7 @@ describe('ShowdownComponent', () => {
       // Player [10,9]=19 vs dealer 10: standing is correct, so hitting is not.
       const { c } = createShowdown(makeShoe(['10', '10', '9', '6', '2', 'K']));
       c.onAction('H');
-      expect(c.lastPlay()).toMatchObject({ correct: false, expected: 'S' });
+      expect(c.lastPlay()).toMatchObject({ correct: false, headline: 'Stand was the play.' });
       // The card was still dealt: 19 + 2 = 21.
       expect(c.playerCards().length).toBe(3);
     });
@@ -893,7 +987,7 @@ describe('ShowdownComponent', () => {
       const { c } = createShowdown(makeShoe(['5', '6', '4', '10', '2', '9', '5']));
       c.onAction('H');
       c.onAction('H');
-      expect(c.lastPlay()!.expected).toBe('H');
+      expect(c.lastPlay()!.headline).toBe('Hit was the play.');
     });
 
     it('collects the round’s misplays for the result panel', () => {
@@ -921,7 +1015,7 @@ describe('ShowdownComponent', () => {
       // [8,8] vs dealer 10 splits under every rule set.
       const { c } = createShowdown(makeShoe(['8', '10', '8', '6', '3', '3', 'K']));
       c.onAction('P');
-      expect(c.lastPlay()).toMatchObject({ correct: true, expected: 'P' });
+      expect(c.lastPlay()).toMatchObject({ correct: true, headline: 'Split was the play.' });
     });
 
     it('shows the verdict on the felt', () => {

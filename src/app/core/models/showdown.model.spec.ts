@@ -1,10 +1,13 @@
 import type { Card, Rank, Suit } from './card.model';
+import { countingSystemById } from '../../data/counting-systems';
 import {
   MAX_SHOWDOWN_SPOTS,
   MIN_SHOWDOWN_CARDS,
   MIN_SHOWDOWN_SPOTS,
   clampSpots,
+  countBasisFor,
   dealerShouldHit,
+  insuranceIsCorrect,
   minCardsForSpots,
   playDealerHand,
   settle,
@@ -181,5 +184,57 @@ describe('showdown.model', () => {
       expect(minCardsForSpots(0)).toBe(4);
       expect(minCardsForSpots(99)).toBe(8);
     });
+  });
+});
+
+describe('countBasisFor', () => {
+  const hiLo = countingSystemById('hi-lo');
+  const ko = countingSystemById('ko');
+  const wongHalves = countingSystemById('wong-halves');
+
+  it('divides a Hi-Lo running count into a true count, truncated toward zero', () => {
+    expect(countBasisFor(hiLo, 7, 2)).toEqual({ kind: 'true-count', trueCount: 3 });
+    // -5 over 2 decks is -2, not -3.
+    expect(countBasisFor(hiLo, -5, 2)).toEqual({ kind: 'true-count', trueCount: -2 });
+  });
+
+  // KO has no true count, but its book publishes a running-count schedule, so
+  // it is the one other system whose insurance call the app can grade.
+  it('keeps an unbalanced system with a schedule on its running count', () => {
+    expect(countBasisFor(ko, -2, 6)).toEqual({
+      kind: 'running-count',
+      runningCount: -2,
+      insuranceAt: 3,
+    });
+  });
+
+  // A level-3 system reads a different true count off the same shoe, and the
+  // app ships no indices for it — so it is dealt and settled, not scored.
+  it('refuses to grade a system whose indices this app does not have', () => {
+    expect(countBasisFor(wongHalves, 7, 2)).toEqual({ kind: 'ungraded' });
+  });
+
+  it('refuses to grade a shoe with no decks left to divide by', () => {
+    expect(countBasisFor(hiLo, 7, 0)).toEqual({ kind: 'ungraded' });
+  });
+});
+
+describe('insuranceIsCorrect', () => {
+  it('defers to the Hi-Lo chart index for a true count', () => {
+    const basis = { kind: 'true-count', trueCount: 4 } as const;
+    expect(insuranceIsCorrect(basis, true)).toBe(true);
+    expect(insuranceIsCorrect(basis, false)).toBe(false);
+  });
+
+  it('compares an unbalanced running count against its own insurance count', () => {
+    const at = (runningCount: number) =>
+      insuranceIsCorrect({ kind: 'running-count', runningCount, insuranceAt: 3 }, false);
+    expect(at(2)).toBe(false);
+    expect(at(3)).toBe(true);
+    expect(at(4)).toBe(true);
+  });
+
+  it('says nothing at all for a system it cannot grade', () => {
+    expect(insuranceIsCorrect({ kind: 'ungraded' }, true)).toBeNull();
   });
 });

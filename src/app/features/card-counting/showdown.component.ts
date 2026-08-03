@@ -24,14 +24,19 @@ import {
   stakeFor,
   surrenderForfeit,
 } from '../../core/models/bankroll.model';
+import { formatSignedCount } from '../../core/models/card-counting.model';
 import { cardHighValue, isAce, type Card } from '../../core/models/card.model';
+import { cardCountValue, type CountingSystem } from '../../core/models/counting-system.model';
 import { handTotal, isBlackjack, isBust } from '../../core/models/hand.model';
 import { Shoe } from '../../core/models/shoe.model';
 import {
   clampSpots,
+  countBasisFor,
+  insuranceIsCorrect,
   minCardsForSpots,
   playDealerHand,
   settle,
+  type CountBasis,
   type Settlement,
   type ShowdownOutcome,
 } from '../../core/models/showdown.model';
@@ -42,12 +47,14 @@ import {
   type EngineOptions,
   type RuleSet,
 } from '../../core/models/strategy.model';
+import { HI_LO } from '../../data/counting-systems';
 import { CardImageComponent } from '../../shared/card-image.component';
 import { BankrollService } from '../../core/services/bankroll.service';
 import {
   BasicStrategyEngineService,
   normalizeUpcardKey,
 } from '../../core/services/basic-strategy-engine.service';
+import { DeviationEngineService } from '../../core/services/deviation-engine.service';
 import { ShowdownPlayStatsService } from '../../core/services/showdown-play-stats.service';
 import { ShowdownStatsService } from '../../core/services/showdown-stats.service';
 
@@ -108,12 +115,13 @@ function freshHand(
   };
 }
 
-// The verdict on one playing decision, as the felt shows it.
+// The verdict on one decision at the table, as the felt shows it. The headline
+// is a sentence rather than an Action because not every decision here is one:
+// declining insurance is a correct play with no action to name.
 interface PlayVerdict {
   readonly correct: boolean;
-  readonly expected: Exclude<Action, 'INS'>;
+  readonly headline: string;
   readonly reason: string;
-  readonly hand: string;
 }
 
 // Post-count showdown: deals one to three boxes from the persistent shoe the
@@ -301,7 +309,7 @@ interface PlayVerdict {
             @if (v.correct) {
               <b>Correct.</b> {{ v.reason }}
             } @else {
-              <b>{{ labelFor(v.expected) }} was the play.</b> {{ v.reason }}
+              <b>{{ v.headline }}</b> {{ v.reason }}
             }
           </p>
         }
@@ -371,6 +379,7 @@ export class ShowdownComponent implements OnInit {
   // Accuracy of the playing decisions, recorded whether or not chips are on.
   private readonly playStats = inject(ShowdownPlayStatsService);
   private readonly engine = inject(BasicStrategyEngineService);
+  private readonly deviations = inject(DeviationEngineService);
 
   // The persistent shoe the player just counted; the showdown deals from it so
   // its depletion carries back to the counting drill.
@@ -382,6 +391,11 @@ export class ShowdownComponent implements OnInit {
   readonly options = input<EngineOptions>(DEFAULT_ENGINE_OPTIONS);
   // Boxes to occupy on the opening deal (1–3). One dealer plays against all.
   readonly spots = input(1, { transform: clampSpots });
+  // The system being counted and the running count carried in from the drill.
+  // Together with the shoe's depletion they are what the count-dependent
+  // decisions at this table are graded against.
+  readonly system = input<CountingSystem>(HI_LO);
+  readonly entryRunningCount = input(0);
   // Bet sizing: when on, each round opens on a bet and settles against a
   // persisted bankroll. Off (the default) the showdown is the pure hand tally it
   // has always been, and no chip figure is shown.
@@ -394,6 +408,18 @@ export class ShowdownComponent implements OnInit {
 
   // Every card dealt during this showdown session, accumulated for the exit.
   private readonly dealt: Card[] = [];
+
+  // The count as the player can actually see it: the count carried in from the
+  // drill plus every card this showdown has turned face up. The dealer's hole
+  // card is deliberately excluded until the next deal — insurance is decided
+  // before it is seen, and grading against a card the player cannot see would
+  // be grading a different game.
+  private readonly visibleRunningCount = signal(0);
+  private pendingHoleCard: Card | null = null;
+
+  protected readonly countBasis = computed(() =>
+    countBasisFor(this.system(), this.visibleRunningCount(), this.shoe().decksRemaining),
+  );
 
   protected readonly hands = signal<readonly PlayerHand[]>([]);
   protected readonly activeIndex = signal(0);
@@ -561,6 +587,8 @@ export class ShowdownComponent implements OnInit {
 
   ngOnInit(): void {
     this.remaining.set(this.shoe().cardsRemaining);
+    // The count the drill was carrying is where this table's count starts.
+    this.visibleRunningCount.set(this.entryRunningCount());
     if (this.betting()) {
       // Size the bet before seeing a card — the count just practised is the only
       // information the decision should rest on.
@@ -633,9 +661,8 @@ export class ShowdownComponent implements OnInit {
     this.playStats.recordAttempt(wasRight);
     this.lastPlay.set({
       correct: wasRight,
-      expected: correct.action,
+      headline: `${ACTION_LABELS[correct.action]} was the play.`,
       reason: correct.reason,
-      hand: correct.handDescription,
     });
     if (!wasRight) {
       this.roundMistakes.update((list) => [
@@ -670,11 +697,17 @@ export class ShowdownComponent implements OnInit {
       this.phase.set('exhausted');
       return;
     }
+    // The previous round's hole card was turned over before that round paid, so
+    // it joins the visible count now rather than staying hidden forever.
+    if (this.pendingHoleCard) {
+      this.countVisible(this.pendingHoleCard);
+      this.pendingHoleCard = null;
+    }
     const boxes: Card[][] = Array.from({ length: spots }, () => []);
     for (const box of boxes) box.push(this.draw()!);
     const dealer: Card[] = [this.draw()!];
     for (const box of boxes) box.push(this.draw()!);
-    dealer.push(this.draw()!);
+    dealer.push(this.drawHole()!);
 
     const bet = this.betting() ? this.bet() : 0;
     this.roundNet.set(0);
@@ -717,6 +750,7 @@ export class ShowdownComponent implements OnInit {
   // then the round continues exactly as an uninsured one.
   protected takeInsurance(): void {
     if (this.phase() !== 'insurance') return;
+    this.gradeInsurance(true);
     const dealerBlackjack = isBlackjack(this.dealerCards());
     let net = 0;
     for (const h of this.hands()) {
@@ -732,8 +766,56 @@ export class ShowdownComponent implements OnInit {
 
   protected declineInsurance(): void {
     if (this.phase() !== 'insurance') return;
+    this.gradeInsurance(false);
     this.phase.set('player-turn');
     this.peekAndContinue();
+  }
+
+  // Insurance is the one decision at this table that is purely about the count,
+  // and the showdown is attached to the drill that just practised it — so this
+  // is where a trainee finds out whether the number they were carrying was
+  // worth acting on. It is graded on the count as they could see it: every card
+  // face up at this moment, and not the hole card the bet is about.
+  //
+  // Whether the bet won is beside the point. Insurance at +3 that loses was
+  // still right, and that is exactly the lesson.
+  private gradeInsurance(tookIt: boolean): void {
+    const basis = this.countBasis();
+    const decision = this.deviations.resolveInsuranceDecision(
+      basis.kind === 'true-count' ? basis.trueCount : 0,
+      this.ruleSet(),
+    );
+    const shouldTake = insuranceIsCorrect(basis, decision.deviationApplied);
+    if (shouldTake === null) {
+      this.lastPlay.set(null);
+      return;
+    }
+    const correct = tookIt === shouldTake;
+    this.playStats.recordAttempt(correct);
+    this.lastPlay.set({
+      correct,
+      headline: shouldTake ? 'Insurance was the play.' : 'Declining was the play.',
+      reason: this.insuranceReason(basis, shouldTake, decision.matchedRule?.index),
+    });
+    if (!correct) {
+      this.roundMistakes.update((list) => [
+        ...list,
+        `Insurance: ${shouldTake ? 'take it' : 'decline'}, not ${tookIt ? 'take' : 'decline'}`,
+      ]);
+    }
+  }
+
+  private insuranceReason(basis: CountBasis, shouldTake: boolean, index?: number): string {
+    const at = shouldTake ? 'at or above' : 'below';
+    if (basis.kind === 'running-count') {
+      return `Running count ${formatSignedCount(basis.runningCount)} is ${at} ${this.system().name}'s insurance count of ${formatSignedCount(basis.insuranceAt)}.`;
+    }
+    const trueCount = basis.kind === 'true-count' ? basis.trueCount : 0;
+    // The index is quoted from the chart the grading just consulted, never
+    // restated here, so a corrected chart cannot leave this sentence citing a
+    // number the verdict no longer uses.
+    const named = index === undefined ? '' : ` of ${formatSignedCount(index)}`;
+    return `True count ${formatSignedCount(trueCount)} is ${at} the insurance index${named}.`;
   }
 
   // Settle one hand against the dealer's final cards and record it. Idempotent:
@@ -885,8 +967,30 @@ export class ShowdownComponent implements OnInit {
   private draw(): Card | undefined {
     const [card] = this.shoe().deal(1);
     this.remaining.set(this.shoe().cardsRemaining);
-    if (card) this.dealt.push(card);
+    if (card) {
+      this.dealt.push(card);
+      this.countVisible(card);
+    }
     return card;
+  }
+
+  // The dealer's second card, drawn face down: dealt and tracked like any
+  // other, but held out of the visible count until the next round opens.
+  private drawHole(): Card | undefined {
+    const card = this.draw();
+    if (card) {
+      this.uncountVisible(card);
+      this.pendingHoleCard = card;
+    }
+    return card;
+  }
+
+  private countVisible(card: Card): void {
+    this.visibleRunningCount.update((count) => count + cardCountValue(this.system(), card));
+  }
+
+  private uncountVisible(card: Card): void {
+    this.visibleRunningCount.update((count) => count - cardCountValue(this.system(), card));
   }
 
   // Return to counting, handing back every card this showdown dealt so the

@@ -145,6 +145,29 @@ test.describe('post-count showdown', () => {
     await expect(page.locator('.showdown__bankroll')).toContainText('495');
   });
 
+  // Insurance is the one decision at this table that is purely about the count,
+  // and the showdown hangs off the drill that just practised it. At the top of
+  // an untouched shoe the count is nowhere near the index, so taking it is a
+  // misplay — whether or not the bet happens to win.
+  test('insurance is graded against the count, not against whether it won', async ({ page }) => {
+    await configureCounting(page, '1', true);
+    // Seed 14 deals a dealer ace over a natural: the insurance bet wins.
+    await runCountingRound(page, 14);
+    await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+    await page.getByRole('button', { name: '10', exact: true }).click();
+    await page.getByRole('button', { name: /^Deal/ }).click();
+
+    await page.getByRole('button', { name: 'Take insurance' }).click();
+
+    const coach = page.locator('.showdown__coach');
+    await expect(coach).toContainText('Declining was the play');
+    await expect(coach).toContainText('insurance index of +3');
+    await expect(coach).toHaveClass(/showdown__coach--wrong/);
+    // The bet still paid; the call was still wrong.
+    await expect(page.locator('.showdown__note[role=status]')).toContainText('Insurance paid 2:1');
+    await expect(page.locator('.showdown__misplay-list li')).toContainText('Insurance');
+  });
+
   test('a hand can be surrendered for an immediate loss', async ({ page }) => {
     await configureCounting(page, '1');
     await page.getByLabel('Late Surrender').check();

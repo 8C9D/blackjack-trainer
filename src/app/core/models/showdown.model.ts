@@ -1,4 +1,6 @@
 import type { Card } from './card.model';
+import type { CountingSystem } from './counting-system.model';
+import { DEVIATION_INDEX_SYSTEM_ID } from './deviation.model';
 import { handTotal, isBlackjack, isBust, isSoftHand } from './hand.model';
 import type { RuleSet } from './strategy.model';
 
@@ -30,6 +32,51 @@ export function clampSpots(spots: number): number {
 // the shoe runs dry mid-hand.
 export function minCardsForSpots(spots: number): number {
   return clampSpots(spots) * 2 + 2;
+}
+
+// Whether the count the showdown is carrying can be graded against, and how.
+//
+// The insurance index is a Hi-Lo true count and the playing indices are the
+// same — a level-2 or fractional system reads a different number off the same
+// shoe (see `deviationIndexNote`). KO is the one other system the app can grade,
+// because its book publishes a running-count schedule of its own. Everything
+// else is dealt and settled exactly as before, ungraded, rather than scored
+// against numbers that are not its own.
+export type CountBasis =
+  | { readonly kind: 'true-count'; readonly trueCount: number }
+  | { readonly kind: 'running-count'; readonly runningCount: number; readonly insuranceAt: number }
+  | { readonly kind: 'ungraded' };
+
+export function countBasisFor(
+  system: CountingSystem,
+  runningCount: number,
+  decksRemaining: number,
+): CountBasis {
+  if (system.id === DEVIATION_INDEX_SYSTEM_ID) {
+    // A shoe dealt to the felt has no decks left to divide by; nothing is
+    // dealt from it either, so the value is never actually consumed.
+    if (decksRemaining <= 0) return { kind: 'ungraded' };
+    return { kind: 'true-count', trueCount: Math.trunc(runningCount / decksRemaining) };
+  }
+  const insuranceAt = system.keyCounts?.insuranceCount;
+  if (insuranceAt !== undefined) {
+    return { kind: 'running-count', runningCount, insuranceAt };
+  }
+  return { kind: 'ungraded' };
+}
+
+// Whether the count says to take insurance, or null when this system's count is
+// not one the app can grade. The Hi-Lo threshold is not hard-coded here: it is
+// read off the deviation chart by the caller, which is where the index lives.
+export function insuranceIsCorrect(basis: CountBasis, hiLoThresholdMet: boolean): boolean | null {
+  switch (basis.kind) {
+    case 'true-count':
+      return hiLoThresholdMet;
+    case 'running-count':
+      return basis.runningCount >= basis.insuranceAt;
+    case 'ungraded':
+      return null;
+  }
 }
 
 export type ShowdownOutcome = 'win' | 'lose' | 'push';
