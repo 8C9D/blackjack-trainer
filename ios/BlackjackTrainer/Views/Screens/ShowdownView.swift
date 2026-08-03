@@ -206,16 +206,17 @@ struct ShowdownView: View {
     private var countCheckStage: some View {
         CountCheckView(
             cardsSeen: model.cardsSeen,
+            holeCardUnseen: model.holeCardUnseen,
             allowFractions: model.fractionalCount,
             verdict: model.countVerdict,
             onAnswer: { model.answerCountCheck($0) },
-            onLeave: { onExit(model.dealtCards) }
+            onLeave: { onExit(model.seenCards) }
         )
     }
 
     /// Leaving: the count question first, when the table has cards to answer for.
     private func leave() {
-        if model.requestExit() { onExit(model.dealtCards) }
+        if model.requestExit() { onExit(model.seenCards) }
     }
 
     private var insuranceStage: some View {

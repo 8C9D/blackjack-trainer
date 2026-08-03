@@ -78,9 +78,31 @@ final class ShowdownModel {
     /// over — insurance is decided before it is seen, and grading against a card
     /// the player cannot see would be grading a different game.
     @ObservationIgnored private(set) var visibleRunningCount: Double
-    /// Readable outside this file: `+Grading` counts the cards the player has
-    /// actually seen, and a face-down hole card is not one of them.
-    @ObservationIgnored private(set) var pendingHoleCard: Card?
+    /// Index into `dealtCards` of the hole card still face down, or nil when the
+    /// round has none outstanding. An index rather than the card itself because
+    /// `dealtCards` is what leaves with the player, and the one card that must
+    /// not is this one.
+    @ObservationIgnored private var pendingHoleIndex: Int?
+    /// The hole card still face down, if the round has one. Readable outside
+    /// this file: `+Grading` counts the cards the player has actually seen, and
+    /// a face-down hole card is not one of them.
+    var pendingHoleCard: Card? {
+        pendingHoleIndex.map { dealtCards[$0] }
+    }
+
+    /// What leaves with the player: every card this table turned face up. A
+    /// round walked away from mid-hand leaves the dealer's hole card dealt but
+    /// never shown — it is gone from the shoe, but a counter who never saw it
+    /// cannot have it in their count, exactly as a burn card is gone and
+    /// uncounted. Handing it back would move the drill's carried count by a card
+    /// the table never showed, and mark the next answer wrong for it.
+    var seenCards: [Card] {
+        guard let index = pendingHoleIndex else { return dealtCards }
+        var cards = dealtCards
+        cards.remove(at: index)
+        return cards
+    }
+
     /// Not `private`: the win/lose/push readers live in `+Presentation`.
     @ObservationIgnored let stats: ShowdownStatsStore
     /// Optional so a spec (and the `#Preview`s) can build a model without the
@@ -96,9 +118,9 @@ final class ShowdownModel {
     /// The bet at this table is the same skill the bet-spread drill measures.
     @ObservationIgnored private let betSpreadStats: SessionStatsStore?
     @ObservationIgnored let bankrollStore: BankrollStore
-    /// Every card this showdown dealt, in order, handed back on exit so the
-    /// counting drill can fold their running-count value into its carried count —
-    /// the cards really left the shoe.
+    /// Every card this showdown dealt, in order. `seenCards` is what leaves with
+    /// the player, so the counting drill can fold their running-count value into
+    /// its carried count — the cards really left the shoe.
     @ObservationIgnored private(set) var dealtCards: [Card] = []
 
     init(
@@ -343,7 +365,7 @@ final class ShowdownModel {
     private func drawHole() -> Card? {
         guard let card = draw() else { return nil }
         visibleRunningCount -= system?.value(for: card) ?? 0
-        pendingHoleCard = card
+        pendingHoleIndex = dealtCards.count - 1
         return card
     }
 
@@ -461,7 +483,7 @@ extension ShowdownModel {
     private func resolveRound() {
         if let hole = pendingHoleCard {
             visibleRunningCount += system?.value(for: hole) ?? 0
-            pendingHoleCard = nil
+            pendingHoleIndex = nil
         }
         phase = .resolved
     }
