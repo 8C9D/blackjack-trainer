@@ -6,6 +6,7 @@ export const CARDS_PER_DECK = 52;
 // 6- and 8-deck shoes.
 export const SHOE_DECK_OPTIONS = [1, 2, 6, 8] as const;
 export const DEFAULT_NUMBER_OF_DECKS = 6;
+export const MAX_NUMBER_OF_DECKS = SHOE_DECK_OPTIONS[SHOE_DECK_OPTIONS.length - 1];
 
 // Penetration is the fraction of the shoe dealt before the cut card forces a
 // reshuffle. Real games run roughly 50–90%; 75% is a sensible default.
@@ -18,6 +19,13 @@ export const DEFAULT_PENETRATION = 0.75;
 // deck. The ShoeService shuffles this before play; kept pure here so specs can
 // assert the pre-shuffle composition.
 export function buildShoeCards(numberOfDecks: number): Card[] {
+  if (
+    !Number.isSafeInteger(numberOfDecks) ||
+    numberOfDecks <= 0 ||
+    numberOfDecks > MAX_NUMBER_OF_DECKS
+  ) {
+    return [];
+  }
   const cards: Card[] = [];
   for (let d = 0; d < numberOfDecks; d++) {
     for (const rank of ALL_RANKS) {
@@ -47,7 +55,8 @@ export class Shoe {
     this.size = cards.length;
     // Clamp so at least one card is dealable and the cut never sits past the
     // bottom of the shoe.
-    const raw = Math.floor(cards.length * penetration);
+    const safePenetration = Number.isFinite(penetration) ? penetration : DEFAULT_PENETRATION;
+    const raw = Math.floor(cards.length * safePenetration);
     this.cutCardPosition = Math.min(Math.max(raw, 1), cards.length);
   }
 
@@ -73,7 +82,8 @@ export class Shoe {
   // Deal up to n cards without replacement. Never deals past the bottom of the
   // shoe; if fewer than n remain, returns what is left.
   deal(n: number): Card[] {
-    const count = Math.max(0, Math.min(n, this.cardsRemaining));
+    if (!Number.isFinite(n) || n <= 0) return [];
+    const count = Math.min(Math.floor(n), this.cardsRemaining);
     const dealt = this.cards.slice(this.index, this.index + count);
     this.index += count;
     return dealt;

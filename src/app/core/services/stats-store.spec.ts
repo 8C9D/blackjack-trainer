@@ -214,6 +214,14 @@ describe('cleanupLegacyStatsKeys', () => {
     expect(localStorage.getItem('blackjack-trainer:stats:v1')).toBeNull();
   });
 
+  it('does not prevent startup when browser storage refuses cleanup', () => {
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new Error('storage unavailable');
+    });
+
+    expect(() => cleanupLegacyStatsKeys()).not.toThrow();
+  });
+
   it('does not touch current-version keys', () => {
     localStorage.setItem(
       BASIC_STRATEGY_STATS_KEY,

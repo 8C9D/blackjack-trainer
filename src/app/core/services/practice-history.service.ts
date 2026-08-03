@@ -114,13 +114,15 @@ export class PracticeHistoryService {
     return readJson(PRACTICE_HISTORY_KEY, [] as readonly PracticeDay[], (raw) => {
       const parsed = raw as { days?: unknown };
       if (!Array.isArray(parsed.days)) return [];
-      return parsed.days.filter(
-        (d): d is PracticeDay =>
-          typeof d === 'object' &&
-          d !== null &&
-          typeof (d as PracticeDay).date === 'string' &&
-          typeof (d as PracticeDay).hands === 'number',
-      );
+      const byDate = new Map<string, number>();
+      for (const candidate of parsed.days) {
+        if (!isPracticeDay(candidate)) continue;
+        const previous = byDate.get(candidate.date) ?? 0;
+        byDate.set(candidate.date, Math.min(Number.MAX_SAFE_INTEGER, previous + candidate.hands));
+      }
+      return [...byDate.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, hands]) => ({ date, hands }));
     });
   }
 
@@ -133,4 +135,16 @@ export class PracticeHistoryService {
   private persist(days: readonly PracticeDay[]): void {
     writeJson(PRACTICE_HISTORY_KEY, { days });
   }
+}
+
+function isPracticeDay(value: unknown): value is PracticeDay {
+  if (typeof value !== 'object' || value === null) return false;
+  const day = value as PracticeDay;
+  return isLocalDateKey(day.date) && Number.isSafeInteger(day.hands) && day.hands >= 0;
+}
+
+export function isLocalDateKey(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
 }

@@ -5,7 +5,9 @@ import {
   FLOW_PREFS_KEY,
   FlowPrefsService,
   MAX_DAILY_GOAL,
+  MAX_MANUAL_TRUE_COUNT,
   MIN_DAILY_GOAL,
+  MIN_MANUAL_TRUE_COUNT,
   clampGoal,
   mergePrefs,
 } from './flow-prefs.service';
@@ -83,6 +85,25 @@ describe('FlowPrefsService', () => {
       expect(merged.ruleSet).toBe(DEFAULT_FLOW_PREFS.ruleSet);
       expect(merged.deviations.practiceMode).toBe(DEFAULT_FLOW_PREFS.deviations.practiceMode);
       expect(merged.deviations.manualTrueCount).toBe(0);
+    });
+
+    it('rejects stored manual true counts outside the settings bounds', () => {
+      expect(
+        mergePrefs({ deviations: { manualTrueCount: MIN_MANUAL_TRUE_COUNT } }).deviations
+          .manualTrueCount,
+      ).toBe(MIN_MANUAL_TRUE_COUNT);
+      expect(
+        mergePrefs({ deviations: { manualTrueCount: MAX_MANUAL_TRUE_COUNT } }).deviations
+          .manualTrueCount,
+      ).toBe(MAX_MANUAL_TRUE_COUNT);
+      expect(
+        mergePrefs({ deviations: { manualTrueCount: MIN_MANUAL_TRUE_COUNT - 1 } }).deviations
+          .manualTrueCount,
+      ).toBe(DEFAULT_FLOW_PREFS.deviations.manualTrueCount);
+      expect(
+        mergePrefs({ deviations: { manualTrueCount: MAX_MANUAL_TRUE_COUNT + 1 } }).deviations
+          .manualTrueCount,
+      ).toBe(DEFAULT_FLOW_PREFS.deviations.manualTrueCount);
     });
 
     it('returns defaults for a non-object payload', () => {

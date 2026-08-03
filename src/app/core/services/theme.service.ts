@@ -1,4 +1,12 @@
-import { Injectable, computed, effect, inject, signal, type Signal } from '@angular/core';
+import {
+  DestroyRef,
+  Injectable,
+  computed,
+  effect,
+  inject,
+  signal,
+  type Signal,
+} from '@angular/core';
 
 import { FlowPrefsService, type ThemePref } from './flow-prefs.service';
 
@@ -22,6 +30,7 @@ const THEME_COLORS: Readonly<Record<ResolvedTheme, string>> = {
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
   private readonly prefs = inject(FlowPrefsService);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly systemDark = signal(matchesDark());
 
@@ -55,9 +64,15 @@ export class ThemeService {
   private watchSystem(): void {
     if (typeof matchMedia !== 'function') return;
     const query = matchMedia(DARK_QUERY);
-    // Safari < 14 only has the deprecated listener API; both are optional here
-    // because a test double may implement neither.
-    query.addEventListener?.('change', (event) => this.systemDark.set(event.matches));
+    const listener = (event: MediaQueryListEvent) => this.systemDark.set(event.matches);
+    if (query.addEventListener) {
+      query.addEventListener('change', listener);
+      this.destroyRef.onDestroy(() => query.removeEventListener('change', listener));
+      return;
+    }
+    // Safari < 14 exposes only the deprecated listener pair.
+    query.addListener?.(listener);
+    this.destroyRef.onDestroy(() => query.removeListener?.(listener));
   }
 }
 

@@ -43,6 +43,11 @@ export const TRAINER_LABELS: Readonly<Record<TrainerId, string>> = {
 export type DeviationTrueCountSource = 'random' | 'manual';
 export type DeviationPracticeMode = 'all-hands' | 'deviation-only';
 
+// The published charts top out far inside this range; the wider bounds keep
+// manual practice flexible while rejecting stale/hand-edited garbage.
+export const MIN_MANUAL_TRUE_COUNT = -20;
+export const MAX_MANUAL_TRUE_COUNT = 20;
+
 // 'system' follows the OS setting; the other two pin a theme regardless.
 export type ThemePref = 'system' | 'light' | 'dark';
 
@@ -240,7 +245,12 @@ export function mergePrefs(parsed: unknown): FlowPrefs {
         ['random', 'manual'] as const,
         d.deviations.trueCountSource,
       ),
-      manualTrueCount: int(dev['manualTrueCount'], d.deviations.manualTrueCount),
+      manualTrueCount: integerInRange(
+        dev['manualTrueCount'],
+        MIN_MANUAL_TRUE_COUNT,
+        MAX_MANUAL_TRUE_COUNT,
+        d.deviations.manualTrueCount,
+      ),
     },
     counting: {
       systemId,
@@ -280,10 +290,6 @@ function bool(v: unknown, fallback: boolean): boolean {
 
 function num(v: unknown, fallback: number): number {
   return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
-}
-
-function int(v: unknown, fallback: number): number {
-  return typeof v === 'number' && Number.isInteger(v) ? v : fallback;
 }
 
 function numberOneOf(value: unknown, allowed: readonly number[], fallback: number): number {

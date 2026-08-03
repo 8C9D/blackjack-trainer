@@ -11,7 +11,12 @@ const LEGACY_STATS_KEYS: readonly string[] = ['blackjack-trainer:stats:v1'];
 export function cleanupLegacyStatsKeys(): void {
   if (typeof localStorage === 'undefined') return;
   for (const key of LEGACY_STATS_KEYS) {
-    localStorage.removeItem(key);
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // Cleanup is opportunistic. Storage can be blocked in privacy modes; an
+      // obsolete key is not worth preventing the current app from starting.
+    }
   }
 }
 

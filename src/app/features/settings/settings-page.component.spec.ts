@@ -279,6 +279,18 @@ describe('SettingsPageComponent', () => {
       expect(status(fixture)!.textContent).toContain('b.json');
     });
 
+    it('shows a recoverable status when the browser refuses the download', () => {
+      vi.spyOn(TestBed.inject(BackupService), 'download').mockImplementation(() => {
+        throw new Error('downloads blocked');
+      });
+      const { fixture } = createPage();
+
+      button(fixture, 'Export backup').click();
+      fixture.detectChanges();
+
+      expect(status(fixture)!.textContent).toContain('could not be saved');
+    });
+
     it('opens the file dialog from the Restore button, not from the input itself', () => {
       const { fixture } = createPage();
       const input = fixture.nativeElement.querySelector('input[type="file"]') as HTMLInputElement;
@@ -308,6 +320,41 @@ describe('SettingsPageComponent', () => {
       } as unknown as Event);
 
       expect(restore).toHaveBeenCalledWith('{"app":"blackjack-trainer"}');
+    });
+
+    it('clears the file input so the same backup can be selected again', async () => {
+      vi.spyOn(TestBed.inject(BackupService), 'restore').mockReturnValue({ ok: true });
+      const { fixture } = createPage();
+      const c = fixture.componentInstance as unknown as {
+        onBackupFileChosen(e: Event): Promise<void>;
+      };
+      const target = {
+        files: [new File(['{}'], 'b.json')],
+        value: 'C:\\fakepath\\b.json',
+      };
+
+      await c.onBackupFileChosen({ target } as unknown as Event);
+
+      expect(target.value).toBe('');
+    });
+
+    it('reports a file-read failure without attempting a restore', async () => {
+      const restore = vi.spyOn(TestBed.inject(BackupService), 'restore');
+      const { fixture } = createPage();
+      const c = fixture.componentInstance as unknown as {
+        onBackupFileChosen(e: Event): Promise<void>;
+      };
+      const target = {
+        files: [{ text: vi.fn().mockRejectedValue(new Error('read refused')) }],
+        value: 'b.json',
+      };
+
+      await c.onBackupFileChosen({ target } as unknown as Event);
+      fixture.detectChanges();
+
+      expect(target.value).toBe('');
+      expect(restore).not.toHaveBeenCalled();
+      expect(status(fixture)!.textContent).toContain('could not be read');
     });
 
     it('shows why a bad file was refused', async () => {

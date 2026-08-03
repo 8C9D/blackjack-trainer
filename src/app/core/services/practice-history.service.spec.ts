@@ -84,6 +84,30 @@ describe('PracticeHistoryService', () => {
       s.recordHand();
       expect(s.handsToday()).toBe(1);
     });
+
+    it('sanitizes, combines, and orders restored day entries', () => {
+      localStorage.setItem(
+        PRACTICE_HISTORY_KEY,
+        JSON.stringify({
+          days: [
+            { date: '2026-07-10', hands: 2 },
+            { date: '2026-02-30', hands: 99 },
+            { date: '2026-07-09', hands: -1 },
+            { date: '2026-07-08', hands: 3.5 },
+            { date: '2026-07-10', hands: 4 },
+            { date: '2026-07-09', hands: 1 },
+          ],
+        }),
+      );
+
+      const s = createService(() => current);
+
+      expect(s.days()).toEqual([
+        { date: '2026-07-09', hands: 1 },
+        { date: '2026-07-10', hands: 6 },
+      ]);
+      expect(s.handsToday()).toBe(6);
+    });
   });
 
   describe('streak', () => {

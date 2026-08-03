@@ -3,7 +3,7 @@ import { Injectable, signal, type Signal } from '@angular/core';
 import { cardHighValue, softNonAceValue, type Card } from '../models/card.model';
 import type { DealerUpcard } from '../models/strategy.model';
 import { classifyAsPair, isSoftHand, normalizeUpcardKey } from './basic-strategy-engine.service';
-import { localDateKey } from './practice-history.service';
+import { isLocalDateKey, localDateKey } from './practice-history.service';
 import { readJson, writeJson } from './storage';
 
 export const MISS_TALLY_KEY = 'blackjack-miss-tally';
@@ -216,15 +216,10 @@ export class MissTallyService {
         if (typeof forTrainer !== 'object' || forTrainer === null) continue;
         const valid: Record<string, ScenarioTally> = {};
         for (const [key, tally] of Object.entries(forTrainer)) {
-          if (isScenarioTally(tally)) {
-            valid[key] = {
-              ref: tally.ref,
-              days: this.pruneDays(tally.days),
-              // Payloads written before clear-streak tracking have no streak; a
-              // fresh 0 just means those scenarios must earn it again.
-              streak: typeof tally.streak === 'number' && tally.streak >= 0 ? tally.streak : 0,
-            };
-          }
+          const sanitized = sanitizeScenarioTally(tally);
+          // The map key is derived from the ref. Requiring them to agree keeps
+          // one hand from masquerading under another hand's stable identity.
+          if (sanitized && key === scenarioKey(sanitized.ref)) valid[key] = sanitized;
         }
         out[trainer] = this.pruneScenarios(valid);
       }
@@ -243,23 +238,52 @@ export class MissTallyService {
   }
 }
 
-function isScenarioTally(v: unknown): v is ScenarioTally {
-  if (typeof v !== 'object' || v === null) return false;
-  const t = v as ScenarioTally;
+function sanitizeScenarioTally(v: unknown): ScenarioTally | null {
+  if (typeof v !== 'object' || v === null) return null;
+  const t = v as Partial<ScenarioTally>;
+  if (!isScenarioRef(t.ref) || !Array.isArray(t.days)) return null;
+  const byDate = new Map<string, DayTally>();
+  for (const candidate of t.days) {
+    if (!isDayTally(candidate)) continue;
+    const previous = byDate.get(candidate.date);
+    const attempts = Math.min(
+      Number.MAX_SAFE_INTEGER,
+      (previous?.attempts ?? 0) + candidate.attempts,
+    );
+    const misses = Math.min(attempts, (previous?.misses ?? 0) + candidate.misses);
+    byDate.set(candidate.date, { date: candidate.date, attempts, misses });
+  }
+  return {
+    ref: t.ref,
+    days: [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date)),
+    // Payloads written before clear-streak tracking have no streak; a fresh 0
+    // just means those scenarios must earn it again.
+    streak: Number.isSafeInteger(t.streak) && (t.streak ?? -1) >= 0 ? t.streak! : 0,
+  };
+}
+
+function isScenarioRef(value: unknown): value is ScenarioRef {
+  if (typeof value !== 'object' || value === null) return false;
+  const ref = value as ScenarioRef;
+  if (!['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'].includes(ref.dealer)) return false;
+  if (ref.kind === 'pair') {
+    return ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'].includes(ref.hand);
+  }
+  const hand = Number(ref.hand);
+  if (!Number.isInteger(hand)) return false;
+  if (ref.kind === 'hard') return hand >= 4 && hand <= 20;
+  return ref.kind === 'soft' && hand >= 13 && hand <= 21;
+}
+
+function isDayTally(value: unknown): value is DayTally {
+  if (typeof value !== 'object' || value === null) return false;
+  const day = value as DayTally;
   return (
-    typeof t.ref === 'object' &&
-    t.ref !== null &&
-    ['hard', 'soft', 'pair'].includes(t.ref.kind) &&
-    typeof t.ref.hand === 'string' &&
-    typeof t.ref.dealer === 'string' &&
-    Array.isArray(t.days) &&
-    t.days.every(
-      (d) =>
-        typeof d === 'object' &&
-        d !== null &&
-        typeof d.date === 'string' &&
-        typeof d.attempts === 'number' &&
-        typeof d.misses === 'number',
-    )
+    isLocalDateKey(day.date) &&
+    Number.isSafeInteger(day.attempts) &&
+    day.attempts > 0 &&
+    Number.isSafeInteger(day.misses) &&
+    day.misses >= 0 &&
+    day.misses <= day.attempts
   );
 }

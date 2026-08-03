@@ -43,6 +43,19 @@ describe('DeckSpeedStatsService', () => {
     expect(store.stats().attempts).toBe(2);
   });
 
+  it('never promotes an invalid elapsed time into the record', () => {
+    const store = TestBed.inject(DeckSpeedStatsService);
+
+    expect(store.recordRound(true, Number.NaN)).toBeNull();
+    expect(store.recordRound(true, Number.POSITIVE_INFINITY)).toBeNull();
+    expect(store.recordRound(true, 0)).toBeNull();
+    expect(store.recordRound(true, -1)).toBeNull();
+
+    expect(store.bestMs()).toBeNull();
+    expect(store.stats()).toMatchObject({ attempts: 4, correct: 4 });
+    expect(localStorage.getItem(DECK_SPEED_BEST_KEY)).toBeNull();
+  });
+
   it('persists the record and reloads it in a fresh instance', () => {
     TestBed.inject(DeckSpeedStatsService).recordRound(true, 21_500);
     TestBed.resetTestingModule();

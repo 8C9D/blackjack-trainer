@@ -53,10 +53,25 @@ export class BankrollService {
   // doubled second bet too.
   record(stake: number, payout: number): void {
     const prev = this._state();
+    const bankroll = prev.bankroll + payout;
+    const wagered = prev.wagered + stake;
+    const net = prev.net + payout;
+    if (
+      !Number.isFinite(stake) ||
+      stake < 0 ||
+      !Number.isFinite(payout) ||
+      !Number.isFinite(bankroll) ||
+      bankroll < 0 ||
+      !Number.isFinite(wagered) ||
+      wagered > Number.MAX_SAFE_INTEGER ||
+      !Number.isFinite(net)
+    ) {
+      return;
+    }
     const next: BankrollState = {
-      bankroll: prev.bankroll + payout,
-      wagered: prev.wagered + stake,
-      net: prev.net + payout,
+      bankroll,
+      wagered,
+      net,
     };
     this._state.set(next);
     this.persist(next);

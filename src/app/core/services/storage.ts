@@ -33,7 +33,7 @@ export function coerceNumericRecord<T extends { readonly [K in keyof T]: number 
   const out: Record<string, number> = {};
   for (const key of Object.keys(fallback)) {
     const value = source[key];
-    if (typeof value !== 'number') return fallback;
+    if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
     out[key] = value;
   }
   return out as T;

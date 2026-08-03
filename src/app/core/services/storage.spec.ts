@@ -28,6 +28,14 @@ describe('storage helpers', () => {
         'fallback',
       );
     });
+
+    it('returns the fallback when localStorage refuses a read', () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('private mode');
+      });
+      expect(readJson(KEY, 'fallback', () => 'coerced')).toBe('fallback');
+      vi.restoreAllMocks();
+    });
   });
 
   describe('coerceNumericRecord', () => {
@@ -50,6 +58,11 @@ describe('storage helpers', () => {
 
     it('rejects the whole payload when a field is not a number', () => {
       expect(coerceNumericRecord({ hands: 3, wins: '2' }, EMPTY)).toBe(EMPTY);
+    });
+
+    it('rejects non-finite numbers that would poison every derived statistic', () => {
+      expect(coerceNumericRecord({ hands: Number.POSITIVE_INFINITY, wins: 2 }, EMPTY)).toBe(EMPTY);
+      expect(coerceNumericRecord({ hands: Number.NaN, wins: 2 }, EMPTY)).toBe(EMPTY);
     });
 
     it('throws on a null payload so readJson falls back', () => {

@@ -312,11 +312,21 @@ export class CountingSettingsComponent {
   }
 
   protected onNumberOfCardsInput(event: Event): void {
-    this.numberOfCardsChange.emit((event.target as HTMLInputElement).valueAsNumber);
+    const input = event.target as HTMLInputElement;
+    if (!Number.isFinite(input.valueAsNumber)) {
+      input.value = String(this.numberOfCards());
+      return;
+    }
+    this.numberOfCardsChange.emit(input.valueAsNumber);
   }
 
   protected onMsInput(event: Event): void {
-    this.millisecondsBetweenCardsChange.emit((event.target as HTMLInputElement).valueAsNumber);
+    const input = event.target as HTMLInputElement;
+    if (!Number.isFinite(input.valueAsNumber)) {
+      input.value = String(this.millisecondsBetweenCards());
+      return;
+    }
+    this.millisecondsBetweenCardsChange.emit(input.valueAsNumber);
   }
 
   protected onDecksRemainingChange(event: Event): void {

@@ -39,7 +39,8 @@ export class DeckSpeedStatsService extends StatsStore {
   recordRound(correct: boolean, elapsedMs: number): number | null {
     const previous = this._bestMs();
     this.recordAttempt(correct);
-    if (correct && (previous === null || elapsedMs < previous)) {
+    const validElapsed = Number.isFinite(elapsedMs) && elapsedMs > 0;
+    if (correct && validElapsed && (previous === null || elapsedMs < previous)) {
       this._bestMs.set(elapsedMs);
       writeJson(DECK_SPEED_BEST_KEY, { bestMs: elapsedMs });
     }

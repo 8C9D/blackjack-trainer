@@ -6,7 +6,10 @@ import { ThemeService } from './theme.service';
 // A controllable `matchMedia` standing in for the OS setting. Only the dark
 // query is answered; anything else reports no match, as a real browser does
 // for a query it does not satisfy.
-function stubMatchMedia(dark: boolean): { setDark: (value: boolean) => void } {
+function stubMatchMedia(dark: boolean): {
+  setDark: (value: boolean) => void;
+  listenerCount: () => number;
+} {
   const listeners = new Set<(event: MediaQueryListEvent) => void>();
   let matches = dark;
   const list = {
@@ -29,6 +32,7 @@ function stubMatchMedia(dark: boolean): { setDark: (value: boolean) => void } {
       matches = value;
       for (const listener of listeners) listener({ matches: value } as MediaQueryListEvent);
     },
+    listenerCount: () => listeners.size,
   };
 }
 
@@ -76,6 +80,45 @@ describe('ThemeService', () => {
     TestBed.tick();
     expect(service.resolved()).toBe('light');
     expect(themeColor()).toBe('#f4f5f8');
+  });
+
+  it('falls back to Safari’s legacy media-query listener API', () => {
+    let matches = true;
+    let listener: ((event: MediaQueryListEvent) => void) | null = null;
+    const list = {
+      get matches() {
+        return matches;
+      },
+      media: '(prefers-color-scheme: dark)',
+      addListener: vi.fn((next: (event: MediaQueryListEvent) => void) => {
+        listener = next;
+      }),
+      removeListener: vi.fn((next: (event: MediaQueryListEvent) => void) => {
+        if (listener === next) listener = null;
+      }),
+    };
+    vi.stubGlobal('matchMedia', () => list);
+    const service = TestBed.inject(ThemeService);
+    TestBed.tick();
+    expect(service.resolved()).toBe('dark');
+
+    matches = false;
+    const notify = listener as ((event: MediaQueryListEvent) => void) | null;
+    notify?.({ matches: false } as MediaQueryListEvent);
+    TestBed.tick();
+
+    expect(service.resolved()).toBe('light');
+    expect(list.addListener).toHaveBeenCalledOnce();
+  });
+
+  it('removes its media-query listener when its injector is destroyed', () => {
+    const media = stubMatchMedia(true);
+    TestBed.inject(ThemeService);
+    expect(media.listenerCount()).toBe(1);
+
+    TestBed.resetTestingModule();
+
+    expect(media.listenerCount()).toBe(0);
   });
 
   it('pins the document to an explicit choice, overriding the OS', () => {

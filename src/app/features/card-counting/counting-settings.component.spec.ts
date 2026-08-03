@@ -160,6 +160,48 @@ describe('CountingSettingsComponent', () => {
     expect(received).toBe('true-count');
   });
 
+  it('emits finite card-count and pacing edits as numbers', () => {
+    const fixture = createSettings();
+    const cards: number[] = [];
+    const pacing: number[] = [];
+    fixture.componentInstance.numberOfCardsChange.subscribe((value) => cards.push(value));
+    fixture.componentInstance.millisecondsBetweenCardsChange.subscribe((value) =>
+      pacing.push(value),
+    );
+    const inputs = fixture.nativeElement.querySelectorAll(
+      '.settings__fields input[type="number"]',
+    ) as NodeListOf<HTMLInputElement>;
+
+    inputs[0].value = '40';
+    inputs[0].dispatchEvent(new Event('input'));
+    inputs[1].value = '750';
+    inputs[1].dispatchEvent(new Event('input'));
+
+    expect(cards).toEqual([40]);
+    expect(pacing).toEqual([750]);
+  });
+
+  it('restores cleared card-count and pacing fields instead of persisting NaN', () => {
+    const fixture = createSettings({ numberOfCards: 20, millisecondsBetweenCards: 500 });
+    const cards = vi.fn();
+    const pacing = vi.fn();
+    fixture.componentInstance.numberOfCardsChange.subscribe(cards);
+    fixture.componentInstance.millisecondsBetweenCardsChange.subscribe(pacing);
+    const inputs = fixture.nativeElement.querySelectorAll(
+      '.settings__fields input[type="number"]',
+    ) as NodeListOf<HTMLInputElement>;
+
+    inputs[0].value = '';
+    inputs[0].dispatchEvent(new Event('input'));
+    inputs[1].value = '';
+    inputs[1].dispatchEvent(new Event('input'));
+
+    expect(cards).not.toHaveBeenCalled();
+    expect(pacing).not.toHaveBeenCalled();
+    expect(inputs[0].value).toBe('20');
+    expect(inputs[1].value).toBe('500');
+  });
+
   it('hides the decks-remaining select in running-count mode', () => {
     const fixture = createSettings({ mode: 'running-count' });
     expect(fixture.nativeElement.querySelector('.settings__decks-remaining')).toBeNull();

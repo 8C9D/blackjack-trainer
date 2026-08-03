@@ -51,6 +51,19 @@ describe('BankrollService', () => {
     expect(s.bustedOut()).toBe(true);
   });
 
+  it('ignores invalid or unaffordable transactions without poisoning the bankroll', () => {
+    const s = service();
+    const initial = s.state();
+
+    s.record(Number.NaN, 1);
+    s.record(-1, 1);
+    s.record(1, Number.POSITIVE_INFINITY);
+    s.record(DEFAULT_BANKROLL + 1, -(DEFAULT_BANKROLL + 1));
+
+    expect(s.state()).toEqual(initial);
+    expect(localStorage.getItem(BANKROLL_KEY)).toBeNull();
+  });
+
   it('persists across instances and resets back to the default', () => {
     service().record(25, -25);
     TestBed.resetTestingModule();
