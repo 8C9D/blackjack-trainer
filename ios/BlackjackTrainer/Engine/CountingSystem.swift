@@ -73,7 +73,8 @@ struct CountingSystem: Decodable, Equatable {
     /// Mirrors the web `modeAllowedFor`.
     func allows(_ mode: DrillMode) -> Bool {
         switch mode {
-        case .runningCount: true
+        // Running count and deck speed: any system's tags can be summed.
+        case .runningCount, .deckSpeed: true
         case .trueCount, .betSpread: balanced
         case .keyCount: keyCounts != nil
         }

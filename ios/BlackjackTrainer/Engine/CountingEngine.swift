@@ -170,6 +170,42 @@ struct CountingEngine {
         )
     }
 
+    /// What one full deck of this system sums to: 0 balanced, +4 for KO. The
+    /// deck-speed arithmetic rests on it, derived from the system's own tags
+    /// rather than from its `balanced` flag.
+    func fullDeckCount(_ system: CountingSystem) -> Double {
+        let deck = Card.allRanks.flatMap { rank in
+            Card.allSuits.map { Card(rank: rank, suit: $0) }
+        }
+        return runningCount(deck, system: system)
+    }
+
+    /// Grade one round of the deck-speed drill: the claimed count of the 51
+    /// shown, plus the elapsed time against the best correct time so far. A
+    /// round only sets a new best when the count is right.
+    func evaluateDeckSpeed(
+        _ cards: [Card],
+        burnedCard: Card,
+        answer: DeckSpeedAnswer,
+        system: CountingSystem,
+        previousBestMilliseconds: Int?
+    ) -> DeckSpeedDrillResult {
+        let correct = runningCount(cards, system: system)
+        let isCorrect = answer.runningCount == correct
+        let beatsBest = previousBestMilliseconds.map { answer.elapsedMilliseconds < $0 } ?? true
+        return DeckSpeedDrillResult(
+            cards: cards,
+            burnedCard: burnedCard,
+            correctRunningCount: correct,
+            userRunningCount: answer.runningCount,
+            fullDeckCount: fullDeckCount(system),
+            isCorrect: isCorrect,
+            elapsedMilliseconds: answer.elapsedMilliseconds,
+            previousBestMilliseconds: previousBestMilliseconds,
+            isPersonalBest: isCorrect && beatsBest
+        )
+    }
+
     /// Validate drill settings, returning every error at once. Mirrors
     /// `validateSettings`; `numberOfCards` is an `Int` here so the "whole number"
     /// guard the web needs for free-form inputs is unnecessary. The decks/shoe

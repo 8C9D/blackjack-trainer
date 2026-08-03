@@ -21,6 +21,8 @@ final class AppModel {
     let deckEstimationStats: SessionStatsStore
     let keyCountStats: SessionStatsStore
     let betSpreadStats: SessionStatsStore
+    let deckSpeedStats: SessionStatsStore
+    let deckSpeedBest: DeckSpeedBestStore
     let showdownStats: ShowdownStatsStore
     let showdownBankroll: BankrollStore
 
@@ -63,6 +65,8 @@ final class AppModel {
         let deckEstimationStats = SessionStatsStore(key: StatsKeys.deckEstimation, cloud: cloud)
         let keyCountStats = SessionStatsStore(key: StatsKeys.keyCount, cloud: cloud)
         let betSpreadStats = SessionStatsStore(key: StatsKeys.betSpread, cloud: cloud)
+        let deckSpeedStats = SessionStatsStore(key: StatsKeys.deckSpeed, cloud: cloud)
+        let deckSpeedBest = DeckSpeedBestStore(cloud: cloud)
         let showdownStats = ShowdownStatsStore(key: StatsKeys.showdown, cloud: cloud)
         let showdownBankroll = BankrollStore(key: StatsKeys.showdownBankroll, cloud: cloud)
         self.basicStrategyStats = basicStrategyStats
@@ -72,6 +76,8 @@ final class AppModel {
         self.deckEstimationStats = deckEstimationStats
         self.keyCountStats = keyCountStats
         self.betSpreadStats = betSpreadStats
+        self.deckSpeedStats = deckSpeedStats
+        self.deckSpeedBest = deckSpeedBest
         self.showdownStats = showdownStats
         self.showdownBankroll = showdownBankroll
 
@@ -85,7 +91,8 @@ final class AppModel {
         cloudSync = StatsCloudSync(cloud: cloud, stores: [
             basicStrategyStats, runningCountStats, trueCountStats,
             deviationStats, deckEstimationStats, keyCountStats, betSpreadStats,
-            showdownStats, showdownBankroll, flowPrefs, practiceHistory, missTally
+            deckSpeedStats, deckSpeedBest, showdownStats, showdownBankroll,
+            flowPrefs, practiceHistory, missTally
         ])
         // Built after cloud adoption so the seeded snapshot reflects any value
         // pulled from iCloud at launch. The widget mirrors the Flow home surface —
@@ -101,10 +108,12 @@ final class AppModel {
     func resetPracticeData() {
         for store in [
             basicStrategyStats, deviationStats, runningCountStats,
-            trueCountStats, deckEstimationStats, keyCountStats, betSpreadStats
+            trueCountStats, deckEstimationStats, keyCountStats, betSpreadStats,
+            deckSpeedStats
         ] {
             store.reset()
         }
+        deckSpeedBest.reset()
         showdownStats.reset()
         showdownBankroll.reset()
         practiceHistory.reset()

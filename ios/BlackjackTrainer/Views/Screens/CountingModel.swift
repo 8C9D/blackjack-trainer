@@ -10,7 +10,8 @@ import SwiftUI
 @Observable
 final class CountingModel {
     enum DrillState {
-        case idle, streaming, estimating, answering, advantage, betting, feedback, showdown
+        case idle, streaming, estimating, answering, advantage, betting, flipping, feedback,
+             showdown
     }
 
     var system: CountingSystem
@@ -47,9 +48,18 @@ final class CountingModel {
     @ObservationIgnored let deckEstimationStore: SessionStatsStore
     @ObservationIgnored let keyCountStore: SessionStatsStore
     @ObservationIgnored let betSpreadStore: SessionStatsStore
+    @ObservationIgnored let deckSpeedStore: SessionStatsStore
+    @ObservationIgnored let deckSpeedBestStore: DeckSpeedBestStore
     @ObservationIgnored private let generator: CardGenerator
     @ObservationIgnored let shoeFactory: ShoeFactory
     @ObservationIgnored private var streamTask: Task<Void, Never>?
+    /// The clock the deck-speed stopwatch reads, injectable so a test can drive
+    /// it (the drill is self-paced, so there is no timer to fast-forward).
+    @ObservationIgnored private let now: () -> Date
+    /// Deck-speed state: the card held back from the deck, and the stopwatch.
+    @ObservationIgnored private var burnedCard: Card?
+    @ObservationIgnored private var startedAt: Date?
+    @ObservationIgnored private var elapsedMilliseconds = 0
 
     init(
         systems: [CountingSystem],
@@ -59,9 +69,12 @@ final class CountingModel {
         deckEstimationStore: SessionStatsStore,
         keyCountStore: SessionStatsStore,
         betSpreadStore: SessionStatsStore,
+        deckSpeedStore: SessionStatsStore,
+        deckSpeedBestStore: DeckSpeedBestStore,
         showdownStatsStore: ShowdownStatsStore,
         generator: CardGenerator = CardGenerator(),
-        shoeFactory: ShoeFactory = ShoeFactory()
+        shoeFactory: ShoeFactory = ShoeFactory(),
+        now: @escaping () -> Date = Date.init
     ) {
         self.systems = systems
         self.engine = engine
@@ -70,7 +83,10 @@ final class CountingModel {
         self.deckEstimationStore = deckEstimationStore
         self.keyCountStore = keyCountStore
         self.betSpreadStore = betSpreadStore
+        self.deckSpeedStore = deckSpeedStore
+        self.deckSpeedBestStore = deckSpeedBestStore
         self.showdownStatsStore = showdownStatsStore
+        self.now = now
         self.generator = generator
         self.shoeFactory = shoeFactory
         system = systems.first { $0.id == "hi-lo" } ?? systems[0]
@@ -86,15 +102,46 @@ final class CountingModel {
     /// Begin a drill (no-op while one is active or settings are invalid).
     func start() {
         guard !isDrillActive, validation.valid else { return }
-        cards = usesLiveShoe
-            ? dealLiveShoeRound()
-            : generator.generateSequence(settings.numberOfCards)
         currentIndex = 0
         result = nil
         deckEstimate = nil
+        if settings.mode == .deckSpeed {
+            dealBurnedDeck()
+            // No timer: the player sets the pace, and the clock starts on the
+            // first card they are already looking at.
+            startedAt = now()
+            state = .flipping
+            return
+        }
+        cards = usesLiveShoe
+            ? dealLiveShoeRound()
+            : generator.generateSequence(settings.numberOfCards)
         state = .streaming
         streamTask?.cancel()
         streamTask = Task { [weak self] in await self?.runStream() }
+    }
+
+    /// Shuffle a single deck, hold one card back, and show the other 51. The
+    /// burned card is the answer's proof: a full deck sums to a known constant,
+    /// so the count of the 51 is that constant minus the burned card's tag.
+    private func dealBurnedDeck() {
+        let deck = shoeFactory.create(numberOfDecks: 1, penetration: 1)
+            .deal(ShoeConstants.cardsPerDeck)
+        burnedCard = deck.last
+        cards = Array(deck.prefix(DeckSpeed.cards))
+    }
+
+    /// Advance the self-paced countdown; the last card stops the clock and asks
+    /// for the count.
+    func flipNext() {
+        guard state == .flipping else { return }
+        let next = currentIndex + 1
+        if next >= cards.count {
+            elapsedMilliseconds = Int((now().timeIntervalSince(startedAt ?? now())) * 1000)
+            state = .answering
+            return
+        }
+        currentIndex = next
     }
 
     private func runStream() async {
@@ -146,6 +193,8 @@ final class CountingModel {
                 result = .trueCount(evaluated)
                 trueCountStore.recordAttempt(correct: evaluated.isCorrect)
             }
+        case .deckSpeed:
+            gradeDeckSpeed(value)
         case .runningCount:
             let evaluated = engine.evaluate(cards, userRunningCount: value, system: system)
             result = .running(evaluated)
@@ -211,6 +260,29 @@ final class CountingModel {
         state = .feedback
     }
 
+    /// Grade the countdown against the burned card, and the clock against the
+    /// record. The record only moves on a correct round.
+    private func gradeDeckSpeed(_ value: Double) {
+        guard let burnedCard else { return }
+        let previousBest = deckSpeedBestStore.bestMilliseconds
+        let evaluated = engine.evaluateDeckSpeed(
+            cards,
+            burnedCard: burnedCard,
+            answer: DeckSpeedAnswer(
+                runningCount: value,
+                elapsedMilliseconds: elapsedMilliseconds
+            ),
+            system: system,
+            previousBestMilliseconds: previousBest
+        )
+        result = .deckSpeed(evaluated)
+        deckSpeedStore.recordAttempt(correct: evaluated.isCorrect)
+        deckSpeedBestStore.record(
+            correct: evaluated.isCorrect,
+            elapsedMilliseconds: elapsedMilliseconds
+        )
+    }
+
     /// Switch system; a different system means a different running count, so the
     /// live shoe restarts fresh. A mode the new system cannot host coerces back
     /// to running count.
@@ -242,18 +314,6 @@ final class CountingModel {
             shoeRunningCount += engine.runningCount(showdownCards, system: system)
         }
         state = .feedback
-    }
-
-    func resetActiveStats() {
-        activeStore.reset()
-    }
-
-    func resetTrueCountStats() {
-        trueCountStore.reset()
-    }
-
-    func resetDeckEstimationStats() {
-        deckEstimationStore.reset()
     }
 
     func cancel() {
