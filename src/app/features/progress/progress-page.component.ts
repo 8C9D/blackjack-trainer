@@ -8,6 +8,7 @@ import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.serv
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
 import { DeckEstimationStatsService } from '../../core/services/deck-estimation-stats.service';
 import { DeckSpeedStatsService } from '../../core/services/deck-speed-stats.service';
+import { ShowdownPlayStatsService } from '../../core/services/showdown-play-stats.service';
 import { formatDuration } from '../../core/models/deck-speed.model';
 import { DeviationStatsService } from '../../core/services/deviation-stats.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
@@ -177,6 +178,7 @@ export class ProgressPageComponent {
   private readonly keyCountStats = inject(KeyCountStatsService);
   private readonly betSpreadStats = inject(BetSpreadStatsService);
   private readonly deckSpeedStats = inject(DeckSpeedStatsService);
+  private readonly showdownPlayStats = inject(ShowdownPlayStatsService);
   private readonly showdownStats = inject(ShowdownStatsService);
   private readonly bankrollService = inject(BankrollService);
   private readonly router = inject(Router);
@@ -219,6 +221,9 @@ export class ProgressPageComponent {
     row('Key count call', this.keyCountStats.stats()),
     row('Bet spread', this.betSpreadStats.stats()),
     row('Deck speed', this.deckSpeedStats.stats()),
+    // Not a drill of its own — it is basic strategy, scored where the hands are
+    // actually played out rather than dealt two at a time.
+    row('Showdown play', this.showdownPlayStats.stats()),
   ]);
 
   protected readonly winRate = computed(() => {

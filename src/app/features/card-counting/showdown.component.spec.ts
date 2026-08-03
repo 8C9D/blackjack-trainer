@@ -5,6 +5,7 @@ import { Shoe } from '../../core/models/shoe.model';
 import type { Settlement } from '../../core/models/showdown.model';
 import type { Action, EngineOptions, RuleSet } from '../../core/models/strategy.model';
 import type { ShowdownStats } from '../../core/services/showdown-stats.service';
+import type { SessionStats } from '../../core/services/stats-store';
 import type { BankrollState } from '../../core/services/bankroll.service';
 import { ShowdownComponent } from './showdown.component';
 
@@ -55,6 +56,9 @@ type Internals = {
   roundSummary(): string;
   spots(): number;
   stats: { stats(): ShowdownStats; reset(): void };
+  playStats: { stats(): SessionStats };
+  lastPlay(): { correct: boolean; expected: Action; reason: string; hand: string } | null;
+  roundMistakes(): readonly string[];
 };
 
 // A shoe that deals the given ranks in order (no shuffle): the constructor takes
@@ -847,6 +851,86 @@ describe('ShowdownComponent', () => {
       expect(c.hands().every((h) => h.fromSplit)).toBe(true);
       expect(c.phase()).toBe('resolved');
       expect(c.hands().every((h) => h.settlement!.playerBlackjack)).toBe(false);
+    });
+  });
+
+  // The table now says whether the hand was played right. It still settles the
+  // play either way — this is a table, not a quiz.
+  describe('grading the play against basic strategy', () => {
+    it('confirms a correct decision without changing what happens', () => {
+      // Player [10,9]=19 vs dealer 10: stand. Dealer [10,6] hits K → bust.
+      const { c } = createShowdown(makeShoe(['10', '10', '9', '6', 'K']));
+      c.onAction('S');
+      expect(c.lastPlay()).toMatchObject({ correct: true, expected: 'S' });
+      // The round resolved exactly as it did before grading existed.
+      expect(c.settlement()!.outcome).toBe('win');
+      expect(c.roundMistakes()).toEqual([]);
+    });
+
+    it('names the play that was correct, and lets the misplay stand', () => {
+      // Player [10,9]=19 vs dealer 10: standing is correct, so hitting is not.
+      const { c } = createShowdown(makeShoe(['10', '10', '9', '6', '2', 'K']));
+      c.onAction('H');
+      expect(c.lastPlay()).toMatchObject({ correct: false, expected: 'S' });
+      // The card was still dealt: 19 + 2 = 21.
+      expect(c.playerCards().length).toBe(3);
+    });
+
+    it('records every decision to the play-accuracy store', () => {
+      // Player [5,4]=9 vs dealer 6: double. Hit is wrong, then 9+2=11 vs 6,
+      // where a three-card hand can only hit — and hitting is now correct.
+      const { c } = createShowdown(makeShoe(['5', '6', '4', '10', '2', '9', '5']));
+      c.onAction('H');
+      expect(c.playStats.stats()).toMatchObject({ attempts: 1, correct: 0 });
+      c.onAction('H');
+      expect(c.playStats.stats()).toMatchObject({ attempts: 2, correct: 1 });
+    });
+
+    // Doubling is a first-two-card action; the engine must not ask for it on a
+    // hand that has already drawn.
+    it('never asks a three-card hand to double', () => {
+      // [5,4]=9 vs 6 doubles; after a hit, 9+2=11 vs 6 must be a hit.
+      const { c } = createShowdown(makeShoe(['5', '6', '4', '10', '2', '9', '5']));
+      c.onAction('H');
+      c.onAction('H');
+      expect(c.lastPlay()!.expected).toBe('H');
+    });
+
+    it('collects the round’s misplays for the result panel', () => {
+      // Player [10,9]=19 vs 10: hit (wrong) to 21, then stand (correct).
+      const { c } = createShowdown(makeShoe(['10', '10', '9', '6', '2', 'K']));
+      c.onAction('H');
+      c.onAction('S');
+      expect(c.roundMistakes()).toHaveLength(1);
+      expect(c.roundMistakes()[0]).toContain('Hard 19 vs 10');
+      expect(c.roundMistakes()[0]).toContain('Stand');
+    });
+
+    it('clears the verdict and the misplay list when the next hand is dealt', () => {
+      const { c } = createShowdown(
+        makeShoe(['10', '10', '9', '6', '2', 'K', '10', '10', '9', '6', 'K']),
+      );
+      c.onAction('H');
+      expect(c.roundMistakes()).toHaveLength(1);
+      c.dealAnother();
+      expect(c.lastPlay()).toBeNull();
+      expect(c.roundMistakes()).toEqual([]);
+    });
+
+    it('grades a split offer the chart wants taken', () => {
+      // [8,8] vs dealer 10 splits under every rule set.
+      const { c } = createShowdown(makeShoe(['8', '10', '8', '6', '3', '3', 'K']));
+      c.onAction('P');
+      expect(c.lastPlay()).toMatchObject({ correct: true, expected: 'P' });
+    });
+
+    it('shows the verdict on the felt', () => {
+      const { fixture, c } = createShowdown(makeShoe(['10', '10', '9', '6', '2', 'K']));
+      c.onAction('H');
+      fixture.detectChanges();
+      const coach = fixture.nativeElement.querySelector('.showdown__coach') as HTMLElement;
+      expect(coach.textContent).toContain('Stand was the play');
+      expect(coach.classList).toContain('showdown__coach--wrong');
     });
   });
 });
