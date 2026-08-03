@@ -36,10 +36,12 @@
 		320D2B7B79708BB8EA3EA3D5 /* GameData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E31BAB1CB5F4A5CE16EFDD5 /* GameData.swift */; };
 		33492E9B5E4EF3FF48BC4CE1 /* CountingDrillTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705F836831ED5AA3612EC1A6 /* CountingDrillTests.swift */; };
 		3428BB4167FFAF6545B55B08 /* FlowDoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04F36DA98AA4623DF7523D3F /* FlowDoneView.swift */; };
+		371BB74A60E0D4F7E1A66A62 /* play-deviation-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = 16AA279657004B2B9271D3CE /* play-deviation-vectors.json */; };
 		386E32FE6EC444B9D31E527A /* basic-strategy-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = D52EF9B7479E51758C09565B /* basic-strategy-vectors.json */; };
 		3CC9C30A7E7A343467F7DA05 /* CloudSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BD7421E78295DC500F5D504 /* CloudSyncTests.swift */; };
 		3D06500A85C04C83F3E882BD /* StatsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A3B7FB8E53D8E1DEAAEE93B /* StatsModels.swift */; };
 		406BE6B1BA3EA48D82C3B9EB /* BlackjackStatsWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 063271D90DDF91F490DF21C5 /* BlackjackStatsWidget.swift */; };
+		41872B96D20B8854BF6044B2 /* PlayDeviationParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E0B74F024CDE2F06166C142 /* PlayDeviationParityTests.swift */; };
 		457BD2A5B549C7C4D08A030F /* RemindersModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24E2ACB0914EF2BC010B1FA0 /* RemindersModel.swift */; };
 		488D636848CD51976F413918 /* AUTHORS.txt in Resources */ = {isa = PBXBuildFile; fileRef = 25A35DC18D354F2C90FF460B /* AUTHORS.txt */; };
 		4A47A66E72212E35E00844CD /* CountStreamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70E0FD3BB6A069CD721C48F8 /* CountStreamView.swift */; };
@@ -212,6 +214,7 @@
 		1652BE128D76A29D29A202BA /* AdvisoryNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvisoryNoteView.swift; sourceTree = "<group>"; };
 		165C075DFEF13830088AC4E9 /* ShowdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownView.swift; sourceTree = "<group>"; };
 		1686420A2590C6534E31F3E2 /* ShoeFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoeFactory.swift; sourceTree = "<group>"; };
+		16AA279657004B2B9271D3CE /* play-deviation-vectors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "play-deviation-vectors.json"; sourceTree = "<group>"; };
 		18C6C68585013F882B690DA5 /* DeviationParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationParityTests.swift; sourceTree = "<group>"; };
 		1965DF5EA178C870607212F6 /* FlowStageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowStageView.swift; sourceTree = "<group>"; };
 		1A1FB0D0470FEEDD9AABEFE2 /* FlowPrefsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowPrefsStoreTests.swift; sourceTree = "<group>"; };
@@ -249,6 +252,7 @@
 		49D8020D3C286C314F3280AF /* BackupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupTests.swift; sourceTree = "<group>"; };
 		4C391C226F94DEFB8E908E8A /* COPYING.LESSER.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = COPYING.LESSER.txt; sourceTree = "<group>"; };
 		4CDF44BD7184EF5D4471A34F /* ShowdownModel+Grading.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ShowdownModel+Grading.swift"; sourceTree = "<group>"; };
+		4E0B74F024CDE2F06166C142 /* PlayDeviationParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayDeviationParityTests.swift; sourceTree = "<group>"; };
 		501FF9BB16087E1BE634AD19 /* DeckEstimateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckEstimateView.swift; sourceTree = "<group>"; };
 		5326BAF2B96AB8EC46186426 /* StrategyChartGridTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrategyChartGridTests.swift; sourceTree = "<group>"; };
 		56D03F7A78236CB3E5505245 /* HardwareKeyboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareKeyboard.swift; sourceTree = "<group>"; };
@@ -352,6 +356,7 @@
 				D9BB02017204C216ACEDAB62 /* counting-systems.json */,
 				A039C5E6271C7F1C7AFECA72 /* counting-vectors.json */,
 				15F33EF1E2388D4C0EE28E6B /* deviation-vectors.json */,
+				16AA279657004B2B9271D3CE /* play-deviation-vectors.json */,
 				E96987FAD78F068E0FF56D55 /* showdown-vectors.json */,
 			);
 			path = Fixtures;
@@ -465,6 +470,7 @@
 				1A1FB0D0470FEEDD9AABEFE2 /* FlowPrefsStoreTests.swift */,
 				5D6A6BE6AD0BE9426D92EAA5 /* HomeHelpersTests.swift */,
 				9558F60D7AA7FADAB9B83CFF /* MissTallyStoreTests.swift */,
+				4E0B74F024CDE2F06166C142 /* PlayDeviationParityTests.swift */,
 				0532EF5C44190141EA29F7E8 /* PracticeHistoryStoreTests.swift */,
 				743B8812CB1A205EA087ACC5 /* ProgressSummaryTests.swift */,
 				0B1F3C9E741253484F3D5474 /* RemindersTests.swift */,
@@ -758,6 +764,7 @@
 				284AFBB818EAAC119ACBFDFC /* counting-systems.json in Resources */,
 				DBE51B6B16BCDF2D61562892 /* counting-vectors.json in Resources */,
 				8BF8225B5B5683063C0901C3 /* deviation-vectors.json in Resources */,
+				371BB74A60E0D4F7E1A66A62 /* play-deviation-vectors.json in Resources */,
 				11723EBF74A70F6A5257E0CD /* showdown-vectors.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -914,6 +921,7 @@
 				1C33D6AB533F90ED1B38271F /* FlowPrefsStoreTests.swift in Sources */,
 				A1A15FE9D46824C3D9167D3C /* HomeHelpersTests.swift in Sources */,
 				9E2C8B656A2313AAE1CAF058 /* MissTallyStoreTests.swift in Sources */,
+				41872B96D20B8854BF6044B2 /* PlayDeviationParityTests.swift in Sources */,
 				50C0B892FA4BD6F58EBACF9A /* PracticeHistoryStoreTests.swift in Sources */,
 				CD1B136CDAF9FADDBC817AFF /* ProgressSummaryTests.swift in Sources */,
 				D1FF42D81F430C0468DF7729 /* RemindersTests.swift in Sources */,
