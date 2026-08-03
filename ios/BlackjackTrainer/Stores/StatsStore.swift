@@ -224,6 +224,90 @@ final class BankrollStore: CloudSyncable {
     }
 }
 
+/// The fastest *correct* deck countdown, under its own key beside the drill's
+/// accuracy store. Its own store rather than a field on `SessionStatsStore`
+/// (the web keeps two keys behind one service) because only this drill has a
+/// record, and the shared stats shape is worth leaving alone.
+@Observable
+final class DeckSpeedBestStore: CloudSyncable {
+    @ObservationIgnored let key: String
+    @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored private let cloud: CloudKeyValueStore?
+    private(set) var bestMilliseconds: Int?
+
+    init(
+        key: String = StatsKeys.deckSpeedBest,
+        defaults: UserDefaults = .standard,
+        cloud: CloudKeyValueStore? = nil
+    ) {
+        self.key = key
+        self.defaults = defaults
+        self.cloud = cloud
+        bestMilliseconds = Self.loaded(key: key, defaults: defaults)
+    }
+
+    /// Records a finished countdown, returning the record that stood before it
+    /// so the feedback can say what was beaten. The record only moves on a
+    /// correct round — speed with the wrong count is not a counting skill.
+    @discardableResult
+    func record(correct: Bool, elapsedMilliseconds: Int) -> Int? {
+        let previous = bestMilliseconds
+        if correct, previous.map({ elapsedMilliseconds < $0 }) ?? true {
+            bestMilliseconds = elapsedMilliseconds
+            persist()
+        }
+        return previous
+    }
+
+    func reset() {
+        bestMilliseconds = nil
+        persist()
+    }
+
+    /// A stored record that is not a positive whole number of milliseconds is
+    /// impossible; drop it rather than showing a nonsense time.
+    private static func loaded(key: String, defaults: UserDefaults) -> Int? {
+        guard let data = defaults.data(forKey: key),
+              let stored = try? JSONDecoder().decode(DeckSpeedBest.self, from: data),
+              let value = stored.bestMs, value > 0 else { return nil }
+        return value
+    }
+
+    private func persist() {
+        StatsPersistence.save(DeckSpeedBest(bestMs: bestMilliseconds), key: key, defaults: defaults)
+        pushToCloud()
+    }
+
+    // MARK: CloudSyncable
+
+    var cloudKey: String {
+        key
+    }
+
+    func adoptFromCloud() {
+        guard let cloud, let data = cloud.data(forKey: key),
+              let stored = try? JSONDecoder().decode(DeckSpeedBest.self, from: data) else { return }
+        bestMilliseconds = (stored.bestMs ?? 0) > 0 ? stored.bestMs : nil
+        StatsPersistence.save(
+            DeckSpeedBest(bestMs: bestMilliseconds),
+            key: key,
+            defaults: defaults
+        )
+    }
+
+    func pushToCloud() {
+        guard let cloud,
+              let data = try? JSONEncoder().encode(DeckSpeedBest(bestMs: bestMilliseconds))
+        else { return }
+        cloud.set(data, forKey: key)
+    }
+}
+
+/// The stored shape, matching the web's `{ bestMs }`.
+private struct DeckSpeedBest: Codable {
+    let bestMs: Int?
+}
+
 /// Wipes stat keys from earlier versions. Call once at launch.
 func cleanupLegacyStatsKeys(defaults: UserDefaults = .standard) {
     for key in StatsKeys.legacy {

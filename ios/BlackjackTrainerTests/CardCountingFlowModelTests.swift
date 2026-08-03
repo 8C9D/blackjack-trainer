@@ -40,6 +40,11 @@ struct CardCountingFlowModelTests {
             ),
             keyCountStore: SessionStatsStore(key: StatsKeys.keyCount, defaults: defaults),
             betSpreadStore: SessionStatsStore(key: StatsKeys.betSpread, defaults: defaults),
+            deckSpeedStore: SessionStatsStore(key: StatsKeys.deckSpeed, defaults: defaults),
+            deckSpeedBestStore: DeckSpeedBestStore(
+                key: StatsKeys.deckSpeedBest,
+                defaults: defaults
+            ),
             showdownStatsStore: ShowdownStatsStore(defaults: defaults)
         )
         let model = CardCountingFlowModel(counting: counting, prefs: prefs, history: history)

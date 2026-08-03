@@ -6,11 +6,14 @@ import Foundation
 /// count. Only offered for systems carrying a `KeyCountSchedule` (KO).
 /// `betSpread` is the true-count drill plus the question the count is for: how
 /// many units to bet. Balanced systems only, since it grades a true count first.
+/// `deckSpeed` is the self-paced one: a shuffled deck with a card burned,
+/// counted down against a stopwatch (see `DeckSpeed`).
 enum DrillMode: String, CaseIterable {
     case runningCount = "running-count"
     case trueCount = "true-count"
     case keyCount = "key-count"
     case betSpread = "bet-spread"
+    case deckSpeed = "deck-speed"
 
     /// The shoe-driven modes: key count always reads a live shoe; the two
     /// true-count modes only with the live-shoe source. The one predicate behind
@@ -143,6 +146,7 @@ enum CountingDrillResult: Equatable {
     case trueCount(TrueCountDrillResult)
     case keyCount(KeyCountDrillResult)
     case betSpread(BetSpreadDrillResult)
+    case deckSpeed(DeckSpeedDrillResult)
 
     var cards: [Card] {
         switch self {
@@ -150,6 +154,7 @@ enum CountingDrillResult: Equatable {
         case let .trueCount(result): result.cards
         case let .keyCount(result): result.cards
         case let .betSpread(result): result.cards
+        case let .deckSpeed(result): result.cards
         }
     }
 
@@ -159,6 +164,7 @@ enum CountingDrillResult: Equatable {
         case let .trueCount(result): result.isCorrect
         case let .keyCount(result): result.isCorrect
         case let .betSpread(result): result.isCorrect
+        case let .deckSpeed(result): result.isCorrect
         }
     }
 
@@ -166,7 +172,7 @@ enum CountingDrillResult: Equatable {
     /// key-count prior; 0 otherwise) — the breakdown's starting offset.
     var priorRunningCount: Double {
         switch self {
-        case .running: 0
+        case .running, .deckSpeed: 0
         case let .trueCount(result): result.priorRunningCount
         case let .keyCount(result): result.priorRunningCount
         case let .betSpread(result): result.priorRunningCount

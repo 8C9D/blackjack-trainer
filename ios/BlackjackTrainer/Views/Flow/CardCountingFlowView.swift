@@ -47,6 +47,8 @@ final class CardCountingFlowModel {
             deckEstimationStore: app.deckEstimationStats,
             keyCountStore: app.keyCountStats,
             betSpreadStore: app.betSpreadStats,
+            deckSpeedStore: app.deckSpeedStats,
+            deckSpeedBestStore: app.deckSpeedBest,
             showdownStatsStore: app.showdownStats
         )
         self.init(
@@ -106,6 +108,12 @@ final class CardCountingFlowModel {
             history.recordHand()
             session.record(result.isCorrect)
         }
+    }
+
+    /// The deck-speed drill's self-paced advance; the last card ends the
+    /// countdown and asks for the count.
+    func flipNext() {
+        counting.flipNext()
     }
 
     /// The bet-spread drill's bet completes the rep.
@@ -223,6 +231,8 @@ struct CardCountingFlowView: View {
                 mode: model.counting.settings.mode,
                 allowFractions: model.counting.fractionalAnswers
             ) { model.answer($0) }
+        case .flipping:
+            deckSpeedStage
         case .advantage:
             AdvantageCallView { model.advantage($0) }
         case .betting:
@@ -235,6 +245,29 @@ struct CardCountingFlowView: View {
             feedbackView
         case .showdown:
             showdownView
+        }
+    }
+
+    /// The self-paced countdown: the card, the control that advances it, and the
+    /// line of context. The stream view is reused so the card and its progress
+    /// read identically to every other mode.
+    private var deckSpeedStage: some View {
+        VStack(spacing: 16) {
+            CountStreamView(
+                card: model.counting.currentCard,
+                index: model.counting.currentIndex,
+                total: model.counting.cards.count
+            )
+            Button { model.flipNext() } label: {
+                Text("Next card")
+                    .frame(maxWidth: .infinity, minHeight: 30)
+            }
+            .accentFilledButton()
+            .keyboardShortcut(.space, modifiers: [])
+            Text("One card is burned. Count the rest as fast as you can — the clock is running.")
+                .font(.footnote)
+                .foregroundStyle(Theme.muted)
+                .multilineTextAlignment(.center)
         }
     }
 

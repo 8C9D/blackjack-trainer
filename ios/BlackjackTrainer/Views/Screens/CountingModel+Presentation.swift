@@ -1,9 +1,10 @@
 import Foundation
 
-/// The Card Counting model's read-only view of itself: mode predicates, the
-/// validation gate, the labels the screen prints, and the stat snapshots it
-/// shows. Split out of `CountingModel.swift` to keep that file inside the
-/// SwiftLint length budget, the same shape as `ShowdownModel+Presentation`.
+/// The Card Counting model's read-only view of itself — mode predicates, the
+/// validation gate, the labels the screen prints, the stat snapshots it shows —
+/// plus the stat resets that sit beside them. Split out of `CountingModel.swift`
+/// to keep that file inside the SwiftLint length budget, the same shape as
+/// `ShowdownModel+Presentation`.
 @MainActor
 extension CountingModel {
     var trueCountAvailable: Bool {
@@ -88,7 +89,13 @@ extension CountingModel {
 
     var isDrillActive: Bool {
         state == .streaming || state == .estimating || state == .answering
-            || state == .advantage || state == .betting
+            || state == .advantage || state == .betting || state == .flipping
+    }
+
+    /// The deck-speed drill: a shuffled deck with one card burned, counted down
+    /// self-paced against a stopwatch. Any system can be counted down.
+    var deckSpeedDrill: Bool {
+        settings.mode == .deckSpeed
     }
 
     var settingsLocked: Bool {
@@ -127,5 +134,25 @@ extension CountingModel {
 
     var betSpreadStats: SessionStats {
         betSpreadStore.stats
+    }
+
+    var deckSpeedStats: SessionStats {
+        deckSpeedStore.stats
+    }
+
+    var deckSpeedBest: Int? {
+        deckSpeedBestStore.bestMilliseconds
+    }
+
+    func resetActiveStats() {
+        activeStore.reset()
+    }
+
+    func resetTrueCountStats() {
+        trueCountStore.reset()
+    }
+
+    func resetDeckEstimationStats() {
+        deckEstimationStore.reset()
     }
 }

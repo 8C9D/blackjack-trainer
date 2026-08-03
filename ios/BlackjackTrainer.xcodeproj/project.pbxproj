@@ -77,6 +77,7 @@
 		8A5FCA013C37B817EE6309EA /* ShowdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 165C075DFEF13830088AC4E9 /* ShowdownView.swift */; };
 		8BF8225B5B5683063C0901C3 /* deviation-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = 15F33EF1E2388D4C0EE28E6B /* deviation-vectors.json */; };
 		8F6FD9EB91B2EBBFAE4EC568 /* StrategyChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78DC33D28D09EB8697F6D833 /* StrategyChart.swift */; };
+		8FD44D4D728FAD6B6E457D17 /* DeckSpeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95DA8025CE95EA6D6ECA67D4 /* DeckSpeed.swift */; };
 		92B298BC5D3D877D16326218 /* CardCountingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE50DEB7576D2B5A6C544838 /* CardCountingFlowView.swift */; };
 		92B9061EFF5C52916413D91D /* BetSpreadDrillTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8796B4C1EA1A80789FDA51D6 /* BetSpreadDrillTests.swift */; };
 		933C1B7510CAB3FA0FEAF5EE /* BetRamp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8620E0BCFDFF00572CD05598 /* BetRamp.swift */; };
@@ -129,6 +130,7 @@
 		E89681A0A7CDFDB53BD9F974 /* ShowdownMultiBoxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57A574AA683108F8EF54F104 /* ShowdownMultiBoxTests.swift */; };
 		EAAD9174590C20E72577CBCA /* FlowPrefs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98EFDB01E654E3C42D38A419 /* FlowPrefs.swift */; };
 		ED40B991FC2DEDC8BA58ADD7 /* Card.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC3A18A1400C61F3B32D13F1 /* Card.swift */; };
+		ED64682C3D8B312445174F0A /* DeckSpeedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0796FA7E1D39E31A828EADA2 /* DeckSpeedTests.swift */; };
 		EE1BBDF8E6F169D9A24CDA81 /* ShowdownParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 786E4951CEEAFF7A09457F30 /* ShowdownParityTests.swift */; };
 		EEAEAB42B68664042D826147 /* StatsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40DA33CFF9EA9742E7504A05 /* StatsStoreTests.swift */; };
 		F68F8690D44ABB89CC9BE0AA /* FlowRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13737B5AC6AE9907CC48AF97 /* FlowRootView.swift */; };
@@ -177,6 +179,7 @@
 		04F36DA98AA4623DF7523D3F /* FlowDoneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowDoneView.swift; sourceTree = "<group>"; };
 		0532EF5C44190141EA29F7E8 /* PracticeHistoryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeHistoryStoreTests.swift; sourceTree = "<group>"; };
 		063271D90DDF91F490DF21C5 /* BlackjackStatsWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlackjackStatsWidget.swift; sourceTree = "<group>"; };
+		0796FA7E1D39E31A828EADA2 /* DeckSpeedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckSpeedTests.swift; sourceTree = "<group>"; };
 		0896F4168F59A3A9EBFF7CDE /* Deviation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Deviation.swift; sourceTree = "<group>"; };
 		09C557C64B5EC75385C98395 /* Fixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fixtures.swift; sourceTree = "<group>"; };
 		0A69D4776F718FC0DBD87AC1 /* ShowdownSurrenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownSurrenderTests.swift; sourceTree = "<group>"; };
@@ -260,6 +263,7 @@
 		92869AF24C67B01CE515A238 /* StatsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsStore.swift; sourceTree = "<group>"; };
 		94C1E91BE95C99F9AC8C66D7 /* BlackjackWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BlackjackWidget.entitlements; sourceTree = "<group>"; };
 		9558F60D7AA7FADAB9B83CFF /* MissTallyStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissTallyStoreTests.swift; sourceTree = "<group>"; };
+		95DA8025CE95EA6D6ECA67D4 /* DeckSpeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckSpeed.swift; sourceTree = "<group>"; };
 		980E7AECAB91B60175930CD3 /* RemindersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemindersView.swift; sourceTree = "<group>"; };
 		98AC306A85F2BCC5BE60F1E3 /* BlackjackTrainer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = BlackjackTrainer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		98EFDB01E654E3C42D38A419 /* FlowPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowPrefs.swift; sourceTree = "<group>"; };
@@ -412,6 +416,7 @@
 				01B4AFDADA3CF8230C9FA589 /* CountingModelTests.swift */,
 				D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */,
 				BA0B879E8B1D853622E0CC86 /* DataLayerTests.swift */,
+				0796FA7E1D39E31A828EADA2 /* DeckSpeedTests.swift */,
 				80916791F08727E4F1F41C6E /* DeviationFeedbackTests.swift */,
 				18C6C68585013F882B690DA5 /* DeviationParityTests.swift */,
 				CCFA223B9420BDC9AD027B73 /* DeviationScenarioGeneratorTests.swift */,
@@ -470,6 +475,7 @@
 				2705BBD8AAF017C2486055AE /* CardGenerator.swift */,
 				CF4D671AA4A053AF40395078 /* CountingEngine.swift */,
 				12BE32AD13FB36B33BAA1B8A /* CountingSystem.swift */,
+				95DA8025CE95EA6D6ECA67D4 /* DeckSpeed.swift */,
 				0896F4168F59A3A9EBFF7CDE /* Deviation.swift */,
 				F423E49F3EE23CE7C3E35ABB /* DeviationEngine.swift */,
 				AACC2CA555089684205FE973 /* DeviationScenarioGenerator.swift */,
@@ -754,6 +760,7 @@
 				B5858C42E92C2DBF9419764B /* CountingModel.swift in Sources */,
 				5DB30E135B7A136CDC249DC4 /* CountingSystem.swift in Sources */,
 				2DE5D31F660953706B611AC6 /* DeckEstimateView.swift in Sources */,
+				8FD44D4D728FAD6B6E457D17 /* DeckSpeed.swift in Sources */,
 				5AF9B9674E93ACAEF2C9D226 /* Deviation.swift in Sources */,
 				6E1A2AA4CC616FC93B1C6DBD /* DeviationEngine.swift in Sources */,
 				26F2A7EFD436472155454735 /* DeviationScenarioGenerator.swift in Sources */,
@@ -835,6 +842,7 @@
 				BD6E7BF5AA767DA6D790CF8D /* CountingModelTests.swift in Sources */,
 				CA4D608DD9DB115BD8BEDD6B /* CountingParityTests.swift in Sources */,
 				6513222E1254F0172453951E /* DataLayerTests.swift in Sources */,
+				ED64682C3D8B312445174F0A /* DeckSpeedTests.swift in Sources */,
 				039F744E1918FABE31519289 /* DeviationFeedbackTests.swift in Sources */,
 				AD5CA329F1BC4A32BF660060 /* DeviationParityTests.swift in Sources */,
 				8124C2BFD8BA1EE68E269E3C /* DeviationScenarioGeneratorTests.swift in Sources */,

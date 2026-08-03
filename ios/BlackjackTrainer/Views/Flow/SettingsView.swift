@@ -136,18 +136,20 @@ struct SettingsView: View {
             }
 
             if trueCountAvailable {
+                // Four modes no longer fit a segmented control on a phone, so
+                // this one is a menu picker like the shoe settings below it.
                 Picker("Mode", selection: modeBinding) {
-                    Text("Running").tag(DrillMode.runningCount)
+                    Text("Running count").tag(DrillMode.runningCount)
                     Text("True count").tag(DrillMode.trueCount)
                     Text("Bet spread").tag(DrillMode.betSpread)
+                    Text("Deck speed").tag(DrillMode.deckSpeed)
                 }
-                .pickerStyle(.segmented)
             } else if keyCountAvailable {
                 Picker("Mode", selection: modeBinding) {
                     Text("Running count").tag(DrillMode.runningCount)
                     Text("Key count").tag(DrillMode.keyCount)
+                    Text("Deck speed").tag(DrillMode.deckSpeed)
                 }
-                .pickerStyle(.segmented)
                 Text(
                     "This system is unbalanced, so there is no true count. Its published "
                         + "schedule is drilled instead: the shoe starts at the IRC and you "
@@ -156,31 +158,27 @@ struct SettingsView: View {
                 .font(.footnote)
                 .foregroundStyle(Theme.muted)
             } else {
-                LabeledContent("Mode", value: "Running count")
+                Picker("Mode", selection: modeBinding) {
+                    Text("Running count").tag(DrillMode.runningCount)
+                    Text("Deck speed").tag(DrillMode.deckSpeed)
+                }
                 Text("True count is only trained for balanced systems.")
                     .font(.footnote)
                     .foregroundStyle(Theme.muted)
             }
 
-            Stepper(
-                "Cards per drill: \(prefs.counting.numberOfCards)",
-                value: intBinding(
-                    get: { prefs.counting.numberOfCards },
-                    set: { value in model.flowPrefs.updateCounting { $0.numberOfCards = value } }
-                ),
-                in: 1 ... CountingConstants.maxCardsPerDrill
-            )
-            Stepper(
-                "Time between cards: \(prefs.counting.millisecondsBetweenCards) ms",
-                value: intBinding(
-                    get: { prefs.counting.millisecondsBetweenCards },
-                    set: { value in
-                        model.flowPrefs.updateCounting { $0.millisecondsBetweenCards = value }
-                    }
-                ),
-                in: CountingConstants.minMillisecondsBetweenCards ... 5000,
-                step: 100
-            )
+            if prefs.counting.mode == .deckSpeed {
+                Text(
+                    "A shuffled deck with one card burned: you flip the other 51 at your own "
+                        + "pace, against a stopwatch, then give the count. The length and pacing "
+                        + "settings do not apply — the deck is the deck, and the speed is what "
+                        + "is being measured."
+                )
+                .font(.footnote)
+                .foregroundStyle(Theme.muted)
+            } else {
+                countingPacingFields
+            }
 
             if prefs.counting.mode == .betSpread {
                 BetRampEditor()
@@ -226,6 +224,29 @@ struct SettingsView: View {
                     .foregroundStyle(Theme.bad)
             }
         }
+    }
+
+    /// Drill length and pacing — every mode but deck speed, which sets neither.
+    @ViewBuilder private var countingPacingFields: some View {
+        Stepper(
+            "Cards per drill: \(prefs.counting.numberOfCards)",
+            value: intBinding(
+                get: { prefs.counting.numberOfCards },
+                set: { value in model.flowPrefs.updateCounting { $0.numberOfCards = value } }
+            ),
+            in: 1 ... CountingConstants.maxCardsPerDrill
+        )
+        Stepper(
+            "Time between cards: \(prefs.counting.millisecondsBetweenCards) ms",
+            value: intBinding(
+                get: { prefs.counting.millisecondsBetweenCards },
+                set: { value in
+                    model.flowPrefs.updateCounting { $0.millisecondsBetweenCards = value }
+                }
+            ),
+            in: CountingConstants.minMillisecondsBetweenCards ... 5000,
+            step: 100
+        )
     }
 
     // MARK: Notifications & about

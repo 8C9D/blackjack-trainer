@@ -275,6 +275,8 @@ The oldest drill in counting was the one the app could not do: the timed stream 
 - **The settings that do not apply are hidden**, not just ignored: the length and pacing fields disappear in this mode, replaced by a line explaining what the drill measures.
 - **Validation.** +25 unit tests (1039 total), an E2E that flips all 51 and reads the burned-card proof, and a contrast sweep of the new stage and its feedback in both themes; 76 E2E.
   One of the session's own new tests turned out flaky — a bet-spread assertion that a carried count was non-zero, which is false whenever a round's cards cancel — and now asserts the carry-over itself.
+- **iOS mirror.** `Engine/DeckSpeed.swift` + `evaluateDeckSpeed`, a `.flipping` state whose clock is an injected `now()` (the drill is self-paced, so there is no timer for a test to fast-forward), `DeckSpeedBestStore` for the record, and a stage that reuses `CountStreamView` with a `Next card` button bound to the space bar. +10 Swift tests (334 total), both themes rendered.
+  Two adaptations: the record is its own store rather than a field on the shared stats shape (the web keeps two keys behind one service), and **the mode picker is now a menu row, not a segmented control** — four modes no longer fit a phone's width, and it now matches the System/shoe pickers around it.
 
 ### Post-roadmap continued: the bet spread (2026-08-02)
 
