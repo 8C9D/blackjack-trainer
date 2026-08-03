@@ -101,7 +101,7 @@ func scenarioLabel(_ ref: ScenarioRef) -> String {
 /// trainer. Drives the Done screen's "Drill next" card and the next session's
 /// opening hand. Mirrors `MissTallyService`.
 @Observable
-final class MissTallyStore: CloudSyncable {
+final class MissTallyStore: CloudSyncable, ReloadableStore {
     @ObservationIgnored let key: String
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let cloud: CloudKeyValueStore?
@@ -124,6 +124,10 @@ final class MissTallyStore: CloudSyncable {
     func setNowSource(_ source: @escaping () -> Date) {
         now = source
         // Re-derive the window-dependent load now that "now" is known.
+        state = load(data: defaults.data(forKey: key))
+    }
+
+    func reloadFromDefaults() {
         state = load(data: defaults.data(forKey: key))
     }
 

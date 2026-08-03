@@ -30,7 +30,7 @@ private enum StatsPersistence {
 /// `cloud` store is supplied (4.2) it write-throughs to iCloud KVS and can adopt
 /// remote values; with none it is local-only (the web parity behavior).
 @Observable
-final class SessionStatsStore: CloudSyncable {
+final class SessionStatsStore: CloudSyncable, ReloadableStore {
     @ObservationIgnored let key: String
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let cloud: CloudKeyValueStore?
@@ -56,6 +56,16 @@ final class SessionStatsStore: CloudSyncable {
     func recordAttempt(correct: Bool) {
         stats = stats.recording(correct: correct)
         persist()
+    }
+
+    func reloadFromDefaults() {
+        stats = StatsPersistence.load(
+            SessionStats.self,
+            key: key,
+            defaults: defaults,
+            empty: .empty,
+            validate: \.isValid
+        )
     }
 
     /// Resets only this store's key.
@@ -92,7 +102,7 @@ final class SessionStatsStore: CloudSyncable {
 
 /// Persists the post-count showdown tally under its own key.
 @Observable
-final class ShowdownStatsStore: CloudSyncable {
+final class ShowdownStatsStore: CloudSyncable, ReloadableStore {
     @ObservationIgnored let key: String
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let cloud: CloudKeyValueStore?
@@ -118,6 +128,16 @@ final class ShowdownStatsStore: CloudSyncable {
     func record(outcome: ShowdownOutcome, playerBlackjack: Bool = false) {
         stats = stats.recording(outcome: outcome, playerBlackjack: playerBlackjack)
         persist()
+    }
+
+    func reloadFromDefaults() {
+        stats = StatsPersistence.load(
+            ShowdownStats.self,
+            key: key,
+            defaults: defaults,
+            empty: .empty,
+            validate: \.isValid
+        )
     }
 
     func reset() {
@@ -154,7 +174,7 @@ final class ShowdownStatsStore: CloudSyncable {
 /// hand tally: the tally is meaningful with betting off, so the two stay
 /// separable. Mirrors the web `BankrollService`.
 @Observable
-final class BankrollStore: CloudSyncable {
+final class BankrollStore: CloudSyncable, ReloadableStore {
     @ObservationIgnored let key: String
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let cloud: CloudKeyValueStore?
@@ -194,6 +214,16 @@ final class BankrollStore: CloudSyncable {
         persist()
     }
 
+    func reloadFromDefaults() {
+        state = StatsPersistence.load(
+            BankrollState.self,
+            key: key,
+            defaults: defaults,
+            empty: .empty,
+            validate: \.isValid
+        )
+    }
+
     func reset() {
         state = .empty
         persist()
@@ -229,7 +259,7 @@ final class BankrollStore: CloudSyncable {
 /// (the web keeps two keys behind one service) because only this drill has a
 /// record, and the shared stats shape is worth leaving alone.
 @Observable
-final class DeckSpeedBestStore: CloudSyncable {
+final class DeckSpeedBestStore: CloudSyncable, ReloadableStore {
     @ObservationIgnored let key: String
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let cloud: CloudKeyValueStore?
@@ -257,6 +287,10 @@ final class DeckSpeedBestStore: CloudSyncable {
             persist()
         }
         return previous
+    }
+
+    func reloadFromDefaults() {
+        bestMilliseconds = Self.loaded(key: key, defaults: defaults)
     }
 
     func reset() {

@@ -39,6 +39,10 @@ final class AppModel {
     let practiceHistory: PracticeHistoryStore
     let missTally: MissTallyStore
 
+    /// Reads and replaces the whole stored namespace as one file — iCloud carries
+    /// a trainee between their own devices, this carries them off the platform.
+    let backup = BackupStore()
+
     /// Retained for the app's lifetime; mirrors the stat stores to iCloud KVS and
     /// adopts external changes (4.2). A no-op beyond local storage until the
     /// iCloud capability is provisioned.
@@ -107,6 +111,32 @@ final class AppModel {
         // pulled from iCloud at launch. The widget mirrors the Flow home surface —
         // the daily-goal ring and the streak — from the practice history + goal.
         widgetPublisher = WidgetSnapshotPublisher(history: practiceHistory, prefs: flowPrefs)
+    }
+
+    /// Every store that holds state loaded from `UserDefaults`, so a restore can
+    /// put the live objects back in step with the bytes underneath them. Same
+    /// reason `resetPracticeData` lists them: a store added later must not be
+    /// silently left out.
+    private var reloadableStores: [any ReloadableStore] {
+        [
+            basicStrategyStats, deviationStats, runningCountStats, trueCountStats,
+            deckEstimationStats, keyCountStats, betSpreadStats, deckSpeedStats,
+            showdownPlayStats, deckSpeedBest, showdownStats, showdownBankroll,
+            practiceHistory, missTally, flowPrefs
+        ]
+    }
+
+    /// Replace everything from a backup file. Unlike the web, which reloads the
+    /// page, the live stores are re-read in place — there is no reload to hide
+    /// behind on iOS, and asking for a relaunch would be a worse answer than
+    /// doing the work.
+    func restoreBackup(_ text: String) -> BackupStore.RestoreResult {
+        let result = backup.restore(text)
+        guard result == .ok else { return result }
+        for store in reloadableStores {
+            store.reloadFromDefaults()
+        }
+        return .ok
     }
 
     /// Everything practice writes, cleared in one call, so no store can be
