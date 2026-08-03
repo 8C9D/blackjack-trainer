@@ -104,6 +104,11 @@ extension ShowdownModel {
     /// wrong would score a bet the table never let the player place.
     func gradeBet(trueCount: Int?, bet: Double) -> GradedPlay? {
         guard let trueCount else { return nil }
+        // A shrinking bankroll clamps the carried bet to whatever it can still
+        // back, which need not land on a rung. The ladder is the only way to
+        // place a bet, so a figure that is not on it is one the player never
+        // chose.
+        guard betOptions.contains(bet) else { return nil }
         let called = Double(BetRamp.units(trueCount: trueCount, ramp: betRamp))
         guard called * Double(spots) <= bankrollStore.bankroll else { return nil }
         let correct = bet == called

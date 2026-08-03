@@ -1039,6 +1039,18 @@ describe('ShowdownComponent', () => {
       expect(c.betSpreadStats.stats().attempts).toBe(0);
     });
 
+    // A losing run clamps the carried bet down to whatever the stack can still
+    // back, which need not land on a rung. Scoring that would mark a figure the
+    // player never chose — the ladder is the only way to place a bet.
+    it('skips a bet the bankroll clamped off the ladder', () => {
+      // 7 chips left: the carried 8 clamps to 7, which is on no rung.
+      TestBed.inject(BankrollService).record(0, -493);
+      const { c } = bet(8, 0);
+      expect(c.bet()).toBe(7);
+      expect(c.lastPlay()).toBeNull();
+      expect(c.betSpreadStats.stats().attempts).toBe(0);
+    });
+
     // The top rung is offered disabled once the stack cannot back it, so scoring
     // it would mark a bet the table never let the player place.
     it('skips a called bet the bankroll could not have covered', () => {
