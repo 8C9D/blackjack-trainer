@@ -15,7 +15,7 @@ import {
   shouldIgnoreKeyboardEvent,
 } from '../../core/keyboard';
 import {
-  BET_OPTIONS,
+  betOptionsFor,
   MIN_BET,
   clampBet,
   handPayout,
@@ -24,6 +24,13 @@ import {
   stakeFor,
   surrenderForfeit,
 } from '../../core/models/bankroll.model';
+import {
+  BET_RAMP_BAND_LABELS,
+  betRampBandIndex,
+  betUnitsForTrueCount,
+  DEFAULT_BET_RAMP,
+  type BetRamp,
+} from '../../core/models/bet-ramp.model';
 import { formatSignedCount } from '../../core/models/card-counting.model';
 import { cardHighValue, isAce, type Card } from '../../core/models/card.model';
 import { cardCountValue, type CountingSystem } from '../../core/models/counting-system.model';
@@ -33,6 +40,7 @@ import {
   clampSpots,
   countBasisFor,
   insuranceIsCorrect,
+  trueCountFor,
   minCardsForSpots,
   playDealerHand,
   settle,
@@ -56,6 +64,7 @@ import {
 } from '../../core/services/basic-strategy-engine.service';
 import { DeviationEngineService } from '../../core/services/deviation-engine.service';
 import { MissTallyService, scenarioRefFor } from '../../core/services/miss-tally.service';
+import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.service';
 import { ShowdownPlayStatsService } from '../../core/services/showdown-play-stats.service';
 import { ShowdownStatsService } from '../../core/services/showdown-stats.service';
 
@@ -182,7 +191,7 @@ interface PlayVerdict {
               }}
             </p>
             <div class="showdown__bets" role="group" aria-label="Bet size">
-              @for (option of betOptions; track option) {
+              @for (option of betOptions(); track option) {
                 <button
                   type="button"
                   class="showdown__bet"
@@ -383,6 +392,8 @@ export class ShowdownComponent implements OnInit {
   private readonly deviations = inject(DeviationEngineService);
   // Misplays here feed the same weak-spot tally the Basic Strategy drill keeps.
   private readonly missTally = inject(MissTallyService);
+  // The bet at this table is the same skill the bet-spread drill measures.
+  private readonly betSpreadStats = inject(BetSpreadStatsService);
 
   // The persistent shoe the player just counted; the showdown deals from it so
   // its depletion carries back to the counting drill.
@@ -399,6 +410,9 @@ export class ShowdownComponent implements OnInit {
   // decisions at this table are graded against.
   readonly system = input<CountingSystem>(HI_LO);
   readonly entryRunningCount = input(0);
+  // The spread the player configured. It is both the rungs the bet control
+  // offers and what the bet is graded against.
+  readonly betRamp = input<BetRamp>(DEFAULT_BET_RAMP);
   // Bet sizing: when on, each round opens on a bet and settles against a
   // persisted bankroll. Off (the default) the showdown is the pure hand tally it
   // has always been, and no chip figure is shown.
@@ -422,6 +436,11 @@ export class ShowdownComponent implements OnInit {
 
   protected readonly countBasis = computed(() =>
     countBasisFor(this.system(), this.visibleRunningCount(), this.shoe().decksRemaining),
+  );
+
+  // The true count the bet is graded on — this system's own, not Hi-Lo's.
+  private readonly betTrueCount = computed(() =>
+    trueCountFor(this.system(), this.visibleRunningCount(), this.shoe().decksRemaining),
   );
 
   protected readonly hands = signal<readonly PlayerHand[]>([]);
@@ -608,7 +627,9 @@ export class ShowdownComponent implements OnInit {
     return clampBet(value, this.bankrollService.bankroll() / this.spots());
   }
 
-  protected readonly betOptions = BET_OPTIONS;
+  // The rungs on offer are the player's own spread, so the bet the count calls
+  // for is one the table can actually take.
+  protected readonly betOptions = computed(() => betOptionsFor(this.betRamp()));
 
   // A bet option the bankroll cannot back across every box is offered disabled,
   // so the ladder stays legible as the stack shrinks.
@@ -623,7 +644,12 @@ export class ShowdownComponent implements OnInit {
 
   protected dealAfterBet(): void {
     if (this.phase() !== 'betting') return;
+    // Snapshot the count before a card is turned: the bet was decided on what
+    // the player could see at that moment, and dealing moves the count.
+    const trueCount = this.betTrueCount();
+    const bet = this.bet();
     this.dealHand();
+    this.gradeBet(trueCount, bet);
   }
 
   protected resetBankroll(): void {
@@ -803,6 +829,38 @@ export class ShowdownComponent implements OnInit {
     this.gradeInsurance(false);
     this.phase.set('player-turn');
     this.peekAndContinue();
+  }
+
+  // The bet is the other decision here that is purely about the count, and the
+  // one the bet-spread drill exists for — but that drill asks for a number in
+  // the abstract, while this is the table where chips actually go out. Until now
+  // a trainee could flat-bet the minimum through a +5 shoe and hear nothing.
+  //
+  // Graded against the player's own spread, never a computed optimum: what to
+  // bet at a count follows from bankroll, risk of ruin and what the table will
+  // tolerate, none of which this app knows (see `bet-ramp.model.ts`). Because
+  // the ramp is the player's own it is indexed by whatever true count they keep,
+  // so every balanced system qualifies — unlike the insurance index, which is a
+  // Hi-Lo number and may only be applied to Hi-Lo.
+  //
+  // Skipped when the bankroll could not have covered the called bet: that rung
+  // is offered disabled, so marking it wrong would score a bet the table never
+  // let the player place.
+  private gradeBet(trueCount: number | null, bet: number): void {
+    if (trueCount === null) return;
+    const called = betUnitsForTrueCount(trueCount, this.betRamp());
+    if (called * this.spots() > this.bankrollService.bankroll()) return;
+    const correct = bet === called;
+    this.betSpreadStats.recordAttempt(correct);
+    const band = BET_RAMP_BAND_LABELS[betRampBandIndex(trueCount)];
+    this.lastPlay.set({
+      correct,
+      headline: `${called} ${called === 1 ? 'unit' : 'units'} was the bet.`,
+      reason: `Your spread calls for ${called} at ${band}, and the true count is ${formatSignedCount(trueCount)}.`,
+    });
+    if (!correct) {
+      this.roundMistakes.update((list) => [...list, `Bet: ${called} at ${band}, not ${bet}`]);
+    }
   }
 
   // Insurance is the one decision at this table that is purely about the count,

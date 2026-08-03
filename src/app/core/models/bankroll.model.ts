@@ -1,3 +1,4 @@
+import type { BetRamp } from './bet-ramp.model';
 import type { Settlement } from './showdown.model';
 
 // Pure betting math for the post-count showdown. Chips are abstract units, not a
@@ -11,11 +12,21 @@ import type { Settlement } from './showdown.model';
 // long session of counting-sized spreads (1 to 25) without a reset.
 export const DEFAULT_BANKROLL = 500;
 
-// Selectable bet sizes, for the round's bet control. A 1-to-25 spread is the
-// range a card counter actually varies across, which is the skill being drilled.
+// Fallback bet sizes for a table with no spread behind it (a preview, or a spec
+// that does not care). A 1-to-25 range is what a counter varies across.
 export const BET_OPTIONS: readonly number[] = [1, 2, 5, 10, 25];
 
 export const MIN_BET = 1;
+
+// The rungs the round's bet control offers. A counter rehearses the spread they
+// intend to play, so the table offers exactly that spread — the ramp's own unit
+// values at one chip per unit — rather than a generic chip tray whose rungs the
+// ramp cannot land on. Without this the bet could never be graded: a spread
+// calling for 4 units has nothing to put out on a 1/2/5/10/25 tray.
+export function betOptionsFor(ramp: BetRamp): readonly number[] {
+  const rungs = [...new Set(ramp)].filter((units) => units >= MIN_BET).sort((a, b) => a - b);
+  return rungs.length > 0 ? rungs : [MIN_BET];
+}
 
 // Clamp a bet to something playable: at least the minimum, never more than the
 // bankroll can cover, and a whole number of chips.
@@ -25,10 +36,13 @@ export function clampBet(bet: number, bankroll: number): number {
   return Math.min(affordable, Math.max(MIN_BET, Math.floor(bet)));
 }
 
-// The largest of BET_OPTIONS the bankroll can still cover, so the bet control can
+// The largest offered rung the bankroll can still cover, so the bet control can
 // fall back sensibly after a losing streak.
-export function largestAffordableBet(bankroll: number): number {
-  const affordable = BET_OPTIONS.filter((b) => b <= bankroll);
+export function largestAffordableBet(
+  bankroll: number,
+  options: readonly number[] = BET_OPTIONS,
+): number {
+  const affordable = options.filter((b) => b <= bankroll);
   return affordable.length > 0 ? affordable[affordable.length - 1] : MIN_BET;
 }
 
