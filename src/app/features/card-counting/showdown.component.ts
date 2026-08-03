@@ -61,9 +61,18 @@ import { BankrollService } from '../../core/services/bankroll.service';
 import {
   BasicStrategyEngineService,
   normalizeUpcardKey,
+  type EngineInput,
+  type PlayInput,
 } from '../../core/services/basic-strategy-engine.service';
-import { DeviationEngineService } from '../../core/services/deviation-engine.service';
-import { MissTallyService, scenarioRefFor } from '../../core/services/miss-tally.service';
+import {
+  DeviationEngineService,
+  type PlayDeviationDecision,
+} from '../../core/services/deviation-engine.service';
+import {
+  MissTallyService,
+  scenarioRefFor,
+  type TalliedTrainer,
+} from '../../core/services/miss-tally.service';
 import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.service';
 import { ShowdownPlayStatsService } from '../../core/services/showdown-play-stats.service';
 import { ShowdownStatsService } from '../../core/services/showdown-stats.service';
@@ -390,7 +399,8 @@ export class ShowdownComponent implements OnInit {
   private readonly playStats = inject(ShowdownPlayStatsService);
   private readonly engine = inject(BasicStrategyEngineService);
   private readonly deviations = inject(DeviationEngineService);
-  // Misplays here feed the same weak-spot tally the Basic Strategy drill keeps.
+  // Misplays here feed the same weak-spot tallies the drills keep — Basic
+  // Strategy's, or Deviations' when the miss was an index play.
   private readonly missTally = inject(MissTallyService);
   // The bet at this table is the same skill the bet-spread drill measures.
   private readonly betSpreadStats = inject(BetSpreadStatsService);
@@ -675,13 +685,12 @@ export class ShowdownComponent implements OnInit {
 
   // The showdown is the only place the app lets a hand be played out, and until
   // now it accepted anything. It still does — this is a table, not a quiz, so a
-  // wrong play stands and is settled — but the play is now scored against the
-  // same chart the Basic Strategy drill grades on, and said out loud.
+  // wrong play stands and is settled — but the play is scored and said out loud.
   private gradePlay(action: Action): void {
     const hand = this.activeHand();
     const upcard = this.dealerUpcard();
     if (hand === null || upcard === null) return;
-    const correct = this.engine.decidePlay({
+    const input: PlayInput = {
       player: hand.cards,
       dealerUpcard: upcard,
       ruleSet: this.ruleSet(),
@@ -689,51 +698,83 @@ export class ShowdownComponent implements OnInit {
       canDouble: this.canDouble(),
       canSplit: this.canSplit(),
       canSurrender: this.canSurrender(),
-    });
+    };
+    const correct = this.correctPlay(input);
     const wasRight = action === correct.action;
     this.playStats.recordAttempt(wasRight);
-    this.tallyAgainstBasicStrategy(hand.cards, upcard, correct.action, wasRight);
+    this.tallyMisplay(hand.cards, upcard, correct, wasRight);
     this.lastPlay.set({
       correct: wasRight,
       headline: `${ACTION_LABELS[correct.action]} was the play.`,
       reason: correct.reason,
     });
     if (!wasRight) {
+      const index = correct.deviationApplied ? ' (index play)' : '';
       this.roundMistakes.update((list) => [
         ...list,
-        `${correct.handDescription} vs ${normalizeUpcardKey(upcard)}: ${ACTION_LABELS[correct.action]}, not ${ACTION_LABELS[action as Exclude<Action, 'INS'>]}`,
+        `${correct.handDescription} vs ${normalizeUpcardKey(upcard)}: ${ACTION_LABELS[correct.action]}, not ${ACTION_LABELS[action as Exclude<Action, 'INS'>]}${index}`,
       ]);
     }
   }
 
-  // A misplay here is a basic-strategy miss on the hand it was made on, so it
-  // belongs in the same weak-spot tally the drill keeps: play 16 vs 10 badly at
-  // the table and the next Basic Strategy session opens on it. Without this the
-  // verdict is said once and forgotten the moment the round settles.
+  // What this table calls correct. The count carried in from the drill is the
+  // whole reason the showdown exists, and a hand is where it finally pays: a
+  // trainee taught to stand 16 vs 10 at +1 and then marked wrong for it here
+  // would be taught two different games by one app.
+  //
+  // The index only applies where the app has one. A playing deviation is a Hi-Lo
+  // true count, so every other system is graded on basic strategy alone rather
+  // than against numbers that are not its own — the same line the insurance call
+  // already draws. (KO's book publishes an insurance trigger, not a playing
+  // schedule, so its running count grades that one decision and no other.)
+  private correctPlay(input: PlayInput): PlayDeviationDecision {
+    const basis = this.countBasis();
+    if (basis.kind !== 'true-count') {
+      return { ...this.engine.decidePlay(input), deviationApplied: false };
+    }
+    return this.deviations.resolvePlayDecision(input, basis.trueCount);
+  }
+
+  // A misplay here is a miss on the hand it was made on, so it belongs in the
+  // same weak-spot tally the drills keep: play 16 vs 10 badly at the table and
+  // the next session opens on it. Without this the verdict is said once and
+  // forgotten the moment the round settles.
+  //
+  // It files against whichever trainer actually teaches the answer — an index
+  // play is a Deviations question, not a basic-strategy one, and filing it under
+  // Basic Strategy would seed that drill a hand whose chart answer the trainee
+  // got right.
   //
   // Only an opening two-card decision is recorded, and only when the table asked
   // the same question the drill does. A `ScenarioRef` names a two-card hand — it
   // is the seed the drill re-deals from — so a three-card 16 has no identity to
   // file under. And when the felt withheld an action the chart wanted (a double
-  // the free chips could not back, a split past the box's four-hand cap), the
-  // correct answer here is not the drill's, and recording it would clear a weak
-  // spot the trainee has not actually learned.
-  private tallyAgainstBasicStrategy(
+  // the free chips could not back, a split past the box's four-hand cap, a
+  // surrender the split already spent), the correct answer here is not the
+  // drill's, and recording it would clear a weak spot the trainee has not
+  // actually learned.
+  private tallyMisplay(
     cards: readonly Card[],
     upcard: Card,
-    played: Action,
+    correct: PlayDeviationDecision,
     wasRight: boolean,
   ): void {
     if (cards.length !== 2) return;
     const player: readonly [Card, Card] = [cards[0], cards[1]];
-    const unrestricted = this.engine.decide({
+    const input: EngineInput = {
       player,
       dealerUpcard: upcard,
       ruleSet: this.ruleSet(),
       options: this.options(),
-    });
-    if (unrestricted.action !== played) return;
-    this.missTally.record('basic-strategy', scenarioRefFor(player, upcard), wasRight);
+    };
+    const basis = this.countBasis();
+    const trainer: TalliedTrainer = correct.deviationApplied ? 'deviations' : 'basic-strategy';
+    const unrestricted =
+      correct.deviationApplied && basis.kind === 'true-count'
+        ? this.deviations.resolveDeviationDecision(input, basis.trueCount).finalAction
+        : this.engine.decide(input).action;
+    if (unrestricted !== correct.action) return;
+    this.missTally.record(trainer, scenarioRefFor(player, upcard), wasRight);
   }
 
   // Between rounds, betting returns to the bet: the count has moved on, so the
