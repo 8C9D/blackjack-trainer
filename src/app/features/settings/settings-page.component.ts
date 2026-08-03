@@ -26,7 +26,9 @@ import { modeAllowedFor } from '../../core/models/counting-system.model';
 import {
   FlowPrefsService,
   MAX_DAILY_GOAL,
+  MAX_MANUAL_TRUE_COUNT,
   MIN_DAILY_GOAL,
+  MIN_MANUAL_TRUE_COUNT,
   type DeviationPracticeMode,
   type DeviationTrueCountSource,
   type ThemePref,
@@ -34,11 +36,6 @@ import {
 import { BackupService } from '../../core/services/backup.service';
 import { PracticeDataService } from '../../core/services/practice-data.service';
 import { CountingSettingsComponent } from '../card-counting/counting-settings.component';
-
-// Manual practice-true-count bounds (the BJA charts top out around +6; ±20
-// rejects obvious garbage while covering any plausible drill).
-export const MIN_MANUAL_TRUE_COUNT = -20;
-export const MAX_MANUAL_TRUE_COUNT = 20;
 
 export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
   { value: 'system', label: 'Match system' },
@@ -350,7 +347,11 @@ export class SettingsPageComponent {
   }
 
   protected exportBackup(): void {
-    this.backupStatus.set(`Saved ${this.backup.download()}.`);
+    try {
+      this.backupStatus.set(`Saved ${this.backup.download()}.`);
+    } catch {
+      this.backupStatus.set('The backup could not be saved. Please try again.');
+    }
   }
 
   protected pickBackupFile(): void {

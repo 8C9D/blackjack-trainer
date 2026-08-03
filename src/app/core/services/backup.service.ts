@@ -64,12 +64,15 @@ export class BackupService {
     const name = backupFileName(backup.exportedAt);
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const anchor = this.document.createElement('a');
-    anchor.href = url;
-    anchor.download = name;
-    anchor.click();
-    URL.revokeObjectURL(url);
-    return name;
+    try {
+      const anchor = this.document.createElement('a');
+      anchor.href = url;
+      anchor.download = name;
+      anchor.click();
+      return name;
+    } finally {
+      URL.revokeObjectURL(url);
+    }
   }
 
   // Replaces the namespace with the file's contents and reloads, because every
@@ -82,11 +85,50 @@ export class BackupService {
   restore(text: string): RestoreResult {
     const parsed = parseBackup(text);
     if (!parsed.ok) return parsed;
-    for (const key of this.namespaceKeys()) localStorage.removeItem(key);
-    for (const [key, value] of Object.entries(parsed.backup.data)) {
-      localStorage.setItem(key, value);
+    let previous: Readonly<Record<string, string>>;
+    try {
+      previous = this.build().data;
+    } catch {
+      // Do not start a destructive replacement unless the current namespace
+      // can first be captured in full. A privacy-mode/read failure otherwise
+      // leaves nothing trustworthy to roll back to.
+      return {
+        ok: false,
+        error: 'Browser storage could not be read; no data was changed.',
+      };
     }
-    this.reloadPage();
+    try {
+      this.replaceNamespace(parsed.backup.data);
+    } catch {
+      // localStorage has no transaction primitive. Restore the snapshot on a
+      // best-effort basis so a quota/private-mode failure does not silently
+      // turn a valid existing profile into a half-applied backup.
+      try {
+        this.replaceNamespace(previous);
+      } catch {
+        return {
+          ok: false,
+          error: 'Browser storage failed while restoring the backup and rolling back the change.',
+        };
+      }
+      return {
+        ok: false,
+        error: 'Browser storage refused the backup; your existing data was kept.',
+      };
+    }
+    try {
+      this.reloadPage();
+    } catch {
+      return {
+        ok: false,
+        error: 'The backup was restored, but the page could not reload. Reload it manually.',
+      };
+    }
     return { ok: true };
+  }
+
+  private replaceNamespace(data: Readonly<Record<string, string>>): void {
+    for (const key of this.namespaceKeys()) localStorage.removeItem(key);
+    for (const [key, value] of Object.entries(data)) localStorage.setItem(key, value);
   }
 }

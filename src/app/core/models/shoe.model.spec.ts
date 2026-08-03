@@ -34,6 +34,13 @@ describe('buildShoeCards', () => {
   it('builds an empty array for zero decks', () => {
     expect(buildShoeCards(0)).toEqual([]);
   });
+
+  it('rejects fractional, non-finite, negative, and unsupported shoe sizes', () => {
+    expect(buildShoeCards(1.5)).toEqual([]);
+    expect(buildShoeCards(Number.NaN)).toEqual([]);
+    expect(buildShoeCards(-1)).toEqual([]);
+    expect(buildShoeCards(9)).toEqual([]);
+  });
 });
 
 describe('Shoe', () => {
@@ -78,6 +85,17 @@ describe('Shoe', () => {
     expect(shoe.deal(5)).toEqual([]);
   });
 
+  it('ignores invalid deal requests without corrupting the cursor', () => {
+    const shoe = new Shoe(buildShoeCards(1), 0.75);
+
+    expect(shoe.deal(Number.NaN)).toEqual([]);
+    expect(shoe.deal(Number.POSITIVE_INFINITY)).toEqual([]);
+    expect(shoe.deal(-2)).toEqual([]);
+    expect(shoe.cardsDealt).toBe(0);
+    expect(shoe.deal(2.9)).toHaveLength(2);
+    expect(shoe.cardsDealt).toBe(2);
+  });
+
   it('places the cut card at floor(size × penetration) and flags reshuffle once reached', () => {
     const shoe = new Shoe(buildShoeCards(1), 0.75); // cut at floor(52*0.75) = 39
     expect(shoe.cutCardPosition).toBe(39);
@@ -93,6 +111,11 @@ describe('Shoe', () => {
     expect(shoe.needsReshuffle).toBe(false);
     shoe.deal(1);
     expect(shoe.needsReshuffle).toBe(true);
+  });
+
+  it('uses the default penetration when the supplied value is not finite', () => {
+    expect(new Shoe(buildShoeCards(1), Number.NaN).cutCardPosition).toBe(39);
+    expect(new Shoe(buildShoeCards(1), Number.POSITIVE_INFINITY).cutCardPosition).toBe(39);
   });
 
   it('only flags reshuffle at the very bottom for full penetration', () => {

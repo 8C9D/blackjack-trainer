@@ -42,12 +42,18 @@ describe('parseBackup', () => {
     ['another app’s file', text({ ...valid, app: 'some-other-app' }), 'not written by this app'],
     ['a future schema', text({ ...valid, schema: 99 }), 'version 99'],
     ['a missing data map', text({ ...valid, data: undefined }), 'no data in it'],
-    ['an empty data map', text({ ...valid, data: {} }), 'no data in it'],
   ])('rejects %s', (_label, payload, expected) => {
     const result = parseBackup(payload);
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('expected a rejection');
     expect(result.error).toContain(expected);
+  });
+
+  it('accepts an empty backup produced before any preference or practice data was stored', () => {
+    const result = parseBackup(text({ ...valid, data: {} }));
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.backup.data).toEqual({});
   });
 
   // The file is user-supplied: it does not get to name the keys it writes.

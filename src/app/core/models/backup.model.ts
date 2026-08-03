@@ -78,9 +78,6 @@ export function parseBackup(text: string): BackupParse {
       return { ok: false, error: 'That backup contains entries this app did not write.' };
     }
   }
-  if (entries.length === 0) {
-    return { ok: false, error: 'That backup has no data in it.' };
-  }
   return {
     ok: true,
     backup: {

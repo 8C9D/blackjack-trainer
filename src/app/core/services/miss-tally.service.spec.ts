@@ -161,6 +161,49 @@ describe('MissTallyService', () => {
       s.record('basic-strategy', HARD_16_V_10, false);
       expect(s.weakSpotFor('basic-strategy')).not.toBeNull();
     });
+
+    it('drops semantically impossible restored tallies and combines duplicate days', () => {
+      const today = localDateKey(current);
+      localStorage.setItem(
+        MISS_TALLY_KEY,
+        JSON.stringify({
+          'basic-strategy': {
+            [scenarioKey(HARD_16_V_10)]: {
+              ref: HARD_16_V_10,
+              days: [
+                { date: today, attempts: 2, misses: 1 },
+                { date: today, attempts: 3, misses: 2 },
+                { date: '2026-02-30', attempts: 100, misses: 100 },
+                { date: today, attempts: 1, misses: 2 },
+              ],
+              streak: Number.POSITIVE_INFINITY,
+            },
+            'hard-12-v-6': {
+              ref: HARD_16_V_10,
+              days: [{ date: today, attempts: 9, misses: 9 }],
+              streak: 0,
+            },
+            'hard-99-v-10': {
+              ref: { kind: 'hard', hand: '99', dealer: '10' },
+              days: [{ date: today, attempts: 9, misses: 9 }],
+              streak: 0,
+            },
+          },
+        }),
+      );
+
+      const s = createService(() => current);
+
+      expect(s.weakSpots('basic-strategy')).toEqual([
+        {
+          ref: HARD_16_V_10,
+          label: '16 vs 10',
+          attempts: 5,
+          misses: 3,
+          streak: 0,
+        },
+      ]);
+    });
   });
 
   describe('clearing a weak spot', () => {
