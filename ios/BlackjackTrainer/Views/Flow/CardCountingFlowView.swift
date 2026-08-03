@@ -23,6 +23,9 @@ final class CardCountingFlowModel {
     /// Where a misplay at the showdown table is filed, so the Basic Strategy
     /// drill can open on it next session.
     @ObservationIgnored let missTally: MissTallyStore?
+    /// Where the bet placed at the showdown table is scored — the same store the
+    /// bet-spread drill writes.
+    @ObservationIgnored let betSpreadStats: SessionStatsStore?
     let session = DrillSession()
     private(set) var target = 0
     private(set) var done = false
@@ -35,7 +38,8 @@ final class CardCountingFlowModel {
         strategy: BasicStrategyEngine? = nil,
         showdownPlayStats: SessionStatsStore? = nil,
         deviations: DeviationEngine? = nil,
-        missTally: MissTallyStore? = nil
+        missTally: MissTallyStore? = nil,
+        betSpreadStats: SessionStatsStore? = nil
     ) {
         self.counting = counting
         self.prefs = prefs
@@ -44,6 +48,7 @@ final class CardCountingFlowModel {
         self.showdownPlayStats = showdownPlayStats
         self.deviations = deviations
         self.missTally = missTally
+        self.betSpreadStats = betSpreadStats
         showdownBankroll = bankroll
         prefs.setLastTrainer(.cardCounting)
         // Configure the drill entirely from the pre-made decisions.
@@ -77,7 +82,8 @@ final class CardCountingFlowModel {
             strategy: app.basicStrategy,
             showdownPlayStats: app.showdownPlayStats,
             deviations: app.deviations,
-            missTally: app.missTally
+            missTally: app.missTally,
+            betSpreadStats: app.betSpreadStats
         )
     }
 
@@ -355,7 +361,9 @@ struct CardCountingFlowView: View {
                 system: model.counting.system,
                 deviations: model.deviations,
                 entryRunningCount: model.counting.shoeRunningCount,
-                missTally: model.missTally
+                missTally: model.missTally,
+                betRamp: model.counting.settings.betRamp,
+                betSpreadStats: model.betSpreadStats
             ) { dealtCards in
                 model.exitShowdown(dealtCards)
             }

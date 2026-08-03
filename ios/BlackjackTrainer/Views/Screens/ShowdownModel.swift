@@ -77,6 +77,11 @@ final class ShowdownModel {
     @ObservationIgnored private let playStats: SessionStatsStore?
     /// Misplays here feed the same weak-spot tally the Basic Strategy drill keeps.
     @ObservationIgnored private let missTally: MissTallyStore?
+    /// The spread the player configured: both the rungs the bet control offers
+    /// and what the bet is graded against. Not `private`: `+Betting` reads it.
+    @ObservationIgnored let betRamp: [Int]
+    /// The bet at this table is the same skill the bet-spread drill measures.
+    @ObservationIgnored private let betSpreadStats: SessionStatsStore?
     @ObservationIgnored let bankrollStore: BankrollStore
     /// Every card this showdown dealt, in order, handed back on exit so the
     /// counting drill can fold their running-count value into its carried count —
@@ -96,9 +101,13 @@ final class ShowdownModel {
         system: CountingSystem? = nil,
         deviations: DeviationEngine? = nil,
         entryRunningCount: Double = 0,
-        missTally: MissTallyStore? = nil
+        missTally: MissTallyStore? = nil,
+        betRamp: [Int] = BetRamp.default,
+        betSpreadStats: SessionStatsStore? = nil
     ) {
         self.missTally = missTally
+        self.betRamp = betRamp
+        self.betSpreadStats = betSpreadStats
         self.shoe = shoe
         self.ruleSet = ruleSet
         self.options = options
@@ -136,7 +145,16 @@ final class ShowdownModel {
 
     func dealAfterBet() {
         guard phase == .betting else { return }
+        // Snapshot the count before a card is turned: the bet was decided on what
+        // the player could see at that moment, and dealing moves the count.
+        let trueCount = betTrueCount
+        let placed = bet
         dealHand()
+        if let graded = gradeBet(trueCount: trueCount, bet: placed) {
+            betSpreadStats?.recordAttempt(correct: graded.verdict.correct)
+            lastPlay = graded.verdict
+            if let misplay = graded.misplay { roundMisplays.append(misplay) }
+        }
     }
 
     func resetBankroll() {

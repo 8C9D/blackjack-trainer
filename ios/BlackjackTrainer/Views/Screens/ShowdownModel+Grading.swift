@@ -80,6 +80,46 @@ extension ShowdownModel {
                       decksRemaining: shoe.decksRemaining)
     }
 
+    /// The true count the bet is graded on — this system's own, not Hi-Lo's.
+    var betTrueCount: Int? {
+        trueCountFor(system: system, runningCount: visibleRunningCount,
+                     decksRemaining: shoe.decksRemaining)
+    }
+
+    /// The bet is the other decision here that is purely about the count, and the
+    /// one the bet-spread drill exists for — but that drill asks for a number in
+    /// the abstract, while this is the table where chips actually go out. Until
+    /// now a trainee could flat-bet the minimum through a +5 shoe and hear
+    /// nothing.
+    ///
+    /// Graded against the player's own spread, never a computed optimum: what to
+    /// bet at a count follows from bankroll, risk of ruin and what the table will
+    /// tolerate, none of which this app knows (see `BetRamp`). Because the ramp is
+    /// the player's own it is indexed by whatever true count they keep, so every
+    /// balanced system qualifies — unlike the insurance index, which is a Hi-Lo
+    /// number and may only be applied to Hi-Lo.
+    ///
+    /// Nil when there is no true count to read, and when the bankroll could not
+    /// have covered the called bet: that rung is offered disabled, so marking it
+    /// wrong would score a bet the table never let the player place.
+    func gradeBet(trueCount: Int?, bet: Double) -> GradedPlay? {
+        guard let trueCount else { return nil }
+        let called = Double(BetRamp.units(trueCount: trueCount, ramp: betRamp))
+        guard called * Double(spots) <= bankrollStore.bankroll else { return nil }
+        let correct = bet == called
+        let band = BetRamp.bandLabels[BetRamp.bandIndex(trueCount: trueCount)]
+        let units = BetRamp.unitsLabel(Int(called))
+        let verdict = PlayVerdict(
+            correct: correct,
+            headline: "\(units) was the bet.",
+            reason: "Your spread calls for \(Int(called)) at \(band), and the true "
+                + "count is \(CountFormat.signedCount(Double(trueCount)))."
+        )
+        guard !correct else { return GradedPlay(verdict: verdict, misplay: nil) }
+        let misplay = "Bet: \(Int(called)) at \(band), not \(CountFormat.count(bet))"
+        return GradedPlay(verdict: verdict, misplay: misplay)
+    }
+
     /// Insurance is the one decision at this table that is purely about the
     /// count, and the showdown hangs off the drill that just practised it — so
     /// this is where a trainee finds out whether the number they were carrying
