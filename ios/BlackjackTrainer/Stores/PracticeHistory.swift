@@ -61,6 +61,9 @@ final class PracticeHistoryStore: CloudSyncable, ReloadableStore {
 
     func reloadFromDefaults() {
         days = Self.load(key: key, defaults: defaults)
+        // A restore changed today's data; notify so the widget snapshot
+        // republishes, exactly as a cross-device adoption does.
+        onChange?()
     }
 
     func recordHand() {

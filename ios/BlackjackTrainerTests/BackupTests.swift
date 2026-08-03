@@ -146,6 +146,53 @@ struct BackupStoreTests {
     }
 }
 
+/// A restore has to win against iCloud. The cloud still holds the profile the
+/// file replaced, and the next external change would otherwise adopt it straight
+/// back over the restored values.
+struct BackupCloudTests {
+    private final class FakeCloud: CloudKeyValueStore {
+        var storage: [String: Data] = [:]
+        func data(forKey key: String) -> Data? {
+            storage[key]
+        }
+
+        func set(_ data: Data?, forKey key: String) {
+            storage[key] = data
+        }
+
+        func synchronize() -> Bool {
+            true
+        }
+    }
+
+    @Test func pushingAllMakesTheLocalValuesAuthoritative() throws {
+        let suite = "backup-cloud-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defaults.removePersistentDomain(forName: suite)
+        let cloud = FakeCloud()
+
+        let stats = SessionStatsStore(
+            key: StatsKeys.basicStrategy,
+            defaults: defaults,
+            cloud: cloud
+        )
+        stats.recordAttempt(correct: true)
+        let sync = StatsCloudSync(cloud: cloud, stores: [stats])
+
+        // The cloud is now carrying a profile a restore is about to replace.
+        cloud
+            .storage[StatsKeys.basicStrategy] = Data(#"{"attempts":99,"correct":99,"streak":0,"longestStreak":0}"#
+                .utf8)
+
+        sync.pushAll()
+
+        #expect(cloud.data(forKey: StatsKeys.basicStrategy) != nil)
+        stats.adoptFromCloud()
+        // Adoption after the push finds the local value, not the stale one.
+        #expect(stats.stats.attempts == 1)
+    }
+}
+
 /// The live stores have to end up in step with the bytes a restore wrote — the
 /// web reloads the page, iOS has to re-read them.
 @MainActor

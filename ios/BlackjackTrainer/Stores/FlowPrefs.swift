@@ -201,6 +201,8 @@ final class FlowPrefsStore: CloudSyncable, ReloadableStore {
 
     func reloadFromDefaults() {
         prefs = Self.load(key: key, defaults: defaults, systems: systems)
+        // The widget shows the daily goal, so a restored one has to reach it.
+        onChange?()
     }
 
     private func persist() {
