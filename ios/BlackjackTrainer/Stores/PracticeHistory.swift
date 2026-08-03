@@ -94,7 +94,12 @@ final class PracticeHistoryStore: CloudSyncable {
     func streak(goal: Int) -> Int {
         var count = 0
         var back = handsOn(dateKeyDaysAgo(0)) >= goal ? 0 : 1
-        while handsOn(dateKeyDaysAgo(back)) >= goal {
+        // Bounded by the retention window rather than by the data: days past it
+        // are pruned, so no real streak can run longer, and the walk cannot spin
+        // forever on a goal of zero — which every day in history, stored or not,
+        // satisfies. The goal is clamped to at least 1 before it reaches here, so
+        // this is a backstop for a caller that stops doing that, not a live path.
+        while back < maxHistoryDays, handsOn(dateKeyDaysAgo(back)) >= goal {
             count += 1
             back += 1
         }

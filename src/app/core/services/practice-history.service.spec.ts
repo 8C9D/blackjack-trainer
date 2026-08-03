@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
 import {
+  MAX_HISTORY_DAYS,
   PRACTICE_HISTORY_KEY,
   PracticeHistoryService,
   localDateKey,
@@ -156,6 +157,17 @@ describe('PracticeHistoryService', () => {
     it('an unfinished today does not break a run ending yesterday', () => {
       const s = seed({ 0: 1, 1: 20, 2: 20 });
       expect(s.streak(20)).toBe(2);
+    });
+
+    // The walk back has no data to stop it when every day clears the goal, and a
+    // goal of zero is cleared by every day there has ever been — including the
+    // ones with no entry, which read as 0 hands. Prefs clamp the goal to at
+    // least 1, so this is the backstop, not a live path: without it the loop
+    // never returns and the screen reading the streak hangs.
+    it('terminates on a goal no day can fail', () => {
+      const s = seed({ 0: 20, 1: 20 });
+      expect(s.streak(0)).toBe(MAX_HISTORY_DAYS);
+      expect(s.streak(-1)).toBe(MAX_HISTORY_DAYS);
     });
   });
 

@@ -142,6 +142,17 @@ struct PracticeHistoryStoreTests {
         #expect(s.streak(goal: 20) == 2)
     }
 
+    /// The walk back has no data to stop it when every day clears the goal, and a
+    /// goal of zero is cleared by every day there has ever been — including the
+    /// ones with no entry, which read as 0 hands. Prefs clamp the goal to at
+    /// least 1, so this is the backstop, not a live path: without it the loop
+    /// never returns and the screen reading the streak hangs.
+    @Test func terminatesOnAGoalNoDayCanFail() {
+        let s = seededStreakStore([0: 20, 1: 20])
+        #expect(s.streak(goal: 0) == 400)
+        #expect(s.streak(goal: -1) == 400)
+    }
+
     // MARK: last7
 
     @Test func returnsSevenDotsOldestFirstWithTodayFlaggedLast() {
