@@ -191,7 +191,7 @@ final class ShowdownModel {
         lastPlay = graded.verdict
         if let misplay = graded.misplay { roundMisplays.append(misplay) }
         if let ref = graded.tallyRef {
-            missTally?.record(.basicStrategy, ref: ref, correct: graded.verdict.correct)
+            missTally?.record(graded.tallyTrainer, ref: ref, correct: graded.verdict.correct)
         }
     }
 

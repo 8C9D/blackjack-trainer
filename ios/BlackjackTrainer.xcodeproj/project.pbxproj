@@ -68,6 +68,7 @@
 		65D49FF023B11E415D09DEA6 /* StreakDotsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F7F71F87D6F8DE7DB2A52 /* StreakDotsView.swift */; };
 		66FBEF52BC2D391180E3FC62 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 355840D6D85CBA4C7903ED7C /* HomeView.swift */; };
 		6707750559B3D005954977F8 /* BasicStrategyDrillModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13DB5EC9A8B7DDB14C65D4A7 /* BasicStrategyDrillModelTests.swift */; };
+		67B514D49F759770828DD436 /* ShowdownDeviationGradingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CF142868E668E0EEDDF798F /* ShowdownDeviationGradingTests.swift */; };
 		6CCB97A6E352D27643984EF5 /* PlayCoachView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 256C8187D4AA033E9DB51FC3 /* PlayCoachView.swift */; };
 		6E1A2AA4CC616FC93B1C6DBD /* DeviationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F423E49F3EE23CE7C3E35ABB /* DeviationEngine.swift */; };
 		70B2CC600AF785AD0951D879 /* GoalRingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72027F1B6A9AFD3511240253 /* GoalRingView.swift */; };
@@ -281,6 +282,7 @@
 		8620E0BCFDFF00572CD05598 /* BetRamp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetRamp.swift; sourceTree = "<group>"; };
 		8796B4C1EA1A80789FDA51D6 /* BetSpreadDrillTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetSpreadDrillTests.swift; sourceTree = "<group>"; };
 		8C574B4537F0D533478F29ED /* ShowdownInsuranceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownInsuranceTests.swift; sourceTree = "<group>"; };
+		8CF142868E668E0EEDDF798F /* ShowdownDeviationGradingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownDeviationGradingTests.swift; sourceTree = "<group>"; };
 		8D515F12D5142DD5EB526BFE /* DeviationIndexSystemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationIndexSystemTests.swift; sourceTree = "<group>"; };
 		9027A7C8DD13E222350D437B /* PracticeProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeProgressView.swift; sourceTree = "<group>"; };
 		92869AF24C67B01CE515A238 /* StatsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsStore.swift; sourceTree = "<group>"; };
@@ -466,6 +468,7 @@
 				645F62DA06D6384BB1E98209 /* SharedComponentsTests.swift */,
 				3D44944317BBDF4871E4996D /* ShoeFactoryTests.swift */,
 				845607FBD58C5B41D4707206 /* ShowdownBetGradingTests.swift */,
+				8CF142868E668E0EEDDF798F /* ShowdownDeviationGradingTests.swift */,
 				F84EBA0E6501785FC8B4A82E /* ShowdownInsuranceGradingTests.swift */,
 				8C574B4537F0D533478F29ED /* ShowdownInsuranceTests.swift */,
 				B1A14FE863E2084BF0AC794D /* ShowdownModelTests.swift */,
@@ -913,6 +916,7 @@
 				30715FEEF950524036747DC0 /* SharedComponentsTests.swift in Sources */,
 				9C4B22D42A6A12BC4DC5C62E /* ShoeFactoryTests.swift in Sources */,
 				BA6F07283A2ED76D98474D93 /* ShowdownBetGradingTests.swift in Sources */,
+				67B514D49F759770828DD436 /* ShowdownDeviationGradingTests.swift in Sources */,
 				BC46AA5B7837F04392A96542 /* ShowdownInsuranceGradingTests.swift in Sources */,
 				5CA5173D12D8A87017D4B99E /* ShowdownInsuranceTests.swift in Sources */,
 				D2AB7ED7BE3625300AACE48F /* ShowdownModelTests.swift in Sources */,

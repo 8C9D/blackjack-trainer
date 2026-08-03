@@ -1,11 +1,10 @@
 import Foundation
 
-/// Scoring the showdown's playing decisions against basic strategy.
+/// Scoring the showdown's playing decisions against the count.
 ///
 /// The showdown is the only place the app lets a hand be played out, and it used
 /// to accept anything. It still does — this is a table, not a quiz, so a wrong
-/// play stands and is settled — but the play is now scored against the same
-/// chart the Basic Strategy drill grades on, and said out loud.
+/// play stands and is settled — but the play is scored and said out loud.
 ///
 /// Its own file so `ShowdownModel` stays inside the file-length budget. It only
 /// reads: `private(set)` is file-scoped, so `onAction` does the recording.
@@ -17,6 +16,9 @@ extension ShowdownModel {
         /// The scenario to file this decision under in the weak-spot tally, or
         /// nil when the decision has no identity the drill could re-deal.
         var tallyRef: ScenarioRef?
+        /// Which drill's weak list `tallyRef` belongs to — the one that teaches
+        /// the answer this decision was graded against.
+        var tallyTrainer: TalliedTrainer = .basicStrategy
     }
 
     /// Nil when there is nothing to grade against — no charts (a preview or a
@@ -24,7 +26,7 @@ extension ShowdownModel {
     func grade(_ action: Action) -> GradedPlay? {
         guard let engine = strategy, let hand = activeHand, let upcard = dealerCards.first
         else { return nil }
-        let correct = engine.decidePlay(PlayInput(
+        let input = PlayInput(
             player: hand.cards,
             dealerUpcard: upcard,
             ruleSet: ruleSet,
@@ -32,45 +34,78 @@ extension ShowdownModel {
             canDouble: canDouble,
             canSplit: canSplit,
             canSurrender: canSurrender
-        ))
+        )
+        let correct = correctPlay(input, engine: engine)
         let wasRight = action == correct.action
         let verdict = PlayVerdict(
             correct: wasRight,
             headline: "\(correct.action.label) was the play.",
             reason: correct.reason
         )
-        let ref = tallyRef(for: hand.cards, upcard: upcard, played: correct.action, engine: engine)
+        let ref = tallyRef(for: hand.cards, upcard: upcard, correct: correct, engine: engine)
+        let trainer: TalliedTrainer = correct.deviationApplied ? .deviations : .basicStrategy
         guard !wasRight else {
-            return GradedPlay(verdict: verdict, misplay: nil, tallyRef: ref)
+            return GradedPlay(verdict: verdict, misplay: nil, tallyRef: ref, tallyTrainer: trainer)
         }
+        let index = correct.deviationApplied ? " (index play)" : ""
         let misplay = "\(correct.handDescription) vs \(normalizeUpcardKey(upcard)): "
-            + "\(correct.action.label), not \(action.label)"
-        return GradedPlay(verdict: verdict, misplay: misplay, tallyRef: ref)
+            + "\(correct.action.label), not \(action.label)\(index)"
+        return GradedPlay(verdict: verdict, misplay: misplay, tallyRef: ref, tallyTrainer: trainer)
+    }
+
+    /// What this table calls correct. The count carried in from the drill is the
+    /// whole reason the showdown exists, and a hand is where it finally pays: a
+    /// trainee taught to stand 16 vs 10 at +1 and then marked wrong for it here
+    /// would be taught two different games by one app.
+    ///
+    /// The index only applies where the app has one. A playing deviation is a
+    /// Hi-Lo true count, so every other system is graded on basic strategy alone
+    /// rather than against numbers that are not its own — the same line the
+    /// insurance call already draws. (KO's book publishes an insurance trigger,
+    /// not a playing schedule, so its running count grades that one decision and
+    /// no other.)
+    private func correctPlay(_ input: PlayInput,
+                             engine: BasicStrategyEngine) -> PlayDeviationDecision {
+        guard let deviations, case let .trueCount(trueCount) = countBasis else {
+            return PlayDeviationDecision(decision: engine.decidePlay(input),
+                                         deviationApplied: false, matchedRule: nil)
+        }
+        return deviations.resolvePlayDecision(input, trueCount: trueCount)
     }
 
     /// The scenario a decision at the table should be filed under, or nil when it
     /// has none.
     ///
-    /// A misplay here is a basic-strategy miss on the hand it was made on, so it
-    /// belongs in the same weak-spot tally the drill keeps: play 16 vs 10 badly at
-    /// the table and the next Basic Strategy session opens on it. Without that the
-    /// verdict is said once and forgotten the moment the round settles.
+    /// A misplay here is a miss on the hand it was made on, so it belongs in the
+    /// same weak-spot tally the drills keep: play 16 vs 10 badly at the table and
+    /// the next session opens on it. Without that the verdict is said once and
+    /// forgotten the moment the round settles. It files against whichever trainer
+    /// teaches the answer — an index play is a Deviations question, and filing it
+    /// under Basic Strategy would seed that drill a hand whose chart answer the
+    /// trainee got right.
     ///
     /// Only an opening two-card decision qualifies, and only when the table asked
     /// the same question the drill does. A `ScenarioRef` names a two-card hand — it
     /// is the seed the drill re-deals from — so a three-card 16 has nothing to file
     /// under. And when the felt withheld an action the chart wanted (a double the
-    /// free chips could not back, a split past the box's four-hand cap), the
-    /// correct answer here is not the drill's, and recording it would clear a weak
-    /// spot the trainee has not actually learned.
-    private func tallyRef(for cards: [Card], upcard: Card, played: Action,
+    /// free chips could not back, a split past the box's four-hand cap, a
+    /// surrender the split already spent), the correct answer here is not the
+    /// drill's, and recording it would clear a weak spot the trainee has not
+    /// actually learned.
+    private func tallyRef(for cards: [Card], upcard: Card, correct: PlayDeviationDecision,
                           engine: BasicStrategyEngine) -> ScenarioRef? {
         guard cards.count == 2 else { return nil }
         let hand = TwoCardHand(cards[0], cards[1])
-        let unrestricted = engine.decide(EngineInput(
-            player: hand, dealerUpcard: upcard, ruleSet: ruleSet, options: options
-        ))
-        guard unrestricted.action == played else { return nil }
+        let input = EngineInput(player: hand, dealerUpcard: upcard,
+                                ruleSet: ruleSet, options: options)
+        let unrestricted: Action = if correct.deviationApplied, let deviations,
+                                      case let .trueCount(trueCount) = countBasis {
+            deviations.resolveDeviationDecision(input, trueCount: trueCount)
+                .finalAction
+        } else {
+            engine.decide(input).action
+        }
+        guard unrestricted == correct.action else { return nil }
         return scenarioRefFor(hand, dealerUpcard: upcard)
     }
 

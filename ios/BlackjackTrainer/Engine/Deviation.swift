@@ -50,6 +50,45 @@ struct DeviationDecision {
     let trueCount: Int
 }
 
+/// A table decision with the count on top of it. Shaped as a `StrategyDecision`
+/// so a caller grades the same way whether or not an index was in play. Mirrors
+/// `PlayDeviationDecision`.
+struct PlayDeviationDecision {
+    let decision: StrategyDecision
+    let deviationApplied: Bool
+    /// The rule that fired — or, when none did, the candidate encoded for this
+    /// hand, so a caller can name the index the count fell short of.
+    let matchedRule: DeviationRule?
+
+    var action: Action {
+        decision.action
+    }
+
+    var reason: String {
+        decision.reason
+    }
+
+    var handDescription: String {
+        decision.handDescription
+    }
+}
+
+extension DeviationRule {
+    /// The threshold as a clause inside a sentence ("stand at true count 0 or
+    /// higher"). The chart screen renders the same field as symbols (`≥ +3`),
+    /// which is right for a table column and wrong mid-sentence. Mirrors
+    /// `describeDeviationThreshold`.
+    var thresholdClause: String {
+        let signed = CountFormat.signedCount(Double(index))
+        switch direction {
+        case "at-or-above": return "at true count \(signed) or higher"
+        case "at-or-below": return "at true count \(signed) or lower"
+        case "positive": return "at any positive true count"
+        default: return "at any negative true count"
+        }
+    }
+}
+
 /// A Deviations-trainer scenario: the two-card hand, dealer upcard, and the
 /// practice true count.
 struct DeviationScenario: Equatable {
