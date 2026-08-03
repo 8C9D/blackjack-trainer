@@ -10,11 +10,22 @@ enum Bankroll {
     /// Chips a fresh bankroll starts with.
     static let defaultBankroll = 500.0
 
-    /// Selectable bet sizes. A 1-to-25 spread is the range a counter actually
-    /// varies across, which is the skill being drilled.
+    /// Fallback bet sizes for a table with no spread behind it (a preview, or a
+    /// spec that does not care). A 1-to-25 range is what a counter varies across.
     static let betOptions = [1.0, 2.0, 5.0, 10.0, 25.0]
 
     static let minBet = 1.0
+
+    /// The rungs the round's bet control offers. A counter rehearses the spread
+    /// they intend to play, so the table offers exactly that spread — the ramp's
+    /// own unit values at one chip per unit — rather than a generic chip tray
+    /// whose rungs the ramp cannot land on. Without this the bet could never be
+    /// graded: a spread calling for 4 units has nothing to put out on a
+    /// 1/2/5/10/25 tray. Mirrors the web `betOptionsFor`.
+    static func betOptions(for ramp: [Int]) -> [Double] {
+        let rungs = Set(ramp).filter { Double($0) >= minBet }.sorted().map(Double.init)
+        return rungs.isEmpty ? [minBet] : rungs
+    }
 
     /// Clamp a bet to something playable: at least the minimum, never more than
     /// the bankroll can cover, and a whole number of chips.
@@ -24,10 +35,11 @@ enum Bankroll {
         return min(affordable, max(minBet, bet.rounded(.down)))
     }
 
-    /// The largest of `betOptions` the bankroll still covers, so the bet control
-    /// can fall back sensibly after a losing streak.
-    static func largestAffordableBet(_ bankroll: Double) -> Double {
-        betOptions.last { $0 <= bankroll } ?? minBet
+    /// The largest offered rung the bankroll still covers, so the bet control can
+    /// fall back sensibly after a losing streak.
+    static func largestAffordableBet(_ bankroll: Double,
+                                     options: [Double] = betOptions) -> Double {
+        options.last { $0 <= bankroll } ?? minBet
     }
 
     /// Chips at risk on a hand: a double puts a second bet up alongside the first.

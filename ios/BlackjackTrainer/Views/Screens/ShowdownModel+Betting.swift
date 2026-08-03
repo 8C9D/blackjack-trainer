@@ -52,8 +52,10 @@ extension ShowdownModel {
         cards.count == 2 && cards[0].highValue == cards[1].highValue
     }
 
+    /// The rungs on offer are the player's own spread, so the bet the count
+    /// calls for is one the table can actually take.
     var betOptions: [Double] {
-        Bankroll.betOptions
+        Bankroll.betOptions(for: betRamp)
     }
 
     /// A bet option the bankroll cannot back across every box is offered disabled,

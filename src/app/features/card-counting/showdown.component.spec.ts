@@ -697,15 +697,20 @@ describe('ShowdownComponent', () => {
       });
 
       // Wong Halves reads a different count off the same shoe and the app ships
-      // no indices for it, so the decision is settled without being scored.
+      // no indices for it, so the decision is settled without being scored. The
+      // bet is still graded — a ramp is the player's own, so any balanced system
+      // has a true count to index it by — which is why the verdict on screen is
+      // the bet's, and the insurance call leaves it alone rather than wiping it.
       it('says nothing for a system whose indices this app does not have', () => {
         const { c } = dealtWithBet(oneDeckLeft(noNatural), 10, 1, {
           systemId: 'wong-halves',
           entryRunningCount: 0,
         });
+        const beforeInsurance = c.lastPlay();
         c.takeInsurance();
-        expect(c.lastPlay()).toBeNull();
+        expect(c.lastPlay()).toBe(beforeInsurance);
         expect(c.playStats.stats().attempts).toBe(0);
+        expect(c.roundMistakes().filter((m) => m.startsWith('Insurance'))).toEqual([]);
       });
     });
 

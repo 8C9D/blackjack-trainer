@@ -89,14 +89,18 @@ struct ShowdownInsuranceGradingTests {
         )).index
         let quotes = verdict.reason.contains("insurance index of +\(index)")
         #expect(quotes)
-        #expect(h.model.roundMisplays.first?.contains("Insurance") == true)
+        // These rounds also over-bet the spread at a flat count, which is its own
+        // misplay; the insurance call is the one under test here.
+        let insuranceMisplays = h.model.roundMisplays.filter { $0.hasPrefix("Insurance") }
+        #expect(insuranceMisplays.count == 1)
     }
 
     @Test func confirmsDecliningAtALowCount() throws {
         let h = try dealt(noNatural)
         h.model.declineInsurance()
         #expect(try #require(h.model.lastPlay).correct)
-        #expect(h.model.roundMisplays.isEmpty)
+        let insuranceMisplays = h.model.roundMisplays.filter { $0.hasPrefix("Insurance") }
+        #expect(insuranceMisplays.isEmpty)
     }
 
     /// A carried +4 less the visible ace is +3, and one deck left makes that a
@@ -132,15 +136,20 @@ struct ShowdownInsuranceGradingTests {
     }
 
     /// Wong Halves reads a different count off the same shoe and the app ships no
-    /// indices for it, so the decision is settled without being scored.
+    /// indices for it, so the decision is settled without being scored. The bet is
+    /// still graded — a ramp is the player's own, so any balanced system has a
+    /// true count to index it by — which is why the verdict on screen is the
+    /// bet's, and the insurance call leaves it alone rather than wiping it.
     @Test func saysNothingForASystemWhoseIndicesThisAppDoesNotHave() throws {
         let h = try dealt(noNatural, systemId: "wong-halves")
         #expect(h.model.countBasis == .ungraded)
+        let beforeInsurance = h.model.lastPlay
         h.model.takeInsurance()
-        #expect(h.model.lastPlay == nil)
-        #expect(h.model.roundMisplays.isEmpty)
+        #expect(h.model.lastPlay == beforeInsurance)
+        let insuranceMisplays = h.model.roundMisplays.filter { $0.hasPrefix("Insurance") }
+        #expect(insuranceMisplays.isEmpty)
         #expect(h.playStats.stats.attempts == 0)
-        // The bet still settles; only the verdict is withheld.
+        // The bet still settles; only the insurance verdict is withheld.
         #expect(h.model.insuranceNet == -5)
     }
 

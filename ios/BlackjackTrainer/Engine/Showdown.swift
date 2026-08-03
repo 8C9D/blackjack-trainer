@@ -18,6 +18,19 @@ struct PlayVerdict: Equatable {
 /// grade, because its book publishes a running-count schedule of its own.
 /// Everything else is dealt and settled exactly as before, ungraded, rather than
 /// scored against numbers that are not its own. Mirrors the web `CountBasis`.
+/// This system's own true count, or nil when it has none to read.
+///
+/// Kept apart from `CountBasis` because the two questions are different. A
+/// deviation index is a Hi-Lo number, so only Hi-Lo may be graded against it. A
+/// bet ramp is the player's own, indexed by whatever true count they are keeping
+/// — so any balanced system qualifies, exactly as the bet-spread drill allows.
+/// Mirrors the web `trueCountFor`.
+func trueCountFor(system: CountingSystem?, runningCount: Double,
+                  decksRemaining: Double) -> Int? {
+    guard let system, system.balanced, decksRemaining > 0 else { return nil }
+    return Int((runningCount / decksRemaining).rounded(.towardZero))
+}
+
 enum CountBasis: Equatable {
     case trueCount(Int)
     case runningCount(count: Double, insuranceAt: Int)

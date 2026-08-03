@@ -878,10 +878,9 @@ export class ShowdownComponent implements OnInit {
       this.ruleSet(),
     );
     const shouldTake = insuranceIsCorrect(basis, decision.deviationApplied);
-    if (shouldTake === null) {
-      this.lastPlay.set(null);
-      return;
-    }
+    // Nothing to say about this system's insurance call. The verdict already on
+    // screen belongs to this round's bet, so it is left alone rather than wiped.
+    if (shouldTake === null) return;
     const correct = tookIt === shouldTake;
     this.playStats.recordAttempt(correct);
     this.lastPlay.set({
