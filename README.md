@@ -668,6 +668,9 @@ Deferred follow-ons, documented in `docs/roadmap-progress.md` and
 
 - **Deviation charts for KO / Omega II / Wong Halves** — deviations are Hi-Lo
   only.
+  The app no longer hides this: the indices are labelled as Hi-Lo true counts,
+  and picking another counting system puts an advisory on the Deviations drill,
+  the deviation chart, and the Deviations settings section.
 - **App Store submission** — the human/Apple steps in
   [`docs/app-store-submission.md`](docs/app-store-submission.md): hosting the
   privacy/support pages, App Store Connect setup, TestFlight, and review.
