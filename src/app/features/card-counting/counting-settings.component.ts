@@ -73,7 +73,24 @@ import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.mo
           />
           <span>Bet spread</span>
         </label>
+        <label class="settings__mode">
+          <input
+            type="radio"
+            name="drill-mode"
+            value="deck-speed"
+            [checked]="mode() === 'deck-speed'"
+            (change)="onModeChange('deck-speed')"
+          />
+          <span>Deck speed</span>
+        </label>
       </div>
+      @if (mode() === 'deck-speed') {
+        <p class="settings__note">
+          A shuffled deck with one card burned: you flip the other 51 at your own pace, against a
+          stopwatch, then give the count. The length and pacing settings do not apply — the deck is
+          the deck, and the speed is what is being measured.
+        </p>
+      }
       @if (!trueCountAvailable()) {
         @if (keyCountAvailable()) {
           <p class="settings__note">
@@ -89,28 +106,30 @@ import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.mo
         }
       }
       <div class="settings__fields">
-        <label class="settings__field">
-          <span>Number of cards</span>
-          <input
-            type="number"
-            min="1"
-            step="1"
-            inputmode="numeric"
-            [value]="numberOfCards()"
-            (input)="onNumberOfCardsInput($event)"
-          />
-        </label>
-        <label class="settings__field">
-          <span>Time between cards (ms)</span>
-          <input
-            type="number"
-            min="100"
-            step="100"
-            inputmode="numeric"
-            [value]="millisecondsBetweenCards()"
-            (input)="onMsInput($event)"
-          />
-        </label>
+        @if (mode() !== 'deck-speed') {
+          <label class="settings__field">
+            <span>Number of cards</span>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              inputmode="numeric"
+              [value]="numberOfCards()"
+              (input)="onNumberOfCardsInput($event)"
+            />
+          </label>
+          <label class="settings__field">
+            <span>Time between cards (ms)</span>
+            <input
+              type="number"
+              min="100"
+              step="100"
+              inputmode="numeric"
+              [value]="millisecondsBetweenCards()"
+              (input)="onMsInput($event)"
+            />
+          </label>
+        }
         @if (
           (mode() === 'true-count' || mode() === 'bet-spread') && trueCountSource() === 'classic'
         ) {

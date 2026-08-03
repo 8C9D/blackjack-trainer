@@ -62,7 +62,7 @@ It exists so the E2E suite can assert real outcomes rather than only that the fl
 
 ### Card Counting Trainer (v2 + v3, plus live shoe & showdown)
 
-The card counting page hosts four drill modes that share the same flow; the mode (like the rest of the counting configuration) is chosen on the Settings screen.
+The card counting page hosts five drill modes that share the same flow; the mode (like the rest of the counting configuration) is chosen on the Settings screen.
 
 **Running count mode (v2)** — user watches a card stream and submits the
 running count at the end of the stream.
@@ -77,6 +77,10 @@ only); see the counting-systems notes below.
 **Bet spread mode** — the true-count round, then the question the count is
 for: how many units do you bet? See
 [Bet spread](#bet-spread-what-the-count-is-for).
+
+**Deck speed mode** — the self-paced one: a shuffled deck with a card burned,
+counted down against a stopwatch. See
+[Deck speed](#deck-speed-counting-down-a-deck).
 
 #### Counting systems
 
@@ -151,6 +155,27 @@ True count mode has two sources for "decks remaining":
 differently, and this is the convention the trainer scores against. True-count
 attempts persist under their own `localStorage` key (see
 [Stats persistence](#stats-persistence)).
+
+#### Deck speed: counting down a deck
+
+The oldest drill in card counting, and the one the app's timed stream cannot
+cover — there the app sets the pace, and here the whole point is to measure
+yours. **Deck speed** mode (Settings → Card counting → drill mode) shuffles a
+single deck, **burns one card face down**, and shows the other 51 one at a time.
+
+- **You set the pace.** Nothing advances on its own: tap **Next card** (or press
+  space) for each one, and the clock runs from the first card to the last.
+- **It grades itself.** A full deck sums to a known constant — 0 for a balanced
+  system, +4 for KO — so the 51 you saw must come to that constant minus the
+  burned card's tag. Answer the running count and the burned card is revealed as
+  the proof: "the jack of spades, worth −1 … so the 51 you saw had to come to
+  +1".
+- **The record only moves on a correct round.** Speed with the wrong count is
+  not a counting skill, so the fastest _correct_ countdown is what persists
+  (shown on the Progress screen, and celebrated when beaten). Under 30 seconds
+  is the usual benchmark for a competent counter.
+- The length and pacing settings do not apply here — the deck is the deck — so
+  they are hidden while this mode is selected.
 
 #### Bet spread: what the count is for
 
@@ -527,7 +552,7 @@ Other encoding choices:
 ## Stats persistence
 
 Each trainer (and each card-counting mode) persists its own stats under a
-dedicated `localStorage` key. The first seven share the `StatsStore` base class
+dedicated `localStorage` key. The first eight share the `StatsStore` base class
 (`{ attempts, correct, streak, longestStreak }`); the showdown keeps a
 different tally and does **not** extend `StatsStore`:
 
@@ -540,6 +565,8 @@ different tally and does **not** extend `StatsStore`:
 | Deck estimation | `blackjack-deck-estimation-stats` | StatsStore (±0.5-deck hit = "correct")         |
 | Key count call  | `blackjack-key-count-stats`       | StatsStore (the advantage call)                |
 | Bet spread      | `blackjack-bet-spread-stats`      | StatsStore (the bet against your ramp)         |
+| Deck speed      | `blackjack-deck-speed-stats`      | StatsStore (the countdown's count)             |
+| Deck record     | `blackjack-deck-speed-best`       | `{ bestMs }` — fastest correct countdown       |
 | Showdown        | `blackjack-showdown-stats`        | `{ hands, wins, losses, pushes, blackjacks }`  |
 | Showdown chips  | `blackjack-showdown-bankroll`     | `{ bankroll, wagered, net }` (bet sizing only) |
 

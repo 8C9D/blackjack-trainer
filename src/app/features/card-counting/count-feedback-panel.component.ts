@@ -2,6 +2,11 @@ import { Component, computed, input, output, signal } from '@angular/core';
 
 import { BET_RAMP_BAND_LABELS, betRampBandIndex } from '../../core/models/bet-ramp.model';
 import {
+  DECK_SPEED_BENCHMARK_MS,
+  formatDuration,
+  type DeckSpeedDrillResult,
+} from '../../core/models/deck-speed.model';
+import {
   formatSignedCount,
   type BetSpreadDrillResult,
   type CountingDrillResult,
@@ -18,6 +23,15 @@ interface BreakdownEntry {
   readonly deltaLabel: string;
   readonly runningTotal: number;
 }
+
+// Ranks read as words in the burned-card sentence; the pip ranks speak for
+// themselves.
+const RANK_WORDS: Partial<Record<string, string>> = {
+  J: 'jack',
+  Q: 'queen',
+  K: 'king',
+  A: 'ace',
+};
 
 interface RampBand {
   readonly label: string;
@@ -128,6 +142,31 @@ interface RampBand {
             </li>
           }
         </ul>
+      } @else if (deckSpeedResult(); as ds) {
+        <dl class="feedback__details">
+          <dt>Your count</dt>
+          <dd>{{ ds.userRunningCount }}</dd>
+          <dt>Correct count</dt>
+          <dd>{{ ds.correctRunningCount }}</dd>
+          <dt>Time</dt>
+          <dd>{{ duration(ds.elapsedMs) }}</dd>
+          <dt>Best</dt>
+          <dd>
+            {{ ds.previousBestMs === null ? '—' : duration(ds.previousBestMs) }}
+          </dd>
+        </dl>
+        <p class="feedback__formula">
+          The burned card was the {{ burnedLabel(ds) }}, worth
+          {{ formatSigned(cardValue(ds.burnedCard)) }}. A full deck of this system counts
+          {{ formatSigned(ds.fullDeckCount) }}, so the 51 you saw had to come to
+          {{ formatSigned(ds.correctRunningCount) }}.
+        </p>
+        @if (ds.isPersonalBest) {
+          <p class="feedback__formula feedback__best" role="status">
+            New personal best — {{ duration(ds.elapsedMs) }}.
+            {{ ds.elapsedMs < benchmarkMs ? 'That is under the 30-second benchmark.' : '' }}
+          </p>
+        }
       }
 
       <button
@@ -187,6 +226,13 @@ export class CountFeedbackPanelComponent {
     return r.mode === 'bet-spread' ? r : null;
   });
 
+  protected readonly deckSpeedResult = computed<DeckSpeedDrillResult | null>(() => {
+    const r = this.result();
+    return r.mode === 'deck-speed' ? r : null;
+  });
+
+  protected readonly benchmarkMs = DECK_SPEED_BENCHMARK_MS;
+
   // The whole spread, with the band this round landed in marked — the feedback
   // shows the table so a missed bet reads as "that count was this band".
   protected readonly rampBands = computed<readonly RampBand[]>(() => {
@@ -203,11 +249,13 @@ export class CountFeedbackPanelComponent {
   protected readonly breakdown = computed<readonly BreakdownEntry[]>(() => {
     const sys = this.system();
     const r = this.result();
-    // Live-shoe rounds (true-count and key-count) carry a running count from
-    // earlier rounds — the IRC itself on a fresh key-count shoe; start the
-    // running total from that offset so it ends at correctRunningCount. Classic
-    // and running-count results have no prior, so this is 0.
-    let running = r.mode === 'running-count' ? 0 : (r.priorRunningCount ?? 0);
+    // Live-shoe rounds (true-count, key-count, bet-spread) carry a running count
+    // from earlier rounds — the IRC itself on a fresh key-count shoe; start the
+    // running total from that offset so it ends at correctRunningCount. Classic,
+    // running-count, and deck-speed rounds have no prior, so this is 0.
+    const carried =
+      r.mode === 'running-count' || r.mode === 'deck-speed' ? 0 : (r.priorRunningCount ?? 0);
+    let running = carried;
     return r.cards.map((card, index) => {
       const delta = cardCountValue(sys, card);
       running += delta;
@@ -228,6 +276,19 @@ export class CountFeedbackPanelComponent {
   // KO tables are written.
   protected formatSigned(value: number): string {
     return formatSignedCount(value);
+  }
+
+  protected duration(ms: number): string {
+    return formatDuration(ms);
+  }
+
+  // The burned card in words, so the proof line reads as a sentence.
+  protected burnedLabel(result: DeckSpeedDrillResult): string {
+    return `${RANK_WORDS[result.burnedCard.rank] ?? result.burnedCard.rank} of ${result.burnedCard.suit}`;
+  }
+
+  protected cardValue(card: RunningCountDrillResult['cards'][number]): number {
+    return cardCountValue(this.system(), card);
   }
 
   // Bets are always whole units, and the singular reads oddly as "1 units".

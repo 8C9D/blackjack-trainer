@@ -1,5 +1,6 @@
 import type { BetRamp } from './bet-ramp.model';
 import type { Card } from './card.model';
+import type { DeckSpeedDrillResult } from './deck-speed.model';
 
 // 'key-count' is the unbalanced-system counterpart of the live-shoe true-count
 // drill: the shoe's running count starts at the system's published IRC and the
@@ -8,7 +9,9 @@ import type { Card } from './card.model';
 // KeyCountSchedule (KO).
 // 'bet-spread' is the true-count drill plus the question the count is for: how
 // many units to bet. Balanced systems only, since it grades a true count first.
-export type DrillMode = 'running-count' | 'true-count' | 'key-count' | 'bet-spread';
+// 'deck-speed' is the self-paced one: a shuffled deck with one card burned,
+// counted down against a stopwatch (see deck-speed.model.ts).
+export type DrillMode = 'running-count' | 'true-count' | 'key-count' | 'bet-spread' | 'deck-speed';
 
 // In true-count mode the decks-remaining figure can come from a live, depleting
 // shoe the player reads ('live-shoe', the default) or from a fixed preset the
@@ -133,7 +136,8 @@ export type CountingDrillResult =
   | RunningCountDrillResult
   | TrueCountDrillResult
   | KeyCountDrillResult
-  | BetSpreadDrillResult;
+  | BetSpreadDrillResult
+  | DeckSpeedDrillResult;
 
 export interface SettingsValidation {
   readonly valid: boolean;

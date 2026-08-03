@@ -119,6 +119,35 @@ test.describe('card counting drill', () => {
     await expect(page.getByRole('list', { name: 'Your bet spread' })).toContainText('20 units');
   });
 
+  test('a deck-speed round is self-paced and ends on the burned card', async ({ page }) => {
+    await page.goto('/settings');
+    await page
+      .getByRole('radiogroup', { name: 'Drill mode' })
+      .getByRole('radio', { name: 'Deck speed', exact: true })
+      .check();
+    // The length/pacing fields do not apply to this drill and are gone.
+    await expect(page.getByLabel('Number of cards')).toHaveCount(0);
+
+    await page.goto('/drill/card-counting');
+    await page.getByRole('button', { name: /Start counting/ }).click();
+
+    // Nothing advances on its own: the card sits there until the player says so.
+    const next = page.getByRole('button', { name: /Next card/ });
+    await expect(next).toBeVisible();
+    await page.waitForTimeout(600);
+    await expect(page.getByText('Card 1 of 51')).toBeVisible();
+
+    // 51 flips, then the count question.
+    for (let i = 0; i < 51; i++) await next.click();
+    const answer = page.getByLabel('What is the running count?');
+    await expect(answer).toBeVisible();
+    await answer.fill('0');
+    await page.getByRole('button', { name: /^Submit/ }).click();
+
+    await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1');
+    await expect(page.getByText('The burned card was the')).toBeVisible();
+  });
+
   test('Escape exits the idle drill back to home', async ({ page }) => {
     await page.goto('/drill/card-counting');
     await expect(page.getByRole('heading', { name: 'Hi-Lo' })).toBeVisible();

@@ -266,6 +266,16 @@ only for systems that carry one (KO alone today).
   the web engine — and `CountingParityTests` grades the Swift
   `evaluateKeyCount` against them.
 
+### Post-roadmap continued: deck speed (2026-08-02)
+
+The oldest drill in counting was the one the app could not do: the timed stream sets the pace, and counting down a deck is about measuring _yours_.
+
+- **Self-paced, and it grades itself.** A shuffled deck with one card burned face down; the other 51 advance only on a tap (or the space bar), timed from the first card to the last. A full deck sums to a known constant — 0 balanced, +4 for KO — so the 51 shown must come to that constant minus the burned card's tag, and the burned card revealed in the feedback is the proof. No system gating: any set of tags can be summed.
+- **The record only moves on a correct round**, because speed with the wrong count is not a counting skill. It persists under its own key (`blackjack-deck-speed-best`) beside the drill's accuracy store, and the Progress screen carries "Fastest deck counted down" under the trainer table. Under 30 seconds is the benchmark the feedback cites when a new best beats it.
+- **The settings that do not apply are hidden**, not just ignored: the length and pacing fields disappear in this mode, replaced by a line explaining what the drill measures.
+- **Validation.** +25 unit tests (1039 total), an E2E that flips all 51 and reads the burned-card proof, and a contrast sweep of the new stage and its feedback in both themes; 76 E2E.
+  One of the session's own new tests turned out flaky — a bet-spread assertion that a carried count was non-zero, which is false whenever a round's cards cancel — and now asserts the carry-over itself.
+
 ### Post-roadmap continued: the bet spread (2026-08-02)
 
 The app drilled count → convert → play, and stopped there.

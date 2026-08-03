@@ -495,6 +495,43 @@ describe('CountingEngineService', () => {
     });
   });
 
+  describe('evaluateDeckSpeed()', () => {
+    const burned = card('5');
+
+    it('grades the count of the 51 and reports the elapsed time', () => {
+      const cards = seq('2', '3', '10');
+      const result = engine.evaluateDeckSpeed(cards, burned, 1, HI_LO, 24_000, null);
+      expect(result.mode).toBe('deck-speed');
+      expect(result.correctRunningCount).toBe(1);
+      expect(result.isCorrect).toBe(true);
+      expect(result.burnedCard).toBe(burned);
+      expect(result.elapsedMs).toBe(24_000);
+      expect(result.previousBestMs).toBeNull();
+      expect(result.isPersonalBest).toBe(true);
+    });
+
+    it('carries the full-deck constant the arithmetic rests on', () => {
+      expect(engine.fullDeckCount(HI_LO)).toBe(0);
+      expect(engine.fullDeckCount(WONG_HALVES)).toBe(0);
+      expect(engine.fullDeckCount(OMEGA_II)).toBe(0);
+      // KO is unbalanced: a full deck sums to +4, which is why its burned-card
+      // arithmetic differs.
+      expect(engine.fullDeckCount(KO)).toBe(4);
+    });
+
+    it('only sets a personal best on a correct, faster round', () => {
+      const cards = seq('2', '3', '10');
+      const slower = engine.evaluateDeckSpeed(cards, burned, 1, HI_LO, 30_000, 25_000);
+      expect(slower.isCorrect).toBe(true);
+      expect(slower.isPersonalBest).toBe(false);
+      const faster = engine.evaluateDeckSpeed(cards, burned, 1, HI_LO, 20_000, 25_000);
+      expect(faster.isPersonalBest).toBe(true);
+      const wrongButFast = engine.evaluateDeckSpeed(cards, burned, 5, HI_LO, 10_000, 25_000);
+      expect(wrongButFast.isCorrect).toBe(false);
+      expect(wrongButFast.isPersonalBest).toBe(false);
+    });
+  });
+
   describe('scoreDeckEstimate()', () => {
     it('accepts an exact match', () => {
       expect(engine.scoreDeckEstimate(5, 5)).toBe(true);

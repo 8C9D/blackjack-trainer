@@ -30,6 +30,7 @@ type Internals = {
     | 'answering'
     | 'advantage'
     | 'betting'
+    | 'flipping'
     | 'feedback'
     | 'showdown'
     | 'done';
@@ -55,6 +56,9 @@ type Internals = {
   deckEstimationStatsService: StatsLike;
   keyCountStatsService: StatsLike;
   betSpreadStatsService: StatsLike;
+  deckSpeedStatsService: StatsLike & { bestMs(): number | null };
+  deckSpeedDrill(): boolean;
+  flipNext(): void;
   start(): void;
   runAgain(): void;
   oneMoreRound(): void;
@@ -1019,6 +1023,109 @@ describe('CardCountingPageComponent', () => {
     });
   });
 
+  describe('deck-speed drills', () => {
+    // Flip through every card of the burned deck, spending `msPerCard` on each
+    // so the stopwatch has something to measure under fake timers.
+    function countDownTheDeck(c: Internals, msPerCard = 400): void {
+      while (c.state() === 'flipping') {
+        vi.advanceTimersByTime(msPerCard);
+        c.flipNext();
+      }
+    }
+
+    it('deals 51 cards from a burned deck and waits on the player', () => {
+      updateSetting('mode', 'deck-speed');
+      const { c } = createPage();
+      expect(c.deckSpeedDrill()).toBe(true);
+      c.start();
+      expect(c.state()).toBe('flipping');
+      expect(c.cards().length).toBe(51);
+      // Self-paced: the app's stream timer never moves this drill on.
+      vi.advanceTimersByTime(10_000);
+      expect(c.currentIndex()).toBe(0);
+      expect(c.state()).toBe('flipping');
+    });
+
+    it('deals every card of a real deck exactly once', () => {
+      updateSetting('mode', 'deck-speed');
+      const { c } = createPage();
+      c.start();
+      const seen = new Map<string, number>();
+      for (const card of c.cards()) {
+        const key = `${card.rank}${card.suit}`;
+        seen.set(key, (seen.get(key) ?? 0) + 1);
+      }
+      expect(seen.size).toBe(51);
+      expect([...seen.values()].every((n) => n === 1)).toBe(true);
+    });
+
+    it('flipping → answering on the last card, then grades against the burned card', () => {
+      updateSetting('mode', 'deck-speed');
+      const { c } = createPage();
+      const engine = new CountingEngineService();
+      c.start();
+      countDownTheDeck(c);
+      expect(c.state()).toBe('answering');
+      const correct = engine.runningCount([...c.cards()], c.system());
+      c.onAnswer(correct);
+      expect(c.state()).toBe('feedback');
+      const r = c.result();
+      expect(r?.mode).toBe('deck-speed');
+      if (r && r.mode === 'deck-speed') {
+        expect(r.isCorrect).toBe(true);
+        // Hi-Lo: a full deck counts 0, so the 51 shown plus the burned card's
+        // tag must come back to that constant. (Written as a sum because the
+        // negation of a 0-tag card is -0, which Object.is separates from 0.)
+        expect(r.fullDeckCount).toBe(0);
+        const burnedTag = engine.runningCount([r.burnedCard], c.system());
+        expect(r.correctRunningCount + burnedTag).toBe(r.fullDeckCount);
+        // 51 flips at 400ms each (the last one ends the countdown), timed from
+        // the first card.
+        expect(r.elapsedMs).toBe(51 * 400);
+        expect(r.isPersonalBest).toBe(true);
+      }
+      expect(c.deckSpeedStatsService.bestMs()).toBe(51 * 400);
+      expect(c.handsToday()).toBe(1);
+    });
+
+    it('routes the round to the deck-speed store and keeps the record honest', () => {
+      updateSetting('mode', 'deck-speed');
+      const { c } = createPage();
+      c.deckSpeedStatsService.reset();
+      c.start();
+      countDownTheDeck(c, 100);
+      // A deliberately wrong count, however fast, sets no record.
+      c.onAnswer(999);
+      expect(c.deckSpeedStatsService.stats().attempts).toBe(1);
+      expect(c.deckSpeedStatsService.stats().correct).toBe(0);
+      expect(c.deckSpeedStatsService.bestMs()).toBeNull();
+      expect(c.statsService.stats().attempts).toBe(0);
+      expect(c.trueCountStatsService.stats().attempts).toBe(0);
+    });
+
+    it('advances on the space bar and ignores a flip once the deck is done', () => {
+      updateSetting('mode', 'deck-speed');
+      const { c } = createPage();
+      c.start();
+      c.onKeyDown(new KeyboardEvent('keydown', { key: ' ' }));
+      expect(c.currentIndex()).toBe(1);
+      countDownTheDeck(c);
+      expect(c.state()).toBe('answering');
+      c.flipNext();
+      expect(c.state()).toBe('answering');
+    });
+
+    it('offers no showdown — the deck-speed deck is not the live shoe', () => {
+      updateSetting('mode', 'deck-speed');
+      const { c } = createPage();
+      c.start();
+      countDownTheDeck(c);
+      c.onAnswer(0);
+      expect(c.usesLiveShoe()).toBe(false);
+      expect(c.showdownAvailable()).toBe(false);
+    });
+  });
+
   describe('bet-spread drills', () => {
     function configureBetSpread(source: 'live-shoe' | 'classic' = 'live-shoe'): void {
       updateSetting('systemId', 'hi-lo');
@@ -1145,12 +1252,13 @@ describe('CardCountingPageComponent', () => {
       c.onBet(1);
       expect(c.deckEstimationStatsService.stats().attempts).toBe(1);
       expect(c.deckEstimationStatsService.stats().correct).toBe(1);
-      const r = c.result();
-      if (r && r.mode === 'bet-spread') {
-        expect(r.deckEstimateWithinBand).toBe(true);
-        expect(r.priorRunningCount).toBe(0);
-        expect(c.shoeRunningCount()).toBe(r.correctRunningCount);
+      const first = c.result();
+      if (!first || first.mode !== 'bet-spread') {
+        throw new Error('expected a bet-spread result');
       }
+      expect(first.deckEstimateWithinBand).toBe(true);
+      expect(first.priorRunningCount).toBe(0);
+      expect(c.shoeRunningCount()).toBe(first.correctRunningCount);
       // The next round of the same shoe opens on the carried count.
       c.runAgain();
       streamToEnd(c);
@@ -1159,7 +1267,10 @@ describe('CardCountingPageComponent', () => {
       c.onBet(1);
       const second = c.result();
       if (second && second.mode === 'bet-spread') {
-        expect(second.priorRunningCount).not.toBe(0);
+        // The prior is the first round's graded count — which is legitimately 0
+        // whenever the round's cards happen to cancel out, so assert the
+        // carry-over itself rather than that it is non-zero.
+        expect(second.priorRunningCount).toBe(first.correctRunningCount);
       }
     });
 

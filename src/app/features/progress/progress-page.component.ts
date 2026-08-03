@@ -7,6 +7,8 @@ import { BankrollService } from '../../core/services/bankroll.service';
 import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.service';
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
 import { DeckEstimationStatsService } from '../../core/services/deck-estimation-stats.service';
+import { DeckSpeedStatsService } from '../../core/services/deck-speed-stats.service';
+import { formatDuration } from '../../core/models/deck-speed.model';
 import { DeviationStatsService } from '../../core/services/deviation-stats.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
 import { KeyCountStatsService } from '../../core/services/key-count-stats.service';
@@ -103,6 +105,11 @@ interface WeakSpotGroup {
             }
           </tbody>
         </table>
+        @if (deckSpeedBest() !== null) {
+          <p class="progress__week-note">
+            Fastest deck counted down: <b>{{ formatDuration(deckSpeedBest()!) }}</b>
+          </p>
+        }
       </section>
 
       @if (showdown().hands > 0) {
@@ -169,11 +176,14 @@ export class ProgressPageComponent {
   private readonly deckEstimationStats = inject(DeckEstimationStatsService);
   private readonly keyCountStats = inject(KeyCountStatsService);
   private readonly betSpreadStats = inject(BetSpreadStatsService);
+  private readonly deckSpeedStats = inject(DeckSpeedStatsService);
   private readonly showdownStats = inject(ShowdownStatsService);
   private readonly bankrollService = inject(BankrollService);
   private readonly router = inject(Router);
 
   protected readonly goal = computed(() => this.prefs.prefs().dailyGoal);
+  protected readonly deckSpeedBest = this.deckSpeedStats.bestMs;
+  protected readonly formatDuration = formatDuration;
   protected readonly showdown = this.showdownStats.stats;
   protected readonly bankroll = this.bankrollService.state;
 
@@ -208,6 +218,7 @@ export class ProgressPageComponent {
     row('Deck estimate', this.deckEstimationStats.stats()),
     row('Key count call', this.keyCountStats.stats()),
     row('Bet spread', this.betSpreadStats.stats()),
+    row('Deck speed', this.deckSpeedStats.stats()),
   ]);
 
   protected readonly winRate = computed(() => {

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 
 import { betUnitsForTrueCount, validateBetRamp, type BetRamp } from '../models/bet-ramp.model';
-import { ALL_RANKS, type Card } from '../models/card.model';
+import { ALL_RANKS, ALL_SUITS, type Card } from '../models/card.model';
 import {
   MAX_CARDS_PER_DRILL,
   MIN_MILLISECONDS_BETWEEN_CARDS,
@@ -19,6 +19,7 @@ import {
   resolveKeyCounts,
   type CountingSystem,
 } from '../models/counting-system.model';
+import { type DeckSpeedDrillResult } from '../models/deck-speed.model';
 import {
   CARDS_PER_DECK,
   MAX_PENETRATION,
@@ -119,6 +120,44 @@ export class CountingEngineService {
       userUnits,
       betCorrect,
       isCorrect: counted.isCorrect && betCorrect,
+    };
+  }
+
+  // What one full deck of this system sums to: 0 for a balanced system, +4 for
+  // KO. The deck-speed drill's arithmetic rests on it, and it is derived from
+  // the system's own tags rather than from its `balanced` flag.
+  fullDeckCount(system: CountingSystem): number {
+    const deck: Card[] = [];
+    for (const rank of ALL_RANKS) {
+      for (const suit of ALL_SUITS) deck.push({ rank, suit });
+    }
+    return this.runningCount(deck, system);
+  }
+
+  // Grade one round of the deck-speed drill: the claimed count of the 51 cards
+  // shown, plus the elapsed time against the best correct time so far. A round
+  // only sets a new best when the count is right.
+  evaluateDeckSpeed(
+    cards: readonly Card[],
+    burnedCard: Card,
+    userRunningCount: number,
+    system: CountingSystem,
+    elapsedMs: number,
+    previousBestMs: number | null,
+  ): DeckSpeedDrillResult {
+    const correctRunningCount = this.runningCount(cards, system);
+    const isCorrect = userRunningCount === correctRunningCount;
+    return {
+      mode: 'deck-speed',
+      cards,
+      burnedCard,
+      correctRunningCount,
+      userRunningCount,
+      fullDeckCount: this.fullDeckCount(system),
+      isCorrect,
+      elapsedMs,
+      previousBestMs,
+      isPersonalBest: isCorrect && (previousBestMs === null || elapsedMs < previousBestMs),
     };
   }
 

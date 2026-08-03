@@ -78,6 +78,7 @@ export interface ResolvedKeyCounts {
 export function modeAllowedFor(system: CountingSystem, mode: DrillMode): boolean {
   if (mode === 'true-count' || mode === 'bet-spread') return system.balanced;
   if (mode === 'key-count') return system.keyCounts !== undefined;
+  // Running count and deck speed: any system's tags can be summed.
   return true;
 }
 
