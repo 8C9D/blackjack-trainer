@@ -1,0 +1,92 @@
+import { DOCUMENT } from '@angular/common';
+import { inject, Injectable, InjectionToken } from '@angular/core';
+
+import {
+  BACKUP_APP_ID,
+  BACKUP_KEY_PREFIX,
+  BACKUP_SCHEMA_VERSION,
+  backupFileName,
+  parseBackup,
+  type PracticeBackup,
+} from '../models/backup.model';
+import { PAGE_RELOAD } from './app-update.service';
+
+// Injected so a spec can pin the export's timestamp, mirroring the `now`
+// seams on PracticeHistoryService and MissTallyService.
+export const NOW_SOURCE = new InjectionToken<() => Date>('NOW_SOURCE', {
+  providedIn: 'root',
+  factory: () => () => new Date(),
+});
+
+export type RestoreResult = { readonly ok: true } | { readonly ok: false; readonly error: string };
+
+// Reads and writes the whole `blackjack-` localStorage namespace as one file.
+//
+// It works at the raw-string level on purpose: no store's shape is known here,
+// so a new store needs no change to back up, and a value that has since changed
+// shape is left for that store's own tolerant loader to reject on next load.
+@Injectable({ providedIn: 'root' })
+export class BackupService {
+  private readonly document = inject(DOCUMENT);
+  private readonly reloadPage = inject(PAGE_RELOAD);
+  private readonly now = inject(NOW_SOURCE);
+
+  // Every stored key in this app's namespace, in stable (sorted) order so two
+  // exports of the same state produce the same file.
+  private namespaceKeys(): string[] {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(BACKUP_KEY_PREFIX)) keys.push(key);
+    }
+    return keys.sort();
+  }
+
+  build(): PracticeBackup {
+    const data: Record<string, string> = {};
+    for (const key of this.namespaceKeys()) {
+      const value = localStorage.getItem(key);
+      if (value !== null) data[key] = value;
+    }
+    return {
+      app: BACKUP_APP_ID,
+      schema: BACKUP_SCHEMA_VERSION,
+      exportedAt: this.now().toISOString(),
+      data,
+    };
+  }
+
+  // Hands the backup to the browser as a download. Returns the file name so the
+  // caller can name it in its confirmation; nothing here can meaningfully fail
+  // that the caller could act on.
+  download(): string {
+    const backup = this.build();
+    const name = backupFileName(backup.exportedAt);
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = this.document.createElement('a');
+    anchor.href = url;
+    anchor.download = name;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    return name;
+  }
+
+  // Replaces the namespace with the file's contents and reloads, because every
+  // store reads localStorage once at construction. A reload is the honest way
+  // to adopt twelve stores' state at once; anything finer would leave whichever
+  // store was forgotten showing the old numbers.
+  //
+  // The replacement clears first: a restore is the state the backup captured,
+  // not that state merged over whatever this browser had.
+  restore(text: string): RestoreResult {
+    const parsed = parseBackup(text);
+    if (!parsed.ok) return parsed;
+    for (const key of this.namespaceKeys()) localStorage.removeItem(key);
+    for (const [key, value] of Object.entries(parsed.backup.data)) {
+      localStorage.setItem(key, value);
+    }
+    this.reloadPage();
+    return { ok: true };
+  }
+}

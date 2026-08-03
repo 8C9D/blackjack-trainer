@@ -1,4 +1,12 @@
-import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { Router } from '@angular/router';
 
 import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
@@ -23,6 +31,7 @@ import {
   type DeviationTrueCountSource,
   type ThemePref,
 } from '../../core/services/flow-prefs.service';
+import { BackupService } from '../../core/services/backup.service';
 import { PracticeDataService } from '../../core/services/practice-data.service';
 import { CountingSettingsComponent } from '../card-counting/counting-settings.component';
 
@@ -217,6 +226,34 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
 
       <section class="settings__group" aria-label="Practice data">
         <h2 class="settings__heading">Practice data</h2>
+        <p class="settings__hint">
+          Everything you have practised lives in this browser only. Keep a backup if you clear site
+          data, use private browsing, or want your progress on another device.
+        </p>
+        <div class="settings__row">
+          <button type="button" class="settings__cancel" (click)="exportBackup()">
+            Export backup
+          </button>
+          <button type="button" class="settings__cancel" (click)="pickBackupFile()">
+            Restore from backup
+          </button>
+        </div>
+        <!-- Off screen and out of the tab order — the button above is the
+             control. Named rather than aria-hidden, so a screen reader
+             browsing the section finds a usable file input rather than an
+             anonymous one. -->
+        <input
+          #backupFile
+          class="sr-only"
+          type="file"
+          accept="application/json,.json"
+          tabindex="-1"
+          aria-label="Backup file"
+          (change)="onBackupFileChosen($event)"
+        />
+        @if (backupStatus(); as status) {
+          <p class="settings__warning" role="status">{{ status }}</p>
+        }
         <!-- Two steps, no dialog: the confirm replaces the button in place. -->
         @if (confirmingReset()) {
           <p class="settings__warning" role="status">
@@ -246,10 +283,13 @@ export class SettingsPageComponent {
   private readonly prefsService = inject(FlowPrefsService);
   private readonly countingEngine = inject(CountingEngineService);
   private readonly practiceData = inject(PracticeDataService);
+  private readonly backup = inject(BackupService);
   private readonly router = inject(Router);
 
   protected readonly confirmingReset = signal(false);
   protected readonly resetDone = signal(false);
+  protected readonly backupStatus = signal<string | null>(null);
+  private readonly backupFile = viewChild.required<ElementRef<HTMLInputElement>>('backupFile');
 
   protected readonly MIN_GOAL = MIN_DAILY_GOAL;
   protected readonly MAX_GOAL = MAX_DAILY_GOAL;
@@ -307,6 +347,34 @@ export class SettingsPageComponent {
     this.practiceData.reset();
     this.confirmingReset.set(false);
     this.resetDone.set(true);
+  }
+
+  protected exportBackup(): void {
+    this.backupStatus.set(`Saved ${this.backup.download()}.`);
+  }
+
+  protected pickBackupFile(): void {
+    this.backupStatus.set(null);
+    this.backupFile().nativeElement.click();
+  }
+
+  protected async onBackupFileChosen(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    // Clearing the value lets the same file be chosen twice running; without
+    // it the second pick fires no change event.
+    input.value = '';
+    if (!file) return;
+    let text: string;
+    try {
+      text = await file.text();
+    } catch {
+      this.backupStatus.set('That file could not be read.');
+      return;
+    }
+    const result = this.backup.restore(text);
+    // On success the page is already reloading, so there is no state to show.
+    if (!result.ok) this.backupStatus.set(result.error);
   }
 
   protected onGoalChange(event: Event): void {
