@@ -139,6 +139,7 @@
 		DBE51B6B16BCDF2D61562892 /* counting-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = A039C5E6271C7F1C7AFECA72 /* counting-vectors.json */; };
 		DDEAA480768F763AC0404C2B /* BlackjackTrainerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C359E507A88490DEB624D413 /* BlackjackTrainerApp.swift */; };
 		E08FEF15973E3C29239780BD /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA7773071A88011CBC0C77FF /* WidgetSnapshot.swift */; };
+		E1F54CF8BAB501264FAE6AB0 /* CountingSystemMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 424E0908F1E2CE3970524A47 /* CountingSystemMetricsTests.swift */; };
 		E6396A2091CB895D66D357EF /* BasicStrategyPlayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCEA578C4A1C61A8F34907C2 /* BasicStrategyPlayTests.swift */; };
 		E713DDCA6C8C45B02CF4497C /* CellContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 379C7FF2338A80383EB718B0 /* CellContext.swift */; };
 		E89681A0A7CDFDB53BD9F974 /* ShowdownMultiBoxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57A574AA683108F8EF54F104 /* ShowdownMultiBoxTests.swift */; };
@@ -239,6 +240,7 @@
 		40DA33CFF9EA9742E7504A05 /* StatsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsStoreTests.swift; sourceTree = "<group>"; };
 		412EEBB6BE3B2274CC4757FB /* BasicStrategyEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicStrategyEngine.swift; sourceTree = "<group>"; };
 		424CE3E5C15E3B885150126A /* BlackjackWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = BlackjackWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		424E0908F1E2CE3970524A47 /* CountingSystemMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingSystemMetricsTests.swift; sourceTree = "<group>"; };
 		455D3327443EB36780BE24A7 /* PracticeReminders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeReminders.swift; sourceTree = "<group>"; };
 		456585027076380424BE63C8 /* CloudKeyValueStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKeyValueStore.swift; sourceTree = "<group>"; };
 		4588AAD1A15A2860A7CB9FBE /* Bankroll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bankroll.swift; sourceTree = "<group>"; };
@@ -450,6 +452,7 @@
 				705F836831ED5AA3612EC1A6 /* CountingDrillTests.swift */,
 				01B4AFDADA3CF8230C9FA589 /* CountingModelTests.swift */,
 				D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */,
+				424E0908F1E2CE3970524A47 /* CountingSystemMetricsTests.swift */,
 				BA0B879E8B1D853622E0CC86 /* DataLayerTests.swift */,
 				0796FA7E1D39E31A828EADA2 /* DeckSpeedTests.swift */,
 				80916791F08727E4F1F41C6E /* DeviationFeedbackTests.swift */,
@@ -896,6 +899,7 @@
 				33492E9B5E4EF3FF48BC4CE1 /* CountingDrillTests.swift in Sources */,
 				BD6E7BF5AA767DA6D790CF8D /* CountingModelTests.swift in Sources */,
 				CA4D608DD9DB115BD8BEDD6B /* CountingParityTests.swift in Sources */,
+				E1F54CF8BAB501264FAE6AB0 /* CountingSystemMetricsTests.swift in Sources */,
 				6513222E1254F0172453951E /* DataLayerTests.swift in Sources */,
 				ED64682C3D8B312445174F0A /* DeckSpeedTests.swift in Sources */,
 				039F744E1918FABE31519289 /* DeviationFeedbackTests.swift in Sources */,

@@ -108,6 +108,34 @@ struct SettingsView: View {
                 }
             }
 
+            // Which system to count is the most consequential setting here, and
+            // the tags alone say nothing about what each one is for. These do.
+            if let selectedSystem {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(selectedSystem.metricLabels) { metric in
+                        HStack {
+                            Text(metric.label)
+                            Spacer(minLength: 8)
+                            Text(metric.value)
+                                .monospacedDigit()
+                                .foregroundStyle(Theme.ink)
+                        }
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(Theme.midInk)
+                    Text(
+                        "What this system's tags are good at: sizing the bet, indexing a "
+                            + "playing decision, and calling insurance — the three things "
+                            + "drilled here. Published figures for the tags alone, not a "
+                            + "verdict on the system: a count you keep accurately beats a "
+                            + "stronger one you do not."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(Theme.muted)
+                    .padding(.top, 2)
+                }
+            }
+
             if trueCountAvailable {
                 // Four modes no longer fit a segmented control on a phone, so
                 // this one is a menu picker like the shoe settings below it.
