@@ -579,3 +579,18 @@ Two independent findings, one a defect in the newest grading path and one a hole
 - **A week beside the week before it.** One week's figure is a reading; the direction is what says whether the practice is working, so the line reads "88% correct this week" with "up from 77% the week before" under it, and stays silent until there are two measured weeks to compare. Per-day accuracy rides in the strip's screen-reader text, where a bar's numbers already live.
 - **Validation.** +10 unit tests (1266 total) across the store and the screen, including the pre-grading migration and the clamp; the card rendered in both themes.
 - **iOS mirror.** `PracticeDay.graded`/`.correct`, `accuracyLast7`, and `ProgressSummary.trend` behind the same week card; the iCloud payload and the `UserDefaults` round trip both carry the counts, and a malformed cloud payload is still nothing to adopt rather than an empty history. +10 Swift tests (432 total), the card photographed in both themes.
+
+### Post-roadmap continued: the table asks for the count on the way out (2026-08-03)
+
+The showdown grades three decisions against the count — the bet, the insurance call, the index plays — and every one of those verdicts was scored against a count the app kept for the player.
+The trainee was never once asked for theirs.
+So the screen that exists to put a live count on a real hand was, for the count itself, a spectator sport: dozens of cards came out and the number they were carrying was never tested.
+
+- **The way out runs through the count.** Leaving the table stops on one question — the running count as the player can see it — and answering it is the exit. The bypass button is hidden while the question is up, because a "Back to counting" beside it would make the check optional in the one moment it is worth anything.
+- **Only between rounds.** Mid-hand the dealer's hole card is dealt but face down, so there is no single count both sides could agree is right: the table holds it out of the visible count deliberately, and asking then would grade a different game. An exit from a player turn leaves straight away, as it always did.
+- **The count the player could see, over the cards they saw.** The verdict names the table's count and the drift, in points and in the direction of the error, over the number of cards actually turned face up — the hole card of an unresolved round is dealt but not shown, so it is not one of them.
+- **It feeds the running-count drill's own store,** because it is the same skill: a count held through played-out hands, past splits and dealer draws, is the running count the drill measures, only harder. It is not a second scoreboard.
+- **One answer, not a second guess.** The verdict replaces the answer box, and a further submission is ignored — a stat that improves because the trainee tried again would not be measuring anything.
+- **On by default, and switchable.** It is the only showdown setting that defaults on: the table has been keeping the count all along, and asking for it is the point of the screen. Prefs written before the setting existed get asked; only an explicit `false` turns it off.
+- **Validation.** +9 unit tests (1275 total) and +2 E2E (90) walking the answer and the Settings opt-out; the question and both verdict states rendered.
+- **iOS mirror.** `ShowdownModel.requestExit` / `answerCountCheck` with the reads in `+Grading`, a `CountCheckView` beside `PlayCoachView` (the answer box is the counting drill's own form), the `showdownCountCheck` pref through the tolerant merge and the Settings toggle. +11 Swift tests (443 total); the question and both verdict states photographed in the simulator in both themes, plus the new Settings row.
