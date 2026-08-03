@@ -1071,6 +1071,39 @@ describe('ShowdownComponent', () => {
       expect(c.lastPlay()).toBeNull();
       expect(c.betSpreadStats.stats().attempts).toBe(0);
     });
+
+    // The hole card is face up on the felt the moment the round pays, so a
+    // counter has it in their count before the next bet goes out. Grading that
+    // bet against a count still missing it marks a correctly-sized bet wrong.
+    it('counts the revealed hole card before grading the next bet', () => {
+      // 57 cards: the opening round plus the bust card leave exactly one deck,
+      // so the running count at the second bet *is* the true count.
+      const shoe = makeShoe([
+        // Player [10,6], dealer 10 up / 5 in the hole, then a 10 to bust on.
+        '10',
+        '10',
+        '6',
+        '5',
+        '10',
+        ...(Array<Rank>(52).fill('8') as Rank[]),
+      ]);
+      const { c } = createShowdown(shoe, 'S17', 1, true, undefined, { entryRunningCount: 3 });
+      c.setBet(2);
+      c.dealAfterBet();
+      // Bust the hand: the dealer never draws, but the hole card is turned over.
+      c.onAction('H');
+      expect(c.phase()).toBe('resolved');
+      expect(c.dealerCards().map((x) => x.rank)).toEqual(['10', '5']);
+
+      // Seen: 10, 10, 6, 5, 10 → a carried +3 becomes +2 over one deck, which is
+      // the band the spread bets 2 units in.
+      c.dealAnother();
+      c.setBet(2);
+      c.dealAfterBet();
+      expect(c.lastPlay()).toMatchObject({ correct: true });
+      expect(c.lastPlay()!.reason).toContain('TC +2');
+      expect(c.roundMistakes()).toEqual([]);
+    });
   });
 
   describe('grading the play against basic strategy', () => {

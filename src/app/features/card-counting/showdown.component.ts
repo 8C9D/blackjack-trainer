@@ -446,9 +446,9 @@ export class ShowdownComponent implements OnInit {
 
   // The count as the player can actually see it: the count carried in from the
   // drill plus every card this showdown has turned face up. The dealer's hole
-  // card is deliberately excluded until the next deal — insurance is decided
-  // before it is seen, and grading against a card the player cannot see would
-  // be grading a different game.
+  // card is deliberately excluded until the round resolves and turns it over —
+  // insurance is decided before it is seen, and grading against a card the
+  // player cannot see would be grading a different game.
   private readonly visibleRunningCount = signal(0);
   private pendingHoleCard: Card | null = null;
 
@@ -829,12 +829,6 @@ export class ShowdownComponent implements OnInit {
       this.phase.set('exhausted');
       return;
     }
-    // The previous round's hole card was turned over before that round paid, so
-    // it joins the visible count now rather than staying hidden forever.
-    if (this.pendingHoleCard) {
-      this.countVisible(this.pendingHoleCard);
-      this.pendingHoleCard = null;
-    }
     const boxes: Card[][] = Array.from({ length: spots }, () => []);
     for (const box of boxes) box.push(this.draw()!);
     const dealer: Card[] = [this.draw()!];
@@ -868,7 +862,7 @@ export class ShowdownComponent implements OnInit {
     if (isBlackjack(dealer)) {
       // A dealer natural ends every box at once — no player action, no draw.
       this.hands().forEach((_, i) => this.settleHandAt(i, dealer));
-      this.phase.set('resolved');
+      this.resolveRound();
       return;
     }
     this.hands().forEach((h, i) => {
@@ -1123,6 +1117,18 @@ export class ShowdownComponent implements OnInit {
       this.dealerCards.set(dealer);
     }
     this.hands().forEach((_, i) => this.settleHandAt(i, dealer));
+    this.resolveRound();
+  }
+
+  // Close the round: the hole card is on its face from here on, so it joins the
+  // count now. Waiting for the next deal would leave the bet that opens that
+  // round graded against a count one card behind the felt — and a player who
+  // counted the card they can see marked wrong for it.
+  private resolveRound(): void {
+    if (this.pendingHoleCard) {
+      this.countVisible(this.pendingHoleCard);
+      this.pendingHoleCard = null;
+    }
     this.phase.set('resolved');
   }
 
@@ -1142,7 +1148,8 @@ export class ShowdownComponent implements OnInit {
   }
 
   // The dealer's second card, drawn face down: dealt and tracked like any
-  // other, but held out of the visible count until the next round opens.
+  // other, but held out of the visible count until the round resolves and turns
+  // it over.
   private drawHole(): Card | undefined {
     const card = this.draw();
     if (card) {
