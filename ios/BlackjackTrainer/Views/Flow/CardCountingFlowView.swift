@@ -312,6 +312,22 @@ struct CardCountingFlowView: View {
                 .font(.subheadline)
                 .foregroundStyle(Theme.muted)
                 .multilineTextAlignment(.center)
+            // What this system is for, on the screen the drill starts from —
+            // the same three figures Settings shows next to the picker.
+            // Non-breaking spaces inside each figure so the line wraps only at
+            // the separators — "Insurance" over "correlation .76" reads as two
+            // different things.
+            Text(
+                model.counting.system.metricLabels
+                    .map {
+                        "\($0.label) \($0.value)".replacingOccurrences(of: " ", with: "\u{00A0}")
+                    }
+                    .joined(separator: " · ")
+            )
+            .font(.caption)
+            .monospacedDigit()
+            .foregroundStyle(Theme.muted)
+            .multilineTextAlignment(.center)
             if model.counting.validation.valid {
                 Button { model.start() } label: {
                     Text("Start counting")

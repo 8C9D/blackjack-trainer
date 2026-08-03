@@ -42,6 +42,38 @@ struct ResolvedKeyCounts: Equatable {
     let insuranceCount: Int
 }
 
+/// The three published correlations that say what a system is *for*. Choosing
+/// between 58 systems is the most consequential setting this app has, and the
+/// tags alone do not tell a trainee what they are trading away — these do, and
+/// each one lines up with a drill the app already runs. Mirrors `SystemMetrics`.
+///
+/// All three are correlations in [0, 1], from the same Blackjack Review table
+/// the registry came from. They rank a system's *tags*, never a trainee: the
+/// perfect betting correlations belong to counts no human can keep.
+struct SystemMetrics: Decodable, Equatable {
+    /// How closely the count tracks the shifting edge — what the bet is sized
+    /// on. The bet-spread drill and the showdown's bet are this in practice.
+    let bettingCorrelation: Double
+    /// How well the count indexes a playing decision, which is what a deviation
+    /// is. The Deviations trainer is this in practice.
+    let playingEfficiency: Double
+    /// How well the count calls insurance, the one decision that is purely a
+    /// count of tens.
+    let insuranceCorrelation: Double
+}
+
+/// One figure as a label/value pair. Pairs rather than one string so a narrow
+/// screen wraps between figures and never inside one. Mirrors
+/// `SystemMetricLabel`.
+struct SystemMetricLabel: Equatable, Identifiable {
+    let label: String
+    let value: String
+
+    var id: String {
+        label
+    }
+}
+
 /// A counting-system descriptor decoded verbatim from `counting-systems.json`.
 /// Mirrors `counting-system.model.ts` (plus the exporter's derived
 /// `isFractional` flag the counting UI keys off).
@@ -49,6 +81,8 @@ struct CountingSystem: Decodable, Equatable {
     let id: String
     let name: String
     let description: String
+    /// Published correlations — what this system is good at.
+    let metrics: SystemMetrics
     let balanced: Bool
     let isFractional: Bool
     /// Per-rank value; `Double` accommodates fractional systems.
@@ -57,6 +91,29 @@ struct CountingSystem: Decodable, Equatable {
     let colorValues: [String: ColorValue]?
     /// Optional published IRC/key-count schedule (KO only).
     let keyCounts: KeyCountSchedule?
+
+    /// The three figures as label/value pairs, in the order a trainee meets
+    /// them: you size a bet before you play a hand, and you only decide
+    /// insurance when the dealer shows an ace. Mirrors `metricsParts`.
+    var metricLabels: [SystemMetricLabel] {
+        [
+            SystemMetricLabel(label: "Betting correlation",
+                              value: Self.correlation(metrics.bettingCorrelation)),
+            SystemMetricLabel(label: "Playing efficiency",
+                              value: Self.correlation(metrics.playingEfficiency)),
+            SystemMetricLabel(label: "Insurance correlation",
+                              value: Self.correlation(metrics.insuranceCorrelation))
+        ]
+    }
+
+    /// A correlation as the published table writes it: two decimals, no leading
+    /// zero. These are dimensionless figures, never quantities to be summed, so
+    /// the leading zero would only suggest arithmetic nobody does on them.
+    /// Mirrors `formatCorrelation`.
+    static func correlation(_ value: Double) -> String {
+        let text = String(format: "%.2f", value)
+        return text.hasPrefix("0.") ? String(text.dropFirst()) : text
+    }
 
     /// Per-card count contribution, honoring any color override (the Swift
     /// mirror of `cardCountValue`).
