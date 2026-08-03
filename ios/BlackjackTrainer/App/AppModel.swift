@@ -136,6 +136,9 @@ final class AppModel {
         for store in reloadableStores {
             store.reloadFromDefaults()
         }
+        // The cloud still holds the profile the file just replaced. Without this
+        // the next external change would adopt it straight back over the restore.
+        cloudSync.pushAll()
         return .ok
     }
 
