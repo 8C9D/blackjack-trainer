@@ -340,6 +340,15 @@ struct CardCountingFlowView: View {
             .monospacedDigit()
             .foregroundStyle(Theme.muted)
             .multilineTextAlignment(.center)
+            // The last moment before the cards start coming, on the screen that
+            // names the system: the one place a trainee about to be graded on
+            // these tags might want to read them.
+            Button("See what each card is worth") {
+                model.exit()
+                router.go(.chart(.count))
+            }
+            .font(.footnote)
+            .tint(Theme.accentInk)
             if model.counting.validation.valid {
                 Button { model.start() } label: {
                     Text("Start counting")

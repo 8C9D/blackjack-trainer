@@ -154,6 +154,15 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(Theme.muted)
                     .padding(.top, 2)
+
+                    // The figures say what the tags are for; this is where the
+                    // tags themselves are. Picking among 58 systems is the
+                    // moment a trainee most needs to see what one actually asks
+                    // them to memorise.
+                    Button("See what each card is worth") { router.go(.chart(.count)) }
+                        .font(.footnote)
+                        .tint(Theme.accentInk)
+                        .padding(.top, 6)
                 }
             }
 

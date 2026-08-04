@@ -7,7 +7,11 @@ import Observation
 enum FlowRoute: Equatable {
     case home
     case settings
-    case chart
+    /// `tab` is which of the chart's three references to open on. The screens
+    /// that send a trainee here are asking about one of them in particular —
+    /// Settings picking a counting system wants the tags, not the hard totals.
+    /// Mirrors the web `?tab=count`.
+    case chart(ChartMode = .basic)
     case progress
     /// `review` opens the drill straight into a review round, where every hand
     /// comes from the weak list — Progress's weak-spot card acting on what it
