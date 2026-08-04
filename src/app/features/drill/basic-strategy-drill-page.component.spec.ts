@@ -502,18 +502,38 @@ describe('BasicStrategyDrillPageComponent', () => {
       ).toContain('2.5s a hand');
     });
 
-    it('restarts the clock for each question, including a played-out one', () => {
+    it('restarts the clock on every deal', () => {
       const { c } = createPage();
-      deal(c, HIT_SCENARIO);
-      TestBed.inject(CardGeneratorService).setRandomSource(() => 0.5); // a 7
+      deal(c, STAND_SCENARIO);
       vi.advanceTimersByTime(1000);
-      c.answer('H');
-      vi.advanceTimersByTime(ADVANCE_MS); // the continuation deals a card
+      c.answer('S');
+      vi.advanceTimersByTime(ADVANCE_MS);
 
       vi.advanceTimersByTime(3000);
       c.answer('S');
-      // 1.0s then 3.0s — the second decision is not timed from the first deal.
+      // 1.0s then 3.0s — the second hand is not timed from the first deal.
       expect(TestBed.inject(PracticeHistoryService).paceLast7()).toBe(2);
+    });
+
+    // A continued decision offers two buttons and one total where the deal
+    // offers six and a pair-or-soft-or-hard lookup. Timing both would move the
+    // week's figure when the trainee turned a setting on rather than when they
+    // got faster.
+    it('times the opening decision only', () => {
+      const { c } = createPage();
+      deal(c, HIT_SCENARIO);
+      TestBed.inject(CardGeneratorService).setRandomSource(() => 0.5); // a 7
+      vi.advanceTimersByTime(2000);
+      c.answer('H');
+      vi.advanceTimersByTime(ADVANCE_MS); // the continuation deals a card
+
+      vi.advanceTimersByTime(9000);
+      c.answer('S'); // hard 14 vs 6 — correct, and three cards deep
+      expect(c.hand().length).toBe(3);
+
+      const history = TestBed.inject(PracticeHistoryService);
+      expect(history.handsToday()).toBe(2);
+      expect(history.paceLast7()).toBe(2);
     });
 
     // A hand you walked away from is not a hand you were slow on.

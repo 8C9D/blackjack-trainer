@@ -258,6 +258,27 @@ describe('PracticeHistoryService', () => {
     });
   });
 
+  // The backup file moves this payload between the browser and the phone, so
+  // the stored shape is a cross-platform contract rather than this store's
+  // private business. A field added on one side and not the other is dropped
+  // silently on the trip.
+  describe('the stored shape', () => {
+    it('writes exactly the fields the iOS store reads', () => {
+      const s = createService(() => current);
+      s.recordHand(true, 2500);
+      const stored = JSON.parse(localStorage.getItem(PRACTICE_HISTORY_KEY)!);
+      expect(Object.keys(stored)).toEqual(['days']);
+      expect(Object.keys(stored.days[0]).sort()).toEqual([
+        'correct',
+        'date',
+        'graded',
+        'hands',
+        'millis',
+        'timed',
+      ]);
+    });
+  });
+
   describe('streak', () => {
     function seed(daysAgoToHands: Record<number, number>): PracticeHistoryService {
       const days = Object.entries(daysAgoToHands).map(([back, hands]) => {
