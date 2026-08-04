@@ -190,9 +190,16 @@ extension ShowdownModel {
         let correct = bet == called
         let band = BetRamp.bandLabels[BetRamp.bandIndex(trueCount: trueCount)]
         let units = BetRamp.unitsLabel(Int(called))
+        // Names the bet that was placed as well as the one called for. A
+        // headline is only ever shown on a miss, and "1 unit was the bet" alone
+        // read as a statement about the chips actually out — on a screen that
+        // says "wagered 8" once the hand settles, and while it is still in
+        // progress says nothing at all. The bet-spread drill has always named
+        // both ("Your bet 8 units / Your spread says 1 unit"); this is the same
+        // decision, so it tells the same story.
         let verdict = PlayVerdict(
             correct: correct,
-            headline: "\(units) was the bet.",
+            headline: "\(units) was the bet, not \(CountFormat.count(bet)).",
             reason: "Your spread calls for \(Int(called)) at \(band), and the true "
                 + "count is \(CountFormat.signedCount(Double(trueCount)))."
         )
