@@ -310,6 +310,28 @@ describe('ProgressPageComponent', () => {
       expect(spot.textContent).not.toContain('TC');
     });
 
+    // The list names what is costing hands; without this the trainee has to go
+    // to the drill and hope the scenario comes up.
+    it('starts a review round in the trainer whose misses are listed', () => {
+      TestBed.inject(MissTallyService).record('deviations', SIXTEEN_V_TEN, false, 2);
+
+      const { fixture, navigate } = createPage();
+      (fixture.nativeElement.querySelector('.progress__drill') as HTMLButtonElement).click();
+
+      expect(navigate).toHaveBeenCalledWith(['/drill', 'deviations'], {
+        queryParams: { review: '1' },
+      });
+    });
+
+    it('offers no review round when the trainer has nothing outstanding', () => {
+      const tally = TestBed.inject(MissTallyService);
+      tally.record('basic-strategy', SIXTEEN_V_TEN, false);
+      for (let i = 0; i < 3; i++) tally.record('basic-strategy', SIXTEEN_V_TEN, true);
+
+      const { fixture } = createPage();
+      expect(fixture.nativeElement.querySelector('.progress__drill')).toBeNull();
+    });
+
     it('still shows a trainer whose spots are all cleared', () => {
       const tally = TestBed.inject(MissTallyService);
       tally.record('basic-strategy', SIXTEEN_V_TEN, false);

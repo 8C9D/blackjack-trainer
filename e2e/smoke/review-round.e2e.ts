@@ -97,6 +97,29 @@ test.describe('review rounds', () => {
     await expect(page.locator('.drill__question')).toContainText(weakHand);
   });
 
+  // Progress names the same weaknesses the Done screen does, and until now was
+  // the one place naming them did nothing.
+  test('Progress can start the review round it lists', async ({ page }) => {
+    await page.goto('/drill/basic-strategy');
+    const weakHand = await drillUntilAMiss(page);
+
+    await page.goto('/progress');
+    const card = page.locator('.progress__card', { hasText: 'Basic Strategy — this week' });
+    await expect(card).toContainText(chartLabel(weakHand));
+    await card.getByRole('button', { name: 'Drill these misses' }).click();
+
+    await expect(page).toHaveURL(/\/drill\/basic-strategy\?review=1$/);
+    await expect(page.getByRole('group', { name: 'Player actions' })).toBeVisible();
+    expect(await questionLine(page)).toBe(weakHand);
+
+    // The second hand is what separates a review round from an ordinary one:
+    // an ordinary round only weights toward the weak list.
+    await page.keyboard.press('s');
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('group', { name: 'Player actions' })).toBeVisible();
+    expect(await questionLine(page)).toBe(weakHand);
+  });
+
   test('a review round keeps dealing the weak spot, not just the first hand', async ({ page }) => {
     await page.goto('/drill/basic-strategy');
     const weakHand = await drillUntilAMiss(page);

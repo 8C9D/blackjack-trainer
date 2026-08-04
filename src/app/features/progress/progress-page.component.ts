@@ -16,8 +16,10 @@ import { KeyCountStatsService } from '../../core/services/key-count-stats.servic
 import {
   MissTallyService,
   missedCountsLabel,
+  type TalliedTrainer,
   type WeakSpot,
 } from '../../core/services/miss-tally.service';
+import { REVIEW_QUERY_PARAM } from '../drill/drill-hand';
 import {
   PracticeHistoryService,
   type StreakDot,
@@ -51,6 +53,8 @@ interface Trend {
 // actionable ("16 vs 10" means different work in each drill).
 interface WeakSpotGroup {
   readonly trainer: string;
+  // The trainer's route segment, so the card can start a review round in it.
+  readonly id: TalliedTrainer;
   readonly outstanding: readonly WeakSpot[];
   readonly cleared: readonly WeakSpot[];
 }
@@ -196,6 +200,12 @@ interface WeakSpotGroup {
                 </li>
               }
             </ul>
+            <!-- Naming a weakness on a read-only screen leaves the trainee to
+                 go and hope it comes up. This is the Done screen's "Drill my
+                 misses" reachable from where the list actually lives. -->
+            <button type="button" class="progress__drill" (click)="drillMisses(group.id)">
+              Drill these misses
+            </button>
           } @else {
             <p class="progress__empty">Nothing outstanding.</p>
           }
@@ -325,6 +335,7 @@ export class ProgressPageComponent {
     )
       .map(({ trainer, id }) => ({
         trainer,
+        id,
         outstanding: this.missTally.weakSpots(id),
         cleared: this.missTally.clearedSpots(id),
       }))
@@ -358,6 +369,12 @@ export class ProgressPageComponent {
 
   protected goHome(): void {
     void this.router.navigate(['/']);
+  }
+
+  protected drillMisses(trainer: TalliedTrainer): void {
+    void this.router.navigate(['/drill', trainer], {
+      queryParams: { [REVIEW_QUERY_PARAM]: '1' },
+    });
   }
 
   @HostListener('window:keydown', ['$event'])
