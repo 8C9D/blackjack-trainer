@@ -1,5 +1,6 @@
-import { Injectable, signal, type Signal } from '@angular/core';
+import { Injectable, inject, signal, type Signal } from '@angular/core';
 
+import { FlowPrefsService } from './flow-prefs.service';
 import { readJson, writeJson } from './storage';
 
 export const PRACTICE_HISTORY_KEY = 'blackjack-practice-history';
@@ -28,6 +29,13 @@ export interface PracticeDay {
   // days written before this have none — untimed, not instant.
   readonly timed: number;
   readonly millis: number;
+  // The daily goal in force when this day was last practised. Kept per day
+  // because a goal is a decision about a day, and judging every past day by
+  // today's number lets one setting rewrite history: raise the goal and a
+  // thirty-day streak reads 0, lower it and days you barely practised count.
+  // Absent on a day written before this was stored, which reads as "whatever
+  // the goal is now" — exactly what those days did before.
+  readonly goal?: number;
 }
 
 // Longest a single decision can be and still count as one. Past this the
@@ -72,6 +80,7 @@ export function localDateKey(d: Date): string {
 // as StatsStore; the stored keys are additive (existing stats keys untouched).
 @Injectable({ providedIn: 'root' })
 export class PracticeHistoryService {
+  private readonly prefs = inject(FlowPrefsService);
   private now: () => Date = () => new Date();
 
   private readonly _days = signal<readonly PracticeDay[]>([]);
@@ -92,10 +101,14 @@ export class PracticeHistoryService {
   recordHand(correct: boolean, elapsedMs?: number): void {
     const today = localDateKey(this.now());
     const millis = plausibleDecisionMs(elapsedMs);
+    // Read here rather than passed in by each drill: six call sites would be six
+    // chances to forget, and a day with no goal reads as judged by whatever the
+    // goal is now — the very thing this is here to stop.
+    const goal = this.prefs.prefs().dailyGoal;
     const days = this._days();
     const existing = days.find((d) => d.date === today);
     const next = existing
-      ? days.map((d) => (d.date === today ? addRep(d, correct, millis) : d))
+      ? days.map((d) => (d.date === today ? addRep(d, correct, millis, goal) : d))
       : [
           ...days,
           {
@@ -105,6 +118,7 @@ export class PracticeHistoryService {
             correct: correct ? 1 : 0,
             timed: millis === null ? 0 : 1,
             millis: millis ?? 0,
+            ...(plausibleGoal(goal) === null ? {} : { goal }),
           },
         ];
     const pruned = this.prune(next);
@@ -120,6 +134,12 @@ export class PracticeHistoryService {
     return this._days().find((d) => d.date === date)?.hands ?? 0;
   }
 
+  // Whether a day reached the goal it is judged by.
+  private metOn(date: string, current: number, isToday: boolean): boolean {
+    const day = this.dayOn(date);
+    return (day?.hands ?? 0) >= this.goalFor(day, current, isToday);
+  }
+
   // The 7-day dot strip ending today, oldest first.
   last7(goal: number): StreakDot[] {
     const dots: StreakDot[] = [];
@@ -130,12 +150,21 @@ export class PracticeHistoryService {
       dots.push({
         date,
         hands,
-        met: hands >= goal,
+        met: hands >= this.goalFor(day, goal, back === 0),
         isToday: back === 0,
         accuracy: accuracyOf(day?.graded ?? 0, day?.correct ?? 0),
       });
     }
     return dots;
+  }
+
+  // Which goal a day is judged by: today's is the one on the Settings screen —
+  // the day is still running, and raising the goal is a statement about it — but
+  // a finished day keeps the goal it was practised under, so changing the number
+  // cannot un-meet a day that was met.
+  private goalFor(day: PracticeDay | undefined, current: number, isToday: boolean): number {
+    if (isToday) return current;
+    return plausibleGoal(day?.goal) ?? current;
   }
 
   // How well the seven days ending `weeksBack` weeks ago went. Volume is
@@ -178,13 +207,13 @@ export class PracticeHistoryService {
   // and an unfinished today never breaks the chain.
   streak(goal: number): number {
     let count = 0;
-    let back = this.handsOn(this.dateKeyDaysAgo(0)) >= goal ? 0 : 1;
+    let back = this.metOn(this.dateKeyDaysAgo(0), goal, true) ? 0 : 1;
     // Bounded by the retention window rather than by the data: days past it are
     // pruned, so no real streak can run longer, and the walk cannot spin forever
     // on a goal of zero — which every day in history, stored or not, satisfies.
     // The goal is clamped to at least 1 before it reaches here, so this is a
     // backstop for a caller that stops doing that, not a live path.
-    while (back < MAX_HISTORY_DAYS && this.handsOn(this.dateKeyDaysAgo(back)) >= goal) {
+    while (back < MAX_HISTORY_DAYS && this.metOn(this.dateKeyDaysAgo(back), goal, back === 0)) {
       count++;
       back++;
     }
@@ -228,7 +257,15 @@ export class PracticeHistoryService {
   }
 }
 
-function addRep(day: PracticeDay, correct: boolean, millis: number | null): PracticeDay {
+function addRep(
+  day: PracticeDay,
+  correct: boolean,
+  millis: number | null,
+  goal: number | undefined,
+): PracticeDay {
+  // The goal in force when the day was last practised: a day whose goal was
+  // raised and then practised again was practised under the new number.
+  const stored = plausibleGoal(goal) ?? day.goal;
   return {
     date: day.date,
     hands: day.hands + 1,
@@ -236,7 +273,16 @@ function addRep(day: PracticeDay, correct: boolean, millis: number | null): Prac
     correct: day.correct + (correct ? 1 : 0),
     timed: day.timed + (millis === null ? 0 : 1),
     millis: day.millis + (millis ?? 0),
+    ...(stored === undefined ? {} : { goal: stored }),
   };
+}
+
+// A stored goal has to be a whole number of hands to judge a day by. Anything
+// else — a repaired preference, a hand-edited backup — reads as no goal at all,
+// which falls back to the one on the Settings screen.
+export function plausibleGoal(goal: number | undefined): number | null {
+  if (goal === undefined || !Number.isFinite(goal)) return null;
+  return goal >= 1 ? Math.floor(goal) : null;
 }
 
 // A decision counts as timed only when the clock read plausibly: a zero or
@@ -251,6 +297,9 @@ export function plausibleDecisionMs(elapsedMs: number | undefined): number | nul
 
 function mergeDays(a: PracticeDay | undefined, b: PracticeDay): PracticeDay {
   if (a === undefined) return b;
+  // Two entries for one date is a hand-edited file; the later one's goal is the
+  // one that day was last practised under, and a missing one keeps the other.
+  const goal = b.goal ?? a.goal;
   return {
     date: b.date,
     hands: capped(a.hands + b.hands),
@@ -258,6 +307,7 @@ function mergeDays(a: PracticeDay | undefined, b: PracticeDay): PracticeDay {
     correct: capped(a.correct + b.correct),
     timed: capped(a.timed + b.timed),
     millis: capped(a.millis + b.millis),
+    ...(goal === undefined ? {} : { goal }),
   };
 }
 
@@ -280,6 +330,7 @@ function toPracticeDay(value: unknown): PracticeDay | null {
   // A timed rep is a graded one, and no run of them can average past the cap,
   // so a hand-edited file cannot report an impossible pace either way.
   const timed = Math.min(graded, count(day.timed) ?? 0);
+  const goal = plausibleGoal(typeof day.goal === 'number' ? day.goal : undefined);
   return {
     date: day.date,
     hands,
@@ -287,6 +338,7 @@ function toPracticeDay(value: unknown): PracticeDay | null {
     correct: Math.min(graded, count(day.correct) ?? 0),
     timed,
     millis: Math.min(timed * MAX_TIMED_DECISION_MS, count(day.millis) ?? 0),
+    ...(goal === null ? {} : { goal }),
   };
 }
 

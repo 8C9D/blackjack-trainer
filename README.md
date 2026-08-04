@@ -437,9 +437,12 @@ no-ops at runtime but document the chart cell.
 ### Shared (the Flow shell)
 
 - **Flow home** — one loud primary action ("Continue — last trainer", `Enter`), the other two trainers on stable cards with lifetime-accuracy chips (keys `2` / `3`), the strategy chart (`C`), Settings (`,`), a daily-goal ring, and a 7-day streak strip.
-- **Daily goal & practice history** — every graded rep records to a per-day hands count, its verdict, and (in the two strategy drills) how long the decision took; the goal ring, streak dots, and each drill's session target derive from the count, the Progress screen's weekly accuracy from the verdicts, and its weekly pace from the clock.
+- **Daily goal & practice history** — every graded rep records to a per-day hands count, its verdict, the daily goal in force, and (in the two strategy drills) how long the decision took; the goal ring, streak dots, and each drill's session target derive from the count, the Progress screen's weekly accuracy from the verdicts, and its weekly pace from the clock.
   The daily goal (1–200, default 20) is set in Settings.
   Days recorded before verdicts were stored read as unmeasured rather than as 0% correct, which is why the graded count is tracked separately from the hands count.
+- **A day keeps the goal it was practised under.** The streak reads as history, and judging every past day by the number currently on the Settings screen let one setting rewrite it: raising the goal turned a month of met days into a 0-day streak, and lowering it handed back days that were never met.
+  Each day now stores the goal in force when it was last practised and is judged by that; **today** is judged by the goal set now, because the day is still running and raising the goal is a statement about it too.
+  A day written before the goal was stored — or carrying one a hand-edited backup could not have meant — falls back to the current goal, which is exactly what every day did before.
 - **Adaptive weak-spot practice** — Basic Strategy and Deviations misses are tallied per scenario over a rolling 7-day window.
   Every round opens on the worst outstanding scenario and then draws ~40% of its hands from the weak list, weighted by miss count, so what you keep missing keeps coming back.
   A scenario retires from the list once you answer it correctly three times running, and the Done screen names the week's cleared spots.
@@ -734,12 +737,12 @@ different tally and does **not** extend `StatsStore`:
 
 The Flow shell adds four keys of its own:
 
-| Store            | Key                          | Shape                                                                                 |
-| ---------------- | ---------------------------- | ------------------------------------------------------------------------------------- |
-| Flow prefs       | `blackjack-flow-prefs`       | last trainer, daily goal, theme, table rules, per-trainer drill settings              |
-| Count drift      | `blackjack-count-drift`      | the last 20 running-count answers as signed distances from the real count             |
-| Practice history | `blackjack-practice-history` | per-day hands / graded / correct counts (local calendar dates, pruned past ~400 days) |
-| Miss tally       | `blackjack-miss-tally`       | per-scenario attempt/miss day tallies + clear streak (Basic Strategy, Deviations)     |
+| Store            | Key                          | Shape                                                                                                            |
+| ---------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Flow prefs       | `blackjack-flow-prefs`       | last trainer, daily goal, theme, table rules, per-trainer drill settings                                         |
+| Count drift      | `blackjack-count-drift`      | the last 20 running-count answers as signed distances from the real count                                        |
+| Practice history | `blackjack-practice-history` | per-day hands / graded / correct / timed counts and the day's goal (local calendar dates, pruned past ~400 days) |
+| Miss tally       | `blackjack-miss-tally`       | per-scenario attempt/miss day tallies + clear streak (Basic Strategy, Deviations)                                |
 
 Every store loads tolerantly: a malformed or partial payload degrades to defaults field by field, and a read the browser refuses yields the same defaults, because nothing is lost by it.
 The home screen's accuracy chips read the lifetime stats stores; the card-counting card combines the running-count and true-count stores.

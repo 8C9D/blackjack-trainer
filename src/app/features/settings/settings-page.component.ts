@@ -131,13 +131,15 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
         <h2 class="settings__heading">Drills</h2>
         <label>
           <input type="checkbox" [checked]="prefs().playHandsOut" (change)="togglePlayHandsOut()" />
-          Play hands out (a correct hit deals the next card)
+          Play hands out (a correct hit or split is followed through)
         </label>
         <p class="settings__hint">
           Off, Basic Strategy and Deviations ask the opening decision and deal a fresh hand. On, a
           hit is followed by the card it draws and the decision that follows — where doubling,
           splitting and surrender are already gone, and a deviation index still applies because it
-          is written against a total.
+          is written against a total. A split is followed through too: each half is dealt a second
+          card and played in turn, re-splitting up to four hands, with split aces taking one card
+          each. A hand out of a split cannot surrender or insure, and doubles only under DAS.
         </p>
       </section>
 
