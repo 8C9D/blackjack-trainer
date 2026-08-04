@@ -58,18 +58,12 @@ final class AppModel {
 
     init() {
         cleanupLegacyStatsKeys()
-        // The data is bundled and its integrity is verified by tests + CI; a
-        // failure here means a broken build, so fail loudly.
-        guard let loaded = try? GameData.loadValidated() else {
-            preconditionFailure("bundled game data failed to load or validate")
-        }
+        let loaded = Self.loadEngines()
         charts = loaded.charts
         countingSystems = loaded.systems
-        let basicStrategyEngine = BasicStrategyEngine(charts: loaded.charts)
-        basicStrategy = basicStrategyEngine
-        let deviationEngine = DeviationEngine(basic: basicStrategyEngine, charts: loaded.charts)
-        deviations = deviationEngine
-        deviationEvaluator = DeviationEvaluator(engine: deviationEngine)
+        basicStrategy = loaded.basicStrategy
+        deviations = loaded.deviations
+        deviationEvaluator = loaded.evaluator
 
         let cloud = UbiquitousKeyValueStore()
         let basicStrategyStats = SessionStatsStore(key: StatsKeys.basicStrategy, cloud: cloud)
@@ -98,7 +92,12 @@ final class AppModel {
         self.showdownBankroll = showdownBankroll
 
         let flowPrefs = FlowPrefsStore(cloud: cloud, systems: loaded.systems)
-        let practiceHistory = PracticeHistoryStore(cloud: cloud)
+        // A day is judged by the goal it was practised under, so the history has
+        // to know what that was on every rep it records — wired at construction
+        // rather than threaded through each drill.
+        let practiceHistory = PracticeHistoryStore(cloud: cloud, goalSource: { [weak flowPrefs] in
+            flowPrefs?.prefs.dailyGoal ?? 0
+        })
         let missTally = MissTallyStore(cloud: cloud)
         let countDrift = CountDriftStore(cloud: cloud)
         self.flowPrefs = flowPrefs
@@ -115,6 +114,33 @@ final class AppModel {
         // pulled from iCloud at launch. The widget mirrors the Flow home surface —
         // the daily-goal ring and the streak — from the practice history + goal.
         widgetPublisher = WidgetSnapshotPublisher(history: practiceHistory, prefs: flowPrefs)
+    }
+
+    /// The bundled charts and the engines built on them. Its own step so the
+    /// initializer stays inside the lint limit.
+    private struct LoadedEngines {
+        let charts: ChartsFile
+        let systems: [CountingSystem]
+        let basicStrategy: BasicStrategyEngine
+        let deviations: DeviationEngine
+        let evaluator: DeviationEvaluator
+    }
+
+    /// The data is bundled and its integrity is verified by tests + CI; a failure
+    /// here means a broken build, so fail loudly.
+    private static func loadEngines() -> LoadedEngines {
+        guard let loaded = try? GameData.loadValidated() else {
+            preconditionFailure("bundled game data failed to load or validate")
+        }
+        let basicStrategy = BasicStrategyEngine(charts: loaded.charts)
+        let deviations = DeviationEngine(basic: basicStrategy, charts: loaded.charts)
+        return LoadedEngines(
+            charts: loaded.charts,
+            systems: loaded.systems,
+            basicStrategy: basicStrategy,
+            deviations: deviations,
+            evaluator: DeviationEvaluator(engine: deviations)
+        )
     }
 
     /// Every store that holds state loaded from `UserDefaults`, so a restore can
