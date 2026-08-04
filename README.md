@@ -288,6 +288,8 @@ the **same persistent shoe**, depleting it further:
 - **Bet sizing (optional)** — Settings → Card counting → **Bet sizing (bankroll)** turns the showdown into a spreading drill.
   Each round opens on a bet before any card is dealt (the count you just practised is the only information you have), every box posts that bet, and a double or split posts a second one.
   The rungs on offer are your own configured bet spread — one chip per unit — and the bet is graded against what that spread calls for at the count, so flat-betting a rich shoe is named rather than passing quietly.
+  **A miss names the bet placed as well as the one called for** ("1 unit was the bet, not 8"): a verdict is only ever shown on a miss, and the called bet alone read as a statement about the chips actually out — while the hand is still in progress the screen says nothing about the wager, and once it settles it says "wagered 8" two lines above.
+  The bet-spread drill has always named both ("Your bet 8 units / Your spread says 1 unit"), and this is the same decision graded at a table instead of in the abstract.
   It is your spread, never a computed optimum: what to bet at a count follows from bankroll, risk of ruin and what the table tolerates, none of which this app knows.
   Any balanced system is graded on its own true count; an unbalanced one has none to index a ramp by, so its bet is left alone.
   Hands settle against a persisted bankroll of 500 chips: a win pays the stake, a natural 3:2 on the bet, a push returns it, a loss forfeits it.
