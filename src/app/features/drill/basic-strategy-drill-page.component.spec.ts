@@ -1,5 +1,5 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 
 import {
   ALL_RANKS,
@@ -675,6 +675,45 @@ describe('BasicStrategyDrillPageComponent', () => {
           vi.advanceTimersByTime(ADVANCE_MS);
           fixture.detectChanges();
         }
+      });
+
+      // Progress lists the same weak spots and, until now, could do nothing
+      // about them. `?review=1` is that card's entry into this round.
+      it('opens straight into a review round when the route asks for one', () => {
+        TestBed.overrideProvider(ActivatedRoute, {
+          useValue: { snapshot: { queryParamMap: convertToParamMap({ review: '1' }) } },
+        });
+        TestBed.inject(MissTallyService).record('basic-strategy', PAIR_8S, false);
+
+        const { fixture, c } = createPage();
+        pinRandomness();
+        // Hand one opens on the weakness in any round; hand two is the one that
+        // separates a review round from an ordinary one, because 0.99 fails the
+        // ordinary 0.4 share roll.
+        for (let i = 0; i < 2; i++) {
+          expect(handQuestion(c.scenario().player, c.scenario().dealerUpcard)).toEqual(
+            PAIR_8S_QUESTION,
+          );
+          c.answer('P');
+          vi.advanceTimersByTime(ADVANCE_MS);
+          fixture.detectChanges();
+        }
+      });
+
+      it('treats any other value of the review parameter as an ordinary round', () => {
+        TestBed.overrideProvider(ActivatedRoute, {
+          useValue: { snapshot: { queryParamMap: convertToParamMap({ review: 'yes' }) } },
+        });
+        TestBed.inject(MissTallyService).record('basic-strategy', PAIR_8S, false);
+
+        const { fixture, c } = createPage();
+        pinRandomness();
+        c.answer('P');
+        vi.advanceTimersByTime(ADVANCE_MS);
+        fixture.detectChanges();
+        expect(handQuestion(c.scenario().player, c.scenario().dealerUpcard)).not.toEqual(
+          PAIR_8S_QUESTION,
+        );
       });
 
       it('"One more round" afterwards goes back to weighting, not forcing', () => {

@@ -2,6 +2,8 @@
 // question-line labels, per-hand action legality (poka-yoke), weak-spot
 // scenario construction, and session-target math.
 
+import type { ActivatedRoute } from '@angular/router';
+
 import {
   ALL_SUITS,
   TEN_VALUE_RANKS,
@@ -85,6 +87,15 @@ export function legalActionsFor(
 export function nextSessionTarget(handsToday: number, goal: number): number {
   const safeGoal = Math.max(1, goal);
   return (Math.floor(Math.max(0, handsToday) / safeGoal) + 1) * safeGoal;
+}
+
+// Query parameter that opens a drill straight into a review round, so Progress
+// can act on the weak spots it names. Only '1' counts: a drill entered any other
+// way is an ordinary round, and a typo should not silently narrow the practice.
+export const REVIEW_QUERY_PARAM = 'review';
+
+export function isReviewEntry(route: ActivatedRoute): boolean {
+  return route.snapshot.queryParamMap.get(REVIEW_QUERY_PARAM) === '1';
 }
 
 // Share of an ordinary round's hands drawn from the user's weak spots. High

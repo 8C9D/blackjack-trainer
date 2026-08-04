@@ -1,5 +1,5 @@
 import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { actionForKey, shouldIgnoreKeyboardEvent } from '../../core/keyboard';
 import type { Card, Scenario } from '../../core/models/card.model';
@@ -26,6 +26,7 @@ import { DrillSession } from './drill-session';
 import { FLOW_ADVANCE_DELAY_MS } from './drill-timing';
 import {
   handQuestion,
+  isReviewEntry,
   legalActionsFor,
   nextSessionTarget,
   pickWeakSpot,
@@ -190,6 +191,10 @@ export class BasicStrategyDrillPageComponent {
   constructor() {
     this.prefs.setLastTrainer('basic-strategy');
     this.target.set(nextSessionTarget(this.handsToday(), this.prefs.prefs().dailyGoal));
+    // Arriving from Progress's weak-spot card, which is the same promise the
+    // Done screen's "Drill my misses" makes — the round opens on the weakness
+    // (`firstScenario` already does) and every later hand comes from the list.
+    if (isReviewEntry(inject(ActivatedRoute))) this.reviewing.set(true);
     inject(DestroyRef).onDestroy(() => this.clearAdvance());
   }
 
