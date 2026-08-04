@@ -3,6 +3,8 @@ import { TestBed } from '@angular/core/testing';
 import { BACKUP_APP_ID, BACKUP_SCHEMA_VERSION } from '../models/backup.model';
 import { PAGE_RELOAD } from './app-update.service';
 import { BackupService, NOW_SOURCE } from './backup.service';
+import { FlowPrefsService } from './flow-prefs.service';
+import { PracticeDataService } from './practice-data.service';
 
 const EXPORTED_AT = new Date('2026-08-03T13:45:00.000Z');
 
@@ -259,6 +261,43 @@ describe('BackupService', () => {
       service.restore(file);
 
       expect(service.build().data).toEqual(before);
+    });
+  });
+
+  // The backup carries whatever is in the namespace, which is what makes the
+  // namespace itself a cross-platform contract: a store this app writes and the
+  // Swift one has never heard of survives the export and is thrown away on
+  // import, and nothing anywhere says so.
+  //
+  // `PracticeDataService` is the one place that already names every practice
+  // store, so resetting through it materialises the whole set rather than
+  // trusting a second hand-kept list.
+  describe('the namespace it carries', () => {
+    it('is exactly the set of keys the iOS app also stores', () => {
+      const { service } = createService();
+      TestBed.inject(PracticeDataService).reset();
+      // Settings are not practice data, so nothing above writes them — but the
+      // backup carries them, and iOS reads them.
+      TestBed.inject(FlowPrefsService).setDailyGoal(20);
+
+      expect(Object.keys(service.build().data).sort()).toEqual([
+        'blackjack-basic-strategy-stats',
+        'blackjack-bet-spread-stats',
+        'blackjack-card-counting-stats',
+        'blackjack-count-drift',
+        'blackjack-deck-estimation-stats',
+        'blackjack-deck-speed-best',
+        'blackjack-deck-speed-stats',
+        'blackjack-deviation-stats',
+        'blackjack-flow-prefs',
+        'blackjack-key-count-stats',
+        'blackjack-miss-tally',
+        'blackjack-practice-history',
+        'blackjack-showdown-bankroll',
+        'blackjack-showdown-play-stats',
+        'blackjack-showdown-stats',
+        'blackjack-true-count-stats',
+      ]);
     });
   });
 });

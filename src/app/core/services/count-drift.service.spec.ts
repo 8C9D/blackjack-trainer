@@ -108,5 +108,16 @@ describe('CountDriftService', () => {
       service().record(3, 5);
       expect(coerceDrifts(JSON.parse(localStorage.getItem(COUNT_DRIFT_KEY)!))).toEqual([-2]);
     });
+
+    // The backup file moves this payload between the browser and the phone, so
+    // the wrapper object is a cross-platform contract: a bare array on one side
+    // and `{ drifts: [...] }` on the other reads as an empty history, and the
+    // Progress line that names which way your counts lean simply disappears.
+    it('writes exactly the shape the iOS store reads', () => {
+      service().record(3, 5);
+      const stored = JSON.parse(localStorage.getItem(COUNT_DRIFT_KEY)!);
+      expect(Object.keys(stored)).toEqual(['drifts']);
+      expect(Array.isArray(stored.drifts)).toBe(true);
+    });
   });
 });
