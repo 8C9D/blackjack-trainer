@@ -21,6 +21,10 @@ final class DeviationsDrillModel {
 
     private(set) var phase: DrillPhase = .question
     private(set) var scenario: DeviationScenario
+    /// The hand as it stands: the deal's two cards, plus every card a correct hit
+    /// has drawn since. The scenario keeps the opening deal, which is what a weak
+    /// spot is filed against and what the next hand resets to.
+    private(set) var hand: [Card] = []
     private(set) var result: DeviationTrainerResult?
     private(set) var target = 0
     let session = DrillSession()
@@ -59,6 +63,7 @@ final class DeviationsDrillModel {
         prefs.setLastTrainer(.deviations)
         target = nextSessionTarget(handsToday: history.handsToday(), goal: prefs.prefs.dailyGoal)
         scenario = firstScenario()
+        hand = scenario.player.cards
     }
 
     convenience init(
@@ -79,92 +84,81 @@ final class DeviationsDrillModel {
         )
     }
 
-    var handsToday: Int {
-        history.handsToday()
-    }
-
-    var question: HandQuestion {
-        handQuestion(scenario.player, dealerUpcard: scenario.dealerUpcard)
-    }
-
-    var trueCountLabel: String {
-        DeviationFeedback.formatTrueCount(scenario.trueCount)
-    }
-
-    /// The counts this drill grades against are Hi-Lo. A trainee who has picked
-    /// another system in Settings would otherwise drill Hi-Lo indices against a
-    /// count that never produces those numbers, and nothing on screen would say so.
-    var indexNote: String? {
-        systems.system(withId: prefs.prefs.counting.systemId).flatMap(DeviationIndexSystem.note)
-    }
-
-    var explanation: String {
-        guard let result else { return "" }
-        return DeviationFeedback.explanation(result, dealerAce: scenario.dealerUpcard.isAce)
-    }
-
-    /// Surrender stays answerable regardless of the Late Surrender rule: the
-    /// deviation surrender overlay can expect SUR either way.
-    var legalActions: [Action] {
-        legalActionsFor(
-            scenario.player,
-            dealerUpcard: scenario.dealerUpcard,
-            options: prefs.prefs.options,
-            surrenderAlways: true
-        )
-    }
-
-    var picked: Action? {
-        result?.userAction
-    }
-
-    var correctAction: Action? {
-        result?.expectedAction
-    }
-
-    var goalMet: Bool {
-        handsToday >= prefs.prefs.dailyGoal
-    }
-
-    var weakSpots: [WeakSpot] {
-        missTally.weakSpots(.deviations)
-    }
-
-    var weakSpot: WeakSpot? {
-        weakSpots.first
-    }
-
-    var clearedSpots: [WeakSpot] {
-        missTally.clearedSpots(.deviations)
-    }
-
     func answer(_ action: Action) {
         guard phase == .question, legalActions.contains(action) else { return }
-        let evaluation = evaluator.evaluate(
+        let evaluation = gradeDecision(action)
+        result = evaluation
+        stats.recordAttempt(correct: evaluation.correct)
+        history.recordHand(correct: evaluation.correct)
+        // Only the opening decision has a weak spot to file under: a `ScenarioRef`
+        // names a two-card hand, and re-dealing a three-card 16 as a two-card one
+        // would ask a different question (that one can double).
+        //
+        // The count goes in with the miss: here it is half the question, and a
+        // hand re-dealt at a fresh count is a different one.
+        if hand.count == 2 {
+            missTally.record(
+                .deviations,
+                ref: scenarioRefFor(scenario.player, dealerUpcard: scenario.dealerUpcard),
+                correct: evaluation.correct,
+                trueCount: scenario.trueCount
+            )
+        }
+        session.record(evaluation.correct)
+
+        if evaluation.correct {
+            phase = .flash
+            scheduler.schedule(after: advanceDelay) { [weak self] in self?.afterCorrect(action) }
+        } else {
+            phase = .miss
+        }
+    }
+
+    /// The opening question takes every action on the table and the insurance
+    /// overlay with it. Every question after it is a playing decision on a hand
+    /// more than two cards deep, where an index still applies — it is written
+    /// against a total — but doubling, splitting and surrender are gone.
+    private func gradeDecision(_ action: Action) -> DeviationTrainerResult {
+        guard hand.count == 2 else {
+            return evaluator.evaluatePlay(
+                PlayedOutHand(
+                    player: hand,
+                    dealerUpcard: scenario.dealerUpcard,
+                    trueCount: scenario.trueCount,
+                    ruleSet: prefs.prefs.ruleSet,
+                    options: prefs.prefs.options
+                ),
+                userAction: action
+            )
+        }
+        return evaluator.evaluate(
             scenario,
             userAction: action,
             ruleSet: prefs.prefs.ruleSet,
             options: prefs.prefs.options
         )
-        result = evaluation
-        stats.recordAttempt(correct: evaluation.correct)
-        history.recordHand(correct: evaluation.correct)
-        // The count goes in with the miss: here it is half the question, and a
-        // hand re-dealt at a fresh count is a different one.
-        missTally.record(
-            .deviations,
-            ref: scenarioRefFor(scenario.player, dealerUpcard: scenario.dealerUpcard),
-            correct: evaluation.correct,
-            trueCount: scenario.trueCount
-        )
-        session.record(evaluation.correct)
+    }
 
-        if evaluation.correct {
-            phase = .flash
-            scheduler.schedule(after: advanceDelay) { [weak self] in self?.advance() }
-        } else {
-            phase = .miss
+    /// A hit is the one correct answer that leaves another decision behind it, so
+    /// it draws the next card and asks again — at the same count, which is the
+    /// scenario's given rather than a live shoe's. Internal so tests can drive
+    /// the loop without a real timer.
+    func afterCorrect(_ action: Action) {
+        guard prefs.prefs.playHandsOut, action == .hit else {
+            advance()
+            return
         }
+        hand.append(generator.generateCard())
+        // Busting, or reaching 21, ends the hand with nothing left to ask. Hold
+        // the card that did it on screen — that is the answer to the hit — then
+        // move on.
+        if Hand.total(hand) >= 21 {
+            phase = .over
+            scheduler.schedule(after: advanceDelay * 2) { [weak self] in self?.advance() }
+            return
+        }
+        result = nil
+        phase = .question
     }
 
     func continueFromMiss() {
@@ -226,6 +220,7 @@ final class DeviationsDrillModel {
     /// Load a scenario and reset to the question phase (transition + test seam).
     func deal(_ scenario: DeviationScenario) {
         self.scenario = scenario
+        hand = scenario.player.cards
         result = nil
         phase = .question
     }
@@ -301,7 +296,80 @@ final class DeviationsDrillModel {
     }
 }
 
-/// The Deviations drill screen in the Flow shell.
+// The Deviations drill screen in the Flow shell.
+
+/// The read-only half of the model: everything the screen renders and nothing
+/// that mutates. Split out to keep the class body inside the lint limit; `private`
+/// is file-scoped, so the stores it reads are still in reach.
+@MainActor
+extension DeviationsDrillModel {
+    var handsToday: Int {
+        history.handsToday()
+    }
+
+    var question: HandQuestion {
+        handQuestion(hand, dealerUpcard: scenario.dealerUpcard)
+    }
+
+    /// Why the played-out hand stopped asking: a hit that busted, or one that
+    /// reached 21 and left nothing to decide.
+    var handOver: String {
+        let total = Hand.total(hand)
+        return total > 21 ? "Bust — \(total)." : "\(total) — nothing left to decide."
+    }
+
+    var trueCountLabel: String {
+        DeviationFeedback.formatTrueCount(scenario.trueCount)
+    }
+
+    /// The counts this drill grades against are Hi-Lo. A trainee who has picked
+    /// another system in Settings would otherwise drill Hi-Lo indices against a
+    /// count that never produces those numbers, and nothing on screen would say so.
+    var indexNote: String? {
+        systems.system(withId: prefs.prefs.counting.systemId).flatMap(DeviationIndexSystem.note)
+    }
+
+    var explanation: String {
+        guard let result else { return "" }
+        return DeviationFeedback.explanation(result, dealerAce: scenario.dealerUpcard.isAce)
+    }
+
+    /// Surrender stays answerable regardless of the Late Surrender rule: the
+    /// deviation surrender overlay can expect SUR either way.
+    var legalActions: [Action] {
+        legalActionsFor(
+            hand,
+            dealerUpcard: scenario.dealerUpcard,
+            options: prefs.prefs.options,
+            surrenderAlways: true
+        )
+    }
+
+    var picked: Action? {
+        result?.userAction
+    }
+
+    var correctAction: Action? {
+        result?.expectedAction
+    }
+
+    var goalMet: Bool {
+        handsToday >= prefs.prefs.dailyGoal
+    }
+
+    var weakSpots: [WeakSpot] {
+        missTally.weakSpots(.deviations)
+    }
+
+    var weakSpot: WeakSpot? {
+        weakSpots.first
+    }
+
+    var clearedSpots: [WeakSpot] {
+        missTally.clearedSpots(.deviations)
+    }
+}
+
 struct DeviationsDrillView: View {
     @State private var model: DeviationsDrillModel
     let onExit: () -> Void
@@ -348,7 +416,7 @@ struct DeviationsDrillView: View {
                 AdvisoryNoteView(text: note)
                     .padding(.top, 10)
             }
-            FlowStageView(player: model.scenario.player, dealer: model.scenario.dealerUpcard) {
+            FlowStageView(player: model.hand, dealer: model.scenario.dealerUpcard) {
                 DrillLineView(line: stageLine)
             }
             FlowActionsView(
@@ -376,6 +444,9 @@ struct DeviationsDrillView: View {
             return Text("Correct: \(result.expectedAction.label). ").bold()
                 .foregroundStyle(Theme.accentInk)
                 + Text(model.explanation).foregroundStyle(Theme.midInk)
+        }
+        if model.phase == .over {
+            return Text(model.handOver).bold().foregroundStyle(Theme.accentInk)
         }
         let question = model.question
         let prefix = question.prefix.isEmpty ? Text("") : Text("\(question.prefix) ")

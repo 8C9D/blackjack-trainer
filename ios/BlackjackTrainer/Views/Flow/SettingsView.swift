@@ -99,15 +99,17 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: Basic Strategy
+    // MARK: Drills
 
     private var basicStrategySection: some View {
-        Section("Basic Strategy") {
+        Section("Drills") {
             Toggle("Play hands out", isOn: playHandsOutBinding)
             Text(
-                "Off, the drill asks the opening decision and deals a fresh hand. "
-                    + "On, a hit is followed by the card it draws and the decision that "
-                    + "follows — where doubling, splitting and surrender are already gone."
+                "Off, Basic Strategy and Deviations ask the opening decision and deal a "
+                    + "fresh hand. On, a hit is followed by the card it draws and the "
+                    + "decision that follows — where doubling, splitting and surrender are "
+                    + "already gone, and a deviation index still applies because it is "
+                    + "written against a total."
             )
             .font(.footnote)
             .foregroundStyle(Theme.muted)

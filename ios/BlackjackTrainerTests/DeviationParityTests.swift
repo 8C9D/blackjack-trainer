@@ -72,6 +72,45 @@ struct DeviationParityTests {
         #expect(!atTwo.correct)
     }
 
+    /// The drill plays a hand out once the chart says hit, and the showdown has
+    /// always graded index plays on hands deeper than the deal.
+    @Test func evaluatePlayAppliesAHardTotalIndexToAThreeCardHand() throws {
+        let evaluator = try evaluator()
+        let deep = [card("10"), card("2"), card("4")] // hard 16
+        let stood = evaluator.evaluatePlay(
+            PlayedOutHand(player: deep, dealerUpcard: card("10"), trueCount: 0,
+                          ruleSet: .s17, options: .default),
+            userAction: .stand
+        )
+        #expect(stood.correct)
+        #expect(stood.expectedAction == .stand)
+        #expect(stood.basicAction == .hit)
+        #expect(stood.deviationApplied)
+
+        // One count lower the index does not fire, and the same total hits.
+        let below = evaluator.evaluatePlay(
+            PlayedOutHand(player: deep, dealerUpcard: card("10"), trueCount: -1,
+                          ruleSet: .s17, options: .default),
+            userAction: .stand
+        )
+        #expect(!below.correct)
+        #expect(below.expectedAction == .hit)
+        #expect(!below.deviationApplied)
+    }
+
+    /// Doubling is a first-two-card action, so an index calling for it can only
+    /// leave the play behind it — the same restriction the showdown applies.
+    @Test func evaluatePlayNeverNamesAnActionTheHandCanNoLongerTake() throws {
+        let evaluator = try evaluator()
+        let result = evaluator.evaluatePlay(
+            PlayedOutHand(player: [card("5"), card("3"), card("3")], dealerUpcard: card("10"),
+                          trueCount: 5, ruleSet: .s17, options: .default),
+            userAction: .hit
+        )
+        #expect(result.expectedAction == .hit)
+        #expect(result.correct)
+    }
+
     @Test func famousSixteenVsTenStands() throws {
         let evaluator = try evaluator()
         let result = evaluator.evaluate(

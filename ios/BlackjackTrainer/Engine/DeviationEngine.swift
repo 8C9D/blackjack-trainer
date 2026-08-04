@@ -86,6 +86,13 @@ struct DeviationEngine {
     /// deviation calling for a double the bankroll cannot back, or a split past
     /// the box's four-hand cap, is not a play the trainee declined — so the
     /// chart's own answer stands. Mirrors `resolvePlayDecision`.
+    /// The chart's own answer for a hand under way, before any index. Exposed so
+    /// the evaluator can report `basicAction` beside a deviated one (`private` is
+    /// file-scoped to the declaring type, so it cannot reach the engine's own).
+    func basicPlay(_ input: PlayInput) -> StrategyDecision {
+        basic.decidePlay(input)
+    }
+
     func resolvePlayDecision(_ input: PlayInput, trueCount: Int) -> PlayDeviationDecision {
         let basic = basic.decidePlay(input)
         let opening = input.player.count == 2
@@ -221,6 +228,17 @@ struct DeviationEngine {
 /// Port of `deviation-evaluator.service.ts`: the insurance overlay (dealer Ace,
 /// TC ≥ +3) dominates the playing-decision deviation overlay. (The feedback
 /// explanation strings are formatted alongside the Deviations screen, Slice 3.5.)
+/// A deviation question about a hand already under way: the cards as they
+/// stand, the count they are being played at, and the table rules. Bundled
+/// rather than passed loose so `evaluatePlay` stays inside the parameter limit.
+struct PlayedOutHand {
+    let player: [Card]
+    let dealerUpcard: Card
+    let trueCount: Int
+    let ruleSet: RuleSet
+    let options: EngineOptions
+}
+
 struct DeviationEvaluator {
     private let engine: DeviationEngine
 
@@ -256,6 +274,29 @@ struct DeviationEvaluator {
             trueCount: scenario.trueCount, deviationApplied: playing.deviationApplied,
             matchedRule: playing.matchedRule, source: .playing,
             correct: userAction == playing.finalAction
+        )
+    }
+
+    /// The same verdict for a hand already under way. An index is written against
+    /// a total, so it applies to a three-card 16 exactly as it does to a two-card
+    /// one — which is what the showdown grades and what the drill can now teach.
+    /// Two things are gone by then: doubling, splitting and surrender are
+    /// first-two-card actions, and insurance was settled before the hand was
+    /// played. Mirrors the web `evaluatePlay`.
+    func evaluatePlay(_ hand: PlayedOutHand, userAction: Action) -> DeviationTrainerResult {
+        let input = PlayInput(
+            player: hand.player, dealerUpcard: hand.dealerUpcard,
+            ruleSet: hand.ruleSet, options: hand.options,
+            canDouble: false, canSplit: false, canSurrender: false
+        )
+        let basic = engine.basicPlay(input)
+        let resolved = engine.resolvePlayDecision(input, trueCount: hand.trueCount)
+        return DeviationTrainerResult(
+            userAction: userAction, expectedAction: resolved.action,
+            basicAction: basic.action,
+            trueCount: hand.trueCount, deviationApplied: resolved.deviationApplied,
+            matchedRule: resolved.matchedRule, source: .playing,
+            correct: userAction == resolved.action
         )
     }
 }
