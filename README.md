@@ -461,7 +461,13 @@ no-ops at runtime but document the chart cell.
   A hand clears its mark the same way it leaves the weak list: three correct answers running.
   Each trainer marks its own chart, and a surrender rule looks itself up under the hard total it is written over, because that is how the drill files it.
   Insurance is the one rule with no mark — a missed insurance call is filed against the hand that was dealt, not against the offer.
-  Marked, not ranked, and still read-only: the counts and the review round that drills them are the Progress screen's job.
+  Marked, not ranked: the counts and the review round that drills them are the Progress screen's job.
+  **Every hand on it is drillable.** The chart is where a trainee looks a hand up, and until now it could name the play and do nothing else — the same gap the Progress weak-spot list closed when it learned to start a review round, on the one screen where the thought "I never remember this one" actually happens.
+  Picking a cell opens the Basic Strategy drill with `?hand=hard-16-v-10` (the tally's own scenario key, so the chart, the weak list and the drill share one encoding) and **every deal that round is that hand**, which the drill says on screen.
+  A deviation row does the same into the Deviations trainer, where the hand is pinned and the count is not: both sides of an index have to come up, or the round only ever asks the half you already know.
+  Insurance is the one row with nothing to drill — it is filed against whatever hand was dealt rather than against the offer.
+  A hand the app cannot deal falls back to an ordinary round, the same call `?review=1` makes, and the pin belongs to the round the chart started: "One more round" is ordinary practice again.
+  The grid is 340 cells, so it holds **one tab stop per table** with the arrow keys moving inside it rather than 340 buttons between "Back" and the legend.
 - **Light and dark themes** — one semantic token set in two palettes (`src/styles.scss`).
   The palette follows `prefers-color-scheme`; Settings → Appearance pins it, which `ThemeService` applies as `data-theme` on `<html>` and mirrors into the `theme-color` meta so the browser chrome matches.
 - **Accessibility** — grading is announced through a live region (the action grid conveys it with color and position alone), the Done screen takes focus when it replaces the drill, every screen carries a level-1 heading, focus rings clear 3:1 in both themes, and `prefers-reduced-motion` is honored.

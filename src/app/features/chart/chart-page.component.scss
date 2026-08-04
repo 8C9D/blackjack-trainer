@@ -153,6 +153,25 @@
   font-variant-numeric: tabular-nums;
 }
 
+// The <td> is now only a slot: the cell itself is the button inside it, so the
+// colour, the ring and the hit target all belong to one element.
+.chart__cell-slot {
+  padding: 0;
+}
+
+.chart__cell--button {
+  display: block;
+  width: 100%;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  background: transparent;
+
+  &:hover {
+    filter: brightness(0.94);
+  }
+}
+
 .chart__cell--h {
   background: var(--chart-hit);
 }
@@ -216,6 +235,25 @@
   width: auto;
   font-weight: 500;
   color: var(--ink);
+}
+
+// A rule's hand is the link into drilling it. Underlined rather than buttoned:
+// the row is text in a text table, and a button apiece would out-shout the
+// indices, which are what the list is for.
+.chart__rule-drill {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  text-decoration-color: var(--muted);
+  cursor: pointer;
+
+  &:hover {
+    text-decoration-color: var(--accent);
+  }
 }
 
 // The deviation list is text, not a ten-column grid, so an outstanding rule can

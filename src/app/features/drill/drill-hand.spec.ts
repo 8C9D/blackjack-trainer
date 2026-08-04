@@ -6,6 +6,7 @@ import type { ScenarioRef, WeakSpot } from '../../core/services/miss-tally.servi
 import {
   MAX_SPLIT_HANDS,
   UNSPLIT,
+  parseScenarioKey,
   WEAK_SPOT_SHARE,
   handQuestion,
   legalActionsFor,
@@ -174,6 +175,34 @@ describe('splitHandAt', () => {
 
   it('caps a deal at four hands', () => {
     expect(MAX_SPLIT_HANDS).toBe(4);
+  });
+});
+
+// The chart's entry into a drill. Its value is the tally's own scenario key, so
+// the three surfaces that name a hand — chart, weak list, drill — share one
+// encoding rather than three.
+describe('parseScenarioKey', () => {
+  it('reads each kind of hand back out', () => {
+    expect(parseScenarioKey('hard-16-v-10')).toEqual({ kind: 'hard', hand: '16', dealer: '10' });
+    expect(parseScenarioKey('soft-18-v-9')).toEqual({ kind: 'soft', hand: '18', dealer: '9' });
+    expect(parseScenarioKey('pair-8-v-A')).toEqual({ kind: 'pair', hand: '8', dealer: 'A' });
+    expect(parseScenarioKey('pair-10-v-2')).toEqual({ kind: 'pair', hand: '10', dealer: '2' });
+    expect(parseScenarioKey('pair-A-v-6')).toEqual({ kind: 'pair', hand: 'A', dealer: '6' });
+  });
+
+  // Strict for the same reason `?review=1` is: pinning every hand of a round to
+  // something no chart ever showed is worse than an ordinary round.
+  it('refuses anything that is not a hand this app deals', () => {
+    expect(parseScenarioKey(null)).toBeNull();
+    expect(parseScenarioKey('')).toBeNull();
+    expect(parseScenarioKey('hard-16-vs-10')).toBeNull();
+    expect(parseScenarioKey('bogus-16-v-10')).toBeNull();
+    expect(parseScenarioKey('hard-16-v-J')).toBeNull(); // faces normalize to 10
+    expect(parseScenarioKey('hard-4-v-6')).toBeNull(); // below the chart
+    expect(parseScenarioKey('hard-21-v-6')).toBeNull(); // above it
+    expect(parseScenarioKey('soft-12-v-6')).toBeNull(); // A,A is a pair, not soft 12
+    expect(parseScenarioKey('soft-21-v-6')).toBeNull();
+    expect(parseScenarioKey('pair-J-v-6')).toBeNull();
   });
 });
 

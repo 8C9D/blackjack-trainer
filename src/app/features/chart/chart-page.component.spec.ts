@@ -20,7 +20,12 @@ import {
   softHandFor,
 } from './chart-page.component';
 
-type Internals = { onKeyDown(event: KeyboardEvent): void };
+type Internals = {
+  onKeyDown(event: KeyboardEvent): void;
+  sections(): readonly { id: string; rows: readonly unknown[] }[];
+  onCellKey(event: KeyboardEvent, section: unknown, row: number, col: number): void;
+  isTabStop(section: string, row: number, col: number): boolean;
+};
 
 function createPage(): {
   fixture: ComponentFixture<ChartPageComponent>;
@@ -42,6 +47,22 @@ function cells(fixture: ComponentFixture<ChartPageComponent>, section: number, l
   );
   if (!row) throw new Error(`No row "${label}" in section ${section}`);
   return [...row.querySelectorAll('td')].map((td) => td.textContent!.trim());
+}
+
+// The button inside a cell: it carries the colour, the ring, the label and the
+// round it starts.
+function cellButton(
+  fixture: ComponentFixture<ChartPageComponent>,
+  section: number,
+  label: string,
+  upcard: string,
+): HTMLElement {
+  const table = fixture.nativeElement.querySelectorAll('.chart__table')[section] as HTMLElement;
+  const row = [...table.querySelectorAll('tbody tr')].find(
+    (tr) => tr.querySelector('.chart__hand')!.textContent!.trim() === label,
+  );
+  if (!row) throw new Error(`No row "${label}" in section ${section}`);
+  return [...row.querySelectorAll('.chart__cell')][col(upcard)] as HTMLElement;
 }
 
 const HARD = 0;
@@ -345,6 +366,82 @@ describe('ChartPageComponent', () => {
 
   // The tally has always known which hands keep costing you; the page a trainee
   // reads to look one up never said.
+  // The page a trainee reads to look a hand up could name the play and do
+  // nothing about it — the same gap the Progress weak-spot list closed.
+  describe('drilling a hand from the chart', () => {
+    it('starts a round pinned to the cell that was picked', () => {
+      const { fixture, navigate } = createPage();
+      (cellButton(fixture, HARD, '16', '10') as HTMLButtonElement).click();
+      expect(navigate).toHaveBeenCalledWith(['/drill', 'basic-strategy'], {
+        queryParams: { hand: 'hard-16-v-10' },
+      });
+    });
+
+    it('keys a soft row by its total and a pair by its rank, as the tally does', () => {
+      const { fixture, navigate } = createPage();
+      (cellButton(fixture, SOFT, 'A,7', '9') as HTMLButtonElement).click();
+      expect(navigate).toHaveBeenLastCalledWith(['/drill', 'basic-strategy'], {
+        queryParams: { hand: 'soft-18-v-9' },
+      });
+
+      (cellButton(fixture, PAIR, '8,8', 'A') as HTMLButtonElement).click();
+      expect(navigate).toHaveBeenLastCalledWith(['/drill', 'basic-strategy'], {
+        queryParams: { hand: 'pair-8-v-A' },
+      });
+    });
+
+    it('sends a deviation row to the trainer that teaches it', () => {
+      const { fixture, navigate } = createPage();
+      showDeviationsTab(fixture);
+      const drill = [...fixture.nativeElement.querySelectorAll('.chart__rule-drill')].find((b) =>
+        (b as HTMLElement).textContent!.includes('Hard 16 vs 10'),
+      ) as HTMLButtonElement;
+      drill.click();
+      expect(navigate).toHaveBeenCalledWith(['/drill', 'deviations'], {
+        queryParams: { hand: 'hard-16-v-10' },
+      });
+    });
+
+    // Insurance is filed against whatever hand was dealt rather than against the
+    // offer, so there is no one hand to pin a round to.
+    it('leaves the insurance row with nothing to drill', () => {
+      const { fixture } = createPage();
+      showDeviationsTab(fixture);
+      const rows = [...fixture.nativeElement.querySelectorAll('.chart__rule-hand')];
+      const insurance = rows.find((th) =>
+        (th as HTMLElement).textContent!.includes('Dealer ace'),
+      ) as HTMLElement;
+      expect(insurance.querySelector('.chart__rule-drill')).toBeNull();
+    });
+
+    // 340 cells, and a button apiece would put every one of them between "Back"
+    // and the legend for anyone reading this page with a keyboard.
+    it('holds one tab stop per grid and moves inside it with the arrows', () => {
+      const { fixture, c } = createPage();
+      const stops = [...fixture.nativeElement.querySelectorAll('.chart__cell--button')].filter(
+        (b) => (b as HTMLElement).getAttribute('tabindex') === '0',
+      );
+      expect(stops.length).toBe(3);
+
+      const section = c.sections()[0];
+      c.onCellKey(new KeyboardEvent('keydown', { key: 'ArrowDown' }), section, 0, 0);
+      fixture.detectChanges();
+      expect(c.isTabStop('hard', 1, 0)).toBe(true);
+      expect(c.isTabStop('hard', 0, 0)).toBe(false);
+      // Each grid keeps its own, so Tab still steps between the three tables.
+      expect(c.isTabStop('soft', 0, 0)).toBe(true);
+    });
+
+    it('stops at the edges rather than wrapping to another row', () => {
+      const { fixture, c } = createPage();
+      const section = c.sections()[0];
+      c.onCellKey(new KeyboardEvent('keydown', { key: 'ArrowLeft' }), section, 0, 0);
+      c.onCellKey(new KeyboardEvent('keydown', { key: 'ArrowUp' }), section, 0, 0);
+      fixture.detectChanges();
+      expect(c.isTabStop('hard', 0, 0)).toBe(true);
+    });
+  });
+
   describe('the hands you keep missing', () => {
     const missOnce = (trainer: TalliedTrainer, ref: ScenarioRef) =>
       TestBed.inject(MissTallyService).record(trainer, ref, false);
@@ -360,7 +457,9 @@ describe('ChartPageComponent', () => {
       const row = [...table.querySelectorAll('tbody tr')].find(
         (tr) => tr.querySelector('.chart__hand')!.textContent!.trim() === label,
       )!;
-      return [...row.querySelectorAll('td')][col(upcard)] as HTMLElement;
+      // The cell is a button now — it starts a round drilling its own hand — so
+      // the ring and the label ride on that rather than on the <td> around it.
+      return [...row.querySelectorAll('.chart__cell')][col(upcard)] as HTMLElement;
     };
 
     it('rings a hard total that is outstanding, and only that one', () => {

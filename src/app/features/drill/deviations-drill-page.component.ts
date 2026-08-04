@@ -21,6 +21,7 @@ import { DeviationStatsService } from '../../core/services/deviation-stats.servi
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
 import {
   MissTallyService,
+  scenarioLabel,
   scenarioRefFor,
   type WeakSpot,
 } from '../../core/services/miss-tally.service';
@@ -41,6 +42,7 @@ import {
   legalActionsFor,
   nextSessionTarget,
   pickWeakSpot,
+  pinnedScenarioRef,
   scenarioFromRef,
   splitHandAt,
   type SplitContext,
@@ -85,6 +87,12 @@ type DrillPhase = 'question' | 'flash' | 'miss' | 'over' | 'done';
 
         @if (indexNote(); as note) {
           <p class="drill__advisory" role="note">{{ note }}</p>
+        }
+
+        @if (pinnedLabel(); as label) {
+          <p class="drill__advisory" role="note">
+            Drilling <b>{{ label }}</b> — every hand this round, at the counts your settings deal.
+          </p>
         }
 
         <app-flow-stage
@@ -157,6 +165,10 @@ export class DeviationsDrillPageComponent {
   private readonly random = inject(RANDOM_SOURCE);
 
   protected readonly session = new DrillSession();
+
+  // One hand, every deal: the chart's own entry into this drill. Declared before
+  // the opening scenario because that scenario is chosen from it.
+  protected readonly pinned = signal(pinnedScenarioRef(inject(ActivatedRoute)));
 
   protected readonly phase = signal<DrillPhase>('question');
   protected readonly scenario = signal<DeviationScenario>(this.firstScenario());
@@ -242,6 +254,13 @@ export class DeviationsDrillPageComponent {
   });
 
   protected readonly weakSpot = computed(() => this.weakSpots()[0] ?? null);
+
+  // A pinned round narrows the practice to one hand, which is worth saying: the
+  // count still moves, so nothing else on screen says the hand will not.
+  protected readonly pinnedLabel = computed(() => {
+    const ref = this.pinned();
+    return ref === null ? null : scenarioLabel(ref);
+  });
 
   protected readonly clearedSpots = computed(() => {
     this.missTally.state();
@@ -470,6 +489,10 @@ export class DeviationsDrillPageComponent {
   private startRound(reviewing: boolean): void {
     if (this.phase() !== 'done') return;
     this.reviewing.set(reviewing);
+    // The pin belongs to the round the chart started, the same way review mode
+    // belongs to the round the Done screen started: another round is ordinary
+    // practice unless it is asked for again.
+    this.pinned.set(null);
     this.session.reset();
     this.target.set(nextSessionTarget(this.handsToday(), this.prefs.prefs().dailyGoal));
     this.dealNext(this.firstScenario());
@@ -503,6 +526,8 @@ export class DeviationsDrillPageComponent {
 
   // Sessions open on the current weak spot when one exists.
   private firstScenario(): DeviationScenario {
+    const pinned = this.pinned();
+    if (pinned) return { ...scenarioFromRef(pinned, this.random), trueCount: this.pickTrueCount() };
     const weak = this.missTally.weakSpotFor('deviations');
     if (weak) {
       const base = scenarioFromRef(weak.ref, this.random);
@@ -517,6 +542,8 @@ export class DeviationsDrillPageComponent {
   // modes — a weak spot recorded in deviation-only mode is itself a deviation
   // scenario, and hand one has always been drawn this way.
   private nextScenario(): DeviationScenario {
+    const pinned = this.pinned();
+    if (pinned) return { ...scenarioFromRef(pinned, this.random), trueCount: this.pickTrueCount() };
     const share = this.reviewing() ? 1 : undefined;
     const weak = pickWeakSpot(this.weakSpots(), this.random, share);
     if (weak) {

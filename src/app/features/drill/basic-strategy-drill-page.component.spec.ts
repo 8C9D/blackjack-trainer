@@ -934,6 +934,75 @@ describe('BasicStrategyDrillPageComponent', () => {
     });
   });
 
+  // The chart is the page a trainee reads to look a hand up, and until now it
+  // could say what the play is and nothing else. `?hand=` is its entry here.
+  describe('drilling one hand from the chart', () => {
+    // `before` runs between the route override and the first injection: TestBed
+    // refuses an override once the module has been instantiated, which reading a
+    // store does.
+    function enterWith(
+      hand: string,
+      before: () => void = () => {},
+    ): { fixture: ComponentFixture<BasicStrategyDrillPageComponent>; c: Internals } {
+      TestBed.overrideProvider(ActivatedRoute, {
+        useValue: { snapshot: { queryParamMap: convertToParamMap({ hand }) } },
+      });
+      before();
+      return createPage();
+    }
+
+    it('deals the pinned hand and says the round is pinned to it', () => {
+      const { fixture, c } = enterWith('pair-8-v-10');
+      expect(handQuestion(c.scenario().player, c.scenario().dealerUpcard)).toEqual({
+        prefix: '',
+        value: '8,8',
+        dealer: '10',
+      });
+      expect(
+        (fixture.nativeElement.querySelector('.drill__advisory') as HTMLElement).textContent,
+      ).toContain('8,8 vs 10');
+    });
+
+    it('deals it again on every hand of the round', () => {
+      const { fixture, c } = enterWith('hard-16-v-10', () => {
+        TestBed.inject(FlowPrefsService).setPlayHandsOut(false);
+      });
+      for (let i = 0; i < 3; i++) {
+        expect(handQuestion(c.scenario().player, c.scenario().dealerUpcard)).toEqual({
+          prefix: 'Hard',
+          value: '16',
+          dealer: '10',
+        });
+        c.answer('H');
+        vi.advanceTimersByTime(ADVANCE_MS);
+        fixture.detectChanges();
+      }
+    });
+
+    // The pin belongs to the round the chart started, exactly as review mode
+    // belongs to the round the Done screen started.
+    it('goes back to ordinary practice on the round after', () => {
+      const { fixture, c } = enterWith('hard-16-v-10', () => {
+        const prefs = TestBed.inject(FlowPrefsService);
+        prefs.setDailyGoal(1);
+        prefs.setPlayHandsOut(false);
+      });
+      c.answer('H');
+      vi.advanceTimersByTime(ADVANCE_MS);
+      fixture.detectChanges();
+      expect(c.phase()).toBe('done');
+
+      (fixture.nativeElement.querySelector('.done__again') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.drill__advisory')).toBeNull();
+    });
+
+    it('treats a hand it cannot deal as an ordinary round', () => {
+      const { fixture } = enterWith('hard-99-v-Z');
+      expect(fixture.nativeElement.querySelector('.drill__advisory')).toBeNull();
+    });
+  });
+
   describe('exit', () => {
     it('Escape leaves for home without confirmation', () => {
       const { c } = createPage();
