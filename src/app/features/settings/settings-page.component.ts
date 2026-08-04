@@ -34,6 +34,7 @@ import {
   type ThemePref,
 } from '../../core/services/flow-prefs.service';
 import { BackupService } from '../../core/services/backup.service';
+import { CHART_TAB_QUERY_PARAM } from '../chart/chart-page.component';
 import { PracticeDataService } from '../../core/services/practice-data.service';
 import { CountingSettingsComponent } from '../card-counting/counting-settings.component';
 
@@ -224,6 +225,7 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
           [showdownCountCheck]="prefs().counting.showdownCountCheck"
           [betRamp]="prefs().counting.betRamp"
           [errors]="countingErrors()"
+          (showTags)="openTags()"
           (systemChange)="onSystemChange($event)"
           (modeChange)="updateCounting({ mode: $event })"
           (numberOfCardsChange)="updateCounting({ numberOfCards: $event })"
@@ -347,6 +349,15 @@ export class SettingsPageComponent {
 
   protected goHome(): void {
     void this.router.navigate(['/']);
+  }
+
+  // The chart's count tab, where the selected system's tags are printed. This
+  // screen picks among 58 systems and, until the tab existed, printed the tags
+  // of none of them.
+  protected openTags(): void {
+    void this.router.navigate(['/chart'], {
+      queryParams: { [CHART_TAB_QUERY_PARAM]: 'count' },
+    });
   }
 
   protected askReset(): void {

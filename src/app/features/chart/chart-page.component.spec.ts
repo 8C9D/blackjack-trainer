@@ -1,5 +1,5 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 
 import { cardHighValue, isAce } from '../../core/models/card.model';
 import type { DeviationRule } from '../../core/models/deviation.model';
@@ -98,6 +98,25 @@ function tagColumns(
     [...tr.querySelectorAll('td')].map((td) => td.textContent!.trim()),
   );
   return labels.map((label, i) => ({ label, values: rows.map((row) => row[i]) }));
+}
+
+// The label of the tab currently pressed.
+function pressedTab(fixture: ComponentFixture<ChartPageComponent>): string | undefined {
+  return [...fixture.nativeElement.querySelectorAll('.chart__mode')]
+    .find((b) => (b as HTMLElement).getAttribute('aria-pressed') === 'true')
+    ?.textContent?.trim();
+}
+
+// A page reached with query params, the way another screen links into it.
+function pageAt(queryParams: Record<string, string>): {
+  fixture: ComponentFixture<ChartPageComponent>;
+} {
+  TestBed.overrideProvider(ActivatedRoute, {
+    useValue: { snapshot: { queryParamMap: convertToParamMap(queryParams) } },
+  });
+  const fixture = TestBed.createComponent(ChartPageComponent);
+  fixture.detectChanges();
+  return { fixture };
 }
 
 function noteText(fixture: ComponentFixture<ChartPageComponent>): string {
@@ -331,6 +350,40 @@ describe('ChartPageComponent', () => {
       const { fixture, navigate } = createPage();
       (fixture.nativeElement.querySelector('.chart__settings') as HTMLButtonElement).click();
       expect(navigate).toHaveBeenCalledWith(['/settings']);
+    });
+
+    // The page is three references behind one set of buttons, and the screens
+    // that send a trainee here are asking about one of them in particular.
+    describe('the tab in the URL', () => {
+      it('opens on the tab the query param names', () => {
+        const { fixture } = pageAt({ tab: 'count' });
+        expect(pressedTab(fixture)).toBe('Count');
+      });
+
+      it('falls back to basic strategy for a tab it does not have', () => {
+        const { fixture } = pageAt({ tab: 'bogus' });
+        expect(pressedTab(fixture)).toBe('Basic strategy');
+      });
+
+      // Replaced, not pushed: the tabs are one page's three views, so Back
+      // should leave the chart rather than step through the ones opened.
+      it('writes the tab as it changes, and drops it again for the default', () => {
+        const { fixture, navigate } = createPage();
+        showTab(fixture, 'Count');
+        expect(navigate).toHaveBeenCalledWith([], {
+          queryParams: { tab: 'count' },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
+
+        navigate.mockClear();
+        showTab(fixture, 'Basic strategy');
+        expect(navigate).toHaveBeenCalledWith([], {
+          queryParams: { tab: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
+      });
     });
 
     it('ignores keys typed into a field', () => {

@@ -107,6 +107,12 @@ type DrillState =
                   <span class="count__metric">{{ part.label }} {{ part.value }}</span>
                 }
               </p>
+              <!-- The last moment before the cards start coming, on the screen
+                   that names the system: the one place a trainee about to be
+                   graded on these tags might want to read them. -->
+              <a class="count__tags" [routerLink]="['/chart']" [queryParams]="{ tab: 'count' }">
+                See what each card is worth
+              </a>
               @if (isValid()) {
                 <button type="button" class="count__start" (click)="start()">
                   Start counting <kbd class="kcap kcap--on-accent">⏎</kbd>

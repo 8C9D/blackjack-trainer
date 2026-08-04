@@ -410,4 +410,16 @@ describe('SettingsPageComponent', () => {
     );
     expect(navigate).toHaveBeenCalledTimes(2);
   });
+
+  // This screen picks among 58 counting systems and prints the tags of none of
+  // them; the chart's count tab is where they are.
+  it('opens the chart on the count tab from the system picker', () => {
+    const { fixture } = createPage();
+    const router = TestBed.inject(Router);
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    (fixture.nativeElement.querySelector('.settings__tags-link') as HTMLButtonElement).click();
+
+    expect(navigate).toHaveBeenCalledWith(['/chart'], { queryParams: { tab: 'count' } });
+  });
 });

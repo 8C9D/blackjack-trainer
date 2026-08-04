@@ -1,6 +1,6 @@
 import { DOCUMENT } from '@angular/common';
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
 import { formatSignedCount } from '../../core/models/card-counting.model';
@@ -88,6 +88,17 @@ export const CHART_MODES: readonly { value: ChartMode; label: string }[] = [
   { value: 'deviations', label: 'Deviations' },
   { value: 'count', label: 'Count' },
 ];
+
+// Which tab the page opens on. The chart is three references behind one set of
+// buttons, and the screens that send a trainee here are asking about one of
+// them in particular — Settings picking a counting system wants the tags, not
+// the hard totals. Also what makes the tab survive a reload and the back
+// button, which a signal alone never did.
+export const CHART_TAB_QUERY_PARAM = 'tab';
+
+export function chartModeFrom(value: string | null): ChartMode {
+  return CHART_MODES.some((mode) => mode.value === value) ? (value as ChartMode) : 'basic';
+}
 
 // Section order for the deviation list, matching how the source chart reads.
 const DEVIATION_CATEGORIES: readonly { id: DeviationCategory; title: string }[] = [
@@ -458,7 +469,9 @@ export class ChartPageComponent {
   protected readonly legend = LEGEND;
   protected readonly modes = CHART_MODES;
 
-  protected readonly mode = signal<ChartMode>('basic');
+  protected readonly mode = signal<ChartMode>(
+    chartModeFrom(inject(ActivatedRoute).snapshot.queryParamMap.get(CHART_TAB_QUERY_PARAM)),
+  );
 
   private readonly prefs = this.prefsService.prefs;
 
@@ -633,8 +646,15 @@ export class ChartPageComponent {
     return ACTION_SYMBOLS[action];
   }
 
+  // Replaces rather than pushes: the tabs are one page's three views, so Back
+  // should leave the chart rather than step through whichever ones were opened.
   protected setMode(mode: ChartMode): void {
     this.mode.set(mode);
+    void this.router.navigate([], {
+      queryParams: { [CHART_TAB_QUERY_PARAM]: mode === 'basic' ? null : mode },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   // The chart has always known which hand a cell is about and could do nothing
