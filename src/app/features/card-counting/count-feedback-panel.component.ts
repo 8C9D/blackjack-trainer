@@ -1,15 +1,21 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 
-import { BET_RAMP_BAND_LABELS, betRampBandIndex } from '../../core/models/bet-ramp.model';
+import {
+  BET_RAMP_BAND_LABELS,
+  betRampBandIndex,
+  betUnitsForTrueCount,
+} from '../../core/models/bet-ramp.model';
 import {
   DECK_SPEED_BENCHMARK_MS,
   formatDuration,
   type DeckSpeedDrillResult,
 } from '../../core/models/deck-speed.model';
 import {
+  deckEstimateEffect,
   formatSignedCount,
   type BetSpreadDrillResult,
   type CountingDrillResult,
+  type DeckEstimateEffect,
   type KeyCountDrillResult,
   type RunningCountDrillResult,
   type TrueCountDrillResult,
@@ -83,6 +89,9 @@ interface RampBand {
           {{ countOf(tc.decksRemaining, 'deck', formatDecks(tc.decksRemaining)) }} = true count
           {{ tc.correctTrueCount }}
         </p>
+        @if (estimateEffect(); as est) {
+          <p class="feedback__formula">{{ estimateLine(tc.correctRunningCount, est) }}</p>
+        }
       } @else if (keyCountResult(); as kc) {
         <dl class="feedback__details">
           <dt>Your count</dt>
@@ -137,6 +146,17 @@ interface RampBand {
           {{ bs.correctTrueCount }}, which is the {{ rampBandLabel(bs.correctTrueCount) }} band of
           your spread.
         </p>
+        @if (estimateEffect(); as est) {
+          <p class="feedback__formula">
+            {{ estimateLine(bs.correctRunningCount, est) }}
+            <!-- The bet is what a deck estimate is *for*, so this round can say
+                 what the estimate would have cost in units rather than leaving
+                 the trainee to read it off the ramp below. -->
+            @if (estimateBetLine(bs, est); as line) {
+              <span>{{ line }}</span>
+            }
+          </p>
+        }
         <ul class="feedback__ramp" aria-label="Your bet spread">
           @for (band of rampBands(); track band.label) {
             <li class="feedback__band" [class.feedback__band--active]="band.active">
@@ -240,6 +260,21 @@ export class CountFeedbackPanelComponent {
 
   protected readonly benchmarkMs = DECK_SPEED_BENCHMARK_MS;
 
+  // The estimate is graded on its own (inside ±0.5 or not) and the true count
+  // against the shoe's real decks — so the round shows both halves and never
+  // said what the one did to the other, which is the only reason to estimate
+  // decks at all.
+  protected readonly estimateEffect = computed<DeckEstimateEffect | null>(() => {
+    const r = this.trueCountResult() ?? this.betSpreadResult();
+    if (!r) return null;
+    return deckEstimateEffect(
+      r.correctRunningCount,
+      r.deckEstimate,
+      r.correctTrueCount,
+      r.userTrueCount,
+    );
+  });
+
   // The whole spread, with the band this round landed in marked — the feedback
   // shows the table so a missed bet reads as "that count was this band".
   protected readonly rampBands = computed<readonly RampBand[]>(() => {
@@ -306,6 +341,36 @@ export class CountFeedbackPanelComponent {
   // The band label a true count falls in, for the feedback line.
   protected rampBandLabel(trueCount: number): string {
     return BET_RAMP_BAND_LABELS[betRampBandIndex(trueCount)];
+  }
+
+  // The same division the line above it does, with the divisor the player
+  // actually had. When it lands on the same true count the estimate cost
+  // nothing this round, which is worth saying too: how far out an estimate is
+  // only matters against the running count it divides.
+  protected estimateLine(runningCount: number, effect: DeckEstimateEffect): string {
+    const divided = `Your estimate: ${runningCount} ÷ ${countOf(
+      effect.estimate,
+      'deck',
+      this.formatDecks(effect.estimate),
+    )} = true count ${effect.impliedTrueCount}`;
+    if (effect.matchesActual) {
+      return `${divided} — the same true count, so the estimate cost nothing here.`;
+    }
+    const agrees = effect.matchesAnswer ? ', and the answer you gave' : '';
+    return `${divided} — the count you would have played on${agrees}.`;
+  }
+
+  // What that count would have bet, when the ramp says something different
+  // there. Null when both land in bands holding the same units, since then the
+  // estimate cost no bet even though it moved the count.
+  protected estimateBetLine(
+    result: BetSpreadDrillResult,
+    effect: DeckEstimateEffect,
+  ): string | null {
+    if (effect.matchesActual) return null;
+    const implied = betUnitsForTrueCount(effect.impliedTrueCount, result.ramp);
+    if (implied === result.correctUnits) return null;
+    return `Your spread bets ${this.units(implied)} there, not ${this.units(result.correctUnits)}.`;
   }
 
   // Whole decks render as "5"; fractional decks as up to two decimals with
