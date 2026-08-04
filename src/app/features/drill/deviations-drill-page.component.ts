@@ -10,6 +10,8 @@ import {
 } from '../../core/models/deviation.model';
 import { countingSystemById } from '../../data/counting-systems';
 import { ACTION_LABELS, type Action } from '../../core/models/strategy.model';
+import { handTotal } from '../../core/models/hand.model';
+import type { Card } from '../../core/models/card.model';
 import { CardGeneratorService } from '../../core/services/card-generator.service';
 import {
   DeviationEvaluatorService,
@@ -48,7 +50,8 @@ import {
 export const MIN_RANDOM_TRUE_COUNT = -5;
 export const MAX_RANDOM_TRUE_COUNT = 8;
 
-type DrillPhase = 'question' | 'flash' | 'miss' | 'done';
+// 'over' holds the beat where a played-out hand ends on its own (bust, or 21).
+type DrillPhase = 'question' | 'flash' | 'miss' | 'over' | 'done';
 
 // The Deviations trainer in the Flow loop: identical to the Basic Strategy
 // drill except that the true count joins the question line and grading goes
@@ -77,10 +80,14 @@ type DrillPhase = 'question' | 'flash' | 'miss' | 'done';
           <p class="drill__advisory" role="note">{{ note }}</p>
         }
 
-        <app-flow-stage [player]="scenario().player" [dealer]="scenario().dealerUpcard">
+        <app-flow-stage [player]="hand()" [dealer]="scenario().dealerUpcard">
           @if (phase() === 'miss' && result(); as r) {
             <p class="drill__rule">
               <b>Correct: {{ labelFor(r.expectedAction) }}.</b> {{ r.explanation }}
+            </p>
+          } @else if (phase() === 'over') {
+            <p class="drill__rule">
+              <b>{{ handOver() }}</b>
             </p>
           } @else {
             <p class="drill__question">
@@ -141,6 +148,10 @@ export class DeviationsDrillPageComponent {
 
   protected readonly phase = signal<DrillPhase>('question');
   protected readonly scenario = signal<DeviationScenario>(this.firstScenario());
+  // The hand as it stands: the deal's two cards, plus every card a correct hit
+  // has drawn since. The scenario keeps the opening deal, which is what a weak
+  // spot is filed against and what the next hand resets to.
+  protected readonly hand = signal<readonly Card[]>(this.scenario().player);
   protected readonly result = signal<DeviationTrainerResult | null>(null);
   protected readonly target = signal(0);
 
@@ -150,8 +161,15 @@ export class DeviationsDrillPageComponent {
   });
 
   protected readonly question = computed(() =>
-    handQuestion(this.scenario().player, this.scenario().dealerUpcard),
+    handQuestion(this.hand(), this.scenario().dealerUpcard),
   );
+
+  // Why the played-out hand stopped asking: a hit that busted, or one that
+  // reached 21 and left nothing to decide.
+  protected readonly handOver = computed(() => {
+    const total = handTotal(this.hand());
+    return total > 21 ? `Bust — ${total}.` : `${total} — nothing left to decide.`;
+  });
 
   protected readonly trueCountLabel = computed(() => formatTrueCount(this.scenario().trueCount));
 
@@ -165,12 +183,7 @@ export class DeviationsDrillPageComponent {
   // Surrender stays answerable regardless of the Late Surrender rule: the
   // deviation surrender overlay can expect SUR either way.
   protected readonly legalActions = computed(() =>
-    legalActionsFor(
-      this.scenario().player,
-      this.scenario().dealerUpcard,
-      this.prefs.prefs().options,
-      true,
-    ),
+    legalActionsFor(this.hand(), this.scenario().dealerUpcard, this.prefs.prefs().options, true),
   );
 
   protected readonly picked = computed<Action | null>(() => this.result()?.userAction ?? null);
@@ -192,6 +205,7 @@ export class DeviationsDrillPageComponent {
   });
 
   protected readonly verdict = computed(() => {
+    if (this.phase() === 'over') return this.handOver();
     const result = this.result();
     if (result === null) return '';
     const expected = ACTION_LABELS[result.expectedAction];
@@ -215,35 +229,82 @@ export class DeviationsDrillPageComponent {
   protected answer(action: Action): void {
     if (this.phase() !== 'question') return;
     if (!this.legalActions().includes(action)) return;
-    const result = this.evaluator.evaluate(
-      this.scenario(),
-      action,
-      this.prefs.prefs().ruleSet,
-      this.prefs.prefs().options,
-    );
+    const cards = this.hand();
+    const result = this.gradeDecision(cards, action);
     this.result.set(result);
     this.stats.recordAttempt(result.correct);
     this.history.recordHand(result.correct);
+    // Only the opening decision has a weak spot to file under: a `ScenarioRef`
+    // names a two-card hand, and re-dealing a three-card 16 as a two-card one
+    // would ask a different question (that one can double).
+    //
     // The count goes in with the miss: here it is half the question, and a hand
     // re-dealt at a fresh count is a different one.
-    this.missTally.record(
-      'deviations',
-      scenarioRefFor(this.scenario().player, this.scenario().dealerUpcard),
-      result.correct,
-      this.scenario().trueCount,
-    );
+    if (cards.length === 2) {
+      this.missTally.record(
+        'deviations',
+        scenarioRefFor(this.scenario().player, this.scenario().dealerUpcard),
+        result.correct,
+        this.scenario().trueCount,
+      );
+    }
     this.session.record(result.correct);
 
     if (result.correct) {
       this.phase.set('flash');
       this.advanceTimer = setTimeout(() => {
         this.advanceTimer = null;
-        this.advance();
+        this.afterCorrect(action);
       }, this.advanceDelayMs);
     } else {
       this.phase.set('miss');
       this.suppressNextContinueClick = true;
     }
+  }
+
+  // The opening question takes every action on the table and the insurance
+  // overlay with it. Every question after it is a playing decision on a hand
+  // more than two cards deep, where an index still applies — it is written
+  // against a total — but doubling, splitting and surrender are gone.
+  private gradeDecision(cards: readonly Card[], action: Action): DeviationTrainerResult {
+    const prefs = this.prefs.prefs();
+    if (cards.length === 2) {
+      return this.evaluator.evaluate(this.scenario(), action, prefs.ruleSet, prefs.options);
+    }
+    return this.evaluator.evaluatePlay(
+      {
+        player: cards,
+        dealerUpcard: this.scenario().dealerUpcard,
+        trueCount: this.scenario().trueCount,
+        ruleSet: prefs.ruleSet,
+        options: prefs.options,
+      },
+      action,
+    );
+  }
+
+  // A hit is the one correct answer that leaves another decision behind it, so
+  // it draws the next card and asks again — at the same count, which is the
+  // scenario's given rather than a live shoe's.
+  private afterCorrect(action: Action): void {
+    if (!this.prefs.prefs().playHandsOut || action !== 'H') {
+      this.advance();
+      return;
+    }
+    const grown = [...this.hand(), this.cardGenerator.generateCard()];
+    this.hand.set(grown);
+    // Busting, or reaching 21, ends the hand with nothing left to ask. Hold the
+    // card that did it on screen — that is the answer to the hit — then move on.
+    if (handTotal(grown) >= 21) {
+      this.phase.set('over');
+      this.advanceTimer = setTimeout(() => {
+        this.advanceTimer = null;
+        this.advance();
+      }, this.advanceDelayMs * 2);
+      return;
+    }
+    this.result.set(null);
+    this.phase.set('question');
   }
 
   protected continueFromMiss(): void {
@@ -289,6 +350,7 @@ export class DeviationsDrillPageComponent {
 
   private dealNext(scenario: DeviationScenario): void {
     this.scenario.set(scenario);
+    this.hand.set(scenario.player);
     this.result.set(null);
     this.phase.set('question');
   }

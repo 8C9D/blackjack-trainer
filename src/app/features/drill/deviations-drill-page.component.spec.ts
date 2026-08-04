@@ -1,9 +1,10 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
-import type { Card, Rank, Suit } from '../../core/models/card.model';
+import { ALL_RANKS, type Card, type Rank, type Suit } from '../../core/models/card.model';
 import type { DeviationScenario, DeviationTrainerResult } from '../../core/models/deviation.model';
 import type { Action } from '../../core/models/strategy.model';
+import { CardGeneratorService } from '../../core/services/card-generator.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
 import { MissTallyService } from '../../core/services/miss-tally.service';
 import { DeviationsDrillPageComponent } from './deviations-drill-page.component';
@@ -33,8 +34,9 @@ const NO_INSURANCE_TC0 = scenarioOf('3', '4', 'A', 0);
 
 type Internals = {
   scenario: { (): DeviationScenario; set(v: DeviationScenario): void };
+  hand: { (): readonly Card[]; set(v: readonly Card[]): void };
   result: { (): DeviationTrainerResult | null };
-  phase: { (): 'question' | 'flash' | 'miss' | 'done' };
+  phase: { (): 'question' | 'flash' | 'miss' | 'over' | 'done' };
   target: { (): number };
   handsToday: () => number;
   legalActions: () => readonly Action[];
@@ -45,6 +47,13 @@ type Internals = {
 
 function asInternals(c: DeviationsDrillPageComponent): Internals {
   return c as unknown as Internals;
+}
+
+// Deal a scenario the way the page does: the opening two cards are both the
+// recorded deal and the hand in play.
+function deal(c: Internals, scenario: DeviationScenario): void {
+  c.scenario.set(scenario);
+  c.hand.set(scenario.player);
 }
 
 function createPage(): {
@@ -84,7 +93,7 @@ describe('DeviationsDrillPageComponent', () => {
       (fixture.nativeElement.querySelector('[role="status"]') as HTMLElement).textContent!;
     expect(live()).toBe('');
 
-    c.scenario.set(SIXTEEN_V_TEN_TC0);
+    deal(c, SIXTEEN_V_TEN_TC0);
     fixture.detectChanges();
     c.answer('S');
     fixture.detectChanges();
@@ -96,7 +105,7 @@ describe('DeviationsDrillPageComponent', () => {
     fixture.detectChanges();
     expect(live()).toBe('');
 
-    c.scenario.set(SIXTEEN_V_TEN_TC_NEG);
+    deal(c, SIXTEEN_V_TEN_TC_NEG);
     fixture.detectChanges();
     c.answer('S');
     fixture.detectChanges();
@@ -106,7 +115,7 @@ describe('DeviationsDrillPageComponent', () => {
 
   it('joins the true count to the question line', () => {
     const { fixture, c } = createPage();
-    c.scenario.set(scenarioOf('K', '6', 'Q', 4));
+    deal(c, scenarioOf('K', '6', 'Q', 4));
     fixture.detectChanges();
     const q = fixture.nativeElement.querySelector('.drill__question') as HTMLElement;
     expect(q.textContent!.replace(/\s+/g, ' ').trim()).toBe('Hard 16 vs 10 · TC +4');
@@ -115,7 +124,7 @@ describe('DeviationsDrillPageComponent', () => {
   describe('deviation grading', () => {
     it('grades the deviation as correct when the threshold is met', () => {
       const { c } = createPage();
-      c.scenario.set(SIXTEEN_V_TEN_TC0);
+      deal(c, SIXTEEN_V_TEN_TC0);
       c.answer('S');
       expect(c.result()!.correct).toBe(true);
       expect(c.result()!.deviationApplied).toBe(true);
@@ -124,7 +133,7 @@ describe('DeviationsDrillPageComponent', () => {
 
     it('grades basic strategy as correct below the threshold', () => {
       const { c } = createPage();
-      c.scenario.set(SIXTEEN_V_TEN_TC_NEG);
+      deal(c, SIXTEEN_V_TEN_TC_NEG);
       c.answer('S');
       expect(c.result()!.correct).toBe(false);
       expect(c.result()!.expectedAction).toBe('H');
@@ -133,7 +142,7 @@ describe('DeviationsDrillPageComponent', () => {
 
     it('shows the deviation explanation in place of the question on a miss', () => {
       const { fixture, c } = createPage();
-      c.scenario.set(SIXTEEN_V_TEN_TC0);
+      deal(c, SIXTEEN_V_TEN_TC0);
       fixture.detectChanges();
       c.answer('H');
       fixture.detectChanges();
@@ -145,7 +154,7 @@ describe('DeviationsDrillPageComponent', () => {
 
     it('ignores a second answer after the hand has already been graded', () => {
       const { c } = createPage();
-      c.scenario.set(SIXTEEN_V_TEN_TC0);
+      deal(c, SIXTEEN_V_TEN_TC0);
       c.answer('S');
       const firstResult = c.result();
 
@@ -159,7 +168,7 @@ describe('DeviationsDrillPageComponent', () => {
   describe('poka-yoke with deviation overlays', () => {
     it('keeps surrender answerable with Late Surrender off, because the overlay can expect it', () => {
       const { c } = createPage();
-      c.scenario.set(SIXTEEN_V_EIGHT_TC4);
+      deal(c, SIXTEEN_V_EIGHT_TC4);
       expect(c.legalActions()).toContain('SUR');
       c.answer('SUR');
       expect(c.result()!.correct).toBe(true);
@@ -168,10 +177,10 @@ describe('DeviationsDrillPageComponent', () => {
 
     it('offers insurance only against an ace and grades it by true count', () => {
       const { c } = createPage();
-      c.scenario.set(SIXTEEN_V_TEN_TC0);
+      deal(c, SIXTEEN_V_TEN_TC0);
       expect(c.legalActions()).not.toContain('INS');
 
-      c.scenario.set(INSURANCE_TC3);
+      deal(c, INSURANCE_TC3);
       expect(c.legalActions()).toContain('INS');
       c.answer('INS');
       expect(c.result()!.correct).toBe(true);
@@ -180,7 +189,7 @@ describe('DeviationsDrillPageComponent', () => {
 
     it('declining insurance below +3 is the correct play', () => {
       const { c } = createPage();
-      c.scenario.set(NO_INSURANCE_TC0);
+      deal(c, NO_INSURANCE_TC0);
       c.answer('INS');
       expect(c.result()!.correct).toBe(false);
       expect(c.result()!.explanation).toContain('Decline insurance');
@@ -188,7 +197,7 @@ describe('DeviationsDrillPageComponent', () => {
 
     it('keeps hotkeys for illegal actions dead', () => {
       const { c } = createPage();
-      c.scenario.set(SIXTEEN_V_TEN_TC0); // no ace up, non-pair
+      deal(c, SIXTEEN_V_TEN_TC0); // no ace up, non-pair
       c.onKeyDown(new KeyboardEvent('keydown', { key: 'i' }));
       c.onKeyDown(new KeyboardEvent('keydown', { key: 'p' }));
       expect(c.phase()).toBe('question');
@@ -197,7 +206,7 @@ describe('DeviationsDrillPageComponent', () => {
 
     it('rejects illegal actions even when called programmatically', () => {
       const { c } = createPage();
-      c.scenario.set(SIXTEEN_V_TEN_TC0); // hard hand: Split and Insurance are illegal
+      deal(c, SIXTEEN_V_TEN_TC0); // hard hand: Split and Insurance are illegal
 
       c.answer('P');
       c.answer('INS');
@@ -211,7 +220,7 @@ describe('DeviationsDrillPageComponent', () => {
   describe('recording and session lifecycle', () => {
     it('tallies misses under the deviations trainer', () => {
       const { c } = createPage();
-      c.scenario.set(SIXTEEN_V_TEN_TC0);
+      deal(c, SIXTEEN_V_TEN_TC0);
       c.answer('H');
       const weak = TestBed.inject(MissTallyService).weakSpotFor('deviations');
       expect(weak).toEqual(expect.objectContaining({ label: '16 vs 10', misses: 1 }));
@@ -222,7 +231,7 @@ describe('DeviationsDrillPageComponent', () => {
       TestBed.inject(FlowPrefsService).setDailyGoal(2);
       const { fixture, c } = createPage();
       for (let i = 0; i < 2; i++) {
-        c.scenario.set(SIXTEEN_V_TEN_TC0);
+        deal(c, SIXTEEN_V_TEN_TC0);
         c.answer('S');
         vi.advanceTimersByTime(ADVANCE_MS);
       }
@@ -238,7 +247,7 @@ describe('DeviationsDrillPageComponent', () => {
     it('keeps "Drill my misses" inert when there is no weak spot to review', () => {
       TestBed.inject(FlowPrefsService).setDailyGoal(1);
       const { c } = createPage();
-      c.scenario.set(SIXTEEN_V_TEN_TC0);
+      deal(c, SIXTEEN_V_TEN_TC0);
       c.answer('S');
       vi.advanceTimersByTime(ADVANCE_MS);
       expect(c.phase()).toBe('done');
@@ -260,7 +269,7 @@ describe('DeviationsDrillPageComponent', () => {
       TestBed.inject(FlowPrefsService).setDailyGoal(4);
       const { fixture, c } = createPage();
       for (let i = 0; i < 4; i++) {
-        c.scenario.set(SIXTEEN_V_TEN_TC0);
+        deal(c, SIXTEEN_V_TEN_TC0);
         c.answer('H'); // wrong at TC 0 — records 16 vs 10 as the weak spot
         c.onKeyDown(new KeyboardEvent('keydown', { key: ' ' }));
       }
@@ -311,7 +320,7 @@ describe('DeviationsDrillPageComponent', () => {
 
     it('records the count the miss was actually made at', () => {
       const { c } = createPage();
-      c.scenario.set(SIXTEEN_V_TEN_TC_NEG); // hits at −2; standing is wrong
+      deal(c, SIXTEEN_V_TEN_TC_NEG); // hits at −2; standing is wrong
       c.answer('S');
       expect(TestBed.inject(MissTallyService).weakSpotFor('deviations')!.missedCounts).toEqual([
         -2,
@@ -323,6 +332,98 @@ describe('DeviationsDrillPageComponent', () => {
       vi.spyOn(Math, 'random').mockReturnValue(0);
       const { c } = createPage();
       expect(c.scenario().trueCount).toBe(-5);
+    });
+  });
+
+  // An index is written against a total, so it applies to a three-card 16
+  // exactly as it does to a two-card one. The showdown has always graded that;
+  // this is the drill that teaches it.
+  describe('playing the hand out', () => {
+    // Pin the next card the drill draws: `generateCard` reads rank and suit off
+    // one call each, so a value inside the rank's 1/13 slice picks it exactly.
+    function nextCardIs(rank: Rank): void {
+      const index = ALL_RANKS.indexOf(rank);
+      TestBed.inject(CardGeneratorService).setRandomSource(() => (index + 0.5) / ALL_RANKS.length);
+    }
+
+    // Hard 12 vs 10 hits at any count; the 4 makes it the hard 16 the
+    // Illustrious 18 stands at TC 0 or higher.
+    const TWELVE_V_TEN = scenarioOf('10', '2', 'Q', 0);
+
+    function hitInto16(c: Internals): void {
+      deal(c, TWELVE_V_TEN);
+      nextCardIs('4');
+      c.answer('H');
+      vi.advanceTimersByTime(ADVANCE_MS);
+    }
+
+    it('applies a hard-total index to a hand three cards deep', () => {
+      const { fixture, c } = createPage();
+      hitInto16(c);
+      fixture.detectChanges();
+
+      expect(c.hand().length).toBe(3);
+      const q = fixture.nativeElement.querySelector('.drill__question') as HTMLElement;
+      expect(q.textContent!.replace(/\s+/g, ' ').trim()).toContain('Hard 16 vs 10');
+
+      c.answer('S');
+      expect(c.result()!.correct).toBe(true);
+      expect(c.result()!.deviationApplied).toBe(true);
+      expect(c.result()!.explanation).toContain('Hi-Lo deviation');
+    });
+
+    it('grades the same three-card 16 the other way one count lower', () => {
+      const { c } = createPage();
+      deal(c, scenarioOf('10', '2', 'Q', -1));
+      nextCardIs('4');
+      c.answer('H');
+      vi.advanceTimersByTime(ADVANCE_MS);
+
+      c.answer('S');
+      expect(c.result()!.correct).toBe(false);
+      expect(c.result()!.expectedAction).toBe('H');
+    });
+
+    it('leaves only hit and stand answerable once a card is drawn', () => {
+      const { fixture, c } = createPage();
+      hitInto16(c);
+      fixture.detectChanges();
+      expect(c.legalActions()).toEqual(['H', 'S']);
+    });
+
+    it('holds a bust on screen, then deals on', () => {
+      const { fixture, c } = createPage();
+      deal(c, TWELVE_V_TEN);
+      nextCardIs('K');
+      c.answer('H');
+      vi.advanceTimersByTime(ADVANCE_MS);
+      fixture.detectChanges();
+
+      expect(c.phase()).toBe('over');
+      expect((fixture.nativeElement.querySelector('.drill__rule') as HTMLElement).textContent).toBe(
+        'Bust — 22.',
+      );
+
+      vi.advanceTimersByTime(ADVANCE_MS * 2);
+      expect(c.phase()).toBe('question');
+      expect(c.hand().length).toBe(2);
+    });
+
+    // A `ScenarioRef` names a two-card hand, and it carries no count of its own.
+    it('files no weak spot for a decision deeper than the deal', () => {
+      const { c } = createPage();
+      hitInto16(c);
+      c.answer('H'); // wrong: the index stands this 16
+      expect(c.phase()).toBe('miss');
+      expect(TestBed.inject(MissTallyService).weakSpotFor('deviations')).toBeNull();
+    });
+
+    it('deals a fresh hand instead when the setting is off', () => {
+      TestBed.inject(FlowPrefsService).setPlayHandsOut(false);
+      const { c } = createPage();
+      hitInto16(c);
+      expect(c.hand().length).toBe(2);
+      expect(c.hand()).toEqual(c.scenario().player);
     });
   });
 
@@ -352,7 +453,7 @@ describe('DeviationsDrillPageComponent', () => {
   describe('keyboard safety', () => {
     it('ignores auto-repeated action keys', () => {
       const { c } = createPage();
-      c.scenario.set(SIXTEEN_V_TEN_TC0);
+      deal(c, SIXTEEN_V_TEN_TC0);
 
       c.onKeyDown(new KeyboardEvent('keydown', { key: 's', repeat: true }));
 
@@ -362,7 +463,7 @@ describe('DeviationsDrillPageComponent', () => {
 
     it('ignores action keys from editable controls', () => {
       const { c } = createPage();
-      c.scenario.set(SIXTEEN_V_TEN_TC0);
+      deal(c, SIXTEEN_V_TEN_TC0);
       const input = document.createElement('input');
       document.body.append(input);
 
@@ -394,7 +495,7 @@ describe('DeviationsDrillPageComponent', () => {
       expect(advisory(fixture)!.textContent).toContain('Hi-Lo');
 
       // Still up after answering, not a one-off shown on the first hand.
-      c.scenario.set(SIXTEEN_V_TEN_TC0);
+      deal(c, SIXTEEN_V_TEN_TC0);
       fixture.detectChanges();
       c.answer('S');
       vi.advanceTimersByTime(ADVANCE_MS);

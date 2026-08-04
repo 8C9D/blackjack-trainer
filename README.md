@@ -2,8 +2,9 @@
 
 A frontend-only Angular app for practicing four blackjack skills:
 
-1. **Basic Strategy Trainer** — initial two-card hands against H17/S17 charts
-   from [Blackjack Apprenticeship](https://www.blackjackapprenticeship.com/).
+1. **Basic Strategy Trainer** — hands against H17/S17 charts from
+   [Blackjack Apprenticeship](https://www.blackjackapprenticeship.com/), played
+   out from the deal: a correct hit deals the next card and asks again.
 2. **Running Count Trainer** — running-count drills on random card streams of
    configurable length and speed, across 58 counting systems (Hi-Lo, KO,
    Omega II, Wong Halves, plus the Blackjack Review comparison set).
@@ -12,8 +13,9 @@ A frontend-only Angular app for practicing four blackjack skills:
    remaining can come from a fixed preset (classic mode) or be estimated live
    from a finite, depleting shoe — and a live-shoe round can roll into a
    post-count showdown against the dealer.
-4. **Deviations Trainer** — initial two-card hands against the BJA H17/S17
-   Hi-Lo deviation charts, with the true count either randomly generated or
+4. **Deviations Trainer** — hands against the BJA H17/S17 Hi-Lo deviation
+   charts (played out from the deal, since an index applies to a total however
+   many cards make it), with the true count either randomly generated or
    manually entered to drill exact thresholds. Practice all hands or
    restrict to deviation-candidate hands. Evaluates the playing decision
    against basic strategy + the deviation overlay, plus an insurance
@@ -59,7 +61,7 @@ It exists so the E2E suite can assert real outcomes rather than only that the fl
 - **Insurance is always wrong** — picking Insurance is flagged with an explanation that basic strategy never takes the side bet.
 - **Flow grading** — a correct answer flashes in place and auto-advances; a miss is the loop's only pause, showing the correct action and a one-line rationale until you tap or press any key.
 - **Keyboard shortcuts** — `H` / `S` / `D` / `P` / `R` (surrender) / `I` (insurance) for actions.
-- **Hands are played out** (Settings → Basic Strategy → **Play hands out**, on by default).
+- **Hands are played out** (Settings → Drills → **Play hands out**, on by default).
   A hit is the one correct answer that leaves another decision behind it, so the drill deals the card and asks again — a three-card 14, then a four-card 18 — until the hand stands, busts, or reaches 21.
   Every decision counts as a rep and is graded on its own; a bust after a correct hit is held on screen with the total and the play still marked right, because the play was.
   Past the opening two cards the grid narrows to **hit and stand**: doubling, splitting and surrender are first-two-card actions, and the dead buttons are how that rule is taught.
@@ -284,6 +286,9 @@ one of Hit / Stand / Double / Split / Surrender / Insurance.
   Insurance is treated as a single action choice rather than a separate
   pre-decision prompt.
 - **Keyboard shortcuts** — same bindings as the basic strategy drill: `H` / `S` / `D` / `P` / `R` (surrender) / `I` (insurance); correct answers auto-advance and any key continues after a miss.
+- **Hands are played out too** (the same Settings → Drills toggle). A correct hit deals the next card and asks the decision it leaves, at the same count — and **an index is written against a total**, so the hard-16 rule fires on a three-card 16 exactly as it does on a two-card one.
+  That is what the showdown has always graded and what no drill taught.
+  Past the deal the grid narrows to hit and stand: doubling, splitting and surrender are first-two-card actions, and insurance was settled before the hand was played.
 
 #### Final-action evaluation
 

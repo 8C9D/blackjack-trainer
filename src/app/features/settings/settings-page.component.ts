@@ -127,16 +127,17 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
         </label>
       </section>
 
-      <section class="settings__group" aria-label="Basic Strategy trainer">
-        <h2 class="settings__heading">Basic Strategy</h2>
+      <section class="settings__group" aria-label="Drills">
+        <h2 class="settings__heading">Drills</h2>
         <label>
           <input type="checkbox" [checked]="prefs().playHandsOut" (change)="togglePlayHandsOut()" />
           Play hands out (a correct hit deals the next card)
         </label>
         <p class="settings__hint">
-          Off, the drill asks the opening decision and deals a fresh hand. On, a hit is followed by
-          the card it draws and the decision that follows — where doubling, splitting and surrender
-          are already gone.
+          Off, Basic Strategy and Deviations ask the opening decision and deal a fresh hand. On, a
+          hit is followed by the card it draws and the decision that follows — where doubling,
+          splitting and surrender are already gone, and a deviation index still applies because it
+          is written against a total.
         </p>
       </section>
 
