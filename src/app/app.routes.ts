@@ -13,7 +13,7 @@ export const APP_ROUTES: Routes = [
     path: 'chart',
     loadComponent: () =>
       import('./features/chart/chart-page.component').then((m) => m.ChartPageComponent),
-    title: 'Strategy Chart — Blackjack Trainer',
+    title: 'Chart — Blackjack Trainer',
   },
   {
     path: 'progress',

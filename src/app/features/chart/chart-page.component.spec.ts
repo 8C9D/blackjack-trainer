@@ -74,12 +74,36 @@ function col(upcard: string): number {
   return DEALER_UPCARDS.indexOf(upcard as (typeof DEALER_UPCARDS)[number]);
 }
 
-function showDeviationsTab(fixture: ComponentFixture<ChartPageComponent>): void {
+function showTab(fixture: ComponentFixture<ChartPageComponent>, label: string): void {
   const tab = [...fixture.nativeElement.querySelectorAll('button')].find(
-    (b) => (b as HTMLElement).textContent!.trim() === 'Deviations',
+    (b) => (b as HTMLElement).textContent!.trim() === label,
   ) as HTMLButtonElement;
   tab.click();
   fixture.detectChanges();
+}
+
+function showDeviationsTab(fixture: ComponentFixture<ChartPageComponent>): void {
+  showTab(fixture, 'Deviations');
+}
+
+// The count tab's tag table as "column label → tag per row".
+function tagColumns(
+  fixture: ComponentFixture<ChartPageComponent>,
+): { label: string; values: string[] }[] {
+  const table = fixture.nativeElement.querySelector('.chart__table--tags') as HTMLElement;
+  const labels = [...table.querySelectorAll('thead th')]
+    .slice(1)
+    .map((th) => th.textContent!.trim());
+  const rows = [...table.querySelectorAll('tbody tr')].map((tr) =>
+    [...tr.querySelectorAll('td')].map((td) => td.textContent!.trim()),
+  );
+  return labels.map((label, i) => ({ label, values: rows.map((row) => row[i]) }));
+}
+
+function noteText(fixture: ComponentFixture<ChartPageComponent>): string {
+  return [...fixture.nativeElement.querySelectorAll('.chart__note')]
+    .map((el) => (el as HTMLElement).textContent!.replace(/\s+/g, ' ').trim())
+    .join(' | ');
 }
 
 describe('ChartPageComponent', () => {
@@ -439,6 +463,101 @@ describe('ChartPageComponent', () => {
       c.onCellKey(new KeyboardEvent('keydown', { key: 'ArrowUp' }), section, 0, 0);
       fixture.detectChanges();
       expect(c.isTabStop('hard', 0, 0)).toBe(true);
+    });
+  });
+
+  // The app grades every counted card against one of 58 systems' tags and
+  // printed them nowhere, so a trainee had to leave to learn what they were
+  // being marked on.
+  describe('the count tab', () => {
+    const useSystem = (systemId: string, numberOfDecks = 6) =>
+      TestBed.inject(FlowPrefsService).updateCounting({ systemId, numberOfDecks });
+
+    it('prints the selected system, not the one the deviation indices are written for', () => {
+      useSystem('zen');
+      const { fixture } = createPage();
+      showTab(fixture, 'Count');
+      const chips = [...fixture.nativeElement.querySelectorAll('.chart__chip')].map((el) =>
+        (el as HTMLElement).textContent!.trim(),
+      );
+      expect(chips).toEqual(['Zen Count', 'Balanced']);
+      // Table rules decide a play, never what a card is worth to the count.
+      expect(chips.some((c) => c.includes('S17') || c.includes('H17'))).toBe(false);
+    });
+
+    it('prints a balanced system as ranges and says what the zero sum buys', () => {
+      useSystem('hi-lo');
+      const { fixture } = createPage();
+      showTab(fixture, 'Count');
+      expect(tagColumns(fixture)).toEqual([
+        { label: '2–6', values: ['+1'] },
+        { label: '7–9', values: ['0'] },
+        { label: '10–A', values: ['-1'] },
+      ]);
+      expect(noteText(fixture)).toContain('A full deck of these tags sums to 0');
+      expect(noteText(fixture)).toContain('true count');
+    });
+
+    // The deck sum is read off the tags on screen, so the sentence and the
+    // table can never disagree — and it is not always KO's +4.
+    it('names the drift an unbalanced system has, and which way it runs', () => {
+      useSystem('ace-mt');
+      const { fixture } = createPage();
+      showTab(fixture, 'Count');
+      expect(noteText(fixture)).toContain('sums to -20, not 0');
+      expect(noteText(fixture)).toContain('drifts down');
+    });
+
+    it('lays out the published key counts for the shoe the drill is set to', () => {
+      useSystem('ko', 6);
+      const { fixture } = createPage();
+      showTab(fixture, 'Count');
+      const schedule = fixture.nativeElement.querySelector('.chart__table--rules') as HTMLElement;
+      expect(schedule.querySelector('caption')!.textContent).toContain('6-deck shoe');
+      const rows = [...schedule.querySelectorAll('tbody tr')].map((tr) =>
+        tr.textContent!.replace(/\s+/g, ' ').trim(),
+      );
+      expect(rows[0]).toContain('-20');
+      expect(rows[1]).toContain('-4');
+      expect(rows[3]).toContain('+3 or above');
+    });
+
+    it('follows the shoe size, because the schedule is per deck count', () => {
+      useSystem('ko', 2);
+      const { fixture } = createPage();
+      showTab(fixture, 'Count');
+      const schedule = fixture.nativeElement.querySelector('.chart__table--rules') as HTMLElement;
+      expect(schedule.querySelector('caption')!.textContent).toContain('2-deck shoe');
+      expect(schedule.querySelectorAll('tbody tr')[0].textContent).toContain('-4');
+    });
+
+    // The absence is why Settings offers these systems no key-count drill, so
+    // the reference screen says it rather than leaving a blank.
+    it('says so when an unbalanced system carries no published schedule', () => {
+      useSystem('archer');
+      const { fixture } = createPage();
+      showTab(fixture, 'Count');
+      expect(fixture.nativeElement.querySelector('.chart__table--rules')).toBeNull();
+      expect(noteText(fixture)).toContain('no published key-count schedule');
+    });
+
+    it('gives a color-dependent system a row per color, and says which suits are which', () => {
+      useSystem('red-seven');
+      const { fixture } = createPage();
+      showTab(fixture, 'Count');
+      const rowLabels = [
+        ...fixture.nativeElement.querySelectorAll('.chart__table--tags tbody th'),
+      ].map((th) => (th as HTMLElement).textContent!.trim());
+      expect(rowLabels).toEqual(['Red', 'Black']);
+      expect(tagColumns(fixture)).toContainEqual({ label: '7', values: ['+1', '0'] });
+      expect(noteText(fixture)).toContain('Hearts and diamonds are red');
+    });
+
+    it('leaves the balanced systems without a colour note', () => {
+      useSystem('hi-lo');
+      const { fixture } = createPage();
+      showTab(fixture, 'Count');
+      expect(noteText(fixture)).not.toContain('suit color');
     });
   });
 

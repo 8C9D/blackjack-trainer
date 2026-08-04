@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
 import { formatSignedCount } from '../../core/models/card-counting.model';
 import type { Card, Rank, Suit } from '../../core/models/card.model';
+import { resolveKeyCounts, tagTableFor } from '../../core/models/counting-system.model';
 import {
   DEVIATION_INDEX_SYSTEM_NAME,
   deviationIndexNote,
@@ -22,6 +23,7 @@ import {
   type SoftKey,
 } from '../../core/models/strategy.model';
 import { BasicStrategyEngineService } from '../../core/services/basic-strategy-engine.service';
+import { CountingEngineService } from '../../core/services/counting-engine.service';
 import { deviationsFor } from '../../core/services/deviation-engine.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
 import {
@@ -79,11 +81,12 @@ function clamp(value: number, max: number): number {
   return Math.min(Math.max(value, 0), max);
 }
 
-export type ChartMode = 'basic' | 'deviations';
+export type ChartMode = 'basic' | 'deviations' | 'count';
 
 export const CHART_MODES: readonly { value: ChartMode; label: string }[] = [
   { value: 'basic', label: 'Basic strategy' },
   { value: 'deviations', label: 'Deviations' },
+  { value: 'count', label: 'Count' },
 ];
 
 // Section order for the deviation list, matching how the source chart reads.
@@ -154,7 +157,7 @@ interface DeviationSectionView {
         <button type="button" class="chart__back" (click)="goHome()">
           ← Back <kbd class="kcap">esc</kbd>
         </button>
-        <h1 class="chart__title">Strategy chart</h1>
+        <h1 class="chart__title">Chart</h1>
       </header>
 
       <div class="chart__modes" role="group" aria-label="Chart">
@@ -171,16 +174,99 @@ interface DeviationSectionView {
         }
       </div>
 
-      <p class="chart__rules">
-        <span class="chart__chip">{{ ruleSetLabel() }}</span>
-        @if (mode() === 'basic') {
-          <span class="chart__chip">{{ dasLabel() }}</span>
-          <span class="chart__chip">{{ surrenderLabel() }}</span>
-        }
-        <button type="button" class="chart__settings" (click)="openSettings()">Change rules</button>
-      </p>
+      <!-- Table rules decide a play; they have nothing to do with what a card
+           is worth to the count. The count tab names the one setting its table
+           does depend on instead. -->
+      @if (mode() === 'count') {
+        <p class="chart__rules">
+          <span class="chart__chip">{{ systemName() }}</span>
+          <span class="chart__chip">{{ balanceLabel() }}</span>
+          <button type="button" class="chart__settings" (click)="openSettings()">
+            Change system
+          </button>
+        </p>
+      } @else {
+        <p class="chart__rules">
+          <span class="chart__chip">{{ ruleSetLabel() }}</span>
+          @if (mode() === 'basic') {
+            <span class="chart__chip">{{ dasLabel() }}</span>
+            <span class="chart__chip">{{ surrenderLabel() }}</span>
+          }
+          <button type="button" class="chart__settings" (click)="openSettings()">
+            Change rules
+          </button>
+        </p>
+      }
 
-      @if (mode() === 'deviations') {
+      @if (mode() === 'count') {
+        <section class="chart__section">
+          <!-- The strategy grids refuse to scroll sideways, because a chart you
+               drag around loses the row and column a cell is read from. A tag
+               strip is one line per row and keeps its meaning at any offset, so
+               the handful of computer-only systems with a distinct weight per
+               rank scroll here rather than crushing every other system's table
+               down to fit them. -->
+          <div class="chart__tags-scroll">
+            <table class="chart__table chart__table--tags">
+              <caption class="chart__caption">
+                What each card is worth
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="chart__corner">Cards</th>
+                  @for (column of tagTable().columns; track column.label) {
+                    <th scope="col" class="chart__upcard">{{ column.label }}</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (label of tagTable().rowLabels; track label; let r = $index) {
+                  <tr>
+                    <th scope="row" class="chart__hand">{{ label }}</th>
+                    @for (column of tagTable().columns; track column.label) {
+                      <td class="chart__cell-slot">
+                        <span class="chart__cell chart__tag">{{ column.values[r] }}</span>
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <p class="chart__note">{{ systemDescription() }}</p>
+
+        <!-- The one line that explains why two systems are drilled by different
+             questions: a deck that sums to zero is what a true count divides. -->
+        <p class="chart__note">{{ balanceNote() }}</p>
+
+        @if (keyCountRows().length > 0) {
+          <section class="chart__section">
+            <table class="chart__table chart__table--rules">
+              <caption class="chart__caption">
+                {{
+                  keyCountCaption()
+                }}
+              </caption>
+              <tbody>
+                @for (row of keyCountRows(); track row.label) {
+                  <tr>
+                    <th scope="row" class="chart__rule-hand">{{ row.label }}</th>
+                    <td class="chart__index">{{ row.value }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </section>
+        } @else if (keyCountMissing(); as note) {
+          <p class="chart__note">{{ note }}</p>
+        }
+
+        @if (colorNote(); as note) {
+          <p class="chart__note">{{ note }}</p>
+        }
+      } @else if (mode() === 'deviations') {
         @for (section of deviationSections(); track section.id) {
           <section class="chart__section">
             <table class="chart__table chart__table--rules">
@@ -359,6 +445,7 @@ interface DeviationSectionView {
 export class ChartPageComponent {
   private readonly prefsService = inject(FlowPrefsService);
   private readonly engine = inject(BasicStrategyEngineService);
+  private readonly countingEngine = inject(CountingEngineService);
   private readonly missTally = inject(MissTallyService);
   private readonly router = inject(Router);
   private readonly document = inject(DOCUMENT);
@@ -447,6 +534,79 @@ export class ChartPageComponent {
       this.deviationSections()
         .flatMap((s) => s.rows)
         .filter((r) => r.missed).length,
+  );
+
+  // ─── the count tab ──────────────────────────────────────────────────────
+  //
+  // The app grades every counted card against one of 58 systems' tags and,
+  // until this tab, printed those tags nowhere: a trainee who picked Zen or
+  // Wong Halves had to leave the app to learn what it was marking them on.
+
+  protected readonly system = computed(() => countingSystemById(this.prefs().counting.systemId));
+
+  protected readonly systemName = computed(() => this.system().name);
+
+  protected readonly systemDescription = computed(() => this.system().description);
+
+  protected readonly tagTable = computed(() => tagTableFor(this.system()));
+
+  protected readonly balanceLabel = computed(() =>
+    this.system().balanced ? 'Balanced' : 'Unbalanced',
+  );
+
+  // Derived from the tags on screen, not from the `balanced` flag, so the
+  // sentence and the table above it can never disagree.
+  private readonly deckSum = computed(() => this.countingEngine.fullDeckCount(this.system()));
+
+  protected readonly balanceNote = computed(() => {
+    const sum = this.deckSum();
+    if (sum === 0) {
+      return 'A full deck of these tags sums to 0. That is what a true count divides: the running count over the decks still to come is a per-deck figure, so this system can be drilled as a true count and its indices read at one.';
+    }
+    const direction = sum > 0 ? 'up' : 'down';
+    return `A full deck of these tags sums to ${formatSignedCount(sum)}, not 0, so the running count drifts ${direction} on its own as a shoe is dealt. There is nothing for a true count to divide — an unbalanced system is read against running-count thresholds instead.`;
+  });
+
+  // KO's published schedule, resolved for the shoe the counting drill is set
+  // to. Deck-dependent, so the figures move with that setting.
+  private readonly keyCounts = computed(() =>
+    resolveKeyCounts(this.system(), this.prefs().counting.numberOfDecks),
+  );
+
+  protected readonly keyCountCaption = computed(
+    () => `Running counts for a ${this.prefs().counting.numberOfDecks}-deck shoe`,
+  );
+
+  protected readonly keyCountRows = computed<readonly { label: string; value: string }[]>(() => {
+    const schedule = this.keyCounts();
+    if (!schedule) return [];
+    return [
+      { label: 'Start of shoe (IRC)', value: formatSignedCount(schedule.irc) },
+      { label: 'Key count — your advantage starts', value: formatSignedCount(schedule.keyCount) },
+      { label: 'Pivot — where a fully dealt shoe ends', value: formatSignedCount(schedule.pivot) },
+      {
+        label: 'Take insurance at',
+        value: `${formatSignedCount(schedule.insuranceCount)} or above`,
+      },
+    ];
+  });
+
+  // An unbalanced system with no schedule this app can print. Said rather than
+  // left blank: the absence is why Settings offers it no key-count drill.
+  protected readonly keyCountMissing = computed<string | null>(() => {
+    const system = this.system();
+    if (system.balanced || this.keyCounts() !== null) return null;
+    return system.keyCounts
+      ? `Its published key counts cover other shoe sizes, not the ${this.prefs().counting.numberOfDecks}-deck shoe your counting drill is set to.`
+      : 'This app carries no published key-count schedule for it, so it is drilled by running count alone.';
+  });
+
+  // Only three systems tag a rank by suit color, and the two rows above say
+  // nothing about why they are there.
+  protected readonly colorNote = computed<string | null>(() =>
+    this.system().colorValues
+      ? 'This system counts some cards by suit color, so its table has a row each for red and black. Hearts and diamonds are red; spades and clubs are black.'
+      : null,
   );
 
   protected readonly indexSystemName = DEVIATION_INDEX_SYSTEM_NAME;
