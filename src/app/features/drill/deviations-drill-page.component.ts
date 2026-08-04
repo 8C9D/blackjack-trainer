@@ -11,7 +11,7 @@ import {
 import { countingSystemById } from '../../data/counting-systems';
 import { ACTION_LABELS, type Action } from '../../core/models/strategy.model';
 import { handTotal } from '../../core/models/hand.model';
-import type { Card } from '../../core/models/card.model';
+import { isAce, type Card } from '../../core/models/card.model';
 import { CardGeneratorService } from '../../core/services/card-generator.service';
 import {
   DeviationEvaluatorService,
@@ -35,12 +35,15 @@ import { FlowTopbarComponent } from '../../shared/flow-topbar.component';
 import { DrillSession } from './drill-session';
 import { FLOW_ADVANCE_DELAY_MS } from './drill-timing';
 import {
+  MAX_SPLIT_HANDS,
   handQuestion,
   isReviewEntry,
   legalActionsFor,
   nextSessionTarget,
   pickWeakSpot,
   scenarioFromRef,
+  splitHandAt,
+  type SplitContext,
 } from './drill-hand';
 import { FlowStageComponent } from './flow-stage.component';
 import {
@@ -84,7 +87,11 @@ type DrillPhase = 'question' | 'flash' | 'miss' | 'over' | 'done';
           <p class="drill__advisory" role="note">{{ note }}</p>
         }
 
-        <app-flow-stage [player]="hand()" [dealer]="scenario().dealerUpcard">
+        <app-flow-stage
+          [player]="hand()"
+          [dealer]="scenario().dealerUpcard"
+          [handLabel]="handLabel()"
+        >
           @if (phase() === 'miss' && result(); as r) {
             <p class="drill__rule">
               <b>Correct: {{ labelFor(r.expectedAction) }}.</b> {{ r.explanation }}
@@ -153,12 +160,35 @@ export class DeviationsDrillPageComponent {
 
   protected readonly phase = signal<DrillPhase>('question');
   protected readonly scenario = signal<DeviationScenario>(this.firstScenario());
-  // The hand as it stands: the deal's two cards, plus every card a correct hit
-  // has drawn since. The scenario keeps the opening deal, which is what a weak
-  // spot is filed against and what the next hand resets to.
-  protected readonly hand = signal<readonly Card[]>(this.scenario().player);
+  // Every hand the deal is holding, in the order they are played: one until a
+  // split makes more. A hand waiting behind the one in play holds a single card
+  // — its second is dealt when it is reached, as a dealer deals it.
+  protected readonly hands = signal<readonly (readonly Card[])[]>([this.scenario().player]);
+  protected readonly activeIndex = signal(0);
+  // The hand in front of you: the deal's two cards, plus every card a correct
+  // hit has drawn since. The scenario keeps the opening deal, which is what a
+  // weak spot is filed against and what the next hand resets to.
+  protected readonly hand = computed<readonly Card[]>(() => this.hands()[this.activeIndex()] ?? []);
   protected readonly result = signal<DeviationTrainerResult | null>(null);
   protected readonly target = signal(0);
+
+  // Split aces take one card each and stand, so those hands are never asked a
+  // question — the rule the showdown's table already plays.
+  private readonly splitAces = signal(false);
+
+  // What a split has left the hand in front of you. More than one hand in play
+  // means every one of them came out of a split: a split replaces the hand that
+  // made it, so there is no unsplit hand left to confuse this with.
+  protected readonly splitContext = computed<SplitContext>(() => ({
+    fromSplit: this.hands().length > 1,
+    canSplitAgain: this.hands().length < MAX_SPLIT_HANDS,
+  }));
+
+  protected readonly handLabel = computed(() => {
+    const total = this.hands().length;
+    if (total < 2) return '';
+    return `Hand ${this.activeIndex() + 1} of ${total}`;
+  });
 
   protected readonly handsToday = computed(() => {
     this.history.days();
@@ -169,11 +199,14 @@ export class DeviationsDrillPageComponent {
     handQuestion(this.hand(), this.scenario().dealerUpcard),
   );
 
-  // Why the played-out hand stopped asking: a hit that busted, or one that
-  // reached 21 and left nothing to decide.
+  // Why the played-out hand stopped asking: a hit that busted, one that reached
+  // 21, or a split ace, which takes its one card and stands.
   protected readonly handOver = computed(() => {
-    const total = handTotal(this.hand());
-    return total > 21 ? `Bust — ${total}.` : `${total} — nothing left to decide.`;
+    const cards = this.hand();
+    const total = handTotal(cards);
+    if (total > 21) return `Bust — ${total}.`;
+    if (this.splitAces() && cards.length === 2) return `${total} — split aces take one card.`;
+    return `${total} — nothing left to decide.`;
   });
 
   protected readonly trueCountLabel = computed(() => formatTrueCount(this.scenario().trueCount));
@@ -188,7 +221,13 @@ export class DeviationsDrillPageComponent {
   // Surrender stays answerable regardless of the Late Surrender rule: the
   // deviation surrender overlay can expect SUR either way.
   protected readonly legalActions = computed(() =>
-    legalActionsFor(this.hand(), this.scenario().dealerUpcard, this.prefs.prefs().options, true),
+    legalActionsFor(
+      this.hand(),
+      this.scenario().dealerUpcard,
+      this.prefs.prefs().options,
+      true,
+      this.splitContext(),
+    ),
   );
 
   protected readonly picked = computed<Action | null>(() => this.result()?.userAction ?? null);
@@ -212,7 +251,9 @@ export class DeviationsDrillPageComponent {
   protected readonly verdict = computed(() => {
     if (this.phase() === 'over') return this.handOver();
     const result = this.result();
-    if (result === null) return '';
+    // Between hands of a split the grid and the stage both change with nothing
+    // announced, so the hand coming up names itself.
+    if (result === null) return this.handLabel();
     const expected = ACTION_LABELS[result.expectedAction];
     if (result.correct) return `Correct: ${expected}.`;
     return `Incorrect. Correct: ${expected}. ${result.explanation}`;
@@ -220,6 +261,12 @@ export class DeviationsDrillPageComponent {
 
   // A review round drills only the weak list; an ordinary round mixes it in.
   private readonly reviewing = signal(false);
+
+  // The deal's first decision — the question the drill has always asked, and the
+  // only one with a weak spot to file or a clock worth reading. A hit deepens
+  // the hand and a split replaces it; either way what follows is a different
+  // question from the one the deal put up.
+  private readonly atDeal = signal(true);
 
   // When the question on screen was put up. A decision's own clock: the app
   // grades whether the answer was right and has never said how long it took,
@@ -245,27 +292,29 @@ export class DeviationsDrillPageComponent {
     if (this.phase() !== 'question') return;
     if (!this.legalActions().includes(action)) return;
     const cards = this.hand();
-    const result = this.gradeDecision(cards, action);
+    const atDeal = this.atDeal();
+    const result = this.gradeDecision(cards, action, atDeal);
     this.result.set(result);
-    // Only the opening decision is timed, and for the same reason only it is
+    this.atDeal.set(false);
+    // Only the deal's decision is timed, and for the same reason only it is
     // filed as a weak spot: it is the question the drill has always asked. A
     // continued decision offers two buttons and one total where the deal offers
     // six and a pair-or-soft-or-hard lookup, so mixing them would move the
     // week's figure when the trainee turned a setting on rather than when they
-    // got faster.
-    const elapsedMs =
-      cards.length === 2
-        ? (plausibleDecisionMs(Date.now() - this.askedAt) ?? undefined)
-        : undefined;
+    // got faster. A hand out of a split is two cards again but is not the deal:
+    // it cannot surrender, cannot insure, and doubles only under DAS.
+    const elapsedMs = atDeal
+      ? (plausibleDecisionMs(Date.now() - this.askedAt) ?? undefined)
+      : undefined;
     this.stats.recordAttempt(result.correct);
     this.history.recordHand(result.correct, elapsedMs);
-    // Only the opening decision has a weak spot to file under: a `ScenarioRef`
-    // names a two-card hand, and re-dealing a three-card 16 as a two-card one
-    // would ask a different question (that one can double).
+    // Only the deal's decision has a weak spot to file under: a `ScenarioRef`
+    // names the two cards that were dealt, and re-dealing a three-card 16 — or
+    // the 11 a split of 8s made — as an opening hand asks a different question.
     //
     // The count goes in with the miss: here it is half the question, and a hand
     // re-dealt at a fresh count is a different one.
-    if (cards.length === 2) {
+    if (atDeal) {
       this.missTally.record(
         'deviations',
         scenarioRefFor(this.scenario().player, this.scenario().dealerUpcard),
@@ -287,15 +336,21 @@ export class DeviationsDrillPageComponent {
     }
   }
 
-  // The opening question takes every action on the table and the insurance
-  // overlay with it. Every question after it is a playing decision on a hand
-  // more than two cards deep, where an index still applies — it is written
-  // against a total — but doubling, splitting and surrender are gone.
-  private gradeDecision(cards: readonly Card[], action: Action): DeviationTrainerResult {
+  // The deal's question takes every action on the table and the insurance
+  // overlay with it. Every question after it is a playing decision, where an
+  // index still applies — it is written against a total — told what the table
+  // still offers. Insurance is gone either way, and the engine narrows further
+  // on its own once the hand is deeper than two cards.
+  private gradeDecision(
+    cards: readonly Card[],
+    action: Action,
+    atDeal: boolean,
+  ): DeviationTrainerResult {
     const prefs = this.prefs.prefs();
-    if (cards.length === 2) {
+    if (atDeal) {
       return this.evaluator.evaluate(this.scenario(), action, prefs.ruleSet, prefs.options);
     }
+    const split = this.splitContext();
     return this.evaluator.evaluatePlay(
       {
         player: cards,
@@ -303,31 +358,94 @@ export class DeviationsDrillPageComponent {
         trueCount: this.scenario().trueCount,
         ruleSet: prefs.ruleSet,
         options: prefs.options,
+        canDouble: !split.fromSplit || prefs.options.doubleAfterSplit,
+        canSplit: split.canSplitAgain,
+        canSurrender: !split.fromSplit,
       },
       action,
     );
   }
 
-  // A hit is the one correct answer that leaves another decision behind it, so
-  // it draws the next card and asks again — at the same count, which is the
-  // scenario's given rather than a live shoe's.
+  // A hit and a split are the two correct answers that leave another decision
+  // behind them: a hit draws the next card and asks again, a split turns one
+  // hand into two and asks about each in turn — both at the same count, which
+  // is the scenario's given rather than a live shoe's. Stand, double and
+  // surrender finish the hand in front of you, as they would at a table.
   private afterCorrect(action: Action): void {
-    if (!this.prefs.prefs().playHandsOut || action !== 'H') {
+    if (!this.prefs.prefs().playHandsOut) {
       this.advance();
       return;
     }
-    const grown = [...this.hand(), this.cardGenerator.generateCard()];
-    this.hand.set(grown);
-    // Busting, or reaching 21, ends the hand with nothing left to ask. Hold the
-    // card that did it on screen — that is the answer to the hit — then move on.
-    if (handTotal(grown) >= 21) {
-      this.phase.set('over');
-      this.advanceTimer = setTimeout(() => {
-        this.advanceTimer = null;
-        this.advance();
-      }, this.advanceDelayMs * 2);
+    if (action === 'H') {
+      this.drawToActive();
       return;
     }
+    if (action === 'P') {
+      this.splitActive();
+      return;
+    }
+    this.finishHand();
+  }
+
+  private drawToActive(): void {
+    const grown = [...this.hand(), this.cardGenerator.generateCard()];
+    this.setActiveHand(grown);
+    // Busting, or reaching 21, ends the hand with nothing left to ask.
+    if (handTotal(grown) >= 21) {
+      this.holdThenFinish();
+      return;
+    }
+    this.ask();
+  }
+
+  // The two halves each keep one card; the one in play is dealt its second.
+  private splitActive(): void {
+    this.splitAces.set(isAce(this.hand()[0]));
+    this.hands.set(splitHandAt(this.hands(), this.activeIndex()));
+    this.dealSecondCard();
+  }
+
+  // A hand out of a split arrives holding one card. Deal its second, then ask —
+  // unless it is a split ace, which takes that card and stands, or it landed on
+  // 21, which leaves nothing to decide either.
+  private dealSecondCard(): void {
+    const grown = [...this.hand(), this.cardGenerator.generateCard()];
+    this.setActiveHand(grown);
+    if (this.splitAces() || handTotal(grown) >= 21) {
+      this.holdThenFinish();
+      return;
+    }
+    this.ask();
+  }
+
+  // Hold the card that ended the hand on screen — that is the answer to the
+  // decision before it — then move on.
+  private holdThenFinish(): void {
+    this.phase.set('over');
+    this.advanceTimer = setTimeout(() => {
+      this.advanceTimer = null;
+      this.finishHand();
+    }, this.advanceDelayMs * 2);
+  }
+
+  // The hand in front of you is done. A split leaves others waiting behind it;
+  // when none is left, so is the deal.
+  private finishHand(): void {
+    const next = this.activeIndex() + 1;
+    if (next >= this.hands().length) {
+      this.advance();
+      return;
+    }
+    this.activeIndex.set(next);
+    this.dealSecondCard();
+  }
+
+  private setActiveHand(cards: readonly Card[]): void {
+    const i = this.activeIndex();
+    this.hands.update((hands) => hands.map((hand, j) => (j === i ? cards : hand)));
+  }
+
+  private ask(): void {
     this.result.set(null);
     this.phase.set('question');
     this.askedAt = Date.now();
@@ -376,10 +494,11 @@ export class DeviationsDrillPageComponent {
 
   private dealNext(scenario: DeviationScenario): void {
     this.scenario.set(scenario);
-    this.hand.set(scenario.player);
-    this.result.set(null);
-    this.phase.set('question');
-    this.askedAt = Date.now();
+    this.hands.set([scenario.player]);
+    this.activeIndex.set(0);
+    this.splitAces.set(false);
+    this.atDeal.set(true);
+    this.ask();
   }
 
   // Sessions open on the current weak spot when one exists.

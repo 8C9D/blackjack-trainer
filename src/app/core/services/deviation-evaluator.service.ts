@@ -107,9 +107,11 @@ export class DeviationEvaluatorService {
 
   // The same verdict for a hand already under way. An index is written against a
   // total, so it applies to a three-card 16 exactly as it does to a two-card one
-  // — which is what the showdown grades and what the drill can now teach. Two
-  // things are gone by then: doubling, splitting and surrender are first-two-card
-  // actions, and insurance was settled before the hand was played.
+  // — which is what the showdown grades and what the drill can now teach.
+  // Insurance is gone by then, settled before the hand was played; what else the
+  // table still offers is the caller's to say, since a hand out of a split is
+  // two cards again and doubles only under DAS. The default is a hand deeper
+  // than two cards, where the rules have taken all three away.
   evaluatePlay(
     args: {
       readonly player: readonly Card[];
@@ -117,6 +119,9 @@ export class DeviationEvaluatorService {
       readonly trueCount: number;
       readonly ruleSet: RuleSet;
       readonly options: EngineOptions;
+      readonly canDouble?: boolean;
+      readonly canSplit?: boolean;
+      readonly canSurrender?: boolean;
     },
     userAction: Action,
   ): DeviationTrainerResult {
@@ -125,9 +130,9 @@ export class DeviationEvaluatorService {
       dealerUpcard: args.dealerUpcard,
       ruleSet: args.ruleSet,
       options: args.options,
-      canDouble: false,
-      canSplit: false,
-      canSurrender: false,
+      canDouble: args.canDouble ?? false,
+      canSplit: args.canSplit ?? false,
+      canSurrender: args.canSurrender ?? false,
     };
     const basic = this.basicStrategy.decidePlay(input);
     const resolved = this.deviationEngine.resolvePlayDecision(input, args.trueCount);

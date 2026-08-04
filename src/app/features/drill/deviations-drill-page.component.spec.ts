@@ -34,7 +34,12 @@ const NO_INSURANCE_TC0 = scenarioOf('3', '4', 'A', 0);
 
 type Internals = {
   scenario: { (): DeviationScenario; set(v: DeviationScenario): void };
-  hand: { (): readonly Card[]; set(v: readonly Card[]): void };
+  hands: { (): readonly (readonly Card[])[]; set(v: readonly (readonly Card[])[]): void };
+  activeIndex: { (): number; set(v: number): void };
+  hand: () => readonly Card[];
+  handLabel: () => string;
+  splitAces: { (): boolean; set(v: boolean): void };
+  atDeal: { (): boolean; set(v: boolean): void };
   result: { (): DeviationTrainerResult | null };
   phase: { (): 'question' | 'flash' | 'miss' | 'over' | 'done' };
   target: { (): number };
@@ -45,15 +50,26 @@ type Internals = {
   onKeyDown(event: KeyboardEvent): void;
 };
 
+// Pin the next card the drill draws: `generateCard` reads rank and suit off
+// one call each, so a value inside the rank's 1/13 slice picks it exactly.
+function nextCardIs(rank: Rank): void {
+  const index = ALL_RANKS.indexOf(rank);
+  TestBed.inject(CardGeneratorService).setRandomSource(() => (index + 0.5) / ALL_RANKS.length);
+}
+
 function asInternals(c: DeviationsDrillPageComponent): Internals {
   return c as unknown as Internals;
 }
 
 // Deal a scenario the way the page does: the opening two cards are both the
-// recorded deal and the hand in play.
+// recorded deal and the only hand in play, and the decision in front of the
+// user is the deal's own.
 function deal(c: Internals, scenario: DeviationScenario): void {
   c.scenario.set(scenario);
-  c.hand.set(scenario.player);
+  c.hands.set([scenario.player]);
+  c.activeIndex.set(0);
+  c.splitAces.set(false);
+  c.atDeal.set(true);
 }
 
 function createPage(): {
@@ -339,13 +355,6 @@ describe('DeviationsDrillPageComponent', () => {
   // exactly as it does to a two-card one. The showdown has always graded that;
   // this is the drill that teaches it.
   describe('playing the hand out', () => {
-    // Pin the next card the drill draws: `generateCard` reads rank and suit off
-    // one call each, so a value inside the rank's 1/13 slice picks it exactly.
-    function nextCardIs(rank: Rank): void {
-      const index = ALL_RANKS.indexOf(rank);
-      TestBed.inject(CardGeneratorService).setRandomSource(() => (index + 0.5) / ALL_RANKS.length);
-    }
-
     // Hard 12 vs 10 hits at any count; the 4 makes it the hard 16 the
     // Illustrious 18 stands at TC 0 or higher.
     const TWELVE_V_TEN = scenarioOf('10', '2', 'Q', 0);
@@ -423,6 +432,93 @@ describe('DeviationsDrillPageComponent', () => {
       const { c } = createPage();
       hitInto16(c);
       expect(c.hand().length).toBe(2);
+      expect(c.hand()).toEqual(c.scenario().player);
+    });
+  });
+
+  // The chart's own pair deviations say to split — T,T v 6 at +4 is one of
+  // them — and the drill used to grade that answer and then deal something
+  // else, so the hands the deviation makes were never played.
+  describe('playing a split out', () => {
+    // T,T v 6: stand by basic strategy, split at TC +4 or higher.
+    const TENS_V_SIX_TC4 = scenarioOf('10', '10', '6', 4);
+    // 8,8 is a split at every count; a 7 on top of one makes the hard 15 v 10
+    // the chart stands at +4 and hits below.
+    const EIGHTS_V_TEN_TC4 = scenarioOf('8', '8', 'Q', 4);
+    const EIGHTS_V_TEN_TC0 = scenarioOf('8', '8', 'Q', 0);
+
+    function splitOnce(c: Internals, rank: Rank): void {
+      nextCardIs(rank);
+      c.answer('P');
+      vi.advanceTimersByTime(ADVANCE_MS);
+    }
+
+    it('plays out the split a pair deviation called for', () => {
+      const { fixture, c } = createPage();
+      deal(c, TENS_V_SIX_TC4);
+      nextCardIs('6');
+      c.answer('P');
+      expect(c.result()!.correct).toBe(true);
+      expect(c.result()!.deviationApplied).toBe(true);
+
+      vi.advanceTimersByTime(ADVANCE_MS);
+      fixture.detectChanges();
+      expect(c.handLabel()).toBe('Hand 1 of 2');
+      expect(c.phase()).toBe('question');
+    });
+
+    // An index is written against a total, so it reads a hand a split made
+    // exactly as it reads one a hit made.
+    it('applies an index to the hand the split made', () => {
+      const { c } = createPage();
+      deal(c, EIGHTS_V_TEN_TC4);
+      splitOnce(c, '7'); // hard 15 vs 10 at TC +4
+
+      c.answer('S');
+      expect(c.result()!.correct).toBe(true);
+      expect(c.result()!.deviationApplied).toBe(true);
+      expect(c.result()!.basicAction).toBe('H');
+    });
+
+    it('grades that same 15 the other way below the index', () => {
+      const { c } = createPage();
+      deal(c, EIGHTS_V_TEN_TC0);
+      splitOnce(c, '7');
+
+      c.answer('S');
+      expect(c.result()!.correct).toBe(false);
+      expect(c.result()!.expectedAction).toBe('H');
+    });
+
+    // This drill offers Surrender whatever the table rule says, because the
+    // surrender overlay can expect it either way — but not on a hand out of a
+    // split, where the rules have taken it away.
+    it('takes the surrender overlay off a hand out of a split', () => {
+      const { c } = createPage();
+      deal(c, EIGHTS_V_TEN_TC4);
+      expect(c.legalActions()).toContain('SUR');
+
+      splitOnce(c, '7');
+      expect(c.legalActions()).toEqual(['H', 'S']);
+    });
+
+    // A `ScenarioRef` names the two cards that were dealt, and it carries the
+    // count they were missed at. The 15 a split made is neither.
+    it('files no weak spot for a decision on a hand out of a split', () => {
+      const { c } = createPage();
+      deal(c, EIGHTS_V_TEN_TC4);
+      splitOnce(c, '7');
+      c.answer('H'); // wrong: the index stands this 15
+      expect(c.phase()).toBe('miss');
+      expect(TestBed.inject(MissTallyService).weakSpotFor('deviations')).toBeNull();
+    });
+
+    it('deals a fresh hand instead when the setting is off', () => {
+      TestBed.inject(FlowPrefsService).setPlayHandsOut(false);
+      const { c } = createPage();
+      deal(c, EIGHTS_V_TEN_TC4);
+      splitOnce(c, '7');
+      expect(c.hands().length).toBe(1);
       expect(c.hand()).toEqual(c.scenario().player);
     });
   });

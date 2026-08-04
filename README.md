@@ -4,7 +4,8 @@ A frontend-only Angular app for practicing four blackjack skills:
 
 1. **Basic Strategy Trainer** — hands against H17/S17 charts from
    [Blackjack Apprenticeship](https://www.blackjackapprenticeship.com/), played
-   out from the deal: a correct hit deals the next card and asks again.
+   out from the deal: a correct hit deals the next card and asks again, and a
+   correct split plays both hands.
 2. **Running Count Trainer** — running-count drills on random card streams of
    configurable length and speed, across 58 counting systems (Hi-Lo, KO,
    Omega II, Wong Halves, plus the Blackjack Review comparison set).
@@ -64,12 +65,17 @@ Without the parameter nothing changes.
 - **Flow grading** — a correct answer flashes in place and auto-advances; a miss is the loop's only pause, showing the correct action and a one-line rationale until you tap or press any key.
 - **Keyboard shortcuts** — `H` / `S` / `D` / `P` / `R` (surrender) / `I` (insurance) for actions.
 - **Hands are played out** (Settings → Drills → **Play hands out**, on by default).
-  A hit is the one correct answer that leaves another decision behind it, so the drill deals the card and asks again — a three-card 14, then a four-card 18 — until the hand stands, busts, or reaches 21.
+  A hit and a split are the two correct answers that leave another decision behind them.
+  A hit deals the card and asks again — a three-card 14, then a four-card 18 — until the hand stands, busts, or reaches 21.
   Every decision counts as a rep and is graded on its own; a bust after a correct hit is held on screen with the total and the play still marked right, because the play was.
   Past the opening two cards the grid narrows to **hit and stand**: doubling, splitting and surrender are first-two-card actions, and the dead buttons are how that rule is taught.
   So the same total reads two ways — hard 11 vs 6 doubles on the deal and can only hit once a card is drawn — which is exactly what the chart means and what the showdown has always graded.
-  Only the opening decision files a weak spot: a `ScenarioRef` names a two-card hand, and re-dealing a three-card 16 as a two-card one would ask a different question.
-  Turn it off and the drill asks the opening decision and deals a fresh hand, as it did before.
+- **A split is played out too**, which is the point of splitting: the chart's answer to 8,8 vs 9 leaves you holding two hands it never asked about.
+  Each half is dealt its second card as it is reached and played in turn (the stage says **Hand 2 of 3** so the second is not mistaken for a fresh deal), re-splitting up to the usual **four hands**, with split aces taking one card each and standing.
+  A hand out of a split is two cards again but is not the hand that was dealt: surrender and insurance are gone for good, and doubling comes back only under **DAS** — so the 11 a split of 8s made doubles at a DAS table and hits at one without.
+  These are the same rules the showdown's table plays, which is where multi-card play was graded long before any drill taught it.
+  Only the deal's decision files a weak spot or is timed: a `ScenarioRef` names the two cards that were dealt, and re-dealing that 11 as an opening hand would ask a question that can surrender and insure.
+  Turn the setting off and the drill asks the opening decision and deals a fresh hand, as it did before.
 
 ### Card Counting Trainer (v2 + v3, plus live shoe & showdown)
 
@@ -357,6 +363,8 @@ one of Hit / Stand / Double / Split / Surrender / Insurance.
   A correct hit deals the next card and asks the decision it leaves, at the same count — and **an index is written against a total**, so the hard-16 rule fires on a three-card 16 exactly as it does on a two-card one.
   That is what the showdown has always graded and what no drill taught.
   Past the deal the grid narrows to hit and stand: doubling, splitting and surrender are first-two-card actions, and insurance was settled before the hand was played.
+  A correct split is played out on the same terms, which matters most here because three of the chart's own deviations _are_ splits (T,T v 4 / 5 / 6): the hands they make were graded and then thrown away.
+  An index reads them like any other total — 8,8 v 10 split, then a 7, is the hard 15 the chart stands at +4 and hits below — and the surrender overlay, which this drill otherwise offers whatever the table rule says, is gone once a hand comes out of a split.
 
 #### Final-action evaluation
 
@@ -464,8 +472,9 @@ no-ops at runtime but document the chart cell.
   The bars carry volume; the accuracy line is the half that says whether the practice is working, and it stays silent until there are two measured weeks to compare.
   The pace line is the other half of table-readiness — a chart answered perfectly and slowly is not a chart you can play — and it is reported, never judged: the app has no published number to hold a trainee to, so the only claim it makes is the direction against their own week before.
   A decision is timed from the moment its question goes up; anything past a minute is a trainee who walked away and is left out entirely.
-  **Only the opening decision is timed** — the same question the drill has always asked, and the same line the weak-spot tally draws.
+  **Only the deal's decision is timed** — the same question the drill has always asked, and the same line the weak-spot tally draws.
   A continued decision (see "Play hands out") offers two buttons and one total where the deal offers six and a pair-or-soft-or-hard lookup, so counting both would move the week's figure when a setting was turned on rather than when the trainee got faster.
+  A hand out of a split is two cards again, but it is not the hand that was dealt and is left out for the same reason.
   The figure does mix the two strategy trainers, and a deviation decision carries a count to read on top of the chart: a week that switched trainers moved its own baseline.
   Read-only, and each section hides itself until there is something to show.
 - **Real card images** — 52 SVGs + face-down back from

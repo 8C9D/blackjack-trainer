@@ -15,10 +15,15 @@ import { CardImageComponent } from '../../shared/card-image.component';
         <span class="stage__label">Dealer shows</span>
         <app-card-image class="stage__dealer-card" [card]="dealer()" />
       </div>
+      <!-- A split puts more than one hand in front of you and the stage shows
+           one at a time, so without this the second is a fresh deal. -->
+      @if (handLabel()) {
+        <span class="stage__label stage__hand-label">{{ handLabel() }}</span>
+      }
       <div
         class="stage__hand"
         role="group"
-        aria-label="Your hand"
+        [attr.aria-label]="handLabel() || 'Your hand'"
         [class.stage__hand--deep]="player().length > 2"
       >
         <!-- Tracked by index: the trainers deal with replacement, so the same
@@ -36,4 +41,7 @@ export class FlowStageComponent {
   // One card or many: a hand played out grows past the opening two.
   readonly player = input.required<readonly Card[]>();
   readonly dealer = input.required<Card>();
+  // "Hand 2 of 3" while a split is being played out; empty for a single hand,
+  // where naming it would only add noise.
+  readonly handLabel = input('');
 }

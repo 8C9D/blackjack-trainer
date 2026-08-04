@@ -45,7 +45,12 @@ const STAND_SCENARIO = scenarioOf('10', '9', '6');
 // the approach of the pre-Flow page specs.
 type Internals = {
   scenario: { (): Scenario; set(v: Scenario): void };
-  hand: { (): readonly Card[]; set(v: readonly Card[]): void };
+  hands: { (): readonly (readonly Card[])[]; set(v: readonly (readonly Card[])[]): void };
+  activeIndex: { (): number; set(v: number): void };
+  hand: () => readonly Card[];
+  handLabel: () => string;
+  splitAces: { (): boolean; set(v: boolean): void };
+  atDeal: { (): boolean; set(v: boolean): void };
   result: { (): EvaluationResult | null };
   phase: { (): 'question' | 'flash' | 'miss' | 'over' | 'done' };
   target: { (): number };
@@ -61,10 +66,14 @@ function asInternals(c: BasicStrategyDrillPageComponent): Internals {
 }
 
 // Deal a scenario the way the page does: the opening two cards are both the
-// recorded deal and the hand in play.
+// recorded deal and the only hand in play, and the decision in front of the
+// user is the deal's own.
 function deal(c: Internals, scenario: Scenario): void {
   c.scenario.set(scenario);
-  c.hand.set(scenario.player);
+  c.hands.set([scenario.player]);
+  c.activeIndex.set(0);
+  c.splitAces.set(false);
+  c.atDeal.set(true);
 }
 
 function createPage(): {
@@ -89,6 +98,13 @@ function actionButton(
 
 function key(c: Internals, k: string): void {
   c.onKeyDown(new KeyboardEvent('keydown', { key: k }));
+}
+
+// Pin the next card the drill draws. `generateCard` reads rank and suit off
+// one call each, so a value inside the rank's 1/13 slice picks it exactly.
+function nextCardIs(rank: Rank): void {
+  const index = ALL_RANKS.indexOf(rank);
+  TestBed.inject(CardGeneratorService).setRandomSource(() => (index + 0.5) / ALL_RANKS.length);
 }
 
 describe('BasicStrategyDrillPageComponent', () => {
@@ -323,13 +339,6 @@ describe('BasicStrategyDrillPageComponent', () => {
   // drill follows it rather than dealing a fresh hand, which is the only place
   // in the app a multi-card decision is taught.
   describe('playing the hand out', () => {
-    // Pin the next card the drill draws. `generateCard` reads rank and suit off
-    // one call each, so a value inside the rank's 1/13 slice picks it exactly.
-    function nextCardIs(rank: Rank): void {
-      const index = ALL_RANKS.indexOf(rank);
-      TestBed.inject(CardGeneratorService).setRandomSource(() => (index + 0.5) / ALL_RANKS.length);
-    }
-
     function hitOnce(c: Internals, rank: Rank): void {
       nextCardIs(rank);
       c.answer('H');
@@ -456,6 +465,188 @@ describe('BasicStrategyDrillPageComponent', () => {
       deal(c, HIT_SCENARIO);
       hitOnce(c, '9');
       expect(c.hand().length).toBe(2);
+      expect(c.hand()).toEqual(c.scenario().player);
+    });
+  });
+
+  // A split is the other correct answer that leaves decisions behind it — two
+  // of them, on hands the drill never used to ask about. The showdown's table
+  // has played splits out since it shipped; the drill that teaches the play
+  // ended the hand and dealt a fresh one, so "split 8s, then what" was the one
+  // question the chart's most-drilled cell never led to.
+  describe('playing a split out', () => {
+    // 8,8 is a split against every upcard, so the split itself is always the
+    // correct answer here and what follows is the hand it made.
+    const PAIR_8S_V_6 = scenarioOf('8', '8', '6');
+    const PAIR_ACES_V_6 = scenarioOf('A', 'A', '6');
+
+    // Split correctly, with the card each new hand draws pinned.
+    function splitOnce(c: Internals, rank: Rank): void {
+      nextCardIs(rank);
+      c.answer('P');
+      vi.advanceTimersByTime(ADVANCE_MS);
+    }
+
+    it('turns one hand into two and asks about the first', () => {
+      const { fixture, c } = createPage();
+      deal(c, PAIR_8S_V_6);
+      splitOnce(c, '3');
+      fixture.detectChanges();
+
+      expect(c.phase()).toBe('question');
+      expect(c.hands().length).toBe(2);
+      expect(c.hand().length).toBe(2); // 8 + 3
+      const q = fixture.nativeElement.querySelector('.drill__question') as HTMLElement;
+      expect(q.textContent!.replace(/\s+/g, ' ').trim()).toBe('Hard 11 vs 6');
+    });
+
+    // The stage shows one hand at a time, so without this the second hand of a
+    // split is indistinguishable from a fresh deal.
+    it('names which hand of the split is in front of you', () => {
+      const { fixture, c } = createPage();
+      expect(c.handLabel()).toBe('');
+
+      deal(c, PAIR_8S_V_6);
+      splitOnce(c, '3');
+      fixture.detectChanges();
+      expect(c.handLabel()).toBe('Hand 1 of 2');
+      expect(
+        (fixture.nativeElement.querySelector('.stage__hand-label') as HTMLElement).textContent,
+      ).toBe('Hand 1 of 2');
+      expect(
+        (fixture.nativeElement.querySelector('.stage__hand') as HTMLElement).getAttribute(
+          'aria-label',
+        ),
+      ).toBe('Hand 1 of 2');
+    });
+
+    // Insurance was settled on the deal and surrender is a first-two-cards
+    // action of the hand the dealer dealt. Both are gone for good.
+    it('takes surrender and insurance off a hand out of a split', () => {
+      TestBed.inject(FlowPrefsService).setOptions({
+        doubleAfterSplit: false,
+        lateSurrender: true,
+      });
+      const { c } = createPage();
+      deal(c, { player: [card('8'), card('8', 'hearts')], dealerUpcard: card('A', 'clubs') });
+      expect(c.legalActions()).toContain('SUR');
+      expect(c.legalActions()).toContain('INS');
+
+      splitOnce(c, '3');
+      expect(c.legalActions()).toEqual(['H', 'S']);
+    });
+
+    it('offers the double back only under DAS, and grades it that way', () => {
+      TestBed.inject(FlowPrefsService).setOptions({
+        doubleAfterSplit: true,
+        lateSurrender: false,
+      });
+      const { c } = createPage();
+      deal(c, PAIR_8S_V_6);
+      splitOnce(c, '3'); // hard 11 vs 6
+
+      expect(c.legalActions()).toEqual(['H', 'S', 'D']);
+      c.answer('D');
+      expect(c.result()!.correct).toBe(true);
+    });
+
+    it('makes the same 11 a hit when the table has no DAS', () => {
+      const { c } = createPage();
+      deal(c, PAIR_8S_V_6);
+      splitOnce(c, '3');
+
+      expect(c.legalActions()).toEqual(['H', 'S']);
+      c.answer('H');
+      expect(c.result()!.correct).toBe(true);
+    });
+
+    it('moves to the second hand when the first is finished, then deals on', () => {
+      const { fixture, c } = createPage();
+      deal(c, PAIR_8S_V_6);
+      splitOnce(c, '10'); // 8 + 10 = hard 18 vs 6 — stand
+
+      c.answer('S');
+      vi.advanceTimersByTime(ADVANCE_MS);
+      fixture.detectChanges();
+      expect(c.handLabel()).toBe('Hand 2 of 2');
+      expect(c.hand().length).toBe(2); // its second card was dealt on arrival
+
+      c.answer('S');
+      vi.advanceTimersByTime(ADVANCE_MS);
+      fixture.detectChanges();
+      expect(c.hands().length).toBe(1);
+      expect(c.hand()).toEqual(c.scenario().player);
+    });
+
+    // Split aces take a single card each and stand — the rule the showdown's
+    // table already plays, and the reason a 21 made that way is not a natural.
+    it('gives split aces one card each and never asks', () => {
+      const { fixture, c } = createPage();
+      deal(c, PAIR_ACES_V_6);
+      splitOnce(c, '5');
+      fixture.detectChanges();
+
+      expect(c.phase()).toBe('over');
+      expect((fixture.nativeElement.querySelector('.drill__rule') as HTMLElement).textContent).toBe(
+        '16 — split aces take one card.',
+      );
+
+      vi.advanceTimersByTime(ADVANCE_MS * 2);
+      fixture.detectChanges();
+      expect(c.phase()).toBe('over'); // the second ace, same rule
+      expect(c.handLabel()).toBe('Hand 2 of 2');
+
+      vi.advanceTimersByTime(ADVANCE_MS * 2);
+      fixture.detectChanges();
+      expect(c.hands().length).toBe(1);
+    });
+
+    it('re-splits a pair up to four hands, then reads it as a total', () => {
+      const { c } = createPage();
+      deal(c, PAIR_8S_V_6);
+      splitOnce(c, '8'); // 8,8 again
+      expect(c.hands().length).toBe(2);
+      expect(c.legalActions()).toContain('P');
+
+      splitOnce(c, '8');
+      expect(c.hands().length).toBe(3);
+      splitOnce(c, '8');
+      expect(c.hands().length).toBe(4);
+
+      // At the cap the pair is not a pair the table will act on, so the chart is
+      // read at the total: hard 16 vs 6 stands.
+      expect(c.legalActions()).toEqual(['H', 'S']);
+      c.answer('S');
+      expect(c.result()!.correct).toBe(true);
+    });
+
+    // A hand out of a split is two cards again, but it is not the hand that was
+    // dealt: filing it would re-deal an 11 that can surrender and insure.
+    it('neither times nor files a decision on a hand out of a split', () => {
+      const tally = TestBed.inject(MissTallyService);
+      const { c } = createPage();
+      deal(c, PAIR_8S_V_6);
+
+      vi.advanceTimersByTime(2000);
+      splitOnce(c, '3');
+
+      vi.advanceTimersByTime(9000);
+      c.answer('S'); // hard 11 vs 6 — wrong, and not the deal's question
+      expect(c.result()!.correct).toBe(false);
+
+      const history = TestBed.inject(PracticeHistoryService);
+      expect(history.handsToday()).toBe(2);
+      expect(history.paceLast7()).toBe(2); // the split alone, at 2.0s
+      // The deal itself was answered correctly, so nothing is outstanding.
+      expect(tally.weakSpotFor('basic-strategy')).toBeNull();
+    });
+
+    it('deals a fresh hand instead when the setting is off', () => {
+      TestBed.inject(FlowPrefsService).setPlayHandsOut(false);
+      const { c } = createPage();
+      deal(c, PAIR_8S_V_6);
+      splitOnce(c, '3');
+      expect(c.hands().length).toBe(1);
       expect(c.hand()).toEqual(c.scenario().player);
     });
   });
@@ -642,9 +833,13 @@ describe('BasicStrategyDrillPageComponent', () => {
       // Both sources of randomness pinned, so which hand is dealt is a fact
       // about the round's mode and nothing else. Math.random at 0.99 fails an
       // ordinary round's 0.4 share roll but never a review round's roll of 1.
-      function pinRandomness(): void {
+      // Playing hands out goes with them: the weak spot is a pair whose correct
+      // answer is Split, which would otherwise play two hands before the next
+      // deal — and the next deal is the whole of what these tests read.
+      function pinTheNextDeal(): void {
         vi.spyOn(Math, 'random').mockReturnValue(0.99);
         TestBed.inject(CardGeneratorService).setRandomSource(() => 0);
+        TestBed.inject(FlowPrefsService).setPlayHandsOut(false);
       }
 
       function startedReviewRound(): {
@@ -666,7 +861,7 @@ describe('BasicStrategyDrillPageComponent', () => {
         expect(c.phase()).toBe('question');
         expect(c.target()).toBe(20);
 
-        pinRandomness();
+        pinTheNextDeal();
         for (let i = 0; i < 3; i++) {
           expect(handQuestion(c.scenario().player, c.scenario().dealerUpcard)).toEqual(
             PAIR_8S_QUESTION,
@@ -686,7 +881,7 @@ describe('BasicStrategyDrillPageComponent', () => {
         TestBed.inject(MissTallyService).record('basic-strategy', PAIR_8S, false);
 
         const { fixture, c } = createPage();
-        pinRandomness();
+        pinTheNextDeal();
         // Hand one opens on the weakness in any round; hand two is the one that
         // separates a review round from an ordinary one, because 0.99 fails the
         // ordinary 0.4 share roll.
@@ -707,7 +902,7 @@ describe('BasicStrategyDrillPageComponent', () => {
         TestBed.inject(MissTallyService).record('basic-strategy', PAIR_8S, false);
 
         const { fixture, c } = createPage();
-        pinRandomness();
+        pinTheNextDeal();
         c.answer('P');
         vi.advanceTimersByTime(ADVANCE_MS);
         fixture.detectChanges();
@@ -728,7 +923,7 @@ describe('BasicStrategyDrillPageComponent', () => {
         );
 
         // Hand two takes the share roll, which now fails: a fresh hand.
-        pinRandomness();
+        pinTheNextDeal();
         c.answer('P');
         vi.advanceTimersByTime(ADVANCE_MS);
         fixture.detectChanges();

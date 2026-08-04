@@ -4,12 +4,15 @@ import { classifyAsPair, isSoftHand } from '../../core/services/basic-strategy-e
 import { cardHighValue } from '../../core/models/card.model';
 import type { ScenarioRef, WeakSpot } from '../../core/services/miss-tally.service';
 import {
+  MAX_SPLIT_HANDS,
+  UNSPLIT,
   WEAK_SPOT_SHARE,
   handQuestion,
   legalActionsFor,
   nextSessionTarget,
   pickWeakSpot,
   scenarioFromRef,
+  splitHandAt,
 } from './drill-hand';
 
 const card = (rank: Rank, suit: Suit = 'spades'): Card => ({ rank, suit });
@@ -104,6 +107,73 @@ describe('legalActionsFor', () => {
   it('leaves only hit and stand once the hand is past two cards', () => {
     const deep = [card('8'), card('8', 'hearts'), card('2')];
     expect(legalActionsFor(deep, card('A'), LS_ON, true)).toEqual(['H', 'S']);
+  });
+
+  // A hand out of a split is two cards again but is not the hand that was
+  // dealt: insurance was settled before it existed and surrender is a
+  // first-two-cards action of the hand that was.
+  describe('after a split', () => {
+    const FROM_SPLIT = { fromSplit: true, canSplitAgain: true };
+    const AT_THE_CAP = { fromSplit: true, canSplitAgain: false };
+
+    it('takes surrender and insurance away for good', () => {
+      const legal = legalActionsFor(NON_PAIR, card('A'), LS_ON, true, FROM_SPLIT);
+      expect(legal).not.toContain('SUR');
+      expect(legal).not.toContain('INS');
+    });
+
+    it('gives the double back only under DAS', () => {
+      expect(
+        legalActionsFor(NON_PAIR, card('6'), DEFAULT_ENGINE_OPTIONS, false, FROM_SPLIT),
+      ).toEqual(['H', 'S']);
+      const das = { ...DEFAULT_ENGINE_OPTIONS, doubleAfterSplit: true };
+      expect(legalActionsFor(NON_PAIR, card('6'), das, false, FROM_SPLIT)).toContain('D');
+    });
+
+    it('re-splits a pair until the deal is at its cap', () => {
+      const pair: readonly Card[] = [card('8'), card('8', 'hearts')];
+      expect(legalActionsFor(pair, card('6'), DEFAULT_ENGINE_OPTIONS, false, FROM_SPLIT)).toContain(
+        'P',
+      );
+      expect(
+        legalActionsFor(pair, card('6'), DEFAULT_ENGINE_OPTIONS, false, AT_THE_CAP),
+      ).not.toContain('P');
+    });
+
+    it('leaves an unsplit hand every action it had', () => {
+      expect(legalActionsFor(NON_PAIR, card('A'), LS_ON, false, UNSPLIT)).toEqual(
+        legalActionsFor(NON_PAIR, card('A'), LS_ON),
+      );
+    });
+  });
+});
+
+describe('splitHandAt', () => {
+  const eights: readonly Card[] = [card('8'), card('8', 'hearts')];
+
+  it('gives each half one card, in the order they are played', () => {
+    expect(splitHandAt([eights], 0)).toEqual([[card('8')], [card('8', 'hearts')]]);
+  });
+
+  it('lands a re-split in place, so the hands stay in playing order', () => {
+    const waiting: readonly Card[] = [card('9')];
+    expect(splitHandAt([eights, waiting], 0)).toEqual([
+      [card('8')],
+      [card('8', 'hearts')],
+      waiting,
+    ]);
+  });
+
+  // Defensive: a one-card hand waiting behind the active one is not a pair to
+  // split, and nothing should be able to turn it into two.
+  it('leaves anything that is not a two-card hand alone', () => {
+    const one = [[card('8')]];
+    expect(splitHandAt(one, 0)).toBe(one);
+    expect(splitHandAt([eights], 3)).toEqual([eights]);
+  });
+
+  it('caps a deal at four hands', () => {
+    expect(MAX_SPLIT_HANDS).toBe(4);
   });
 });
 
