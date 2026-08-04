@@ -54,6 +54,16 @@ struct ProgressWeakGroup: Identifiable {
     let drill: TrainerId
     let outstanding: [WeakSpot]
     let cleared: [WeakSpot]
+
+    /// The worst few, which is what the card lists, and the count it did not.
+    /// The review round the card starts is not capped by this.
+    var shown: [WeakSpot] {
+        Array(outstanding.prefix(ProgressSummary.spotsShown))
+    }
+
+    var hidden: Int {
+        max(0, outstanding.count - ProgressSummary.spotsShown)
+    }
 }
 
 /// The pure half of the Progress screen, mirroring the web
@@ -61,6 +71,11 @@ struct ProgressWeakGroup: Identifiable {
 enum ProgressSummary {
     /// Cleared scenarios named before the line collapses to a count.
     static let clearedShown = 3
+
+    /// How many outstanding scenarios a card names before it collapses to a
+    /// count. Enough to be a work list, few enough that the worst ones stay
+    /// legible. Mirrors the web `SPOTS_SHOWN`.
+    static let spotsShown = 5
 
     static func row(_ label: String, _ stats: SessionStats) -> ProgressStatRow {
         ProgressStatRow(
