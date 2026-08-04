@@ -49,7 +49,8 @@ final class DeviationsDrillModel {
         systems: [CountingSystem] = [],
         scheduler: FlowAdvanceScheduler? = nil,
         advanceDelay: Duration = .milliseconds(500),
-        now: @escaping () -> Date = { Date() }
+        now: @escaping () -> Date = { Date() },
+        review: Bool = false
     ) {
         self.evaluator = evaluator
         self.generator = generator
@@ -73,13 +74,19 @@ final class DeviationsDrillModel {
         target = nextSessionTarget(handsToday: history.handsToday(), goal: prefs.prefs.dailyGoal)
         scenario = firstScenario()
         hand = scenario.player.cards
+        // Arriving from Progress's weak-spot card, which is the same promise the
+        // Done screen's "Drill my misses" makes — the round opens on the weakness
+        // (`firstScenario` already does) and every later hand comes from the list,
+        // each at a count it was actually missed at.
+        reviewing = review
     }
 
     convenience init(
         app: AppModel,
         scheduler: FlowAdvanceScheduler? = nil,
         advanceDelay: Duration = .milliseconds(500),
-        now: @escaping () -> Date = { Date() }
+        now: @escaping () -> Date = { Date() },
+        review: Bool = false
     ) {
         self.init(
             evaluator: app.deviationEvaluator,
@@ -91,7 +98,8 @@ final class DeviationsDrillModel {
             systems: app.countingSystems,
             scheduler: scheduler,
             advanceDelay: advanceDelay,
-            now: now
+            now: now,
+            review: review
         )
     }
 
@@ -396,8 +404,8 @@ struct DeviationsDrillView: View {
     @State private var model: DeviationsDrillModel
     let onExit: () -> Void
 
-    init(app: AppModel, onExit: @escaping () -> Void) {
-        _model = State(initialValue: DeviationsDrillModel(app: app))
+    init(app: AppModel, review: Bool = false, onExit: @escaping () -> Void) {
+        _model = State(initialValue: DeviationsDrillModel(app: app, review: review))
         self.onExit = onExit
     }
 

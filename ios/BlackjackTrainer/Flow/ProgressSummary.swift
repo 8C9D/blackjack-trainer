@@ -49,6 +49,9 @@ struct ProgressWeakGroup: Identifiable {
     }
 
     let trainer: String
+    /// The drill this group's misses belong to, so the card can start a review
+    /// round in it.
+    let drill: TrainerId
     let outstanding: [WeakSpot]
     let cleared: [WeakSpot]
 }

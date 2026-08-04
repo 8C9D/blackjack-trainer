@@ -45,7 +45,8 @@ final class BasicStrategyDrillModel {
         missTally: MissTallyStore,
         scheduler: FlowAdvanceScheduler? = nil,
         advanceDelay: Duration = .milliseconds(500),
-        now: @escaping () -> Date = { Date() }
+        now: @escaping () -> Date = { Date() },
+        review: Bool = false
     ) {
         self.engine = engine
         self.generator = generator
@@ -62,13 +63,18 @@ final class BasicStrategyDrillModel {
         hand = opening.player.cards
         prefs.setLastTrainer(.basicStrategy)
         target = nextSessionTarget(handsToday: history.handsToday(), goal: prefs.prefs.dailyGoal)
+        // Arriving from Progress's weak-spot card, which is the same promise the
+        // Done screen's "Drill my misses" makes — the round opens on the weakness
+        // (`firstScenario` already does) and every later hand comes from the list.
+        reviewing = review
     }
 
     convenience init(
         app: AppModel,
         scheduler: FlowAdvanceScheduler? = nil,
         advanceDelay: Duration = .milliseconds(500),
-        now: @escaping () -> Date = { Date() }
+        now: @escaping () -> Date = { Date() },
+        review: Bool = false
     ) {
         self.init(
             engine: app.basicStrategy,
@@ -78,7 +84,8 @@ final class BasicStrategyDrillModel {
             missTally: app.missTally,
             scheduler: scheduler,
             advanceDelay: advanceDelay,
-            now: now
+            now: now,
+            review: review
         )
     }
 
@@ -298,8 +305,8 @@ struct BasicStrategyDrillView: View {
     @State private var model: BasicStrategyDrillModel
     let onExit: () -> Void
 
-    init(app: AppModel, onExit: @escaping () -> Void) {
-        _model = State(initialValue: BasicStrategyDrillModel(app: app))
+    init(app: AppModel, review: Bool = false, onExit: @escaping () -> Void) {
+        _model = State(initialValue: BasicStrategyDrillModel(app: app, review: review))
         self.onExit = onExit
     }
 
