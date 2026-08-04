@@ -314,7 +314,7 @@ struct ProgressBodyView: View {
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.muted)
             } else {
-                ForEach(group.outstanding, id: \.label) { spot in
+                ForEach(group.shown, id: \.label) { spot in
                     HStack {
                         Text(spot.label)
                             .font(.system(size: 13, weight: .semibold))
@@ -325,6 +325,15 @@ struct ProgressBodyView: View {
                             .foregroundStyle(Theme.muted)
                     }
                     .accessibilityElement(children: .combine)
+                }
+                // A bad week can outstand thirty scenarios, and a card listing
+                // them all buries the ones actually costing hands. The list is
+                // worst-first, so the cut is at the bottom — and it is stated,
+                // never silent, because the round below still drills all of them.
+                if group.hidden > 0 {
+                    Text("+\(group.hidden) more this week")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.muted)
                 }
                 Button("Drill these misses") { onDrillMisses(group.drill) }
                     .font(.system(size: 12, weight: .semibold))

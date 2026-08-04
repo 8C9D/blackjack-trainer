@@ -116,6 +116,31 @@ struct ProgressSummaryTests {
         #expect(ProgressSummary.spotDetail(spot([2, -1])) == "missed 3 of 7 at TC -1, +2")
     }
 
+    /// A bad week can outstand thirty scenarios; listing them all buries the ones
+    /// actually costing hands.
+    @Test func aWeakGroupNamesTheWorstFewAndCountsTheRest() {
+        func spot(_ label: String) -> WeakSpot {
+            WeakSpot(
+                ref: ScenarioRef(kind: "hard", hand: "16", dealer: "10"),
+                label: label, misses: 1, attempts: 4
+            )
+        }
+        func group(_ count: Int) -> ProgressWeakGroup {
+            ProgressWeakGroup(
+                trainer: "Basic Strategy",
+                drill: .basicStrategy,
+                outstanding: (0 ..< count).map { spot("hand \($0)") },
+                cleared: []
+            )
+        }
+        #expect(group(3).shown.count == 3)
+        #expect(group(3).hidden == 0)
+        #expect(group(7).shown.map(\.label) == (0 ..< 5).map { "hand \($0)" })
+        #expect(group(7).hidden == 2)
+        // The cut is presentational: the review round still has the whole list.
+        #expect(group(7).outstanding.count == 7)
+    }
+
     @Test func signedChipTotalsCarryTheirSign() {
         #expect(ProgressSummary.signed(45) == "+45")
         #expect(ProgressSummary.signed(-20) == "-20")
