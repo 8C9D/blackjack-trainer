@@ -16,7 +16,7 @@ import {
   type Suit,
 } from '../../core/models/card.model';
 import { handTotal, isSoftHand as isSoftNCardHand } from '../../core/models/hand.model';
-import type { Action, EngineOptions } from '../../core/models/strategy.model';
+import type { Action, DealerUpcard, EngineOptions } from '../../core/models/strategy.model';
 import {
   classifyAsPair,
   isSoftHand,
@@ -130,6 +130,53 @@ export const REVIEW_QUERY_PARAM = 'review';
 
 export function isReviewEntry(route: ActivatedRoute): boolean {
   return route.snapshot.queryParamMap.get(REVIEW_QUERY_PARAM) === '1';
+}
+
+// Query parameter that pins a round to one scenario, so the chart a trainee
+// reads a hand off is also where they can practise it. The value is the tally's
+// own scenario key ("hard-16-v-10") — the language the chart, the weak-spot list
+// and the drill already share, so no second encoding of a hand exists.
+export const HAND_QUERY_PARAM = 'hand';
+
+// The dealer upcards a chart has columns for; ten-value cards normalize to '10'.
+const PINNABLE_DEALERS: readonly DealerUpcard[] = [
+  '2',
+  '3',
+  '4',
+  '5',
+  '6',
+  '7',
+  '8',
+  '9',
+  '10',
+  'A',
+];
+const PINNABLE_PAIRS: readonly string[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'];
+// Soft hands are keyed by their total (A,2 is 13); hard totals start at 5, the
+// lowest two cards can make, and stop at 20.
+const SOFT_TOTALS = { min: 13, max: 20 };
+const HARD_TOTALS = { min: 5, max: 20 };
+
+export function pinnedScenarioRef(route: ActivatedRoute): ScenarioRef | null {
+  return parseScenarioKey(route.snapshot.queryParamMap.get(HAND_QUERY_PARAM));
+}
+
+// Strict, for the same reason `?review=1` is: a value naming a hand this app
+// cannot deal must fall back to an ordinary round rather than pin every hand of
+// it to something no chart ever showed.
+export function parseScenarioKey(value: string | null): ScenarioRef | null {
+  const match = /^(hard|soft|pair)-([0-9A]{1,2})-v-([0-9A]{1,2})$/.exec(value ?? '');
+  if (match === null) return null;
+  const [, kind, hand, upcard] = match;
+  const dealer = PINNABLE_DEALERS.find((u) => u === upcard);
+  if (dealer === undefined) return null;
+  if (kind === 'pair') {
+    return PINNABLE_PAIRS.includes(hand) ? { kind, hand, dealer } : null;
+  }
+  const total = Number(hand);
+  const range = kind === 'soft' ? SOFT_TOTALS : HARD_TOTALS;
+  if (!Number.isInteger(total) || total < range.min || total > range.max) return null;
+  return { kind: kind as ScenarioRef['kind'], hand, dealer };
 }
 
 // Share of an ordinary round's hands drawn from the user's weak spots. High

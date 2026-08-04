@@ -1,5 +1,5 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 
 import { ALL_RANKS, type Card, type Rank, type Suit } from '../../core/models/card.model';
 import type { DeviationScenario, DeviationTrainerResult } from '../../core/models/deviation.model';
@@ -520,6 +520,71 @@ describe('DeviationsDrillPageComponent', () => {
       splitOnce(c, '7');
       expect(c.hands().length).toBe(1);
       expect(c.hand()).toEqual(c.scenario().player);
+    });
+  });
+
+  // The deviation chart lists the hands worth knowing by name; until now it
+  // could say what each index is and nothing about practising it.
+  describe('drilling one hand from the chart', () => {
+    function enterWith(hand: string): {
+      fixture: ComponentFixture<DeviationsDrillPageComponent>;
+      c: Internals;
+    } {
+      TestBed.overrideProvider(ActivatedRoute, {
+        useValue: { snapshot: { queryParamMap: convertToParamMap({ hand }) } },
+      });
+      return createPage();
+    }
+
+    it('deals the pinned hand every time and says so', () => {
+      const { fixture, c } = enterWith('hard-16-v-10');
+      expect(
+        (fixture.nativeElement.querySelector('.drill__advisory') as HTMLElement).textContent,
+      ).toContain('16 vs 10');
+
+      for (let i = 0; i < 3; i++) {
+        expect(handQuestion(c.scenario().player, c.scenario().dealerUpcard)).toEqual({
+          prefix: 'Hard',
+          value: '16',
+          dealer: '10',
+        });
+        c.answer('S');
+        vi.advanceTimersByTime(ADVANCE_MS);
+        fixture.detectChanges();
+        if (c.phase() === 'miss') {
+          c.onKeyDown(new KeyboardEvent('keydown', { key: ' ' }));
+          fixture.detectChanges();
+        }
+      }
+    });
+
+    // The hand is pinned; the count is not. Both sides of an index have to come
+    // up, or the round only ever asks the half you already know.
+    it('leaves the count to the settings, so both sides of the index come up', () => {
+      // Driven rather than left to chance: what is asserted is that each deal
+      // draws its own count, not that a real RNG happened to produce two.
+      const draws = [0, 0.99, 0.5];
+      let next = 0;
+      vi.spyOn(Math, 'random').mockImplementation(() => draws[next++ % draws.length]);
+
+      const counts: number[] = [];
+      const { fixture, c } = enterWith('hard-16-v-10');
+      for (let i = 0; i < 3; i++) {
+        counts.push(c.scenario().trueCount);
+        c.answer('S');
+        vi.advanceTimersByTime(ADVANCE_MS);
+        fixture.detectChanges();
+        if (c.phase() === 'miss') {
+          c.onKeyDown(new KeyboardEvent('keydown', { key: ' ' }));
+          fixture.detectChanges();
+        }
+      }
+      expect(new Set(counts).size).toBeGreaterThan(1);
+    });
+
+    it('treats a hand it cannot deal as an ordinary round', () => {
+      const { fixture } = enterWith('soft-99-v-Q');
+      expect(fixture.nativeElement.querySelector('.drill__advisory')).toBeNull();
     });
   });
 

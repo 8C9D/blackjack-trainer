@@ -13,7 +13,11 @@ import { BasicStrategyEngineService } from '../../core/services/basic-strategy-e
 import { BasicStrategyStatsService } from '../../core/services/basic-strategy-stats.service';
 import { CardGeneratorService } from '../../core/services/card-generator.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
-import { MissTallyService, scenarioRefFor } from '../../core/services/miss-tally.service';
+import {
+  MissTallyService,
+  scenarioLabel,
+  scenarioRefFor,
+} from '../../core/services/miss-tally.service';
 import { RANDOM_SOURCE } from '../../core/services/random-source';
 import {
   PracticeHistoryService,
@@ -31,6 +35,7 @@ import {
   legalActionsFor,
   nextSessionTarget,
   pickWeakSpot,
+  pinnedScenarioRef,
   scenarioFromRef,
   splitHandAt,
   type SplitContext,
@@ -60,6 +65,12 @@ type DrillPhase = 'question' | 'flash' | 'miss' | 'over' | 'done';
           [streak]="session.streak()"
           (exit)="exitToHome()"
         />
+
+        @if (pinnedLabel(); as label) {
+          <p class="drill__advisory" role="note">
+            Drilling <b>{{ label }}</b> — every hand this round.
+          </p>
+        }
 
         <app-flow-stage
           [player]="hand()"
@@ -128,6 +139,10 @@ export class BasicStrategyDrillPageComponent {
   private readonly random = inject(RANDOM_SOURCE);
 
   protected readonly session = new DrillSession();
+
+  // One hand, every deal: the chart's own entry into this drill. Declared before
+  // the opening scenario because that scenario is chosen from it.
+  protected readonly pinned = signal(pinnedScenarioRef(inject(ActivatedRoute)));
 
   protected readonly phase = signal<DrillPhase>('question');
   protected readonly scenario = signal<Scenario>(this.firstScenario());
@@ -200,6 +215,13 @@ export class BasicStrategyDrillPageComponent {
   });
 
   protected readonly weakSpot = computed(() => this.weakSpots()[0] ?? null);
+
+  // A pinned round narrows the practice to one hand, which is worth saying:
+  // nothing else on screen distinguishes it from a run of coincidences.
+  protected readonly pinnedLabel = computed(() => {
+    const ref = this.pinned();
+    return ref === null ? null : scenarioLabel(ref);
+  });
 
   protected readonly clearedSpots = computed(() => {
     this.missTally.state();
@@ -420,6 +442,10 @@ export class BasicStrategyDrillPageComponent {
   private startRound(reviewing: boolean): void {
     if (this.phase() !== 'done') return;
     this.reviewing.set(reviewing);
+    // The pin belongs to the round the chart started, the same way review mode
+    // belongs to the round the Done screen started: another round is ordinary
+    // practice unless it is asked for again.
+    this.pinned.set(null);
     this.session.reset();
     this.target.set(nextSessionTarget(this.handsToday(), this.prefs.prefs().dailyGoal));
     this.dealNext(this.firstScenario());
@@ -454,6 +480,8 @@ export class BasicStrategyDrillPageComponent {
   // Sessions open on the current weak spot when one exists — the Done
   // screen's queued weakness is a promise the next round keeps.
   private firstScenario(): Scenario {
+    const pinned = this.pinned();
+    if (pinned) return scenarioFromRef(pinned, this.random);
     const weak = this.missTally.weakSpotFor('basic-strategy');
     if (weak) return scenarioFromRef(weak.ref, this.random);
     return this.generator.generate();
@@ -463,6 +491,8 @@ export class BasicStrategyDrillPageComponent {
   // weakness gets repetition inside the session that surfaced it. A review
   // round draws from the weak list every time.
   private nextScenario(): Scenario {
+    const pinned = this.pinned();
+    if (pinned) return scenarioFromRef(pinned, this.random);
     const share = this.reviewing() ? 1 : undefined;
     const weak = pickWeakSpot(this.weakSpots(), this.random, share);
     if (weak) return scenarioFromRef(weak.ref, this.random);

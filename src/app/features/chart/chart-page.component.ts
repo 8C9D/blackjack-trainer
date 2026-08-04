@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
@@ -31,6 +32,7 @@ import {
   type WeakSpot,
 } from '../../core/services/miss-tally.service';
 import { countOf } from '../../core/text';
+import { HAND_QUERY_PARAM } from '../drill/drill-hand';
 import { countingSystemById } from '../../data/counting-systems';
 
 export const DEALER_UPCARDS: readonly DealerUpcard[] = [
@@ -64,6 +66,19 @@ const ACTION_SYMBOLS: Readonly<Record<Action, string>> = {
   INS: 'I',
 };
 
+// Arrow keys move around the grid rather than out of it, which is what makes
+// one tab stop per table enough.
+const ARROW_STEPS: Readonly<Record<string, { row: number; col: number }>> = {
+  ArrowUp: { row: -1, col: 0 },
+  ArrowDown: { row: 1, col: 0 },
+  ArrowLeft: { row: 0, col: -1 },
+  ArrowRight: { row: 0, col: 1 },
+};
+
+function clamp(value: number, max: number): number {
+  return Math.min(Math.max(value, 0), max);
+}
+
 export type ChartMode = 'basic' | 'deviations';
 
 export const CHART_MODES: readonly { value: ChartMode; label: string }[] = [
@@ -88,6 +103,9 @@ interface ChartCellView {
   readonly action: Exclude<Action, 'INS'>;
   readonly symbol: string;
   readonly label: string;
+  // The hand this cell is about, in the tally's own terms — what marks it as
+  // missed, and what the drill it starts is pinned to.
+  readonly ref: ScenarioRef;
   // "missed 3 of 7 this week", or null when this hand is not outstanding. The
   // grid has no room for the words, so the ring carries it on screen and this
   // carries it to a screen reader.
@@ -108,6 +126,9 @@ interface ChartSectionView {
 
 interface DeviationRowView {
   readonly hand: string;
+  // Null for insurance, which is filed against the hand that was dealt rather
+  // than against the offer, so there is no one hand to drill.
+  readonly ref: ScenarioRef | null;
   readonly threshold: string;
   readonly action: Action;
   readonly symbol: string;
@@ -179,7 +200,18 @@ interface DeviationSectionView {
                 @for (rule of section.rows; track rule.hand) {
                   <tr>
                     <th scope="row" class="chart__rule-hand" [class.chart__missed]="rule.missed">
-                      {{ rule.hand }}
+                      @if (rule.ref; as ref) {
+                        <button
+                          type="button"
+                          class="chart__rule-drill"
+                          [attr.aria-label]="'Drill ' + rule.hand"
+                          (click)="drill('deviations', ref)"
+                        >
+                          {{ rule.hand }}
+                        </button>
+                      } @else {
+                        {{ rule.hand }}
+                      }
                       @if (rule.missed; as missed) {
                         <small class="chart__missed-note">{{ missed }}</small>
                       }
@@ -204,6 +236,13 @@ interface DeviationSectionView {
           Every index here is a {{ indexSystemName }} true count. Deviations override basic strategy
           only once the true count reaches the index. Everything not listed here is played straight
           off the chart, at any count.
+        </p>
+
+        <!-- Insurance is the one row with no hand to pin: it is filed against
+             whatever was dealt, so it has no scenario of its own to drill. -->
+        <p class="chart__note">
+          Pick a hand to drill it — every deal that round is that hand, at the counts your settings
+          give it, so both sides of its index come up.
         </p>
 
         @if (indexNote(); as note) {
@@ -237,17 +276,32 @@ interface DeviationSectionView {
                 </tr>
               </thead>
               <tbody>
-                @for (row of section.rows; track row.label) {
+                @for (row of section.rows; track row.label; let r = $index) {
                   <tr>
                     <th scope="row" class="chart__hand">{{ row.label }}</th>
-                    @for (cell of row.cells; track $index) {
-                      <td
-                        class="chart__cell"
-                        [class]="'chart__cell--' + cell.action.toLowerCase()"
-                        [class.chart__cell--missed]="cell.missed"
-                        [attr.aria-label]="cellLabel(cell)"
-                      >
-                        {{ cell.symbol }}
+                    @for (cell of row.cells; track $index; let c = $index) {
+                      <td class="chart__cell-slot">
+                        <!-- One tab stop per grid, arrow keys inside it: a chart
+                             is 160 cells, and a button apiece would put them all
+                             between "Back" and the legend for anyone reading
+                             this page with a keyboard. -->
+                        <button
+                          type="button"
+                          [id]="cellId(section.id, r, c)"
+                          class="chart__cell chart__cell--button"
+                          [class]="
+                            'chart__cell chart__cell--button chart__cell--' +
+                            cell.action.toLowerCase()
+                          "
+                          [class.chart__cell--missed]="cell.missed"
+                          [attr.aria-label]="cellLabel(cell)"
+                          [attr.tabindex]="isTabStop(section.id, r, c) ? 0 : -1"
+                          (focus)="rememberFocus(section.id, r, c)"
+                          (keydown)="onCellKey($event, section, r, c)"
+                          (click)="drill('basic-strategy', cell.ref)"
+                        >
+                          {{ cell.symbol }}
+                        </button>
                       </td>
                     }
                   </tr>
@@ -282,6 +336,14 @@ interface DeviationSectionView {
           the split decision, or the play the hand falls back to when the chart says not to split.
         </p>
 
+        <!-- The page a trainee reads to look a hand up could say what the play
+             is and nothing else. Pick the cell and the drill deals that hand,
+             which is the thing they came here to learn. -->
+        <p class="chart__note">
+          Pick any cell to drill that hand — arrow keys move around the grid, Enter starts the
+          round.
+        </p>
+
         <!-- The app has always known which hands keep costing you, and the page
              a trainee actually reads never said. Marked, not ranked: the count
              is on the Progress screen, which is also where the review round
@@ -302,6 +364,7 @@ export class ChartPageComponent {
   private readonly engine = inject(BasicStrategyEngineService);
   private readonly missTally = inject(MissTallyService);
   private readonly router = inject(Router);
+  private readonly document = inject(DOCUMENT);
 
   // Templates can only call class members, so the shared counted-noun helper is
   // re-exposed rather than imported into the markup.
@@ -417,6 +480,48 @@ export class ChartPageComponent {
     this.mode.set(mode);
   }
 
+  // The chart has always known which hand a cell is about and could do nothing
+  // with it — the same gap the Progress screen's weak-spot list closed when it
+  // learned to start a review round.
+  protected drill(trainer: TalliedTrainer, ref: ScenarioRef): void {
+    void this.router.navigate(['/drill', trainer], {
+      queryParams: { [HAND_QUERY_PARAM]: scenarioKey(ref) },
+    });
+  }
+
+  protected cellId(section: string, row: number, col: number): string {
+    return `chart-${section}-${row}-${col}`;
+  }
+
+  // Where the tab stop sits in each grid: the last cell focused there, or its
+  // top-left corner. Per section, so Tab still steps between the three tables.
+  private readonly gridFocus = signal<Readonly<Record<string, { row: number; col: number }>>>({});
+
+  protected isTabStop(section: string, row: number, col: number): boolean {
+    const at = this.gridFocus()[section] ?? { row: 0, col: 0 };
+    return at.row === row && at.col === col;
+  }
+
+  protected rememberFocus(section: string, row: number, col: number): void {
+    this.gridFocus.update((all) => ({ ...all, [section]: { row, col } }));
+  }
+
+  protected onCellKey(
+    event: KeyboardEvent,
+    section: ChartSectionView,
+    row: number,
+    col: number,
+  ): void {
+    const step = ARROW_STEPS[event.key];
+    if (step === undefined) return;
+    event.preventDefault();
+    const nextRow = clamp(row + step.row, section.rows.length - 1);
+    const nextCol = clamp(col + step.col, DEALER_UPCARDS.length - 1);
+    this.rememberFocus(section.id, nextRow, nextCol);
+    const next = this.document.getElementById(this.cellId(section.id, nextRow, nextCol));
+    next?.focus();
+  }
+
   protected goHome(): void {
     void this.router.navigate(['/']);
   }
@@ -448,11 +553,13 @@ export class ChartPageComponent {
           ruleSet,
           options,
         });
+        const ref: ScenarioRef = { kind, hand: handKey, dealer: upcard };
         return {
           action,
           symbol: ACTION_SYMBOLS[action],
           label: ACTION_LABELS[action],
-          missed: missLabel(misses, { kind, hand: handKey, dealer: upcard }),
+          ref,
+          missed: missLabel(misses, ref),
         };
       }),
     };
@@ -534,6 +641,7 @@ function deviationRow(
       rule.category === 'insurance'
         ? 'Dealer ace'
         : `${rule.playerHandLabel} vs ${rule.dealerUpcard}`,
+    ref,
     threshold: formatDeviationThreshold(rule),
     action: rule.deviationAction,
     symbol: ACTION_SYMBOLS[rule.deviationAction],
