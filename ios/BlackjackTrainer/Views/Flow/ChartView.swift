@@ -244,6 +244,10 @@ struct ChartGridView: View {
     /// The grid has no table semantics for VoiceOver to lean on, so each cell
     /// carries its own row and column in its label — and its miss count, which
     /// the ring cannot say.
+    /// Ten columns cannot each be 44pt wide on a phone, and a strategy chart you
+    /// have to scroll sideways is not one you can read — the same call that
+    /// spells surrender 'R' so the columns fit at all. What the cell can give,
+    /// it gives: the whole coloured box is the target, padding included.
     private func cellView(_ cell: ChartCell, in row: ChartRow) -> some View {
         Button {
             onDrill(.basicStrategy, cell.ref)
@@ -252,11 +256,12 @@ struct ChartGridView: View {
                 .font(.system(size: 12, weight: .semibold))
                 .monospacedDigit()
                 .foregroundStyle(Theme.ink)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, minHeight: 24)
                 .padding(.vertical, 5)
                 .background(Theme.chartCell(cell.action))
                 .clipShape(RoundedRectangle(cornerRadius: 4))
                 .overlay(missRing(cell.missed != nil))
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityElement()
