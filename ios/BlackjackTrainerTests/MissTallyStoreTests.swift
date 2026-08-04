@@ -307,3 +307,69 @@ struct MissTallyStoreTests {
             == ["8,8 vs 10", "A,7 vs 9", "16 vs 10"])
     }
 }
+
+/// The backup file moves this payload between the phone and the browser, so the
+/// stored shape is a cross-platform contract rather than this store's private
+/// business — the same reason `PracticeDay` pins its own key set. A field added
+/// on one side and not the other is dropped silently on the trip, and here that
+/// means the weak spots that decide what a review round drills arrive on the
+/// other device meaning something else.
+///
+/// Its own suite because the tally's behaviour tests already fill one to
+/// swiftlint's type-body limit. Mirrors `miss-tally.service.spec.ts` →
+/// "the stored shape".
+struct MissTallyStoredShapeTests {
+    private let hard16v10 = ScenarioRef(kind: "hard", hand: "16", dealer: "10")
+    private let soft18v9 = ScenarioRef(kind: "soft", hand: "18", dealer: "9")
+
+    private func store() -> (MissTallyStore, UserDefaults) {
+        let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)") ?? .standard
+        return (MissTallyStore(defaults: defaults), defaults)
+    }
+
+    @Test func writesExactlyTheFieldsTheWebStoreReads() throws {
+        let (s, defaults) = store()
+        s.record(.deviations, ref: hard16v10, correct: false, trueCount: 2)
+        let root = try Self.storedRoot(defaults)
+
+        #expect(Array(root.keys) == ["deviations"])
+        let tally = try #require(
+            (root["deviations"] as? [String: Any])?[scenarioKey(hard16v10)] as? [String: Any]
+        )
+        #expect(tally.keys.sorted() == ["days", "missedCounts", "ref", "streak"])
+        let ref = try #require(tally["ref"] as? [String: Any])
+        #expect(ref.keys.sorted() == ["dealer", "hand", "kind"])
+        let day = try #require((tally["days"] as? [[String: Any]])?.first)
+        #expect(day.keys.sorted() == ["attempts", "date", "misses"])
+    }
+
+    /// Basic Strategy has no count in its question, so it records none. The
+    /// absence has to be an absence on both platforms rather than a `[]` on one
+    /// and a missing key on the other, or a round trip invents a difference.
+    @Test func stillNamesMissedCountsForATrainerThatRecordsNone() throws {
+        let (s, defaults) = store()
+        s.record(.basicStrategy, ref: hard16v10, correct: false)
+        let root = try Self.storedRoot(defaults)
+        let tally = try #require(
+            (root["basic-strategy"] as? [String: Any])?[scenarioKey(hard16v10)] as? [String: Any]
+        )
+        #expect(tally.keys.sorted() == ["days", "missedCounts", "ref", "streak"])
+        #expect(tally["missedCounts"] as? [Int] == [])
+    }
+
+    /// The trainer keys are the other half of the contract: they are the object
+    /// keys of the payload, so renaming one on either side loses that trainer's
+    /// whole weak list on the trip.
+    @Test func keysTrainersByTheNamesBothPlatformsUse() throws {
+        let (s, defaults) = store()
+        s.record(.basicStrategy, ref: hard16v10, correct: false)
+        s.record(.deviations, ref: soft18v9, correct: false)
+        let root = try Self.storedRoot(defaults)
+        #expect(root.keys.sorted() == ["basic-strategy", "deviations"])
+    }
+
+    private static func storedRoot(_ defaults: UserDefaults) throws -> [String: Any] {
+        let data = try #require(defaults.data(forKey: StatsKeys.missTally))
+        return try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+    }
+}
