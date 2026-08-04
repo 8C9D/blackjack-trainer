@@ -66,15 +66,19 @@ struct PracticeProgressView: View {
 
     /// Only trainers that tally scenarios appear, and only once they have one.
     private var weakGroups: [ProgressWeakGroup] {
-        [(TalliedTrainer.basicStrategy, "Basic Strategy"), (.deviations, "Deviations")]
-            .map { trainer, label in
-                ProgressWeakGroup(
-                    trainer: label,
-                    outstanding: model.missTally.weakSpots(trainer),
-                    cleared: model.missTally.clearedSpots(trainer)
-                )
-            }
-            .filter { !$0.outstanding.isEmpty || !$0.cleared.isEmpty }
+        [
+            (TalliedTrainer.basicStrategy, "Basic Strategy", TrainerId.basicStrategy),
+            (.deviations, "Deviations", .deviations)
+        ]
+        .map { trainer, label, drill in
+            ProgressWeakGroup(
+                trainer: label,
+                drill: drill,
+                outstanding: model.missTally.weakSpots(trainer),
+                cleared: model.missTally.clearedSpots(trainer)
+            )
+        }
+        .filter { !$0.outstanding.isEmpty || !$0.cleared.isEmpty }
     }
 
     var body: some View {
@@ -92,7 +96,8 @@ struct PracticeProgressView: View {
                     rows: rows,
                     showdown: model.showdownStats.stats,
                     bankroll: model.showdownBankroll.state,
-                    weakGroups: weakGroups
+                    weakGroups: weakGroups,
+                    onDrillMisses: { router.go(.drill($0, review: true)) }
                 )
             }
             .background(Theme.ground.ignoresSafeArea())
@@ -129,6 +134,9 @@ struct ProgressBodyView: View {
     let showdown: ShowdownStats
     let bankroll: BankrollState
     let weakGroups: [ProgressWeakGroup]
+    /// Starts a review round in the named trainer. Naming a weakness on a
+    /// read-only screen leaves the trainee to go and hope it comes up.
+    var onDrillMisses: (TrainerId) -> Void = { _ in }
 
     private let weekHeight: CGFloat = 72
     private let handsWidth: CGFloat = 42
@@ -315,6 +323,10 @@ struct ProgressBodyView: View {
                     }
                     .accessibilityElement(children: .combine)
                 }
+                Button("Drill these misses") { onDrillMisses(group.drill) }
+                    .font(.system(size: 12, weight: .semibold))
+                    .buttonStyle(.bordered)
+                    .tint(Theme.accentInk)
             }
             if !group.cleared.isEmpty {
                 Text("Cleared: \(ProgressSummary.clearedLabel(group.cleared))")

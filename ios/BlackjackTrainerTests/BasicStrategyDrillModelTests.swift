@@ -278,6 +278,32 @@ struct BasicStrategyDrillModelTests {
         #expect(h.model.handsToday == before + 1)
     }
 
+    /// Progress lists the same weak spots and, until now, could do nothing about
+    /// them. `review: true` is that card's entry into this round.
+    @Test func opensStraightIntoAReviewRoundWhenAskedTo() {
+        let pair8s = ScenarioRef(kind: "pair", hand: "8", dealer: "10")
+        let h = DrillFixture.makeHarness(dailyGoal: 20, seedWeak: pair8s, review: true)
+
+        // Hand one opens on the weakness in any round; the hands after it are what
+        // separate a review round from an ordinary one, which only weights toward
+        // the list. Two is as far as this can go before the spot clears.
+        for _ in 0 ..< 2 {
+            #expect(h.model.question == HandQuestion(prefix: "", value: "8,8", dealer: "10"))
+            h.model.answer(.split)
+            h.scheduler.fire()
+        }
+    }
+
+    @Test func anOrdinaryRoundIsTheDefaultEntry() {
+        let pair8s = ScenarioRef(kind: "pair", hand: "8", dealer: "10")
+        let h = DrillFixture.makeHarness(dailyGoal: 20, seedWeak: pair8s)
+        // The opening hand is the weak spot either way, so the mode shows up only
+        // in whether the round *forces* it; that is covered above. Here the point
+        // is that nothing about an ordinary entry changed.
+        #expect(h.model.question == HandQuestion(prefix: "", value: "8,8", dealer: "10"))
+        #expect(h.model.phase == .question)
+    }
+
     @Test func reviewRoundsAreDeclinedWithNothingToReview() {
         let h = makeHarness(dailyGoal: 1)
         h.model.deal(standScenario)

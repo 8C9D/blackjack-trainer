@@ -9,7 +9,10 @@ enum FlowRoute: Equatable {
     case settings
     case chart
     case progress
-    case drill(TrainerId)
+    /// `review` opens the drill straight into a review round, where every hand
+    /// comes from the weak list — Progress's weak-spot card acting on what it
+    /// names. Mirrors the web `?review=1`.
+    case drill(TrainerId, review: Bool = false)
 }
 
 @MainActor

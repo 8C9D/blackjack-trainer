@@ -24,17 +24,17 @@ struct FlowRootView: View {
             ChartView()
         case .progress:
             PracticeProgressView()
-        case let .drill(trainer):
-            drill(trainer)
+        case let .drill(trainer, review):
+            drill(trainer, review: review)
         }
     }
 
-    @ViewBuilder private func drill(_ trainer: TrainerId) -> some View {
+    @ViewBuilder private func drill(_ trainer: TrainerId, review: Bool) -> some View {
         switch trainer {
         case .basicStrategy:
-            BasicStrategyDrillView(app: model) { router.goHome() }
+            BasicStrategyDrillView(app: model, review: review) { router.goHome() }
         case .deviations:
-            DeviationsDrillView(app: model) { router.goHome() }
+            DeviationsDrillView(app: model, review: review) { router.goHome() }
         case .cardCounting:
             CardCountingFlowView(app: model) { router.goHome() }
         }
