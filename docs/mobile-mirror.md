@@ -1,16 +1,30 @@
 # Mobile Mirror (v1)
 
-> **Update (2026-07-23, docs sync):** The responsive top-nav / bottom-tab-bar mirror this document describes was **replaced by the Flow redesign** (`feat: launch into the flow home and remove the old UI` and follow-ups): the app now opens on a one-action home screen, drills run full screen, and the tab/top navigation no longer exists.
-> The "Tab-bar icons" future item is obsolete; the PWA items shipped on 2026-07-23 (Angular service worker via `ngsw-config.json`, maskable 192/512 icons + apple-touch-icon derived from the iOS app icon, and a global top safe-area pad), leaving only the light theme open.
-> The body below is retained as history of the pre-Flow mobile pass.
+> **Closed 2026-08-04.**
+> The responsive top-nav and bottom-tab-bar mirror this document describes no longer exists, so the body is kept only as the record of the pre-Flow mobile pass.
+> Do not use it to reason about the current UI.
 
-> **Update (2026-07-24):** The light theme shipped, closing the last open item above.
-> `src/styles.scss` now carries one semantic token set in two palettes: the split that makes it work is that `--accent` stays amber in both themes because it is only ever a fill under `--on-accent` text, while every foreground use of the accent (text, rules, the goal ring, the progress fill) moved to `--accent-ink`, which darkens to `#8a5a06` on light backgrounds so it holds contrast.
-> `--good` / `--bad` are tuned the same way, and focus rings follow `--focus` rather than the fill so they clear 3:1 in both themes.
-> Selection is three-way: the palette follows `prefers-color-scheme` on its own, and a Settings → Appearance choice pins it via `data-theme` on `<html>` (equal specificity, later source order, so the explicit choice wins).
-> `ThemeService` owns only what CSS cannot do — writing that attribute and keeping the `theme-color` meta in step with the resolved theme.
-> Scope note: this is **web only**. The SwiftUI app pins `.preferredColorScheme(.dark)` at its root and reads a fixed `Theme` enum, so a light theme there is its own piece of work — every token would have to become trait-aware — and it was deliberately left out of this pass.
-> The same pass closed the accessibility gaps the Flow loop had left: grading is announced through a `role="status"` region that stays mounted across phases (the action grid conveys the verdict with color and position alone), the Done screen takes focus when it replaces the drill, every screen has a level-1 heading (on phones the drill's is hidden visually rather than with `display: none`, which would drop it from the accessibility tree), and `prefers-reduced-motion` is honored.
+## What replaced it
+
+The Flow redesign superseded this pass on 2026-07-23, in `feat: launch into the flow home and remove the old UI` and its follow-ups.
+The app now opens on a one-action home screen, drills run full screen, and the tab and top navigation are gone, which also makes the "Tab-bar icons" future item below obsolete.
+
+The PWA items shipped on the same day: an Angular service worker via `ngsw-config.json`, maskable 192/512 icons and an apple-touch-icon derived from the iOS app icon, and a global top safe-area pad.
+That left only the light theme open, and it shipped on 2026-07-24.
+
+`src/styles.scss` now carries one semantic token set in two palettes.
+The split that makes it work is that `--accent` stays amber in both themes because it is only ever a fill under `--on-accent` text, while every foreground use of the accent - text, rules, the goal ring, the progress fill - moved to `--accent-ink`, which darkens to `#8a5a06` on light backgrounds so it holds contrast.
+`--good` and `--bad` are tuned the same way, and focus rings follow `--focus` rather than the fill so they clear 3:1 in both themes.
+Selection is three-way: the palette follows `prefers-color-scheme` on its own, and a Settings → Appearance choice pins it via `data-theme` on `<html>`, at equal specificity but later source order, so the explicit choice wins.
+`ThemeService` owns only what CSS cannot do, which is writing that attribute and keeping the `theme-color` meta in step with the resolved theme.
+
+That work is **web only**.
+The SwiftUI app pins `.preferredColorScheme(.dark)` at its root and reads a fixed `Theme` enum, so a light theme there is its own piece of work - every token would have to become trait-aware - and it was deliberately left out of this pass.
+
+The same pass closed the accessibility gaps the Flow loop had left.
+Grading is announced through a `role="status"` region that stays mounted across phases, because the action grid conveys the verdict with color and position alone.
+The Done screen takes focus when it replaces the drill, every screen has a level-1 heading, and `prefers-reduced-motion` is honored.
+On phones the drill's heading is hidden visually rather than with `display: none`, which would drop it from the accessibility tree.
 
 A mobile-first, phone-friendly presentation of the **existing** Blackjack
 Trainer. This is a _mirror_, not a fork: same app, same routes, same trainers,

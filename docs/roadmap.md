@@ -1,5 +1,10 @@
 # Blackjack Trainer — Slice-by-Slice Roadmap
 
+> **Complete as of 2026-08-04.**
+> All nine slices across both phases are Done, and [`roadmap-progress.md`](roadmap-progress.md) carries no next slice.
+> This file is kept as the record of what was planned and shipped; new work does not belong here.
+> The iOS app has its own, still-open plan in [`ios-app-roadmap.md`](ios-app-roadmap.md).
+
 A sequenced, vertical-slice plan for the work that remains. Each slice is a
 **single shippable increment**: one focused change that leaves `main` green
 (typecheck + tests + build) and is worth exactly one commit.
@@ -56,7 +61,7 @@ Plus, once Slice 1 lands: `npm run lint`.
 > Already done (do **not** re-add): GitHub Actions CI
 > (`.github/workflows/ci.yml`), `.nvmrc` (`22`), `engines` in `package.json`,
 > the `typecheck` script, and co-located specs for **all** UI components
-> (the former "Gap 5" is closed — 16/16 components have specs, ~480 tests).
+> (the former "Gap 5" is closed — every component had a spec, and the suite stood at ~480 tests when this was written).
 
 ### Slice 1 — Lint & format tooling
 

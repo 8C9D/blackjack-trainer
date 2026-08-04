@@ -7,29 +7,38 @@ pass in the app as it actually exists today (Angular 21, routes
 persistence, 27 spec files / 481 unit + component tests passing). Selectors and
 flows below were read off the current source, not assumed._
 
-> **Update (2026-07-23, docs sync):** This plan has since been **implemented in its Phase-1 form**: Playwright + `playwright.config.ts`, an `e2e/smoke/` suite (navigation, basic-strategy, persistence, responsive — 14 tests), `npm run e2e*` scripts, and a CI `e2e` job that uploads the HTML report all exist now.
-> The plan's routes and selectors describe the **pre-Flow UI** (`/basic-strategy` top-nav app); the shipped suite targets the current Flow home / `/drill/*` pages instead.
-> The counting and deviations drill scenarios (§7 #5–7) are covered as of this sync (`e2e/smoke/card-counting.e2e.ts`, `e2e/smoke/deviations.e2e.ts` — running count, live-shoe true count with the deck-estimate step, and manual-TC deviations).
-> The §5/§8 CI hardening also landed: the CI e2e job caches the Playwright browser install keyed on the `@playwright/test` version, builds once, and runs the suite against the production bundle via `tools/serve-dist.mjs` (local runs keep `ng serve`).
-> Still open from this plan: only the optional seeded-RNG hook (§7.1).
-> The note below is retained as history.
+> **Closed 2026-08-04.**
+> Every item in this plan has shipped, so it is kept as the record of the design rather than as a live plan.
+> The routes, selectors, and test counts in the body describe the **pre-Flow UI** (`/basic-strategy` in a top-nav app) and should not be used to write new specs; the shipped suite targets the Flow home and the `/drill/*` pages, and `e2e/README.md` is the live reference for it.
 
-> **Update (2026-07-24):** The seeded-RNG hook landed, so nothing from this plan is open.
-> `core/services/random-source.ts` defines a `RANDOM_SOURCE` injection token whose factory reads `?seed=<integer>` off `location.search` and returns a `mulberry32` generator (or `Math.random` when absent or unparseable).
-> The drill pages inject it in place of their direct `Math.random` calls; `CardGeneratorService` and `ShoeService` keep `Math.random` as their default and get the seeded generator pushed in by a `provideAppInitializer` in `app.config.ts`, which does nothing at all when no seed was asked for.
-> Deliberately **not** gated on `isDevMode()`: CI runs the E2E suite against the production bundle, so a dev-only hook would be unreachable exactly where it is needed.
-> §7.1's premise ("determinism must come from properties that don't depend on the random draw") therefore no longer binds — `e2e/smoke/seeded.e2e.ts` asserts that a seed replays hand for hand and that an unseeded visit still varies.
-> Two more specs joined the suite in the same pass: `theme.e2e.ts` (the palette under `prefers-color-scheme`, the Settings override, `theme-color`, and reduced motion — none of which jsdom can resolve) and `review-round.e2e.ts` (miss → queued weakness → review round, through real `localStorage`). The suite is now **34 tests**.
->
-> One caveat worth keeping: a seeded stream is shared by the deal, the weak-spot draw, and the true-count pick, and `pickWeakSpot` consumes draws only when the weak list is non-empty. Two runs therefore align only if their _answers_ align too — which is why the replay spec presses the same key every hand and clears `localStorage` between runs.
->
-> Also learned the hard way while writing these: a drill assertion must wait on the **session counter** first and the action grid second. The counter increments the instant a hand is graded, so waiting for it proves the keypress registered; only then is the grid reliably locked, which makes "grid unlocked again" a trustworthy signal that the _next_ hand is on screen. Waiting on the grid alone reads the question line of the hand just answered, which looks exactly like a determinism bug.
+## How it ended
 
-> **Update (2026-06-06, docs sync):** Still accurate that **no E2E layer exists**
-> (no Playwright/Cypress), so this plan is current. Two figures have drifted: the
-> unit baseline is now **37 spec files / 710 tests** (after roadmap Slices 5–9),
-> and CI's validate job now runs **`npm run lint`** (= typecheck + format:check),
-> not a bare `typecheck` step — see §5. The recommendations are unchanged.
+The plan shipped in three passes.
+
+On 2026-07-23 the Phase-1 form landed: Playwright with `playwright.config.ts`, an `e2e/smoke/` suite covering navigation, basic strategy, persistence, and responsive layout, the `npm run e2e*` scripts, and a CI `e2e` job that uploads the HTML report.
+The counting and deviations scenarios from §7 #5-7 landed with it, in `e2e/smoke/card-counting.e2e.ts` and `e2e/smoke/deviations.e2e.ts`, covering running count, live-shoe true count with the deck-estimate step, and manual-TC deviations.
+The §5 and §8 CI hardening landed in the same pass: the CI e2e job caches the Playwright browser install keyed on the `@playwright/test` version, builds once, and runs the suite against the production bundle via `tools/serve-dist.mjs`, while local runs keep `ng serve`.
+
+On 2026-07-24 the optional seeded-RNG hook from §7.1 landed, which was the last open item.
+`core/services/random-source.ts` defines a `RANDOM_SOURCE` injection token whose factory reads `?seed=<integer>` off `location.search` and returns a `mulberry32` generator, or `Math.random` when the seed is absent or unparseable.
+The drill pages inject it in place of their direct `Math.random` calls; `CardGeneratorService` and `ShoeService` keep `Math.random` as their default and get the seeded generator pushed in by a `provideAppInitializer` in `app.config.ts`, which does nothing at all when no seed was asked for.
+It is deliberately **not** gated on `isDevMode()`, because CI runs the E2E suite against the production bundle, so a dev-only hook would be unreachable exactly where it is needed.
+§7.1's premise, that determinism must come from properties which do not depend on the random draw, therefore no longer binds: `e2e/smoke/seeded.e2e.ts` asserts that a seed replays hand for hand and that an unseeded visit still varies.
+Two more specs joined in the same pass, `theme.e2e.ts` for the palette under `prefers-color-scheme`, the Settings override, `theme-color`, and reduced motion, none of which jsdom can resolve, and `review-round.e2e.ts` for the miss to queued-weakness to review-round chain through real `localStorage`.
+
+One caveat from that work is worth keeping.
+A seeded stream is shared by the deal, the weak-spot draw, and the true-count pick, and `pickWeakSpot` consumes draws only when the weak list is non-empty.
+Two runs therefore align only if their _answers_ align too, which is why the replay spec presses the same key every hand and clears `localStorage` between runs.
+
+> Also learned the hard way while writing these: a drill assertion must wait on the **session counter** first and the action grid second.
+> The counter increments the instant a hand is graded, so waiting for it proves the keypress registered; only then is the grid reliably locked, which makes "grid unlocked again" a trustworthy signal that the _next_ hand is on screen.
+> Waiting on the grid alone reads the question line of the hand just answered, which looks exactly like a determinism bug.
+
+> **Update (2026-06-06, docs sync):** Still accurate at the time that **no E2E layer exists**
+> (no Playwright/Cypress). Two figures had drifted by then: the
+> unit baseline was **37 spec files / 710 tests** (after roadmap Slices 5–9),
+> and CI's validate job runs **`npm run lint`** (= typecheck + format:check),
+> not a bare `typecheck` step — see §5. The recommendations were unchanged.
 
 ## 1. Why E2E is still worth adding
 
