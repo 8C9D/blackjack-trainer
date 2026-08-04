@@ -468,6 +468,7 @@ no-ops at runtime but document the chart cell.
   Insurance is the one row with nothing to drill — it is filed against whatever hand was dealt rather than against the offer.
   A hand the app cannot deal falls back to an ordinary round, the same call `?review=1` makes, and the pin belongs to the round the chart started: "One more round" is ordinary practice again.
   The grid is 340 cells, so it holds **one tab stop per table** with the arrow keys moving inside it rather than 340 buttons between "Back" and the legend.
+  A cell that can be tapped owes a minimum size, so the page spends its own margins on the grid below 420px: every cell clears 24px from about 355px up, and below that the columns stay narrower rather than scrolling sideways — the same call that spells surrender `R` so ten columns fit at all.
 - **Light and dark themes** — one semantic token set in two palettes (`src/styles.scss`).
   The palette follows `prefers-color-scheme`; Settings → Appearance pins it, which `ThemeService` applies as `data-theme` on `<html>` and mirrors into the `theme-color` meta so the browser chrome matches.
 - **Accessibility** — grading is announced through a live region (the action grid conveys it with color and position alone), the Done screen takes focus when it replaces the drill, every screen carries a level-1 heading, focus rings clear 3:1 in both themes, and `prefers-reduced-motion` is honored.

@@ -289,10 +289,7 @@ interface DeviationSectionView {
                           type="button"
                           [id]="cellId(section.id, r, c)"
                           class="chart__cell chart__cell--button"
-                          [class]="
-                            'chart__cell chart__cell--button chart__cell--' +
-                            cell.action.toLowerCase()
-                          "
+                          [class]="'chart__cell--' + cell.action.toLowerCase()"
                           [class.chart__cell--missed]="cell.missed"
                           [attr.aria-label]="cellLabel(cell)"
                           [attr.tabindex]="isTabStop(section.id, r, c) ? 0 : -1"
