@@ -19,6 +19,10 @@ extension ShowdownModel {
         /// Which drill's weak list `tallyRef` belongs to — the one that teaches
         /// the answer this decision was graded against.
         var tallyTrainer: TalliedTrainer = .basicStrategy
+        /// The count an index play was made at, for the Deviations trainer to
+        /// re-deal the hand at. Nil for a basic-strategy decision, which has no
+        /// count in its question.
+        var tallyTrueCount: Int?
     }
 
     /// Nil when there is nothing to grade against — no charts (a preview or a
@@ -44,13 +48,31 @@ extension ShowdownModel {
         )
         let ref = tallyRef(for: hand.cards, upcard: upcard, correct: correct, engine: engine)
         let trainer: TalliedTrainer = correct.deviationApplied ? .deviations : .basicStrategy
+        // An index play is a question about a count, so the count it was played
+        // at goes with it.
+        var tallyCount: Int?
+        if trainer == .deviations, case let .trueCount(trueCount) = countBasis {
+            tallyCount = trueCount
+        }
         guard !wasRight else {
-            return GradedPlay(verdict: verdict, misplay: nil, tallyRef: ref, tallyTrainer: trainer)
+            return GradedPlay(
+                verdict: verdict,
+                misplay: nil,
+                tallyRef: ref,
+                tallyTrainer: trainer,
+                tallyTrueCount: tallyCount
+            )
         }
         let index = correct.deviationApplied ? " (index play)" : ""
         let misplay = "\(correct.handDescription) vs \(normalizeUpcardKey(upcard)): "
             + "\(correct.action.label), not \(action.label)\(index)"
-        return GradedPlay(verdict: verdict, misplay: misplay, tallyRef: ref, tallyTrainer: trainer)
+        return GradedPlay(
+            verdict: verdict,
+            misplay: misplay,
+            tallyRef: ref,
+            tallyTrainer: trainer,
+            tallyTrueCount: tallyCount
+        )
     }
 
     /// What this table calls correct. The count carried in from the drill is the

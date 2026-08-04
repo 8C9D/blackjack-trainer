@@ -149,10 +149,13 @@ final class DeviationsDrillModel {
         result = evaluation
         stats.recordAttempt(correct: evaluation.correct)
         history.recordHand(correct: evaluation.correct)
+        // The count goes in with the miss: here it is half the question, and a
+        // hand re-dealt at a fresh count is a different one.
         missTally.record(
             .deviations,
             ref: scenarioRefFor(scenario.player, dealerUpcard: scenario.dealerUpcard),
-            correct: evaluation.correct
+            correct: evaluation.correct,
+            trueCount: scenario.trueCount
         )
         session.record(evaluation.correct)
 
@@ -214,7 +217,7 @@ final class DeviationsDrillModel {
             return DeviationScenario(
                 player: base.player,
                 dealerUpcard: base.dealerUpcard,
-                trueCount: pickTrueCount()
+                trueCount: trueCount(for: weak, random: source)
             )
         }
         return generateScenario()
@@ -229,11 +232,12 @@ final class DeviationsDrillModel {
 
     private func firstScenario() -> DeviationScenario {
         if let weak = missTally.weakSpotFor(.deviations) {
-            let base = scenarioFromRef(weak.ref, random: { Double.random(in: 0 ..< 1) })
+            let source = { Double.random(in: 0 ..< 1) }
+            let base = scenarioFromRef(weak.ref, random: source)
             return DeviationScenario(
                 player: base.player,
                 dealerUpcard: base.dealerUpcard,
-                trueCount: pickTrueCount()
+                trueCount: trueCount(for: weak, random: source)
             )
         }
         return generateScenario()
@@ -253,6 +257,24 @@ final class DeviationsDrillModel {
             dealerUpcard: base.dealerUpcard,
             trueCount: pickTrueCount()
         )
+    }
+
+    /// A weak spot comes back at a count it was actually missed at. The hand alone
+    /// is not the question here: 16 vs 10 is a stand at +2 and a hit at −1, so a
+    /// re-deal at a fresh count can ask the side the trainee already had right —
+    /// and three of those would clear the spot without teaching anything.
+    /// A manually pinned count still wins: that is the trainee naming the
+    /// threshold they are drilling.
+    private func trueCount(for weak: WeakSpot, random: () -> Double) -> Int {
+        if prefs.prefs.deviations.trueCountSource == .manual { return pickTrueCount() }
+        // Empty for a spot recorded before the counts were kept: a fresh count is
+        // what that scenario has always come back at.
+        guard !weak.missedCounts.isEmpty else { return pickTrueCount() }
+        let index = min(
+            weak.missedCounts.count - 1,
+            Int(random() * Double(weak.missedCounts.count))
+        )
+        return weak.missedCounts[index]
     }
 
     private func pickTrueCount() -> Int {
