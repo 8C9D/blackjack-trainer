@@ -293,15 +293,13 @@ extension ShowdownModel {
     func gradeCountCheck(_ answer: Double) -> PlayVerdict {
         let actual = visibleRunningCount
         let drift = answer - actual
-        let points = abs(drift) == 1 ? "point" : "points"
         return PlayVerdict(
             correct: drift == 0,
             headline: "The running count is \(CountFormat.signedCount(actual)).",
             reason: drift == 0
                 ? "You carried it through \(cardsSeen) cards at the table."
                 : "You said \(CountFormat.signedCount(answer)) — "
-                + "\(CountFormat.count(abs(drift))) \(points) "
-                + "\(drift > 0 ? "high" : "low") over \(cardsSeen) cards."
+                + "\(countDriftLabel(drift)) over \(cardsSeen) cards."
         )
     }
 }

@@ -26,6 +26,11 @@ final class CardCountingFlowModel {
     /// Where the bet placed at the showdown table is scored — the same store the
     /// bet-spread drill writes.
     @ObservationIgnored let betSpreadStats: SessionStatsStore?
+    /// Which side a wrong running count lands on, over every mode that answers
+    /// one — the half of a miscount the accuracy stores never carried. Recorded
+    /// here, beside the other things a graded rep feeds, rather than inside the
+    /// drill that only knows about its own round.
+    @ObservationIgnored let countDrift: CountDriftStore
     let session = DrillSession()
     private(set) var target = 0
     private(set) var done = false
@@ -39,7 +44,8 @@ final class CardCountingFlowModel {
         showdownPlayStats: SessionStatsStore? = nil,
         deviations: DeviationEngine? = nil,
         missTally: MissTallyStore? = nil,
-        betSpreadStats: SessionStatsStore? = nil
+        betSpreadStats: SessionStatsStore? = nil,
+        countDrift: CountDriftStore = CountDriftStore()
     ) {
         self.counting = counting
         self.prefs = prefs
@@ -49,6 +55,7 @@ final class CardCountingFlowModel {
         self.deviations = deviations
         self.missTally = missTally
         self.betSpreadStats = betSpreadStats
+        self.countDrift = countDrift
         showdownBankroll = bankroll
         prefs.setLastTrainer(.cardCounting)
         // Configure the drill entirely from the pre-made decisions.
@@ -84,7 +91,8 @@ final class CardCountingFlowModel {
             showdownPlayStats: app.showdownPlayStats,
             deviations: app.deviations,
             missTally: app.missTally,
-            betSpreadStats: app.betSpreadStats
+            betSpreadStats: app.betSpreadStats,
+            countDrift: app.countDrift
         )
     }
 
@@ -124,6 +132,7 @@ final class CardCountingFlowModel {
         guard counting.state == .answering else { return }
         counting.answer(value)
         if let result = counting.result {
+            countDrift.record(result)
             history.recordHand(correct: result.isCorrect)
             session.record(result.isCorrect)
         }
@@ -134,6 +143,7 @@ final class CardCountingFlowModel {
         guard counting.state == .advantage else { return }
         counting.answerAdvantage(saidYes)
         if let result = counting.result {
+            countDrift.record(result)
             history.recordHand(correct: result.isCorrect)
             session.record(result.isCorrect)
         }
@@ -150,6 +160,7 @@ final class CardCountingFlowModel {
         guard counting.state == .betting else { return }
         counting.answerBet(units)
         if let result = counting.result {
+            countDrift.record(result)
             history.recordHand(correct: result.isCorrect)
             session.record(result.isCorrect)
         }
@@ -390,7 +401,8 @@ struct CardCountingFlowView: View {
                 countCheck: model.counting.showdownCountCheck,
                 // The count carried off the table is the same running count the
                 // drill measures, so it lands in the same store.
-                countStats: model.counting.runningStore
+                countStats: model.counting.runningStore,
+                countDrift: model.countDrift
             ) { dealtCards in
                 model.exitShowdown(dealtCards)
             }

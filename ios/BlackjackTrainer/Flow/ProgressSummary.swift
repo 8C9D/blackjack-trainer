@@ -77,6 +77,19 @@ enum ProgressSummary {
     /// legible. Mirrors the web `SPOTS_SHOWN`.
     static let spotsShown = 5
 
+    /// Which side the counts land on, as the line the Trainers card shows.
+    ///
+    /// Accuracy says a count was wrong and never how, and the two ways to be
+    /// wrong want different practice: a count that lands under nearly every time
+    /// is dropping the same thing each shoe; one that scatters is being lost and
+    /// restarted. Named, not diagnosed — the app has no way to tell which card
+    /// went missing. Mirrors the web Progress screen's drift line.
+    static func driftNote(_ shape: DriftShape) -> String {
+        "Your last \(countOf(shape.rounds, "count")): \(shape.low) low · "
+            + "\(shape.high) high · \(shape.exact) exact. Missing on the same side every "
+            + "time and missing all over are different problems."
+    }
+
     static func row(_ label: String, _ stats: SessionStats) -> ProgressStatRow {
         ProgressStatRow(
             label: label,

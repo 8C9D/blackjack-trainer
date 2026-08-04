@@ -20,6 +20,7 @@ enum StatsKeys {
     static let flowPrefs = "blackjack-flow-prefs"
     static let practiceHistory = "blackjack-practice-history"
     static let missTally = "blackjack-miss-tally"
+    static let countDrift = "blackjack-count-drift" // which side a running count lands on
 
     /// Keys from earlier versions, wiped once at launch.
     static let legacy = ["blackjack-trainer:stats:v1"]

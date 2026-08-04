@@ -47,7 +47,12 @@ struct CardCountingFlowModelTests {
             ),
             showdownStatsStore: ShowdownStatsStore(defaults: defaults)
         )
-        let model = CardCountingFlowModel(counting: counting, prefs: prefs, history: history)
+        let model = CardCountingFlowModel(
+            counting: counting,
+            prefs: prefs,
+            history: history,
+            countDrift: CountDriftStore(key: StatsKeys.countDrift, defaults: defaults)
+        )
         return Harness(model: model, prefs: prefs, history: history)
     }
 
@@ -79,6 +84,20 @@ struct CardCountingFlowModelTests {
         #expect(h.model.session.attempts == 1)
         h.model.runAgain()
         #expect(h.model.done)
+    }
+
+    /// Which side a wrong count landed on is recorded beside the rep, so the
+    /// Progress screen can say whether the misses lean or scatter.
+    @Test func recordsWhichSideTheRunningCountLandedOn() async {
+        let h = makeHarness(dailyGoal: 20)
+        h.model.start()
+        await waitForAnswering(h.model)
+        let real = h.model.counting.engine.runningCount(
+            h.model.counting.cards,
+            system: h.model.counting.system
+        )
+        h.model.answer(real + 2)
+        #expect(h.model.countDrift.drifts == [2])
     }
 
     @Test func oneMoreRoundRetargetsAndClearsDone() async {

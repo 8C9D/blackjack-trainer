@@ -38,6 +38,9 @@ final class AppModel {
     let flowPrefs: FlowPrefsStore
     let practiceHistory: PracticeHistoryStore
     let missTally: MissTallyStore
+    /// Which side a wrong running count lands on — the half of a miscount the
+    /// accuracy stores never carried.
+    let countDrift: CountDriftStore
 
     /// Reads and replaces the whole stored namespace as one file — iCloud carries
     /// a trainee between their own devices, this carries them off the platform.
@@ -97,15 +100,16 @@ final class AppModel {
         let flowPrefs = FlowPrefsStore(cloud: cloud, systems: loaded.systems)
         let practiceHistory = PracticeHistoryStore(cloud: cloud)
         let missTally = MissTallyStore(cloud: cloud)
+        let countDrift = CountDriftStore(cloud: cloud)
         self.flowPrefs = flowPrefs
         self.practiceHistory = practiceHistory
-        self.missTally = missTally
+        (self.missTally, self.countDrift) = (missTally, countDrift)
 
         cloudSync = StatsCloudSync(cloud: cloud, stores: [
             basicStrategyStats, runningCountStats, trueCountStats,
             deviationStats, deckEstimationStats, keyCountStats, betSpreadStats,
             deckSpeedStats, deckSpeedBest, showdownStats, showdownPlayStats, showdownBankroll,
-            flowPrefs, practiceHistory, missTally
+            flowPrefs, practiceHistory, missTally, countDrift
         ])
         // Built after cloud adoption so the seeded snapshot reflects any value
         // pulled from iCloud at launch. The widget mirrors the Flow home surface —
@@ -122,7 +126,7 @@ final class AppModel {
             basicStrategyStats, deviationStats, runningCountStats, trueCountStats,
             deckEstimationStats, keyCountStats, betSpreadStats, deckSpeedStats,
             showdownPlayStats, deckSpeedBest, showdownStats, showdownBankroll,
-            practiceHistory, missTally, flowPrefs
+            practiceHistory, missTally, countDrift, flowPrefs
         ]
     }
 
@@ -160,5 +164,6 @@ final class AppModel {
         showdownBankroll.reset()
         practiceHistory.reset()
         missTally.reset()
+        countDrift.reset()
     }
 }
