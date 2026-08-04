@@ -43,7 +43,7 @@ struct FlowDoneView: View {
     private var peakSuffixes: [String] {
         var parts: [String] = []
         if let accuracy {
-            parts.append(" · \(accuracy)% today")
+            parts.append(" · \(accuracy)% this round")
         }
         if let medianSeconds {
             parts.append(" · \(Self.secondsLabel(medianSeconds))s a hand")
@@ -61,6 +61,14 @@ struct FlowDoneView: View {
     private var othersLabel: String {
         let others = max(0, weakSpots.count - 1)
         return others == 0 ? "" : " · +\(others) more"
+    }
+
+    /// "missed 3 of 7 this week at TC -1, +2 · +2 more". The counts are the half
+    /// of a deviation the hand alone does not carry — the drill already re-deals
+    /// the spot at one of them, and this is where it says so.
+    private func missLine(_ weak: WeakSpot) -> String {
+        let counts = ProgressSummary.missedCountsLabel(weak).map { " at \($0)" } ?? ""
+        return "missed \(weak.misses) of \(weak.attempts) this week\(counts)\(othersLabel)"
     }
 
     /// "16 vs 10 · A,7 vs 9 · +2 more", or nil when nothing was cleared.
@@ -132,7 +140,7 @@ struct FlowDoneView: View {
             (Text("Drill my misses: ") + Text(weak.label).bold().foregroundStyle(Theme.accentInk))
                 .font(.system(size: 14))
                 .foregroundStyle(Theme.midInk)
-            Text("missed \(weak.misses) of \(weak.attempts) this week\(othersLabel)")
+            Text(missLine(weak))
                 .font(.system(size: 11.5))
                 .foregroundStyle(Theme.muted)
         }
