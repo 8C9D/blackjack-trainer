@@ -94,6 +94,7 @@ struct PracticeProgressView: View {
                     weekPace: weekPace,
                     paceTrend: paceTrend,
                     rows: rows,
+                    driftShape: model.countDrift.shape(),
                     showdown: model.showdownStats.stats,
                     bankroll: model.showdownBankroll.state,
                     weakGroups: weakGroups,
@@ -131,6 +132,9 @@ struct ProgressBodyView: View {
     var weekPace: Double?
     var paceTrend: ProgressTrend?
     let rows: [ProgressStatRow]
+    /// Which side the counts land on. Nil under five rounds, where a lean is
+    /// not yet a lean.
+    var driftShape: DriftShape?
     let showdown: ShowdownStats
     let bankroll: BankrollState
     let weakGroups: [ProgressWeakGroup]
@@ -275,35 +279,7 @@ struct ProgressBodyView: View {
                     .padding(.vertical, 6)
                 }
             }
-        }
-    }
-
-    private var showdownCard: some View {
-        card("Showdown") {
-            VStack(alignment: .leading, spacing: 3) {
-                Text("\(showdown.wins)W · \(showdown.losses)L · \(showdown.pushes)P")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Theme.ink)
-                Text(
-                    "\(countOf(showdown.hands, "hand")) · "
-                        + "\(countOf(showdown.blackjacks, "blackjack")) · \(winRate)% won"
-                )
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.muted)
-            }
-            if bankroll.wagered > 0 {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(ProgressSummary.signed(bankroll.net))
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(netColor)
-                    Text(
-                        "\(chipsLabel(bankroll.bankroll)) on hand · "
-                            + "\(CountFormat.count(bankroll.wagered)) wagered"
-                    )
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.muted)
-                }
-            }
+            driftNote
         }
     }
 
@@ -412,4 +388,47 @@ struct ProgressBodyView: View {
         .environment(AppModel())
         .environment(FlowRouter())
         .preferredColorScheme(.dark)
+}
+
+extension ProgressBodyView {
+    private var showdownCard: some View {
+        card("Showdown") {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("\(showdown.wins)W · \(showdown.losses)L · \(showdown.pushes)P")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Theme.ink)
+                Text(
+                    "\(countOf(showdown.hands, "hand")) · "
+                        + "\(countOf(showdown.blackjacks, "blackjack")) · \(winRate)% won"
+                )
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.muted)
+            }
+            if bankroll.wagered > 0 {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(ProgressSummary.signed(bankroll.net))
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(netColor)
+                    Text(
+                        "\(chipsLabel(bankroll.bankroll)) on hand · "
+                            + "\(CountFormat.count(bankroll.wagered)) wagered"
+                    )
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.muted)
+                }
+            }
+        }
+    }
+
+    /// Which side the counts land on. Accuracy says a count was wrong and never
+    /// how, and the two ways to be wrong want different practice.
+    @ViewBuilder
+    var driftNote: some View {
+        if let driftShape {
+            Text(ProgressSummary.driftNote(driftShape))
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.muted)
+                .padding(.top, 8)
+        }
+    }
 }

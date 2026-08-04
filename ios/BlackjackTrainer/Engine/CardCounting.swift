@@ -153,6 +153,31 @@ struct BetSpreadDrillResult: Equatable {
     let isCorrect: Bool
 }
 
+extension CountingDrillResult {
+    /// The running count this round asked for, as (answered, real), or nil for
+    /// the modes whose answer is a true count — there the deck-estimate line
+    /// accounts for the miss instead.
+    var runningCountAnswer: (answer: Double, actual: Double)? {
+        switch self {
+        case let .running(result): (result.userRunningCount, result.correctRunningCount)
+        case let .keyCount(result): (result.userRunningCount, result.correctRunningCount)
+        case let .deckSpeed(result): (result.userRunningCount, result.correctRunningCount)
+        case .trueCount, .betSpread: nil
+        }
+    }
+}
+
+/// How far an answered running count landed from the real one: "2 points high",
+/// "1 point low". One helper for every surface that grades a count — the drill's
+/// feedback, the countdown's, and the table's count check on the way out — since
+/// the same miss described two ways reads as two different mistakes. Fractional
+/// systems answer in halves, so the noun follows the value rather than the sign.
+/// Mirrors the web `countDriftLabel`.
+func countDriftLabel(_ drift: Double) -> String {
+    "\(countOf(abs(drift), "point", display: CountFormat.count(abs(drift)))) "
+        + (drift > 0 ? "high" : "low")
+}
+
 /// What the player's own decks estimate would have made of the count.
 ///
 /// A live-shoe round grades the true count against the shoe's actual decks

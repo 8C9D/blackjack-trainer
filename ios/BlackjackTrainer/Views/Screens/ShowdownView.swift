@@ -16,13 +16,14 @@ struct ShowdownView: View {
          entryRunningCount: Double = 0, missTally: MissTallyStore? = nil,
          betRamp: [Int] = BetRamp.default, betSpreadStats: SessionStatsStore? = nil,
          countCheck: Bool = true, countStats: SessionStatsStore? = nil,
+         countDrift: CountDriftStore? = nil,
          onExit: @escaping ([Card]) -> Void) {
         _model = State(initialValue: ShowdownModel(
             shoe: shoe, ruleSet: ruleSet, stats: stats, options: options, spots: spots,
             betting: betting, bankroll: bankroll, strategy: strategy, playStats: playStats,
             system: system, deviations: deviations, entryRunningCount: entryRunningCount,
             missTally: missTally, betRamp: betRamp, betSpreadStats: betSpreadStats,
-            countCheck: countCheck, countStats: countStats
+            countCheck: countCheck, countStats: countStats, countDrift: countDrift
         ))
         self.onExit = onExit
     }

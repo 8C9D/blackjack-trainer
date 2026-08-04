@@ -64,6 +64,9 @@ final class ShowdownModel {
     /// And the count carried off the table is the same skill the running-count
     /// drill measures.
     @ObservationIgnored private let countStats: SessionStatsStore?
+    /// The count on the way out is the same skill the drill grades, so which
+    /// side it lands on is remembered in the same place.
+    @ObservationIgnored private let countDrift: CountDriftStore?
 
     /// Not `private`: `+Grading` divides the count by what is left of it.
     @ObservationIgnored let shoe: Shoe
@@ -140,10 +143,12 @@ final class ShowdownModel {
         betRamp: [Int] = BetRamp.default,
         betSpreadStats: SessionStatsStore? = nil,
         countCheck: Bool = true,
-        countStats: SessionStatsStore? = nil
+        countStats: SessionStatsStore? = nil,
+        countDrift: CountDriftStore? = nil
     ) {
         self.countCheck = countCheck
         self.countStats = countStats
+        self.countDrift = countDrift
         self.missTally = missTally
         self.betRamp = betRamp
         self.betSpreadStats = betSpreadStats
@@ -548,6 +553,7 @@ extension ShowdownModel {
         guard phase == .countCheck, countVerdict == nil else { return }
         let verdict = gradeCountCheck(answer)
         countStats?.recordAttempt(correct: verdict.correct)
+        countDrift?.record(answer: answer, actual: visibleRunningCount)
         countVerdict = verdict
     }
 }
