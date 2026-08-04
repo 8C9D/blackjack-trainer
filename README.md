@@ -429,6 +429,11 @@ no-ops at runtime but document the chart cell.
   Every cell is `BasicStrategyEngineService.decide()` run on a representative hand rather than a second transcription of the chart data, so what the page shows and what a drill grades cannot drift.
   `SUR_*` and `YN` cells resolve against the live DAS / Late-Surrender settings, and a pair the chart declines to split shows the play it falls back to.
   A second tab lists the deviation chart for the same rule set (insurance, hard, soft, pairs, surrender), each rule as hand, true-count threshold (`≥ +3`, `≤ -1`, `> 0`), and play.
+  **The hands you keep missing are marked on it.** The weak-spot tally has always known which cells are costing you, and the page you actually read to look one up said nothing: an outstanding scenario now wears a ring on the grid (a shape, not a seventh colour — the six actions have spent the palette) with its count in the cell's label, and the deviation list says "missed 3 of 7 this week" under the rule in words, since a text table has room for them.
+  A hand clears its mark the same way it leaves the weak list: three correct answers running.
+  Each trainer marks its own chart, and a surrender rule looks itself up under the hard total it is written over, because that is how the drill files it.
+  Insurance is the one rule with no mark — a missed insurance call is filed against the hand that was dealt, not against the offer.
+  Marked, not ranked, and still read-only: the counts and the review round that drills them are the Progress screen's job.
 - **Light and dark themes** — one semantic token set in two palettes (`src/styles.scss`).
   The palette follows `prefers-color-scheme`; Settings → Appearance pins it, which `ThemeService` applies as `data-theme` on `<html>` and mirrors into the `theme-color` meta so the browser chrome matches.
 - **Accessibility** — grading is announced through a live region (the action grid conveys it with color and position alone), the Done screen takes focus when it replaces the drill, every screen carries a level-1 heading, focus rings clear 3:1 in both themes, and `prefers-reduced-motion` is honored.

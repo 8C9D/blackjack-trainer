@@ -23,6 +23,14 @@ import {
 import { BasicStrategyEngineService } from '../../core/services/basic-strategy-engine.service';
 import { deviationsFor } from '../../core/services/deviation-engine.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
+import {
+  MissTallyService,
+  scenarioKey,
+  type ScenarioRef,
+  type TalliedTrainer,
+  type WeakSpot,
+} from '../../core/services/miss-tally.service';
+import { countOf } from '../../core/text';
 import { countingSystemById } from '../../data/counting-systems';
 
 export const DEALER_UPCARDS: readonly DealerUpcard[] = [
@@ -40,6 +48,8 @@ export const DEALER_UPCARDS: readonly DealerUpcard[] = [
 
 const HARD_KEYS: readonly HardKey[] = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
 const SOFT_KEYS: readonly SoftKey[] = [2, 3, 4, 5, 6, 7, 8, 9];
+// A soft row's key is its non-ace card; the tally keys it by the total.
+const SOFT_ACE_VALUE = 11;
 const PAIR_KEYS: readonly PairKey[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'];
 
 // Chart shorthand. Surrender is 'R', not the BJA charts' 'SUR': ten columns
@@ -78,6 +88,10 @@ interface ChartCellView {
   readonly action: Exclude<Action, 'INS'>;
   readonly symbol: string;
   readonly label: string;
+  // "missed 3 of 7 this week", or null when this hand is not outstanding. The
+  // grid has no room for the words, so the ring carries it on screen and this
+  // carries it to a screen reader.
+  readonly missed: string | null;
 }
 
 interface ChartRowView {
@@ -98,6 +112,7 @@ interface DeviationRowView {
   readonly action: Action;
   readonly symbol: string;
   readonly label: string;
+  readonly missed: string | null;
 }
 
 interface DeviationSectionView {
@@ -163,7 +178,12 @@ interface DeviationSectionView {
               <tbody>
                 @for (rule of section.rows; track rule.hand) {
                   <tr>
-                    <th scope="row" class="chart__rule-hand">{{ rule.hand }}</th>
+                    <th scope="row" class="chart__rule-hand" [class.chart__missed]="rule.missed">
+                      {{ rule.hand }}
+                      @if (rule.missed; as missed) {
+                        <small class="chart__missed-note">{{ missed }}</small>
+                      }
+                    </th>
                     <td class="chart__index">{{ rule.threshold }}</td>
                     <td class="chart__play">
                       <span
@@ -188,6 +208,16 @@ interface DeviationSectionView {
 
         @if (indexNote(); as note) {
           <p class="chart__note chart__note--warn" role="note">{{ note }}</p>
+        }
+
+        <!-- No count here, unlike the grid's: one hand can carry two rules (a
+             hard total and the surrender written over it), so a tally of marked
+             rows would read as more weaknesses than there are. -->
+        @if (missedRules() > 0) {
+          <p class="chart__note">
+            Marked hands are ones you have missed in the last 7 days and not yet answered right
+            three times running.
+          </p>
         }
       } @else {
         @for (section of sections(); track section.id) {
@@ -214,7 +244,8 @@ interface DeviationSectionView {
                       <td
                         class="chart__cell"
                         [class]="'chart__cell--' + cell.action.toLowerCase()"
-                        [attr.aria-label]="cell.label"
+                        [class.chart__cell--missed]="cell.missed"
+                        [attr.aria-label]="cellLabel(cell)"
                       >
                         {{ cell.symbol }}
                       </td>
@@ -235,12 +266,32 @@ interface DeviationSectionView {
               {{ entry.label }}
             </li>
           }
+          <!-- The ring is a shape, not a colour: every cell is already coloured
+               by its action, so a seventh hue would collide with the six the
+               legend above spends. -->
+          @if (missedCells() > 0) {
+            <li>
+              <span class="chart__cell chart__cell--missed">&nbsp;</span>
+              Missed this week
+            </li>
+          }
         </ul>
 
         <p class="chart__note">
           Every cell is the play for a two-card starting hand under the rules above. Pair rows show
           the split decision, or the play the hand falls back to when the chart says not to split.
         </p>
+
+        <!-- The app has always known which hands keep costing you, and the page
+             a trainee actually reads never said. Marked, not ranked: the count
+             is on the Progress screen, which is also where the review round
+             starts. -->
+        @if (missedCells() > 0) {
+          <p class="chart__note">
+            {{ countOf(missedCells(), 'ringed cell') }} — hands you have missed in the last 7 days
+            and not yet answered right three times running.
+          </p>
+        }
       }
     </main>
   `,
@@ -249,7 +300,12 @@ interface DeviationSectionView {
 export class ChartPageComponent {
   private readonly prefsService = inject(FlowPrefsService);
   private readonly engine = inject(BasicStrategyEngineService);
+  private readonly missTally = inject(MissTallyService);
   private readonly router = inject(Router);
+
+  // Templates can only call class members, so the shared counted-noun helper is
+  // re-exposed rather than imported into the markup.
+  protected readonly countOf = countOf;
 
   protected readonly dealerUpcards = DEALER_UPCARDS;
   protected readonly legend = LEGEND;
@@ -271,29 +327,67 @@ export class ChartPageComponent {
     this.prefs().options.lateSurrender ? 'Late surrender' : 'No late surrender',
   );
 
+  // The scenarios each trainer is still costing hands on, by scenario key. The
+  // tally speaks the same (kind, hand, dealer) language a chart cell does, so
+  // marking is a lookup rather than a second encoding of the chart.
+  private readonly basicMisses = computed(() => this.missesFor('basic-strategy'));
+  private readonly deviationMisses = computed(() => this.missesFor('deviations'));
+
   protected readonly sections = computed<readonly ChartSectionView[]>(() => {
     const { ruleSet, options } = this.prefs();
+    const misses = this.basicMisses();
     return [
       {
         id: 'hard',
         title: 'Hard totals',
         rowHeader: 'Total',
-        rows: HARD_KEYS.map((key) => this.row(String(key), hardHandFor(key), ruleSet, options)),
+        rows: HARD_KEYS.map((key) =>
+          this.row('hard', String(key), String(key), hardHandFor(key), ruleSet, options, misses),
+        ),
       },
       {
         id: 'soft',
         title: 'Soft totals',
         rowHeader: 'Hand',
-        rows: SOFT_KEYS.map((key) => this.row(`A,${key}`, softHandFor(key), ruleSet, options)),
+        // A soft row is keyed by its non-ace card and tallied by its total, the
+        // way the drill files it: A,7 is the scenario 'soft 18'.
+        rows: SOFT_KEYS.map((key) =>
+          this.row(
+            'soft',
+            String(SOFT_ACE_VALUE + key),
+            `A,${key}`,
+            softHandFor(key),
+            ruleSet,
+            options,
+            misses,
+          ),
+        ),
       },
       {
         id: 'pair',
         title: 'Pairs',
         rowHeader: 'Hand',
-        rows: PAIR_KEYS.map((key) => this.row(`${key},${key}`, pairHandFor(key), ruleSet, options)),
+        rows: PAIR_KEYS.map((key) =>
+          this.row('pair', key, `${key},${key}`, pairHandFor(key), ruleSet, options, misses),
+        ),
       },
     ];
   });
+
+  protected readonly missedCells = computed(
+    () =>
+      this.sections()
+        .flatMap((s) => s.rows)
+        .flatMap((r) => r.cells)
+        .filter((c) => c.missed).length,
+  );
+
+  protected readonly missedRules = computed(
+    () =>
+      this.deviationSections()
+        .flatMap((s) => s.rows)
+        .filter((r) => r.missed).length,
+  );
 
   protected readonly indexSystemName = DEVIATION_INDEX_SYSTEM_NAME;
 
@@ -307,10 +401,11 @@ export class ChartPageComponent {
   // PDF is: insurance first, then the playing decisions, then surrender.
   protected readonly deviationSections = computed<readonly DeviationSectionView[]>(() => {
     const rules = deviationsFor(this.prefs().ruleSet);
+    const misses = this.deviationMisses();
     return DEVIATION_CATEGORIES.map(({ id, title }) => ({
       id,
       title,
-      rows: rules.filter((rule) => rule.category === id).map(deviationRow),
+      rows: rules.filter((rule) => rule.category === id).map((rule) => deviationRow(rule, misses)),
     })).filter((section) => section.rows.length > 0);
   });
 
@@ -330,11 +425,19 @@ export class ChartPageComponent {
     void this.router.navigate(['/settings']);
   }
 
+  private missesFor(trainer: TalliedTrainer): ReadonlyMap<string, WeakSpot> {
+    this.missTally.state();
+    return new Map(this.missTally.weakSpots(trainer).map((spot) => [scenarioKey(spot.ref), spot]));
+  }
+
   private row(
+    kind: ScenarioRef['kind'],
+    handKey: string,
     label: string,
     player: readonly [Card, Card],
     ruleSet: RuleSet,
     options: EngineOptions,
+    misses: ReadonlyMap<string, WeakSpot>,
   ): ChartRowView {
     return {
       label,
@@ -345,9 +448,20 @@ export class ChartPageComponent {
           ruleSet,
           options,
         });
-        return { action, symbol: ACTION_SYMBOLS[action], label: ACTION_LABELS[action] };
+        return {
+          action,
+          symbol: ACTION_SYMBOLS[action],
+          label: ACTION_LABELS[action],
+          missed: missLabel(misses, { kind, hand: handKey, dealer: upcard }),
+        };
       }),
     };
+  }
+
+  // The ring is the only thing on screen, so the cell's own label is where the
+  // count goes for anyone not looking at it.
+  protected cellLabel(cell: ChartCellView): string {
+    return cell.missed === null ? cell.label : `${cell.label} — ${cell.missed}`;
   }
 
   @HostListener('window:keydown', ['$event'])
@@ -409,7 +523,11 @@ export function formatDeviationThreshold(rule: DeviationRule): string {
   }
 }
 
-function deviationRow(rule: DeviationRule): DeviationRowView {
+function deviationRow(
+  rule: DeviationRule,
+  misses: ReadonlyMap<string, WeakSpot>,
+): DeviationRowView {
+  const ref = deviationScenarioRef(rule);
   return {
     // Insurance has no player hand — the dealer's ace is the whole scenario.
     hand:
@@ -420,5 +538,27 @@ function deviationRow(rule: DeviationRule): DeviationRowView {
     action: rule.deviationAction,
     symbol: ACTION_SYMBOLS[rule.deviationAction],
     label: ACTION_LABELS[rule.deviationAction],
+    missed: ref === null ? null : missLabel(misses, ref),
   };
+}
+
+// The scenario a rule is about, in the tally's own terms. Surrender rules are
+// written over a hard total, so they tally as one; insurance is filed against
+// whatever hand was dealt rather than against the offer, so it has no ref of
+// its own and stays unmarked.
+export function deviationScenarioRef(rule: DeviationRule): ScenarioRef | null {
+  switch (rule.category) {
+    case 'insurance':
+      return null;
+    case 'surrender':
+      return { kind: 'hard', hand: rule.playerHand, dealer: rule.dealerUpcard };
+    default:
+      return { kind: rule.category, hand: rule.playerHand, dealer: rule.dealerUpcard };
+  }
+}
+
+// "missed 3 of 7 this week", or null when the scenario is not outstanding.
+function missLabel(misses: ReadonlyMap<string, WeakSpot>, ref: ScenarioRef): string | null {
+  const spot = misses.get(scenarioKey(ref));
+  return spot ? `missed ${spot.misses} of ${spot.attempts} this week` : null;
 }

@@ -177,6 +177,14 @@
   background: var(--chart-insurance);
 }
 
+// A hand still outstanding in the rolling week. Every cell is already coloured
+// by its action, so this has to be a shape rather than a hue: an inset ring in
+// the body ink, which reads over all six action colours in both themes. The
+// count itself rides in the cell's aria-label.
+.chart__cell--missed {
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+
 // The deviation list: three text columns, not a ten-column grid.
 .chart__table--rules {
   table-layout: auto;
@@ -208,6 +216,19 @@
   width: auto;
   font-weight: 500;
   color: var(--ink);
+}
+
+// The deviation list is text, not a ten-column grid, so an outstanding rule can
+// say so in words instead of wearing the grid's ring.
+.chart__missed {
+  box-shadow: inset 2px 0 0 var(--ink);
+}
+
+.chart__missed-note {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--muted);
 }
 
 .chart__index {

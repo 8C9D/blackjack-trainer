@@ -120,6 +120,26 @@ test.describe('review rounds', () => {
     expect(await questionLine(page)).toBe(weakHand);
   });
 
+  // The chart is where a trainee looks a hand up, and it knew nothing about
+  // which hands they keep getting wrong.
+  test('the chart rings the hand that was just missed', async ({ page }) => {
+    await page.goto('/drill/basic-strategy');
+    const weakHand = await drillUntilAMiss(page);
+
+    await page.goto('/chart');
+    // Scoped to the grids: the legend carries a ring of its own, as its sample.
+    const ringed = page.locator('.chart__table .chart__cell--missed');
+    await expect(ringed).toHaveCount(1);
+    // Exactly one hand was missed, so the ring has to be on that hand's cell.
+    await expect(ringed).toHaveAttribute('aria-label', /missed 1 of \d+ this week/);
+    await expect(page.getByText('1 ringed cell —')).toBeVisible();
+
+    const row = page
+      .locator('.chart__table tbody tr')
+      .filter({ has: page.locator('.chart__cell--missed') });
+    await expect(row.locator('.chart__hand')).toHaveText(chartLabel(weakHand).split(' vs ')[0]);
+  });
+
   test('a review round keeps dealing the weak spot, not just the first hand', async ({ page }) => {
     await page.goto('/drill/basic-strategy');
     const weakHand = await drillUntilAMiss(page);
