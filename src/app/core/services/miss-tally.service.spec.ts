@@ -4,6 +4,7 @@ import type { Card, Rank, Suit } from '../models/card.model';
 import { localDateKey } from './practice-history.service';
 import {
   CLEAR_STREAK,
+  MISSED_COUNT_MEMORY,
   MISS_TALLY_KEY,
   MissTallyService,
   scenarioKey,
@@ -106,6 +107,86 @@ describe('MissTallyService', () => {
         misses: 3,
         attempts: 7,
         streak: 1,
+        // Basic strategy has no count in its question, so nothing is remembered.
+        missedCounts: [],
+      });
+    });
+
+    // In the Deviations trainer the count is half the question, so the miss
+    // remembers it: the scenario has to come back as the question that beat
+    // the trainee, not as the same hand at a count they already had right.
+    describe('the count a scenario was missed at', () => {
+      it('remembers a miss, newest first, and ignores correct answers', () => {
+        const s = createService(() => current);
+        s.record('deviations', HARD_16_V_10, false, 2);
+        s.record('deviations', HARD_16_V_10, true, -4);
+        s.record('deviations', HARD_16_V_10, false, -1);
+        expect(s.weakSpotFor('deviations')!.missedCounts).toEqual([-1, 2]);
+      });
+
+      it('promotes a repeated count rather than storing it twice', () => {
+        const s = createService(() => current);
+        s.record('deviations', HARD_16_V_10, false, 2);
+        s.record('deviations', HARD_16_V_10, false, 5);
+        s.record('deviations', HARD_16_V_10, false, 2);
+        expect(s.weakSpotFor('deviations')!.missedCounts).toEqual([2, 5]);
+      });
+
+      it('keeps only the most recent few, so a bad week cannot grow the store', () => {
+        const s = createService(() => current);
+        for (let count = 1; count <= MISSED_COUNT_MEMORY + 3; count++) {
+          s.record('deviations', HARD_16_V_10, false, count);
+        }
+        const counts = s.weakSpotFor('deviations')!.missedCounts;
+        expect(counts.length).toBe(MISSED_COUNT_MEMORY);
+        expect(counts[0]).toBe(MISSED_COUNT_MEMORY + 3);
+      });
+
+      it('ignores a count that is not a plausible true count', () => {
+        const s = createService(() => current);
+        s.record('deviations', HARD_16_V_10, false, 2.5);
+        s.record('deviations', HARD_16_V_10, false, 5000);
+        expect(s.weakSpotFor('deviations')!.missedCounts).toEqual([]);
+      });
+
+      it('survives a reload, and tolerates a payload written without them', () => {
+        const s = createService(() => current);
+        s.record('deviations', HARD_16_V_10, false, 3);
+        expect(createService(() => current).weakSpotFor('deviations')!.missedCounts).toEqual([3]);
+
+        localStorage.setItem(
+          MISS_TALLY_KEY,
+          JSON.stringify({
+            deviations: {
+              [scenarioKey(HARD_16_V_10)]: {
+                ref: HARD_16_V_10,
+                days: [{ date: localDateKey(current), attempts: 1, misses: 1 }],
+                streak: 0,
+              },
+            },
+          }),
+        );
+        TestBed.resetTestingModule();
+        expect(createService(() => current).weakSpotFor('deviations')!.missedCounts).toEqual([]);
+      });
+
+      it('drops garbage and duplicates out of a restored list', () => {
+        localStorage.setItem(
+          MISS_TALLY_KEY,
+          JSON.stringify({
+            deviations: {
+              [scenarioKey(HARD_16_V_10)]: {
+                ref: HARD_16_V_10,
+                days: [{ date: localDateKey(current), attempts: 1, misses: 1 }],
+                streak: 0,
+                missedCounts: [3, '4', 3, 1.5, 900, -2, null],
+              },
+            },
+          }),
+        );
+        expect(createService(() => current).weakSpotFor('deviations')!.missedCounts).toEqual([
+          3, -2,
+        ]);
       });
     });
 
@@ -201,6 +282,7 @@ describe('MissTallyService', () => {
           attempts: 5,
           misses: 3,
           streak: 0,
+          missedCounts: [],
         },
       ]);
     });

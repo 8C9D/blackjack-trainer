@@ -10,6 +10,7 @@ const WEAK: WeakSpot = {
   misses: 3,
   attempts: 7,
   streak: 0,
+  missedCounts: [],
 };
 
 const spot = (label: string, streak: number, misses = 1): WeakSpot => ({
@@ -18,6 +19,7 @@ const spot = (label: string, streak: number, misses = 1): WeakSpot => ({
   misses,
   attempts: misses + streak,
   streak,
+  missedCounts: [],
 });
 
 @Component({

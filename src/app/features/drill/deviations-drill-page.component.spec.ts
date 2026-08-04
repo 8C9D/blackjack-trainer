@@ -285,6 +285,47 @@ describe('DeviationsDrillPageComponent', () => {
     });
   });
 
+  // The count is half a deviation question: 16 vs 10 stands at +2 and hits at
+  // −1. A weak spot re-dealt at a fresh count can ask the side the trainee
+  // already had right — and three of those would clear it without teaching.
+  describe('a weak spot comes back at the count that beat you', () => {
+    const HARD_16_V_10 = { kind: 'hard', hand: '16', dealer: '10' } as const;
+
+    it('opens the session at a count the scenario was missed at', () => {
+      TestBed.inject(MissTallyService).record('deviations', HARD_16_V_10, false, 3);
+      // The fresh-count path would return the bottom of the random range (−5).
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const { c } = createPage();
+      expect(c.scenario().trueCount).toBe(3);
+    });
+
+    it('draws among every count it was missed at', () => {
+      const tally = TestBed.inject(MissTallyService);
+      tally.record('deviations', HARD_16_V_10, false, 3);
+      tally.record('deviations', HARD_16_V_10, false, -1);
+      // Newest first, so the last roll of the draw lands on the older count.
+      vi.spyOn(Math, 'random').mockReturnValue(0.99);
+      const { c } = createPage();
+      expect(c.scenario().trueCount).toBe(3);
+    });
+
+    it('records the count the miss was actually made at', () => {
+      const { c } = createPage();
+      c.scenario.set(SIXTEEN_V_TEN_TC_NEG); // hits at −2; standing is wrong
+      c.answer('S');
+      expect(TestBed.inject(MissTallyService).weakSpotFor('deviations')!.missedCounts).toEqual([
+        -2,
+      ]);
+    });
+
+    it('falls back to a fresh count for a spot recorded without one', () => {
+      TestBed.inject(MissTallyService).record('deviations', HARD_16_V_10, false);
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const { c } = createPage();
+      expect(c.scenario().trueCount).toBe(-5);
+    });
+  });
+
   describe('scenario generation from prefs', () => {
     it('uses the manual true count when configured', () => {
       const prefs = TestBed.inject(FlowPrefsService);

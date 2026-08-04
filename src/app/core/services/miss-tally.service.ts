@@ -36,7 +36,21 @@ export interface WeakSpot {
   readonly attempts: number;
   // Consecutive correct answers since this scenario was last missed.
   readonly streak: number;
+  // True counts this scenario was recently missed at, most recent first. Only
+  // the Deviations trainer records them: there the count is half the question,
+  // and a re-deal that draws a fresh one asks something else.
+  readonly missedCounts: readonly number[];
 }
+
+// How many missed true counts a scenario remembers. A hand can be missed on
+// both sides of its index — 16 vs 10 stood at −1, hit at +2 — so one is too
+// few; five is enough to cover a hand's real failure modes without letting a
+// bad week write an unbounded list into storage.
+export const MISSED_COUNT_MEMORY = 5;
+
+// Widest true count worth storing. The trainer's own manual range is ±20; a
+// stored value outside this is corrupt rather than practice.
+const MAX_STORED_TRUE_COUNT = 30;
 
 interface DayTally {
   readonly date: string;
@@ -50,6 +64,8 @@ interface ScenarioTally {
   // Consecutive correct answers since the last miss. Unlike `days` this is
   // not windowed: it is the live clear-streak signal, reset by any miss.
   readonly streak: number;
+  // The true counts the scenario was missed at, most recent first.
+  readonly missedCounts: readonly number[];
 }
 
 type TallyState = Partial<Record<TalliedTrainer, Record<string, ScenarioTally>>>;
@@ -103,12 +119,16 @@ export class MissTallyService {
     this.now = fn;
   }
 
-  record(trainer: TalliedTrainer, ref: ScenarioRef, correct: boolean): void {
+  // `trueCount` is the count the question was asked at, and is only meaningful
+  // where the count is part of the question — the Deviations trainer, and the
+  // showdown's index plays. A miss remembers it so the scenario can come back
+  // as the question that was actually missed rather than the hand alone.
+  record(trainer: TalliedTrainer, ref: ScenarioRef, correct: boolean, trueCount?: number): void {
     const today = localDateKey(this.now());
     const key = scenarioKey(ref);
     const state = this._state();
     const forTrainer = { ...(state[trainer] ?? {}) };
-    const existing = forTrainer[key] ?? { ref, days: [], streak: 0 };
+    const existing = forTrainer[key] ?? { ref, days: [], streak: 0, missedCounts: [] };
     const day = existing.days.find((d) => d.date === today);
     const days = day
       ? existing.days.map((d) =>
@@ -121,6 +141,7 @@ export class MissTallyService {
       ref,
       days: this.pruneDays(days),
       streak: correct ? existing.streak + 1 : 0,
+      missedCounts: rememberMissedCount(existing.missedCounts, correct, trueCount),
     };
     const next: TallyState = { ...state, [trainer]: this.pruneScenarios(forTrainer) };
     this._state.set(next);
@@ -178,6 +199,7 @@ export class MissTallyService {
         misses,
         attempts,
         streak: tally.streak,
+        missedCounts: tally.missedCounts,
       });
     }
     return spots;
@@ -201,7 +223,14 @@ export class MissTallyService {
     const out: Record<string, ScenarioTally> = {};
     for (const [key, tally] of Object.entries(forTrainer)) {
       const days = this.pruneDays(tally.days);
-      if (days.length > 0) out[key] = { ref: tally.ref, days, streak: tally.streak };
+      if (days.length > 0) {
+        out[key] = {
+          ref: tally.ref,
+          days,
+          streak: tally.streak,
+          missedCounts: tally.missedCounts,
+        };
+      }
     }
     return out;
   }
@@ -259,7 +288,34 @@ function sanitizeScenarioTally(v: unknown): ScenarioTally | null {
     // Payloads written before clear-streak tracking have no streak; a fresh 0
     // just means those scenarios must earn it again.
     streak: Number.isSafeInteger(t.streak) && (t.streak ?? -1) >= 0 ? t.streak! : 0,
+    // Likewise for the missed counts: a scenario stored before they were kept
+    // (or by the Basic Strategy trainer, which has no count) simply has none,
+    // and comes back at a fresh count exactly as it used to.
+    missedCounts: sanitizeMissedCounts(t.missedCounts),
   };
+}
+
+// Newest first, capped, and only for a miss — a correct answer leaves the list
+// alone, since it is the record of what went wrong.
+function rememberMissedCount(
+  existing: readonly number[],
+  correct: boolean,
+  trueCount: number | undefined,
+): readonly number[] {
+  if (correct || trueCount === undefined || !Number.isInteger(trueCount)) return existing;
+  if (Math.abs(trueCount) > MAX_STORED_TRUE_COUNT) return existing;
+  return [trueCount, ...existing.filter((c) => c !== trueCount)].slice(0, MISSED_COUNT_MEMORY);
+}
+
+function sanitizeMissedCounts(value: unknown): readonly number[] {
+  if (!Array.isArray(value)) return [];
+  const seen: number[] = [];
+  for (const candidate of value) {
+    if (typeof candidate !== 'number' || !Number.isInteger(candidate)) continue;
+    if (Math.abs(candidate) > MAX_STORED_TRUE_COUNT) continue;
+    if (!seen.includes(candidate)) seen.push(candidate);
+  }
+  return seen.slice(0, MISSED_COUNT_MEMORY);
 }
 
 function isScenarioRef(value: unknown): value is ScenarioRef {
