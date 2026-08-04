@@ -40,6 +40,7 @@ struct ChartSection: Identifiable {
 enum ChartMode: String, CaseIterable, Identifiable {
     case basic
     case deviations
+    case count
 
     var id: String {
         rawValue
@@ -49,6 +50,7 @@ enum ChartMode: String, CaseIterable, Identifiable {
         switch self {
         case .basic: "Basic strategy"
         case .deviations: "Deviations"
+        case .count: "Count"
         }
     }
 }

@@ -37,9 +37,23 @@ struct ChartView: View {
             .flatMap(DeviationIndexSystem.note)
     }
 
+    /// The tags the counting drill grades against — the count tab's whole body.
+    private var countReference: CountReference? {
+        model.countingSystems
+            .system(withId: prefs.counting.systemId)
+            .map { CountReference(system: $0, decks: prefs.counting.numberOfDecks) }
+    }
+
     /// The DAS and Late-Surrender chips are dropped in the deviation list: no
-    /// deviation rule reads either option.
+    /// deviation rule reads either option. Table rules are dropped entirely on
+    /// the count tab — they decide a play, and have nothing to do with what a
+    /// card is worth to the count, so the system it does depend on takes their
+    /// place.
     private var ruleChips: [String] {
+        if mode == .count {
+            guard let countReference else { return [] }
+            return [countReference.systemName, countReference.balanceLabel]
+        }
         let ruleSet = prefs.ruleSet == .h17
             ? "H17 — dealer hits soft 17"
             : "S17 — dealer stands soft 17"
@@ -60,13 +74,14 @@ struct ChartView: View {
                     deviationSections: deviationSections,
                     ruleChips: ruleChips,
                     indexNote: indexNote,
+                    countReference: countReference,
                     onDrill: { trainer, ref in router.go(.drill(trainer, hand: ref)) }
                 ) {
                     router.go(.settings)
                 }
             }
             .background(Theme.ground.ignoresSafeArea())
-            .navigationTitle("Strategy chart")
+            .navigationTitle("Chart")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -89,6 +104,9 @@ struct ChartGridView: View {
     /// Set when the trainee's counting system is not the one the indices are
     /// written for; nil (the common case) leaves the list unadorned.
     var indexNote: String?
+    /// The count tab's body. Nil only when the registry failed to load, which
+    /// leaves the tab empty rather than inventing a system.
+    var countReference: CountReference?
     /// Start a round pinned to one hand. The chart is where a trainee looks a
     /// hand up, and until now it could name the play and do nothing else.
     var onDrill: (TrainerId, ScenarioRef) -> Void = { _, _ in }
@@ -115,7 +133,11 @@ struct ChartGridView: View {
 
             rules
 
-            if mode == .deviations {
+            if mode == .count {
+                if let countReference {
+                    CountReferenceView(reference: countReference)
+                }
+            } else if mode == .deviations {
                 ForEach(deviationSections) { section in
                     deviationCard(section)
                 }
@@ -189,7 +211,7 @@ struct ChartGridView: View {
                     .background(Capsule().fill(Theme.surface))
                     .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 1))
             }
-            Button("Change rules", action: onChangeRules)
+            Button(mode == .count ? "Change system" : "Change rules", action: onChangeRules)
                 .font(.system(size: 12))
                 .tint(Theme.accentInk)
         }
