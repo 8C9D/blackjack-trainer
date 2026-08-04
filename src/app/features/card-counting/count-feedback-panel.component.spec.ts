@@ -145,6 +145,33 @@ describe('CountFeedbackPanelComponent', () => {
       expect(fixture.nativeElement.querySelector('.feedback__formula')).toBeNull();
     });
 
+    // Two numbers side by side leave the subtraction to the trainee, and which
+    // side a count lands on is the half of a miscount worth practising.
+    it('says how far the count landed from the real one, and on which side', () => {
+      const low = createPanel(
+        makeRunningCountResult({ userRunningCount: 3, correctRunningCount: 5, isCorrect: false }),
+      );
+      expect(low.nativeElement.textContent).toContain('came in 2 points low over 5 cards');
+
+      const high = createPanel(
+        makeRunningCountResult({ userRunningCount: 6, correctRunningCount: 5, isCorrect: false }),
+      );
+      expect(high.nativeElement.textContent).toContain('came in 1 point high');
+    });
+
+    it('says nothing about drift on a correct count', () => {
+      const fixture = createPanel(makeRunningCountResult());
+      expect(fixture.nativeElement.textContent).not.toContain('came in');
+    });
+
+    // Wong Halves answers in halves, so the noun follows the value.
+    it('counts a half-point drift as points', () => {
+      const fixture = createPanel(
+        makeRunningCountResult({ userRunningCount: 4.5, correctRunningCount: 5, isCorrect: false }),
+      );
+      expect(fixture.nativeElement.textContent).toContain('0.5 points low');
+    });
+
     it('renders the card-by-card breakdown when toggled open', () => {
       const fixture = createPanel(makeRunningCountResult());
       const toggle = fixture.nativeElement.querySelector('.feedback__toggle') as HTMLButtonElement;
@@ -415,6 +442,15 @@ describe('CountFeedbackPanelComponent', () => {
       expect(active.length).toBe(1);
       expect(active[0].textContent).toContain('TC +3');
       expect(active[0].textContent).toContain('4 units');
+    });
+
+    // The answer here is a true count, and the deck-estimate line above already
+    // accounts for what moved it.
+    it('leaves the running-count drift line to the modes that answer one', () => {
+      const fixture = createPanel(
+        makeBetSpreadResult({ userTrueCount: 1, correctTrueCount: 3, isCorrect: false }),
+      );
+      expect(fixture.nativeElement.textContent).not.toContain('came in');
     });
 
     it('shows the deck estimate only when the round asked for one', () => {

@@ -1,6 +1,7 @@
 import type { BetRamp } from './bet-ramp.model';
 import type { Card } from './card.model';
 import type { DeckSpeedDrillResult } from './deck-speed.model';
+import { countOf } from '../text';
 
 // 'key-count' is the unbalanced-system counterpart of the live-shoe true-count
 // drill: the shoe's running count starts at the system's published IRC and the
@@ -57,6 +58,15 @@ export const DRILL_MODE_LABELS: Readonly<Record<DrillMode, string>> = {
 // notice.
 export function formatSignedCount(value: number): string {
   return value > 0 ? `+${value}` : String(value);
+}
+
+// How far an answered running count landed from the real one: "2 points high",
+// "1 point low". One helper for every surface that grades a count — the drill's
+// feedback, the countdown's, and the table's count check on the way out — since
+// the same miss described two ways reads as two different mistakes. Fractional
+// systems answer in halves, so the noun follows the value rather than the sign.
+export function countDriftLabel(drift: number): string {
+  return `${countOf(Math.abs(drift), 'point')} ${drift > 0 ? 'high' : 'low'}`;
 }
 
 // What the player's own decks estimate would have made of the count.

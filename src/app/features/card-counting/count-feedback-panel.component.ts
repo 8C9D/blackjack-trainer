@@ -11,6 +11,7 @@ import {
   type DeckSpeedDrillResult,
 } from '../../core/models/deck-speed.model';
 import {
+  countDriftLabel,
   deckEstimateEffect,
   formatSignedCount,
   type BetSpreadDrillResult,
@@ -67,6 +68,9 @@ interface RampBand {
           <dt>Correct count</dt>
           <dd>{{ rc.correctRunningCount }}</dd>
         </dl>
+        @if (driftLine(); as line) {
+          <p class="feedback__formula">{{ line }}</p>
+        }
       } @else if (trueCountResult(); as tc) {
         <dl class="feedback__details">
           <dt>Your true count</dt>
@@ -106,6 +110,9 @@ interface RampBand {
             {{ kc.userSaidAdvantage ? 'yes' : 'no' }}
           </dd>
         </dl>
+        @if (driftLine(); as line) {
+          <p class="feedback__formula">{{ line }}</p>
+        }
         <p class="feedback__formula">
           Running count {{ formatSigned(kc.correctRunningCount) }} is
           {{ kc.hasAdvantage ? 'at or above' : 'below' }} the key count
@@ -178,6 +185,9 @@ interface RampBand {
             {{ ds.previousBestMs === null ? '—' : duration(ds.previousBestMs) }}
           </dd>
         </dl>
+        @if (driftLine(); as line) {
+          <p class="feedback__formula">{{ line }}</p>
+        }
         <p class="feedback__formula">
           The burned card was the {{ burnedLabel(ds) }}, worth
           {{ formatSigned(cardValue(ds.burnedCard)) }}. A full deck of this system counts
@@ -259,6 +269,22 @@ export class CountFeedbackPanelComponent {
   });
 
   protected readonly benchmarkMs = DECK_SPEED_BENCHMARK_MS;
+
+  // How far a wrong count landed from the real one, in the same words the
+  // table's count check uses on the way out — it is the same skill and the same
+  // miss, and two numbers side by side leave the subtraction to the trainee.
+  // Null on a correct count, and on the modes whose answer is a true count:
+  // there the deck-estimate line above already accounts for the miss.
+  protected readonly driftLine = computed<string | null>(() => {
+    const r = this.result();
+    if (r.mode === 'true-count' || r.mode === 'bet-spread') return null;
+    const drift =
+      r.mode === 'key-count' || r.mode === 'running-count' || r.mode === 'deck-speed'
+        ? r.userRunningCount - r.correctRunningCount
+        : 0;
+    if (drift === 0) return null;
+    return `Your count came in ${countDriftLabel(drift)} over ${countOf(r.cards.length, 'card')}.`;
+  });
 
   // The estimate is graded on its own (inside ±0.5 or not) and the true count
   // against the shoe's real decks — so the round shows both halves and never

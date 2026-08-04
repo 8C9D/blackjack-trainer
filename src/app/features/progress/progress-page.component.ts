@@ -6,6 +6,7 @@ import { BasicStrategyStatsService } from '../../core/services/basic-strategy-st
 import { BankrollService } from '../../core/services/bankroll.service';
 import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.service';
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
+import { CountDriftService } from '../../core/services/count-drift.service';
 import { DeckEstimationStatsService } from '../../core/services/deck-estimation-stats.service';
 import { DeckSpeedStatsService } from '../../core/services/deck-speed-stats.service';
 import { ShowdownPlayStatsService } from '../../core/services/showdown-play-stats.service';
@@ -169,6 +170,17 @@ const SPOTS_SHOWN = 5;
             Fastest deck counted down: <b>{{ formatDuration(deckSpeedBest()!) }}</b>
           </p>
         }
+        <!-- Accuracy says a count was wrong and never how. A count that lands
+             under nearly every time is dropping the same thing each shoe; one
+             that scatters is being lost and restarted. Named, not diagnosed —
+             the app has no way to tell which card went missing. -->
+        @if (driftShape(); as shape) {
+          <p class="progress__week-note">
+            Your last {{ countOf(shape.rounds, 'count') }}: <b>{{ shape.low }} low</b> ·
+            <b>{{ shape.high }} high</b> · <b>{{ shape.exact }} exact</b>. Missing on the same side
+            every time and missing all over are different problems.
+          </p>
+        }
       </section>
 
       @if (showdown().hands > 0) {
@@ -257,6 +269,7 @@ export class ProgressPageComponent {
   private readonly showdownPlayStats = inject(ShowdownPlayStatsService);
   private readonly showdownStats = inject(ShowdownStatsService);
   private readonly bankrollService = inject(BankrollService);
+  private readonly countDrift = inject(CountDriftService);
   private readonly router = inject(Router);
 
   protected readonly goal = computed(() => this.prefs.prefs().dailyGoal);
@@ -340,6 +353,14 @@ export class ProgressPageComponent {
     // strategy, the indices laid over it, and the insurance call.
     row('Showdown play', this.showdownPlayStats.stats()),
   ]);
+
+  // Which side the counts land on, once there are enough of them for a lean to
+  // be a lean. Every mode that answers a running count feeds it, including the
+  // count carried out of the showdown.
+  protected readonly driftShape = computed(() => {
+    this.countDrift.drifts();
+    return this.countDrift.shape();
+  });
 
   protected readonly winRate = computed(() => {
     const { hands, wins } = this.showdown();
