@@ -11,7 +11,10 @@ import { PracticeHistoryService } from '../../core/services/practice-history.ser
 import { ShowdownStatsService } from '../../core/services/showdown-stats.service';
 import { ProgressPageComponent, weekdayInitial } from './progress-page.component';
 
-type Internals = { onKeyDown(event: KeyboardEvent): void };
+type Internals = {
+  onKeyDown(event: KeyboardEvent): void;
+  weakSpots(): readonly { outstanding: readonly unknown[] }[];
+};
 
 function createPage(): {
   fixture: ComponentFixture<ProgressPageComponent>;
@@ -334,6 +337,47 @@ describe('ProgressPageComponent', () => {
       (fixture.nativeElement.querySelector('.progress__drill') as HTMLButtonElement).click();
 
       expect(navigate).toHaveBeenCalledWith(['/drill', 'deviations'], {
+        queryParams: { review: '1' },
+      });
+    });
+
+    // A bad week can outstand thirty scenarios; listing them all buries the ones
+    // actually costing hands.
+    it('lists only the worst few and counts the rest', () => {
+      const tally = TestBed.inject(MissTallyService);
+      // Seven scenarios, the first missed most, so the order is unambiguous.
+      for (let i = 0; i < 7; i++) {
+        const ref: ScenarioRef = { kind: 'hard', hand: String(12 + i), dealer: '10' };
+        for (let m = 0; m <= 7 - i; m++) tally.record('basic-strategy', ref, false);
+      }
+
+      const { fixture } = createPage();
+      const labels = [...fixture.nativeElement.querySelectorAll('.progress__spots li b')].map((b) =>
+        (b as HTMLElement).textContent!.trim(),
+      );
+      expect(labels).toEqual(['12 vs 10', '13 vs 10', '14 vs 10', '15 vs 10', '16 vs 10']);
+      expect(text(fixture, '.progress__more')).toBe('+2 more this week');
+    });
+
+    it('says nothing about a remainder when everything outstanding is listed', () => {
+      const tally = TestBed.inject(MissTallyService);
+      tally.record('basic-strategy', SIXTEEN_V_TEN, false);
+      const { fixture } = createPage();
+      expect(fixture.nativeElement.querySelector('.progress__more')).toBeNull();
+    });
+
+    // The cut is presentational: the round the card starts still draws from every
+    // outstanding scenario, which is what makes stating the remainder honest.
+    it('still starts a review round over the whole list, not just the shown few', () => {
+      const tally = TestBed.inject(MissTallyService);
+      for (let i = 0; i < 7; i++) {
+        tally.record('basic-strategy', { kind: 'hard', hand: String(12 + i), dealer: '10' }, false);
+      }
+
+      const { fixture, c, navigate } = createPage();
+      expect(c.weakSpots()[0].outstanding).toHaveLength(7);
+      (fixture.nativeElement.querySelector('.progress__drill') as HTMLButtonElement).click();
+      expect(navigate).toHaveBeenCalledWith(['/drill', 'basic-strategy'], {
         queryParams: { review: '1' },
       });
     });
