@@ -25,6 +25,21 @@ struct PracticeDay: Equatable {
     /// and days written before this have none — untimed, not instant.
     var timed: Int = 0
     var millis: Int = 0
+    /// The daily goal in force when this day was last practised. Kept per day
+    /// because a goal is a decision about a day, and judging every past day by
+    /// today's number lets one setting rewrite history: raise the goal and a
+    /// thirty-day streak reads 0, lower it and days you barely practised count.
+    /// Nil on a day written before this was stored, which reads as "whatever the
+    /// goal is now" — exactly what those days did before. Mirrors `PracticeDay`.
+    var goal: Int?
+}
+
+/// A stored goal has to be a whole number of hands to judge a day by. Anything
+/// else — a repaired preference, a hand-edited backup — reads as no goal at all.
+/// Mirrors `plausibleGoal`.
+func plausibleGoal(_ goal: Int?) -> Int? {
+    guard let goal, goal >= 1 else { return nil }
+    return goal
 }
 
 /// Longest a single decision can be and still count as one. Past this the
@@ -84,16 +99,23 @@ final class PracticeHistoryStore: CloudSyncable, ReloadableStore {
     @ObservationIgnored var now: () -> Date = { Date() }
     /// Fired after a local change (so the widget snapshot can refresh).
     @ObservationIgnored var onChange: (() -> Void)?
+    /// The daily goal in force, read at write time rather than passed in by each
+    /// drill: the call sites would be that many chances to forget, and a day with
+    /// no goal falls back to whatever the goal is now — the very thing storing it
+    /// is here to stop. Unset in a spec that does not care.
+    @ObservationIgnored var goalSource: (() -> Int)?
     private(set) var days: [PracticeDay]
 
     init(
         key: String = StatsKeys.practiceHistory,
         defaults: UserDefaults = .standard,
-        cloud: CloudKeyValueStore? = nil
+        cloud: CloudKeyValueStore? = nil,
+        goalSource: (() -> Int)? = nil
     ) {
         self.key = key
         self.defaults = defaults
         self.cloud = cloud
+        self.goalSource = goalSource
         days = Self.load(key: key, defaults: defaults)
     }
 
@@ -115,6 +137,7 @@ final class PracticeHistoryStore: CloudSyncable, ReloadableStore {
         let today = localDateKey(now())
         let won = correct ? 1 : 0
         let millis = plausibleDecisionMs(elapsedMs)
+        let goal = plausibleGoal(goalSource?())
         if let index = days.firstIndex(where: { $0.date == today }) {
             let day = days[index]
             days[index] = PracticeDay(
@@ -123,12 +146,16 @@ final class PracticeHistoryStore: CloudSyncable, ReloadableStore {
                 graded: day.graded + 1,
                 correct: day.correct + won,
                 timed: day.timed + (millis == nil ? 0 : 1),
-                millis: day.millis + (millis ?? 0)
+                millis: day.millis + (millis ?? 0),
+                // The goal in force when the day was last practised: a day whose
+                // goal was raised and then practised again was practised under
+                // the new number.
+                goal: goal ?? day.goal
             )
         } else {
             days.append(PracticeDay(
                 date: today, hands: 1, graded: 1, correct: won,
-                timed: millis == nil ? 0 : 1, millis: millis ?? 0
+                timed: millis == nil ? 0 : 1, millis: millis ?? 0, goal: goal
             ))
         }
         days = prune(days)
@@ -157,7 +184,7 @@ final class PracticeHistoryStore: CloudSyncable, ReloadableStore {
             dots.append(StreakDot(
                 date: date,
                 hands: hands,
-                met: hands >= goal,
+                met: hands >= goalFor(day, current: goal, isToday: back == 0),
                 isToday: back == 0,
                 accuracy: accuracyOf(graded: day?.graded ?? 0, correct: day?.correct ?? 0)
             ))
@@ -197,17 +224,33 @@ final class PracticeHistoryStore: CloudSyncable, ReloadableStore {
         return accuracyOf(graded: graded, correct: correct)
     }
 
+    /// Which goal a day is judged by: today's is the one on the Settings screen —
+    /// the day is still running, and raising the goal is a statement about it —
+    /// but a finished day keeps the goal it was practised under, so changing the
+    /// number cannot un-meet a day that was met. Mirrors `goalFor`.
+    private func goalFor(_ day: PracticeDay?, current: Int, isToday: Bool) -> Int {
+        if isToday { return current }
+        return plausibleGoal(day?.goal) ?? current
+    }
+
+    /// Whether a day reached the goal it is judged by.
+    private func metOn(_ date: String, current: Int, isToday: Bool) -> Bool {
+        let day = dayOn(date)
+        return (day?.hands ?? 0) >= goalFor(day, current: current, isToday: isToday)
+    }
+
     /// Consecutive goal-met days ending today (if today's goal is met) or
     /// yesterday otherwise. Mirrors `streak`.
     func streak(goal: Int) -> Int {
         var count = 0
-        var back = handsOn(dateKeyDaysAgo(0)) >= goal ? 0 : 1
+        var back = metOn(dateKeyDaysAgo(0), current: goal, isToday: true) ? 0 : 1
         // Bounded by the retention window rather than by the data: days past it
         // are pruned, so no real streak can run longer, and the walk cannot spin
         // forever on a goal of zero — which every day in history, stored or not,
         // satisfies. The goal is clamped to at least 1 before it reaches here, so
         // this is a backstop for a caller that stops doing that, not a live path.
-        while back < maxHistoryDays, handsOn(dateKeyDaysAgo(back)) >= goal {
+        while back < maxHistoryDays,
+              metOn(dateKeyDaysAgo(back), current: goal, isToday: back == 0) {
             count += 1
             back += 1
         }
@@ -269,7 +312,8 @@ final class PracticeHistoryStore: CloudSyncable, ReloadableStore {
                 millis: min(
                     timed * maxTimedDecisionMs,
                     (entry["millis"] as? NSNumber)?.intValue ?? 0
-                )
+                ),
+                goal: plausibleGoal((entry["goal"] as? NSNumber)?.intValue)
             )
         }
     }
@@ -307,11 +351,15 @@ final class PracticeHistoryStore: CloudSyncable, ReloadableStore {
     /// The stored shape, shared by the local save and the cloud push so the two
     /// cannot carry different fields.
     private static func payload(_ days: [PracticeDay]) -> [String: Any] {
-        ["days": days.map {
-            [
-                "date": $0.date, "hands": $0.hands, "graded": $0.graded,
-                "correct": $0.correct, "timed": $0.timed, "millis": $0.millis
-            ] as [String: Any]
+        ["days": days.map { day in
+            var entry: [String: Any] = [
+                "date": day.date, "hands": day.hands, "graded": day.graded,
+                "correct": day.correct, "timed": day.timed, "millis": day.millis
+            ]
+            // Omitted rather than written as 0 on a day that has none, so a
+            // browser reading this file sees the same absence iOS does.
+            if let goal = day.goal { entry["goal"] = goal }
+            return entry
         }]
     }
 }

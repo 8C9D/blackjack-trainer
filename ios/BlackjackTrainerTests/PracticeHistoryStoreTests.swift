@@ -360,6 +360,7 @@ struct PracticeHistoryPaceTests {
     @Test func writesExactlyTheFieldsTheWebStoreReads() throws {
         let defaults = freshDefaults()
         let s = store(defaults, now: { Self.base() })
+        s.goalSource = { 20 }
         s.recordHand(correct: true, elapsedMs: 2500)
         let data = try #require(defaults.data(forKey: StatsKeys.practiceHistory))
         let root = try #require(
@@ -367,6 +368,94 @@ struct PracticeHistoryPaceTests {
         )
         #expect(Array(root.keys) == ["days"])
         let day = try #require((root["days"] as? [[String: Any]])?.first)
-        #expect(day.keys.sorted() == ["correct", "date", "graded", "hands", "millis", "timed"])
+        #expect(
+            day.keys.sorted()
+                == ["correct", "date", "goal", "graded", "hands", "millis", "timed"]
+        )
+    }
+
+    // The streak reads as history, and judging every past day by the number
+    // currently on the Settings screen let one setting rewrite it.
+
+    /// One seeded day: how far back it was, how many hands it took, and the goal
+    /// it was practised under (nil for a day written before that was stored).
+    private struct SeededDay {
+        let back: Int
+        let hands: Int
+        var goal: Int?
+    }
+
+    private func seedWithGoals(_ defaults: UserDefaults, _ entries: [SeededDay]) {
+        let days = entries.map { entry -> [String: Any] in
+            let date = Calendar.current.date(
+                byAdding: .day, value: -entry.back, to: Self.base()
+            ) ?? Self.base()
+            var day: [String: Any] = ["date": localDateKey(date), "hands": entry.hands]
+            if let goal = entry.goal { day["goal"] = goal }
+            return day
+        }
+        let data = try? JSONSerialization.data(withJSONObject: ["days": days])
+        defaults.set(data, forKey: StatsKeys.practiceHistory)
+    }
+
+    @Test func aStreakSurvivesRaisingTheGoal() {
+        let defaults = freshDefaults()
+        seedWithGoals(defaults, [
+            SeededDay(back: 1, hands: 20, goal: 20),
+            SeededDay(back: 2, hands: 20, goal: 20),
+            SeededDay(back: 3, hands: 20, goal: 20)
+        ])
+        let s = store(defaults, now: { Self.base() })
+        #expect(s.streak(goal: 50) == 3)
+        #expect(s.last7(goal: 50).filter(\.met).count == 3)
+    }
+
+    @Test func loweringTheGoalDoesNotHandBackADayThatWasNeverMet() {
+        let defaults = freshDefaults()
+        seedWithGoals(defaults, [
+            SeededDay(back: 1, hands: 6, goal: 20),
+            SeededDay(back: 2, hands: 20, goal: 20)
+        ])
+        let s = store(defaults, now: { Self.base() })
+        #expect(s.streak(goal: 5) == 0)
+    }
+
+    /// Today is still running, so raising the goal is a statement about it too.
+    @Test func todayIsJudgedByTheGoalThatIsSetNow() {
+        let defaults = freshDefaults()
+        seedWithGoals(defaults, [SeededDay(back: 0, hands: 20, goal: 20)])
+        let s = store(defaults, now: { Self.base() })
+        #expect(s.streak(goal: 50) == 0)
+        #expect(s.last7(goal: 50)[6].met == false)
+        #expect(s.last7(goal: 20)[6].met == true)
+    }
+
+    /// Days written before the goal was stored read as judged by whatever it is
+    /// now — exactly what every day did before.
+    @Test func aDayThatStoredNoGoalFallsBackToTheCurrentOne() {
+        let defaults = freshDefaults()
+        seedWithGoals(defaults, [
+            SeededDay(back: 1, hands: 20),
+            SeededDay(back: 2, hands: 20)
+        ])
+        let s = store(defaults, now: { Self.base() })
+        #expect(s.streak(goal: 20) == 2)
+        #expect(s.streak(goal: 50) == 0)
+    }
+
+    @Test func aGoalAHandEditedFileCouldNotHaveMeantIsIgnored() {
+        let defaults = freshDefaults()
+        seedWithGoals(defaults, [SeededDay(back: 1, hands: 20, goal: 0)])
+        let s = store(defaults, now: { Self.base() })
+        #expect(s.streak(goal: 20) == 1)
+        #expect(s.streak(goal: 50) == 0)
+    }
+
+    @Test func recordsTheGoalInForceWhenTheDayWasLastPractised() {
+        let defaults = freshDefaults()
+        let s = store(defaults, now: { Self.base() })
+        s.goalSource = { 20 }
+        s.recordHand(correct: true)
+        #expect(s.days.first?.goal == 20)
     }
 }

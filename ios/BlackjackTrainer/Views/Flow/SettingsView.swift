@@ -109,7 +109,10 @@ struct SettingsView: View {
                     + "fresh hand. On, a hit is followed by the card it draws and the "
                     + "decision that follows — where doubling, splitting and surrender are "
                     + "already gone, and a deviation index still applies because it is "
-                    + "written against a total."
+                    + "written against a total. A split is followed through too: each half "
+                    + "is dealt a second card and played in turn, re-splitting up to four "
+                    + "hands, with split aces taking one card each. A hand out of a split "
+                    + "cannot surrender or insure, and doubles only under DAS."
             )
             .font(.footnote)
             .foregroundStyle(Theme.muted)
