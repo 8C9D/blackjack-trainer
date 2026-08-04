@@ -78,14 +78,27 @@ struct ShowdownBetGradingTests {
     }
 
     /// A carried +3 with one deck left is TC +3, where the spread calls for 4.
-    @Test func namesTheBetTheSpreadCalledFor() throws {
+    ///
+    /// Both numbers, because a headline is only ever shown on a miss and the
+    /// correct bet on its own read as a statement about the chips actually out —
+    /// on a screen that says "wagered 8" once the hand settles. The bet-spread
+    /// drill has always named both, and this is the same decision.
+    @Test func namesTheBetPlacedAsWellAsTheOneTheSpreadCalledFor() throws {
         let h = try placing(1, entryRunningCount: 3)
         let verdict = try #require(h.model.lastPlay)
         #expect(!verdict.correct)
-        #expect(verdict.headline == "4 units was the bet.")
+        #expect(verdict.headline == "4 units was the bet, not 1.")
         let saysBand = verdict.reason.contains("TC +3")
         #expect(saysBand)
         #expect(h.model.roundMisplays.first == "Bet: 4 at TC +3, not 1")
+    }
+
+    /// "1 units" is the reason the counted-noun helper exists.
+    @Test func agreesTheUnitNounWithTheBetTheSpreadCalledFor() throws {
+        let h = try placing(4, entryRunningCount: 0)
+        let verdict = try #require(h.model.lastPlay)
+        #expect(!verdict.correct)
+        #expect(verdict.headline == "1 unit was the bet, not 4.")
     }
 
     @Test func recordsTheCallInTheBetSpreadAccuracy() throws {
