@@ -834,3 +834,26 @@ Five slices, found by the usual question — where does the app do something and
   The card names the worst five and states the remainder ("+23 more this week"); the cut is presentational only, which is what makes stating it honest — the review round it starts still draws from all of them.
 - **Validation.** +21 unit tests (1382), +9 Swift (515), +1 E2E (97), and a contrast check of the new action in both themes, since the route sweep never sees a card that needs a miss tally to exist.
   Corrupt-storage probing over every route found nothing to fix: a negative goal, an unknown rule set, and an unknown counting system are all repaired on load, with no page errors.
+
+### Post-roadmap continued: what the counting side did and would not say (2026-08-04)
+
+Four slices and a review pass, found by the usual question - where does the app do something and never say anything about it - asked this time of the counting drills and the reference screen.
+
+- **The decks estimate was graded and never priced.** A live-shoe round asks for a half-deck estimate, scores it inside a ±0.5 band, and grades the true count against the shoe's real remainder - so both halves are on screen and nothing said what the one did to the other, which is the only reason to estimate decks at all.
+  The panel now does that division too ("Your estimate: -2 ÷ 1 deck = true count -2"), says when the answer given is exactly that, and names an estimate that lands on the same true count anyway as costing nothing: how far out an estimate is only matters against the running count it divides.
+  In bet-spread mode it is priced in units, which is what a deck estimate is for.
+- **The chart knew nothing about the hands you keep missing.** The weak-spot tally has always known which cells are costing hands, and the page a trainee reads to look one up said nothing.
+  An outstanding scenario now wears a ring on the grid - a shape, not a seventh colour, since the six actions have spent the palette - with its count in the cell's own label, and the deviation list says "missed 3 of 7 this week" in words, having room for them.
+  Each trainer marks its own chart; a surrender rule looks itself up under the hard total it is written over, because that is how the drill files it; insurance carries no mark, being filed against the hand that was dealt rather than the offer.
+  Marked, not ranked, and still read-only: the counts and the review round belong to Progress.
+- **A refused write was swallowed in silence.** `localStorage` is the app's only persistence and it can reject a write - quota exhausted, or storage blocked in private browsing - and nothing downstream can tell: the drill goes on grading, the session bar goes on counting, and Progress goes on showing what was stored before.
+  A trainee could practise a whole evening into nothing and be told by nobody.
+  The write cannot be recovered, so the storage layer now stops the app pretending it happened: a notice above every screen, sticky for the session because it reports something already lost, linking to the backup export - which reads what is stored and writes it to a file rather than to the browser.
+  No iOS counterpart: `UserDefaults` writes do not fail this way.
+- **Accuracy said a count was wrong and never how.** The two ways to be wrong want different practice - a count that lands under nearly every time is dropping the same thing each shoe; one that scatters is being lost and restarted - and the app had the figure on every miss it ever graded and threw it away.
+  Every wrong count now says how far and which way, in the words the table's count check already used (one helper behind both, since the same miss described twice reads as two mistakes), and the last 20 answers are kept as signed distances under `blackjack-count-drift` for the Progress line: "Your last 20 counts: 14 low · 2 high · 4 exact."
+  Named, not diagnosed - the app cannot tell which card went missing - and silent under five rounds, where a lean is not yet a lean.
+- **The review pass caught two sentences that had started lying.** "The count you would have played on" is only true where the answer agrees with the estimate; said of an answer that landed on the shoe's own count - which is marked _correct_ - it contradicted the verdict two lines above, so it is now claimed only where it holds.
+  And "over 20 cards" is only true where the round's cards are the whole count: a key-count round carries the shoe's prior, so its drift spans every card since the shuffle and the line drops the figure rather than naming the wrong one.
+- **Validation.** +52 unit tests (1434), +25 Swift (540), +1 E2E (98), each new surface walked in the browser and rendered on the phone in both themes.
+  Two iOS files were split at their type-body limits by the work rather than beyond it (the counting feedback's paragraph modes, the Progress screen's showdown ledger), and the drift is recorded in the flow model beside the other things a graded rep feeds rather than inside the drill that only knows its own round.
