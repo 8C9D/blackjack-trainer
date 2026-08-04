@@ -25,6 +25,7 @@ extension FlowPrefs {
                 doubleAfterSplit: boolValue(opts["doubleAfterSplit"]) ?? d.options.doubleAfterSplit,
                 lateSurrender: boolValue(opts["lateSurrender"]) ?? d.options.lateSurrender
             ),
+            playHandsOut: boolValue(p["playHandsOut"]) ?? d.playHandsOut,
             deviations: mergedDeviations(dev, defaults: d.deviations),
             counting: mergedCounting(cnt, defaults: d.counting, systems: systems)
         )
@@ -41,6 +42,7 @@ extension FlowPrefs {
                 "doubleAfterSplit": options.doubleAfterSplit,
                 "lateSurrender": options.lateSurrender
             ],
+            "playHandsOut": playHandsOut,
             "deviations": [
                 "practiceMode": practiceModeString(deviations.practiceMode),
                 "trueCountSource": deviations.trueCountSource.rawValue,

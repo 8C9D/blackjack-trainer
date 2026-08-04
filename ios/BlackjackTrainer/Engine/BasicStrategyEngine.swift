@@ -109,7 +109,18 @@ struct BasicStrategyEngine {
     }
 
     func evaluate(_ input: EngineInput, userAction: Action) -> EvaluationResult {
-        let decision = decide(input)
+        grade(decide(input), userAction: userAction)
+    }
+
+    /// The same grading, for a hand already under way: the drill plays a hand out
+    /// once the chart says hit, and every decision after the first is a
+    /// `decidePlay` question — the hand may be three cards deep and doubling,
+    /// splitting and surrender are gone. Mirrors the web `evaluatePlay`.
+    func evaluatePlay(_ input: PlayInput, userAction: Action) -> EvaluationResult {
+        grade(decidePlay(input), userAction: userAction)
+    }
+
+    private func grade(_ decision: StrategyDecision, userAction: Action) -> EvaluationResult {
         if userAction == .insurance {
             let reason = "Basic strategy never takes insurance (or even money) — the bet has a "
                 + "negative expectation. The correct action here is \(decision.action.label): "

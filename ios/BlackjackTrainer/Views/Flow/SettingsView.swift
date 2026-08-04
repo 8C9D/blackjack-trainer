@@ -38,6 +38,7 @@ struct SettingsView: View {
                 dailyGoalSection
                 appearanceSection
                 tableRulesSection
+                basicStrategySection
                 DeviationsSection()
                 countingSection
                 BackupSection()
@@ -95,6 +96,21 @@ struct SettingsView: View {
             }
             Toggle("Double After Split (DAS)", isOn: doubleAfterSplitBinding)
             Toggle("Late Surrender", isOn: lateSurrenderBinding)
+        }
+    }
+
+    // MARK: Basic Strategy
+
+    private var basicStrategySection: some View {
+        Section("Basic Strategy") {
+            Toggle("Play hands out", isOn: playHandsOutBinding)
+            Text(
+                "Off, the drill asks the opening decision and deals a fresh hand. "
+                    + "On, a hit is followed by the card it draws and the decision that "
+                    + "follows — where doubling, splitting and surrender are already gone."
+            )
+            .font(.footnote)
+            .foregroundStyle(Theme.muted)
         }
     }
 
@@ -366,6 +382,13 @@ extension SettingsView {
             set: { value in
                 model.flowPrefs.updateCounting { $0.showdownSpots = Showdown.clampSpots(value) }
             }
+        )
+    }
+
+    private var playHandsOutBinding: Binding<Bool> {
+        Binding(
+            get: { prefs.playHandsOut },
+            set: { model.flowPrefs.setPlayHandsOut($0) }
         )
     }
 

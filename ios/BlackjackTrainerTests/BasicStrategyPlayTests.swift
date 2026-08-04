@@ -153,4 +153,29 @@ struct BasicStrategyPlayTests {
         #expect(engine.decidePlay(play([.ace, .five, .five], vs: .ten, .s17, s17))
             .action == .stand)
     }
+
+    // The drill grades a played-out hand through this, so it has to carry the
+    // same verdict shape `evaluate` does.
+
+    private var hard16: PlayInput {
+        play([.ten, .four, .two], vs: .ten, .s17, Self.optionSets[0])
+    }
+
+    @Test func evaluatePlayGradesAContinuedDecision() {
+        let right = engine.evaluatePlay(hard16, userAction: .hit)
+        #expect(right.correct)
+        #expect(right.userAction == .hit)
+        #expect(right.reason.contains("Hard 16 vs dealer 10 under S17: hit"))
+
+        let wrong = engine.evaluatePlay(hard16, userAction: .stand)
+        #expect(!wrong.correct)
+        #expect(wrong.action == .hit)
+    }
+
+    @Test func evaluatePlayKeepsTheInsuranceVerdict() {
+        let result = engine.evaluatePlay(hard16, userAction: .insurance)
+        #expect(!result.correct)
+        #expect(result.source == .insurance)
+        #expect(result.reason.contains("never takes insurance"))
+    }
 }

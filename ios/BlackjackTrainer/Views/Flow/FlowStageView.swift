@@ -4,9 +4,26 @@ import SwiftUI
 /// player hand, with a caller-supplied line (question or miss rule) beneath.
 /// Mirrors the web `flow-stage` component. Purely presentational.
 struct FlowStageView<Line: View>: View {
-    let player: TwoCardHand
+    /// One card or many: a hand played out grows past the opening two.
+    let player: [Card]
     let dealer: Card
     @ViewBuilder let line: () -> Line
+
+    init(player: [Card], dealer: Card, @ViewBuilder line: @escaping () -> Line) {
+        self.player = player
+        self.dealer = dealer
+        self.line = line
+    }
+
+    init(player: TwoCardHand, dealer: Card, @ViewBuilder line: @escaping () -> Line) {
+        self.init(player: player.cards, dealer: dealer, line: line)
+    }
+
+    /// A hand played out can reach five or six cards. Shrink them past two so a
+    /// four-card hand still reads as one row on a phone.
+    private var cardWidth: CGFloat {
+        player.count > 2 ? 64 : 88
+    }
 
     var body: some View {
         VStack(spacing: 6) {
@@ -19,9 +36,12 @@ struct FlowStageView<Line: View>: View {
                 CardImage(dealer, width: 44)
             }
             .padding(.bottom, 20)
-            HStack(spacing: 12) {
-                CardImage(player.first, width: 88)
-                CardImage(player.second, width: 88)
+            // Indexed rather than keyed by card: the trainers deal with
+            // replacement, so the same card can appear twice in one hand.
+            HStack(spacing: player.count > 2 ? 8 : 12) {
+                ForEach(Array(player.enumerated()), id: \.offset) { _, card in
+                    CardImage(card, width: cardWidth)
+                }
             }
             line()
                 .padding(.top, 20)

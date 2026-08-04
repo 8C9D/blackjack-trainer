@@ -131,6 +131,20 @@ struct FlowPrefsStoreTests {
         #expect(FlowPrefs.merged(from: ["dailyGoal": 15]).counting.showdownCountCheck)
     }
 
+    /// The other default-on setting: the opening decision alone is the chart, not
+    /// the game, so a hit is followed unless the trainee says otherwise.
+    @Test func playsHandsOutUnlessExplicitlyTurnedOff() {
+        #expect(!FlowPrefs.merged(from: ["playHandsOut": false]).playHandsOut)
+        #expect(FlowPrefs.merged(from: ["playHandsOut": "no"]).playHandsOut)
+        // Prefs written before the setting existed play hands out.
+        #expect(FlowPrefs.merged(from: ["dailyGoal": 15]).playHandsOut)
+    }
+}
+
+/// The counting half of the same merge: system-dependent modes, shoe-sized
+/// rounds, and the bet spread. Split from `FlowPrefsStoreTests` to stay inside
+/// the suite's type-body limit.
+struct FlowPrefsCountingMergeTests {
     @Test func fallsBackFromAnUnknownCountingSystem() {
         let counting = FlowPrefs.merged(from: [
             "counting": ["systemId": "missing-system"]

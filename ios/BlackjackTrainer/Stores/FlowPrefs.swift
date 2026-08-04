@@ -97,6 +97,11 @@ struct FlowPrefs: Equatable {
     var theme: ThemePref
     var ruleSet: RuleSet
     var options: EngineOptions
+    /// Play a hand out in the Basic Strategy drill: a correct hit is followed by
+    /// the next card and the next decision, until the hand stands or ends. On by
+    /// default — a hit is the one answer that leaves another question behind it,
+    /// and the opening decision alone is the chart, not the game.
+    var playHandsOut: Bool
     var deviations: DeviationPrefs
     var counting: CountingPrefs
 }
@@ -113,6 +118,7 @@ extension FlowPrefs {
         theme: .system,
         ruleSet: .s17,
         options: .default,
+        playHandsOut: true,
         deviations: DeviationPrefs(
             practiceMode: .allHands,
             trueCountSource: .random,
@@ -191,6 +197,11 @@ final class FlowPrefsStore: CloudSyncable, ReloadableStore {
 
     func setOptions(_ options: EngineOptions) {
         prefs.options = options
+        persist()
+    }
+
+    func setPlayHandsOut(_ playHandsOut: Bool) {
+        prefs.playHandsOut = playHandsOut
         persist()
     }
 

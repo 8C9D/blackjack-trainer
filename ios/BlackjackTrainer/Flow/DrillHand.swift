@@ -16,6 +16,20 @@ struct HandQuestion: Equatable {
     let dealer: String
 }
 
+/// The question line for a hand as it stands. Past two cards there is no pair to
+/// name and the ace may have softened, so the line is the N-card total the chart
+/// is about to be read at.
+func handQuestion(_ player: [Card], dealerUpcard: Card) -> HandQuestion {
+    guard player.count == 2 else {
+        return HandQuestion(
+            prefix: Hand.isSoft(player) ? "Soft" : "Hard",
+            value: String(Hand.total(player)),
+            dealer: normalizeUpcardKey(dealerUpcard)
+        )
+    }
+    return handQuestion(TwoCardHand(player[0], player[1]), dealerUpcard: dealerUpcard)
+}
+
 func handQuestion(_ player: TwoCardHand, dealerUpcard: Card) -> HandQuestion {
     let dealer = normalizeUpcardKey(dealerUpcard)
     if let pairKey = HandClassification.pairKey(player) {
@@ -40,6 +54,25 @@ func handQuestion(_ player: TwoCardHand, dealerUpcard: Card) -> HandQuestion {
 /// Late Surrender — except where the caller's engine can expect SUR regardless
 /// (the deviations surrender overlay), via `surrenderAlways`. Mirrors
 /// `legalActionsFor`.
+/// Once a card has been drawn, hit and stand are the whole of it: double, split
+/// and surrender are first-two-card actions, and insurance was decided before the
+/// hand was played. The grid says so by going dead rather than by hiding them,
+/// which is the rule the drill is teaching.
+func legalActionsFor(
+    _ player: [Card],
+    dealerUpcard: Card,
+    options: EngineOptions,
+    surrenderAlways: Bool = false
+) -> [Action] {
+    guard player.count == 2 else { return [.hit, .stand] }
+    return legalActionsFor(
+        TwoCardHand(player[0], player[1]),
+        dealerUpcard: dealerUpcard,
+        options: options,
+        surrenderAlways: surrenderAlways
+    )
+}
+
 func legalActionsFor(
     _ player: TwoCardHand,
     dealerUpcard: Card,
