@@ -4,85 +4,6 @@ import Testing
 
 /// Mirrors `basic-strategy-drill-page.component.spec.ts`: session setup, grade-in-
 /// place / auto-advance, the miss pause, poka-yoke, recording, and session end.
-/// Shared fixture for the Basic Strategy drill suites: a model wired to fresh
-/// stores and a manual scheduler, plus the two scenarios the loops drill.
-@MainActor
-enum DrillFixture {
-    struct Harness {
-        let model: BasicStrategyDrillModel
-        let scheduler: ManualFlowAdvanceScheduler
-        let prefs: FlowPrefsStore
-        let history: PracticeHistoryStore
-        let missTally: MissTallyStore
-        let stats: SessionStatsStore
-    }
-
-    /// Hard 7 (3+4) vs 6 always hits under S17 — "hit" is correct, "stand" wrong.
-    static var hitScenario: Scenario {
-        Scenario(
-            player: TwoCardHand(card(.three), card(.four, .hearts)),
-            dealerUpcard: card(.six, .clubs)
-        )
-    }
-
-    /// Hard 19 (10+9) vs 6 always stands, which ends the hand in one decision.
-    static var standScenario: Scenario {
-        Scenario(
-            player: TwoCardHand(card(.ten), card(.nine, .hearts)),
-            dealerUpcard: card(.six, .clubs)
-        )
-    }
-
-    static func card(_ rank: Rank, _ suit: Suit = .spades) -> Card {
-        Card(rank: rank, suit: suit)
-    }
-
-    /// A generator pinned to one rank: `generateCard` reads rank and suit off one
-    /// call each, so a value inside the rank's 1/13 slice picks it exactly.
-    static func generator(drawing rank: Rank?) -> CardGenerator {
-        guard let rank, let index = Card.allRanks.firstIndex(of: rank) else {
-            return CardGenerator()
-        }
-        let value = (Double(index) + 0.5) / Double(Card.allRanks.count)
-        return CardGenerator(random: { value })
-    }
-
-    static func makeHarness(
-        dailyGoal: Int = 20,
-        options: EngineOptions = .default,
-        seedWeak: ScenarioRef? = nil,
-        playHandsOut: Bool = true,
-        draws: Rank? = nil
-    ) -> Harness {
-        let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)") ?? .standard
-        let prefs = FlowPrefsStore(defaults: defaults)
-        prefs.setDailyGoal(Double(dailyGoal))
-        prefs.setOptions(options)
-        prefs.setPlayHandsOut(playHandsOut)
-        let history = PracticeHistoryStore(defaults: defaults)
-        let missTally = MissTallyStore(defaults: defaults)
-        if let ref = seedWeak { missTally.record(.basicStrategy, ref: ref, correct: false) }
-        let stats = SessionStatsStore(key: StatsKeys.basicStrategy, defaults: defaults)
-        let scheduler = ManualFlowAdvanceScheduler()
-        let model = BasicStrategyDrillModel(
-            engine: TestEngines.shared.basicStrategy,
-            generator: generator(drawing: draws),
-            stats: stats,
-            prefs: prefs,
-            history: history,
-            missTally: missTally,
-            scheduler: scheduler,
-            advanceDelay: .zero
-        )
-        return Harness(
-            model: model, scheduler: scheduler, prefs: prefs,
-            history: history, missTally: missTally, stats: stats
-        )
-    }
-}
-
-/// Mirrors `basic-strategy-drill-page.component.spec.ts`: session setup, grade-in-
-/// place / auto-advance, the miss pause, poka-yoke, recording, and session end.
 @MainActor
 struct BasicStrategyDrillModelTests {
     private var hitScenario: Scenario {
@@ -103,6 +24,46 @@ struct BasicStrategyDrillModelTests {
         seedWeak: ScenarioRef? = nil
     ) -> DrillFixture.Harness {
         DrillFixture.makeHarness(dailyGoal: dailyGoal, options: options, seedWeak: seedWeak)
+    }
+
+    // The app has graded every rep and never said how long it took, which at a
+    // table is half of whether the chart is any use to you.
+
+    @Test func timesTheAnswerAndReportsTheRoundMedian() {
+        let h = DrillFixture.makeHarness(dailyGoal: 1)
+        h.model.deal(DrillFixture.standScenario)
+        h.clock.advance(2.5)
+        h.model.answer(.stand)
+        #expect(h.history.paceLast7() == 2.5)
+        #expect(h.model.session.medianSeconds == 2.5)
+    }
+
+    @Test func restartsTheClockForEachQuestionIncludingAPlayedOutOne() {
+        let h = DrillFixture.makeHarness(draws: .seven)
+        h.model.deal(DrillFixture.hitScenario)
+        h.clock.advance(1)
+        h.model.answer(.hit)
+        h.scheduler.fire() // the continuation deals a card
+        h.clock.advance(3)
+        h.model.answer(.stand)
+        // 1s then 3s — the second decision is not timed from the first deal.
+        #expect(h.history.paceLast7() == 2)
+    }
+
+    /// A hand you walked away from is not a hand you were slow on.
+    @Test func leavesAnAbandonedHandOutOfTheFigureEntirely() {
+        let h = DrillFixture.makeHarness()
+        h.model.deal(DrillFixture.standScenario)
+        h.clock.advance(2)
+        h.model.answer(.stand)
+        h.scheduler.fire()
+
+        h.model.deal(DrillFixture.standScenario)
+        h.clock.advance(Double(maxTimedDecisionMs) / 1000 + 1)
+        h.model.answer(.stand)
+
+        #expect(h.history.paceLast7() == 2)
+        #expect(h.model.handsToday == 2)
     }
 
     // MARK: session setup

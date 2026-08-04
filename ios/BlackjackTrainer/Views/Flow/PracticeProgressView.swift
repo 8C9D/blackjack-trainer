@@ -36,6 +36,17 @@ struct PracticeProgressView: View {
         )
     }
 
+    private var weekPace: Double? {
+        model.practiceHistory.paceLast7()
+    }
+
+    private var paceTrend: ProgressTrend? {
+        ProgressSummary.paceTrend(
+            thisWeek: weekPace,
+            weekBefore: model.practiceHistory.paceLast7(weeksBack: 1)
+        )
+    }
+
     private var rows: [ProgressStatRow] {
         [
             ProgressSummary.row("Basic Strategy", model.basicStrategyStats.stats),
@@ -76,6 +87,8 @@ struct PracticeProgressView: View {
                     totalHands: totalHands,
                     weekAccuracy: weekAccuracy,
                     trend: trend,
+                    weekPace: weekPace,
+                    paceTrend: paceTrend,
                     rows: rows,
                     showdown: model.showdownStats.stats,
                     bankroll: model.showdownBankroll.state,
@@ -107,6 +120,11 @@ struct ProgressBodyView: View {
     /// nothing to say about how the week went.
     var weekAccuracy: Int?
     var trend: ProgressTrend?
+    /// Nil until something has been timed. Reported, never judged — the app has
+    /// no published number to hold a trainee to, so the direction against their
+    /// own week before is the whole claim.
+    var weekPace: Double?
+    var paceTrend: ProgressTrend?
     let rows: [ProgressStatRow]
     let showdown: ShowdownStats
     let bankroll: BankrollState
@@ -177,6 +195,22 @@ struct ProgressBodyView: View {
                         Text(trend.label)
                             .font(.system(size: 12))
                             .foregroundStyle(trendColor(trend.direction))
+                    }
+                }
+                .font(.system(size: 14))
+                .foregroundStyle(Theme.midInk)
+                .accessibilityElement(children: .combine)
+            }
+            // The other half of table-readiness: a chart answered perfectly and
+            // slowly is not a chart you can play.
+            if let weekPace {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(FlowDoneView.secondsLabel(weekPace))s a hand").fontWeight(.semibold)
+                        + Text(" this week")
+                    if let paceTrend {
+                        Text(paceTrend.label)
+                            .font(.system(size: 12))
+                            .foregroundStyle(trendColor(paceTrend.direction))
                     }
                 }
                 .font(.system(size: 14))

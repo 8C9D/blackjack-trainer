@@ -102,6 +102,22 @@ enum ProgressSummary {
         )
     }
 
+    /// How this week's pace compares with the one before it. Faster is the good
+    /// direction here, which is why this cannot reuse `trend`: there, up is
+    /// better; here, down is. Mirrors the web `paceTrend`.
+    static func paceTrend(thisWeek: Double?, weekBefore: Double?) -> ProgressTrend? {
+        guard let thisWeek, let weekBefore else { return nil }
+        guard thisWeek != weekBefore else {
+            return ProgressTrend(direction: .level, label: "level with the week before")
+        }
+        let faster = thisWeek < weekBefore
+        let before = FlowDoneView.secondsLabel(weekBefore)
+        return ProgressTrend(
+            direction: faster ? .up : .down,
+            label: "\(faster ? "faster" : "slower") than \(before)s the week before"
+        )
+    }
+
     /// The bars carry only height, so the accessibility label is where a day's
     /// numbers actually live.
     static func dayLabel(_ bar: ProgressDayBar) -> String {
