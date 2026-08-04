@@ -704,8 +704,13 @@ The Flow shell adds three keys of its own:
 | Practice history | `blackjack-practice-history` | per-day hands / graded / correct counts (local calendar dates, pruned past ~400 days) |
 | Miss tally       | `blackjack-miss-tally`       | per-scenario attempt/miss day tallies + clear streak (Basic Strategy, Deviations)     |
 
-Every store loads tolerantly (a malformed or partial payload degrades to defaults field by field) and persists silently through quota / private-browsing errors.
+Every store loads tolerantly: a malformed or partial payload degrades to defaults field by field, and a read the browser refuses yields the same defaults, because nothing is lost by it.
 The home screen's accuracy chips read the lifetime stats stores; the card-counting card combines the running-count and true-count stores.
+
+**A write the browser refuses is said out loud.** `localStorage` can reject a write — quota exhausted, or storage blocked outright in private browsing — and the failure is invisible from inside the app: the drill goes on grading, the session bar goes on counting, and Progress goes on showing whatever was stored before, so a trainee can practise a whole evening into nothing and be told by nobody.
+The write cannot be recovered, so the one thing the storage layer can do is stop the app pretending it happened: a refused write raises a notice above every screen ("This browser is not saving your practice") that links to the backup export, which reads what _is_ stored and writes it to a file rather than to the browser.
+It is sticky for the session and not dismissible, because it reports something already lost — a later write succeeding does not bring the earlier one back.
+The iOS app has no counterpart: `UserDefaults` writes do not fail this way.
 
 Note: v2 dropped the v1 key (`blackjack-trainer:stats:v1`); `main.ts` runs
 `cleanupLegacyStatsKeys()` on boot to wipe it. If you were running v1 locally,

@@ -6,6 +6,7 @@ import { Subject } from 'rxjs';
 import { App } from './app';
 import { APP_ROUTES } from './app.routes';
 import { PAGE_RELOAD } from './core/services/app-update.service';
+import { resetStorageWriteRefused, writeJson } from './core/services/storage';
 
 describe('App', () => {
   let versionUpdates: Subject<VersionEvent>;
@@ -58,6 +59,39 @@ describe('App', () => {
     (compiled.querySelector('.update__later') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(compiled.querySelector('.update')).toBeNull();
+  });
+
+  // Nothing else in the app can tell: the drill goes on grading, the session bar
+  // goes on counting, and Progress goes on showing what was stored before.
+  describe('when the browser refuses to save', () => {
+    afterEach(() => {
+      resetStorageWriteRefused();
+    });
+
+    const refuseAWrite = () => {
+      const original = Storage.prototype.setItem;
+      Storage.prototype.setItem = () => {
+        throw new Error('quota');
+      };
+      try {
+        writeJson('app-spec-key', { hands: 1 });
+      } finally {
+        Storage.prototype.setItem = original;
+      }
+    };
+
+    it('says so above every screen, and offers the backup that can still be taken', () => {
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.lost')).toBeNull();
+
+      refuseAWrite();
+      fixture.detectChanges();
+      const notice = fixture.nativeElement.querySelector('.lost') as HTMLElement;
+      expect(notice.textContent).toContain('not saving your practice');
+      expect(notice.getAttribute('role')).toBe('alert');
+      expect(notice.querySelector('a')?.getAttribute('href')).toBe('/settings');
+    });
   });
 
   it('reloads into an available update from the prompt', () => {

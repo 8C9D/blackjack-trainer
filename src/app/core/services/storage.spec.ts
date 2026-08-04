@@ -1,4 +1,10 @@
-import { coerceNumericRecord, readJson, writeJson } from './storage';
+import {
+  coerceNumericRecord,
+  readJson,
+  resetStorageWriteRefused,
+  storageWriteRefused,
+  writeJson,
+} from './storage';
 
 const KEY = 'storage-spec-key';
 
@@ -88,6 +94,52 @@ describe('storage helpers', () => {
       } finally {
         Storage.prototype.setItem = original;
       }
+    });
+  });
+
+  // A refused write is practice the trainee will not get back, and it is
+  // invisible from inside the drill — which goes on grading and counting.
+  describe('storageWriteRefused', () => {
+    const refusing = (fn: () => void) => {
+      const original = Storage.prototype.setItem;
+      Storage.prototype.setItem = () => {
+        throw new Error('quota');
+      };
+      try {
+        fn();
+      } finally {
+        Storage.prototype.setItem = original;
+      }
+    };
+
+    beforeEach(() => {
+      resetStorageWriteRefused();
+    });
+
+    it('is false while writes are being accepted', () => {
+      writeJson(KEY, { hands: 3 });
+      expect(storageWriteRefused()).toBe(false);
+    });
+
+    it('is set by a write the browser refuses', () => {
+      refusing(() => writeJson(KEY, { hands: 3 }));
+      expect(storageWriteRefused()).toBe(true);
+    });
+
+    // A later write succeeding does not bring the lost one back.
+    it('stays set once something has been lost', () => {
+      refusing(() => writeJson(KEY, { hands: 3 }));
+      writeJson(KEY, { hands: 4 });
+      expect(storageWriteRefused()).toBe(true);
+    });
+
+    it('is not set by a read the browser refuses, which loses nothing', () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('private mode');
+      });
+      readJson(KEY, 'fallback', () => 'coerced');
+      vi.restoreAllMocks();
+      expect(storageWriteRefused()).toBe(false);
     });
   });
 });

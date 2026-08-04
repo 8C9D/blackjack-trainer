@@ -15,6 +15,34 @@
     sans-serif;
 }
 
+// The "nothing is being saved" notice. In the flow of the page, above every
+// screen, and the only thing in the app that colours a whole band: the trainee
+// is about to lose work and every other surface will keep telling them they are
+// not.
+.lost {
+  display: grid;
+  gap: 0.15rem;
+  padding: calc(0.75rem + env(safe-area-inset-top)) max(1rem, env(safe-area-inset-left)) 0.75rem
+    max(1rem, env(safe-area-inset-right));
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--bad) 16%, var(--surface));
+  border-bottom: 1px solid var(--bad);
+
+  a {
+    justify-self: start;
+    margin-top: 0.15rem;
+    color: var(--accent-ink);
+
+    &:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+  }
+}
+
 .update {
   position: fixed;
   z-index: 20;
