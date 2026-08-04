@@ -57,8 +57,16 @@ interface WeakSpotGroup {
   // The trainer's route segment, so the card can start a review round in it.
   readonly id: TalliedTrainer;
   readonly outstanding: readonly WeakSpot[];
+  // The worst few, which is what the card lists, and the count it did not.
+  readonly shown: readonly WeakSpot[];
+  readonly hidden: number;
   readonly cleared: readonly WeakSpot[];
 }
+
+// How many outstanding scenarios a card names before it collapses to a count.
+// Enough to be a work list, few enough that the worst ones stay legible — the
+// review round the card starts is not capped by this.
+const SPOTS_SHOWN = 5;
 
 // Everything the app has been quietly recording, in one place: the week, each
 // trainer's lifetime accuracy, the showdown ledger, and the scenarios still
@@ -196,13 +204,20 @@ interface WeakSpotGroup {
           <h2 class="progress__heading">{{ group.trainer }} — this week</h2>
           @if (group.outstanding.length > 0) {
             <ul class="progress__spots">
-              @for (spot of group.outstanding; track spot.label) {
+              @for (spot of group.shown; track spot.label) {
                 <li>
                   <b>{{ spot.label }}</b>
                   <span>{{ spotDetail(spot) }}</span>
                 </li>
               }
             </ul>
+            <!-- A bad week can outstand thirty scenarios, and a card that lists
+                 them all buries the ones actually costing hands. The list is
+                 worst-first, so the cut is at the bottom — and it is stated,
+                 never silent, because the round below still drills all of them. -->
+            @if (group.hidden > 0) {
+              <p class="progress__more">+{{ group.hidden }} more this week</p>
+            }
             <!-- Naming a weakness on a read-only screen leaves the trainee to
                  go and hope it comes up. This is the Done screen's "Drill my
                  misses" reachable from where the list actually lives. -->
@@ -340,12 +355,17 @@ export class ProgressPageComponent {
         { trainer: 'Deviations', id: 'deviations' },
       ] as const
     )
-      .map(({ trainer, id }) => ({
-        trainer,
-        id,
-        outstanding: this.missTally.weakSpots(id),
-        cleared: this.missTally.clearedSpots(id),
-      }))
+      .map(({ trainer, id }) => {
+        const outstanding = this.missTally.weakSpots(id);
+        return {
+          trainer,
+          id,
+          outstanding,
+          shown: outstanding.slice(0, SPOTS_SHOWN),
+          hidden: Math.max(0, outstanding.length - SPOTS_SHOWN),
+          cleared: this.missTally.clearedSpots(id),
+        };
+      })
       .filter((group) => group.outstanding.length > 0 || group.cleared.length > 0);
   });
 
