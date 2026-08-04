@@ -186,6 +186,13 @@ describe('ProgressPageComponent', () => {
       expect(labels[6]).toBe('2 hands, 50% correct');
       expect(labels[0]).toBe('0 hands');
     });
+
+    it('uses singular grammar when a day contains one hand', () => {
+      TestBed.inject(PracticeHistoryService).recordHand(true);
+      const { fixture } = createPage();
+      const labels = fixture.nativeElement.querySelectorAll('.progress__day .sr-only');
+      expect((labels[6] as HTMLElement).textContent!.trim()).toBe('1 hand, 100% correct');
+    });
   });
 
   describe('the trainer table', () => {

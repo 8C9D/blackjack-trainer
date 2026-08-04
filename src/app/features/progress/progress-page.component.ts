@@ -330,7 +330,7 @@ export class ProgressPageComponent {
   // The bars carry only height, so the screen-reader text is where a day's
   // numbers actually live.
   protected dayLabel(day: DayBar): string {
-    const hands = `${day.hands} hands`;
+    const hands = `${day.hands} ${day.hands === 1 ? 'hand' : 'hands'}`;
     return day.accuracy === null ? hands : `${hands}, ${day.accuracy}% correct`;
   }
 

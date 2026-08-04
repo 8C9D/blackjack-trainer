@@ -8,7 +8,7 @@ import type { StreakDot } from '../core/services/practice-history.service';
 @Component({
   selector: 'app-streak-dots',
   template: `
-    <div class="dots" role="img" [attr.aria-label]="streakLabel()">
+    <div class="dots" role="img" [attr.aria-label]="historyLabel()">
       @for (dot of dots(); track dot.date) {
         <i
           class="dots__dot"
@@ -17,7 +17,9 @@ import type { StreakDot } from '../core/services/practice-history.service';
         ></i>
       }
     </div>
-    <p class="dots__label">{{ streakLabel() }}</p>
+    <!-- The richer label above includes the same streak phrase; keep the
+         visible caption from being announced twice. -->
+    <p class="dots__label" aria-hidden="true">{{ streakLabel() }}</p>
   `,
   styleUrl: './streak-dots.component.scss',
 })
@@ -29,5 +31,15 @@ export class StreakDotsComponent {
     const n = this.streak();
     if (n === 0) return 'No streak yet';
     return `${n}-day streak`;
+  });
+
+  protected readonly historyLabel = computed(() => {
+    const days = this.dots()
+      .map(
+        (dot) =>
+          `${dot.date}${dot.isToday ? ' (today)' : ''}: ${dot.hands} ${dot.hands === 1 ? 'hand' : 'hands'}, ${dot.met ? 'goal met' : 'goal not met'}`,
+      )
+      .join('; ');
+    return `${this.streakLabel()}. Last 7 days: ${days}`;
   });
 }

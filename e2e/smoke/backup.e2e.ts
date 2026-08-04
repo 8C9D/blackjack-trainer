@@ -55,7 +55,7 @@ test.describe('practice-data backup', () => {
 
     // And the practice history came back with the settings, not just the goal.
     await page.goto('/');
-    await expect(page.getByRole('img', { name: '1 of 42 hands today' })).toBeVisible();
+    await expect(page.getByRole('progressbar', { name: '1 of 42 hands today' })).toBeVisible();
   });
 
   test('a file that is not a backup is refused, and changes nothing', async ({

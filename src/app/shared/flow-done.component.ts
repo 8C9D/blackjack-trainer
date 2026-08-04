@@ -26,11 +26,12 @@ const CLEARED_SHOWN = 3;
   imports: [GoalRingComponent],
   template: `
     <section #root class="done" tabindex="-1" aria-label="Session complete">
+      <h1 class="sr-only">Session complete</h1>
       <app-goal-ring [value]="hands()" [goal]="target()" [label]="ringLabel()" />
       <p class="done__peak">
         Best streak: <b>{{ bestStreak() }}</b>
         @if (accuracy() !== null) {
-          · {{ accuracy() }}% today
+          · {{ accuracy() }}% this round
         }
         @if (medianSeconds() !== null) {
           · {{ medianSeconds() }}s a hand

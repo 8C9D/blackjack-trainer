@@ -9,8 +9,11 @@ import { Component, computed, input } from '@angular/core';
       class="ring"
       [class.ring--met]="met()"
       [style.--ring-fill.deg]="fillDegrees()"
-      role="img"
+      role="progressbar"
       [attr.aria-label]="value() + ' of ' + goal() + ' ' + label()"
+      [attr.aria-valuenow]="boundedValue()"
+      aria-valuemin="0"
+      [attr.aria-valuemax]="boundedGoal()"
     >
       <div class="ring__inner">
         <b class="ring__count">{{ value() }}/{{ goal() }}</b>
@@ -27,9 +30,16 @@ export class GoalRingComponent {
 
   protected readonly met = computed(() => this.value() >= this.goal());
 
+  // ARIA requires value-now to stay inside min/max even if a caller briefly
+  // supplies an invalid value while preferences are being repaired.
+  protected readonly boundedGoal = computed(() => Math.max(1, this.goal()));
+  protected readonly boundedValue = computed(() =>
+    Math.max(0, Math.min(this.value(), this.boundedGoal())),
+  );
+
   protected readonly fillDegrees = computed(() => {
     const goal = this.goal();
     if (goal <= 0) return 360;
-    return Math.min(360, Math.round((this.value() / goal) * 360));
+    return Math.max(0, Math.min(360, Math.round((this.value() / goal) * 360)));
   });
 }
