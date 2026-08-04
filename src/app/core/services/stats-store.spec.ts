@@ -14,6 +14,22 @@ describe('StatsStore', () => {
     localStorage.clear();
   });
 
+  // Eight of the sixteen keys the backup file moves between the browser and the
+  // phone hold this one shape, so it is a cross-platform contract rather than
+  // this store's private business — the same reason `PracticeDay` and the miss
+  // tally pin their own key sets. A field added on one side and not the other
+  // is dropped silently on the trip, on every trainer at once.
+  it('writes exactly the fields the iOS store reads', () => {
+    const store = new StatsStore(TEST_KEY);
+    store.recordAttempt(true);
+    expect(Object.keys(JSON.parse(localStorage.getItem(TEST_KEY)!)).sort()).toEqual([
+      'attempts',
+      'correct',
+      'longestStreak',
+      'streak',
+    ]);
+  });
+
   it('starts with all zeros when storage is empty', () => {
     const store = new StatsStore(TEST_KEY);
     expect(store.stats()).toEqual({

@@ -410,4 +410,47 @@ describe('MissTallyService', () => {
       expect(localStorage.getItem(MISS_TALLY_KEY)).toBe('{}');
     });
   });
+
+  // The backup file moves this payload between the browser and the phone, so
+  // the stored shape is a cross-platform contract rather than this store's
+  // private business — the same reason `PracticeDay` pins its own key set. A
+  // field added on one side and not the other is dropped silently on the trip,
+  // and here that means the weak spots that decide what a review round drills
+  // arrive on the other device meaning something else.
+  describe('the stored shape', () => {
+    it('writes exactly the fields the iOS store reads', () => {
+      const s = createService(() => current);
+      s.record('deviations', HARD_16_V_10, false, 2);
+      const stored = JSON.parse(localStorage.getItem(MISS_TALLY_KEY)!);
+
+      expect(Object.keys(stored)).toEqual(['deviations']);
+      const tally = stored.deviations[scenarioKey(HARD_16_V_10)];
+      expect(Object.keys(tally).sort()).toEqual(['days', 'missedCounts', 'ref', 'streak']);
+      expect(Object.keys(tally.ref).sort()).toEqual(['dealer', 'hand', 'kind']);
+      expect(Object.keys(tally.days[0]).sort()).toEqual(['attempts', 'date', 'misses']);
+    });
+
+    // Basic Strategy has no count in its question, so it records none. The
+    // absence has to be an absence on both platforms rather than a `[]` on one
+    // and a missing key on the other, or a round trip invents a difference.
+    it('still names missedCounts for a trainer that records none', () => {
+      const s = createService(() => current);
+      s.record('basic-strategy', HARD_16_V_10, false);
+      const stored = JSON.parse(localStorage.getItem(MISS_TALLY_KEY)!);
+      const tally = stored['basic-strategy'][scenarioKey(HARD_16_V_10)];
+      expect(Object.keys(tally).sort()).toEqual(['days', 'missedCounts', 'ref', 'streak']);
+      expect(tally.missedCounts).toEqual([]);
+    });
+
+    // The trainer keys are the other half of the contract: they are the object
+    // keys of the payload, so renaming one on either side loses that trainer's
+    // whole weak list on the trip.
+    it('keys trainers by the names both platforms use', () => {
+      const s = createService(() => current);
+      s.record('basic-strategy', HARD_16_V_10, false);
+      s.record('deviations', SOFT_18_V_9, false);
+      const stored = JSON.parse(localStorage.getItem(MISS_TALLY_KEY)!);
+      expect(Object.keys(stored).sort()).toEqual(['basic-strategy', 'deviations']);
+    });
+  });
 });

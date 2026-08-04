@@ -19,6 +19,21 @@ describe('ShowdownStatsService', () => {
     expect(SHOWDOWN_STATS_KEY).not.toBe(CARD_COUNTING_STATS_KEY);
   });
 
+  // The backup file moves this payload between the browser and the phone, so
+  // the stored shape is a cross-platform contract; a field added on one side
+  // and not the other is dropped silently on the trip.
+  it('writes exactly the fields the iOS store reads', () => {
+    const service = TestBed.inject(ShowdownStatsService);
+    service.record('win', true);
+    expect(Object.keys(JSON.parse(localStorage.getItem(SHOWDOWN_STATS_KEY)!)).sort()).toEqual([
+      'blackjacks',
+      'hands',
+      'losses',
+      'pushes',
+      'wins',
+    ]);
+  });
+
   it('starts empty', () => {
     const service = TestBed.inject(ShowdownStatsService);
     expect(service.stats()).toEqual({
