@@ -1,5 +1,26 @@
 import { COUNTING_SYSTEMS, countingSystemById } from '../../data/counting-systems';
-import { DEVIATION_INDEX_SYSTEM_ID, deviationIndexNote } from './deviation.model';
+import {
+  DEVIATION_INDEX_SYSTEM_ID,
+  describeDeviationThreshold,
+  deviationIndexNote,
+  type DeviationDirection,
+  type DeviationRule,
+} from './deviation.model';
+
+function rule(direction: DeviationDirection, index: number): DeviationRule {
+  return {
+    ruleSet: 'S17',
+    category: 'hard',
+    playerHand: '16',
+    playerHandLabel: 'Hard 16',
+    dealerUpcard: '10',
+    index,
+    direction,
+    basicAction: 'H',
+    deviationAction: 'S',
+    source: 'spec fixture',
+  };
+}
 
 describe('deviationIndexNote', () => {
   it('says nothing when the trainee counts the system the indices are written for', () => {
@@ -30,5 +51,23 @@ describe('deviationIndexNote', () => {
     const note = deviationIndexNote(countingSystemById('ko'))!;
     expect(note).toContain('unbalanced');
     expect(note).toContain('no true count');
+  });
+});
+
+describe('describeDeviationThreshold', () => {
+  it('describes an inclusive positive lower bound', () => {
+    expect(describeDeviationThreshold(rule('at-or-above', 3))).toBe('at true count +3 or higher');
+  });
+
+  it('describes an inclusive negative upper bound', () => {
+    expect(describeDeviationThreshold(rule('at-or-below', -1))).toBe('at true count -1 or lower');
+  });
+
+  it("keeps the chart's exclusive positive-zero wording unambiguous", () => {
+    expect(describeDeviationThreshold(rule('positive', 0))).toBe('at any positive true count');
+  });
+
+  it("keeps the chart's exclusive negative-zero wording unambiguous", () => {
+    expect(describeDeviationThreshold(rule('negative', 0))).toBe('at any negative true count');
   });
 });
