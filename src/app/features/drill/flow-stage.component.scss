@@ -33,6 +33,11 @@
     color: var(--muted);
   }
 
+  // Sits directly above the hand it names, close enough to read as its caption.
+  &__hand-label {
+    margin-bottom: 0.1rem;
+  }
+
   &__hand {
     display: flex;
     flex-wrap: wrap;

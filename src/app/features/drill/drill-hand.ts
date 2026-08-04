@@ -56,6 +56,22 @@ export function handQuestion(player: readonly Card[], dealerUpcard: Card): HandQ
   };
 }
 
+// Most a pair splits to: three splits, four hands — the common casino cap, and
+// the same one the showdown's table already enforces per box.
+export const MAX_SPLIT_HANDS = 4;
+
+// What a split has taken away from the hand in front of you. Insurance was
+// settled on the deal and surrender is a first-two-cards action of the hand the
+// dealer dealt, so both are gone for good; doubling comes back only under DAS;
+// and a re-split needs the deal to be under its four-hand cap.
+export interface SplitContext {
+  readonly fromSplit: boolean;
+  readonly canSplitAgain: boolean;
+}
+
+// A hand nobody has split: every action is still on the table.
+export const UNSPLIT: SplitContext = { fromSplit: false, canSplitAgain: true };
+
 // Which of the six actions are answerable for this hand. Hit/Stand/Double are
 // always live on an initial two-card hand; Split needs a pair; Insurance
 // needs a dealer Ace. Surrender needs Late Surrender in the table rules —
@@ -66,19 +82,37 @@ export function handQuestion(player: readonly Card[], dealerUpcard: Card): HandQ
 // and surrender are first-two-card actions, and insurance was decided before
 // the hand was played. The grid says so by going dead rather than by hiding
 // them, which is the rule the drill is teaching.
+//
+// A hand that came out of a split is two cards again, but not the hand that was
+// dealt: `split` is what the table has left it.
 export function legalActionsFor(
   player: readonly Card[],
   dealerUpcard: Card,
   options: EngineOptions,
   surrenderAlways = false,
+  split: SplitContext = UNSPLIT,
 ): readonly Action[] {
   if (player.length !== 2) return ['H', 'S'];
   const opening: readonly [Card, Card] = [player[0], player[1]];
-  const legal: Action[] = ['H', 'S', 'D'];
-  if (classifyAsPair(opening) !== null) legal.push('P');
-  if (surrenderAlways || options.lateSurrender) legal.push('SUR');
-  if (isAce(dealerUpcard)) legal.push('INS');
+  const legal: Action[] = ['H', 'S'];
+  if (!split.fromSplit || options.doubleAfterSplit) legal.push('D');
+  if (classifyAsPair(opening) !== null && split.canSplitAgain) legal.push('P');
+  if (!split.fromSplit && (surrenderAlways || options.lateSurrender)) legal.push('SUR');
+  if (!split.fromSplit && isAce(dealerUpcard)) legal.push('INS');
   return legal;
+}
+
+// Split the hand at `index` into two, each keeping one of its cards. The second
+// card of each is dealt as that hand is reached, exactly as a dealer deals it —
+// so a hand waiting behind the one in play holds a single card. A re-split
+// lands its halves in place, which keeps the hands in the order they are played.
+export function splitHandAt(
+  hands: readonly (readonly Card[])[],
+  index: number,
+): readonly (readonly Card[])[] {
+  const hand = hands[index];
+  if (hand === undefined || hand.length !== 2) return hands;
+  return [...hands.slice(0, index), [hand[0]], [hand[1]], ...hands.slice(index + 1)];
 }
 
 // Session target: the next multiple of the daily goal beyond the hands
