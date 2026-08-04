@@ -55,6 +55,10 @@ test.describe('navigation & routing', () => {
     await expect(page).toHaveTitle(/Progress/);
     await expect(page.getByRole('rowheader', { name: 'Basic Strategy' })).toBeVisible();
     await expect(page.getByText(/hands all time/)).toContainText('1 hands all time');
+    // The decision was timed too. Which figure it reports is a wall-clock
+    // question a browser test cannot pin, so this asserts only that the app
+    // measured the hand rather than what it took.
+    await expect(page.getByText(/s a hand this week/)).toBeVisible();
   });
 
   test('pre-Flow trainer URLs redirect into the flow', async ({ page }) => {

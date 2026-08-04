@@ -100,6 +100,23 @@ interface WeakSpotGroup {
             }
           </p>
         }
+        <!-- The other half of table-readiness: a chart answered perfectly and
+             slowly is not a chart you can play. Reported, never judged — the
+             app has no published number to hold a trainee to, so the direction
+             against their own week before is the whole claim. -->
+        @if (weekPace() !== null) {
+          <p class="progress__accuracy">
+            <b>{{ weekPace() }}s a hand</b> this week
+            @if (paceTrend(); as t) {
+              <span
+                class="progress__trend"
+                [class.progress__good]="t.direction === 'up'"
+                [class.progress__bad]="t.direction === 'down'"
+                >{{ t.label }}</span
+              >
+            }
+          </p>
+        }
         <p class="progress__week-note">
           {{ streakLabel() }} · goal {{ goal() }} hands/day · {{ totalHands() }} hands all time
         </p>
@@ -241,6 +258,26 @@ export class ProgressPageComponent {
     if (now === before) return { direction: 'level', label: 'level with the week before' };
     const direction = now > before ? 'up' : 'down';
     return { direction, label: `${direction} from ${before}% the week before` };
+  });
+
+  protected readonly weekPace = computed(() => {
+    this.history.days();
+    return this.history.paceLast7();
+  });
+
+  // Faster is the good direction here, which is why this cannot reuse the
+  // accuracy trend: there, up is better; here, down is.
+  protected readonly paceTrend = computed<Trend | null>(() => {
+    this.history.days();
+    const now = this.weekPace();
+    const before = this.history.paceLast7(1);
+    if (now === null || before === null) return null;
+    if (now === before) return { direction: 'level', label: 'level with the week before' };
+    const faster = now < before;
+    return {
+      direction: faster ? 'up' : 'down',
+      label: `${faster ? 'faster' : 'slower'} than ${before}s the week before`,
+    };
   });
 
   protected readonly streakLabel = computed(() => {

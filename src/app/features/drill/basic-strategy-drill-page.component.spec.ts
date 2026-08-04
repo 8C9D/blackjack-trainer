@@ -17,7 +17,10 @@ import {
   MissTallyService,
   type ScenarioRef,
 } from '../../core/services/miss-tally.service';
-import { PracticeHistoryService } from '../../core/services/practice-history.service';
+import {
+  MAX_TIMED_DECISION_MS,
+  PracticeHistoryService,
+} from '../../core/services/practice-history.service';
 import { BasicStrategyDrillPageComponent } from './basic-strategy-drill-page.component';
 import { handQuestion } from './drill-hand';
 import { FLOW_ADVANCE_DELAY_MS } from './drill-timing';
@@ -476,6 +479,58 @@ describe('BasicStrategyDrillPageComponent', () => {
       expect(TestBed.inject(MissTallyService).weakSpotFor('basic-strategy')).toEqual(
         expect.objectContaining({ label: '7 vs 6', misses: 1, attempts: 2 }),
       );
+    });
+  });
+
+  // The app has graded every rep and never said how long it took, which at a
+  // table is half of whether the chart is any use to you.
+  describe('the decision clock', () => {
+    it('times the answer and reports the round median on the Done screen', () => {
+      TestBed.inject(FlowPrefsService).setDailyGoal(1);
+      const { fixture, c } = createPage();
+      deal(c, STAND_SCENARIO);
+
+      vi.advanceTimersByTime(2500);
+      c.answer('S');
+      vi.advanceTimersByTime(ADVANCE_MS);
+      fixture.detectChanges();
+
+      expect(c.phase()).toBe('done');
+      expect(TestBed.inject(PracticeHistoryService).paceLast7()).toBe(2.5);
+      expect(
+        (fixture.nativeElement.querySelector('.done__peak') as HTMLElement).textContent,
+      ).toContain('2.5s a hand');
+    });
+
+    it('restarts the clock for each question, including a played-out one', () => {
+      const { c } = createPage();
+      deal(c, HIT_SCENARIO);
+      TestBed.inject(CardGeneratorService).setRandomSource(() => 0.5); // a 7
+      vi.advanceTimersByTime(1000);
+      c.answer('H');
+      vi.advanceTimersByTime(ADVANCE_MS); // the continuation deals a card
+
+      vi.advanceTimersByTime(3000);
+      c.answer('S');
+      // 1.0s then 3.0s — the second decision is not timed from the first deal.
+      expect(TestBed.inject(PracticeHistoryService).paceLast7()).toBe(2);
+    });
+
+    // A hand you walked away from is not a hand you were slow on.
+    it('leaves an abandoned hand out of the figure entirely', () => {
+      const { c } = createPage();
+      deal(c, STAND_SCENARIO);
+      vi.advanceTimersByTime(2000);
+      c.answer('S');
+      vi.advanceTimersByTime(ADVANCE_MS);
+
+      deal(c, STAND_SCENARIO);
+      vi.advanceTimersByTime(MAX_TIMED_DECISION_MS + 1000);
+      c.answer('S');
+
+      const history = TestBed.inject(PracticeHistoryService);
+      expect(history.paceLast7()).toBe(2);
+      expect(history.handsToday()).toBe(2);
     });
   });
 

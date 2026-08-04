@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 
 import {
   MAX_HISTORY_DAYS,
+  MAX_TIMED_DECISION_MS,
   PRACTICE_HISTORY_KEY,
   PracticeHistoryService,
   localDateKey,
@@ -104,8 +105,8 @@ describe('PracticeHistoryService', () => {
       const s = createService(() => current);
 
       expect(s.days()).toEqual([
-        { date: '2026-07-09', hands: 1, graded: 0, correct: 0 },
-        { date: '2026-07-10', hands: 6, graded: 0, correct: 0 },
+        { date: '2026-07-09', hands: 1, graded: 0, correct: 0, timed: 0, millis: 0 },
+        { date: '2026-07-10', hands: 6, graded: 0, correct: 0, timed: 0, millis: 0 },
       ]);
       expect(s.handsToday()).toBe(6);
     });
@@ -171,8 +172,89 @@ describe('PracticeHistoryService', () => {
         JSON.stringify({ days: [{ date: '2026-07-10', hands: 4, graded: 9, correct: 9 }] }),
       );
       const s = createService(() => current);
-      expect(s.days()[0]).toEqual({ date: '2026-07-10', hands: 4, graded: 4, correct: 4 });
+      expect(s.days()[0]).toEqual({
+        date: '2026-07-10',
+        hands: 4,
+        graded: 4,
+        correct: 4,
+        timed: 0,
+        millis: 0,
+      });
       expect(s.accuracyLast7()).toBe(100);
+    });
+  });
+
+  // Accuracy says whether the practice is working; the pace says whether it
+  // would survive a table, where the dealer is waiting.
+  describe('paceLast7', () => {
+    it('is null before anything is timed', () => {
+      const s = createService(() => current);
+      s.recordHand(true);
+      expect(s.paceLast7()).toBeNull();
+    });
+
+    it('averages the timed decisions to a tenth of a second', () => {
+      const s = createService(() => current);
+      s.recordHand(true, 2000);
+      s.recordHand(false, 3000);
+      s.recordHand(true, 4000);
+      expect(s.paceLast7()).toBe(3);
+    });
+
+    // A hand you walked away from is not a hand you were slow on.
+    it('ignores a reading past the cap, or one the clock ran backwards on', () => {
+      const s = createService(() => current);
+      s.recordHand(true, 2000);
+      s.recordHand(true, MAX_TIMED_DECISION_MS + 1);
+      s.recordHand(true, -5);
+      s.recordHand(true, 0);
+      expect(s.paceLast7()).toBe(2);
+      expect(s.days()[0].timed).toBe(1);
+      expect(s.days()[0].graded).toBe(4);
+    });
+
+    it('separates the weeks, so last week can be compared with this one', () => {
+      const s = createService(() => current);
+      const lastWeek = new Date(BASE);
+      lastWeek.setDate(lastWeek.getDate() - 8);
+      current = lastWeek;
+      s.recordHand(true, 5000);
+      current = BASE;
+      s.recordHand(true, 2500);
+      expect(s.paceLast7()).toBe(2.5);
+      expect(s.paceLast7(1)).toBe(5);
+    });
+
+    it('reads a day written before decisions were timed as untimed, not instant', () => {
+      localStorage.setItem(
+        PRACTICE_HISTORY_KEY,
+        JSON.stringify({ days: [{ date: localDateKey(BASE), hands: 9, graded: 9, correct: 9 }] }),
+      );
+      const s = createService(() => current);
+      expect(s.paceLast7()).toBeNull();
+    });
+
+    it('clamps a stored day to a pace the cap allows', () => {
+      localStorage.setItem(
+        PRACTICE_HISTORY_KEY,
+        JSON.stringify({
+          days: [
+            {
+              date: localDateKey(BASE),
+              hands: 2,
+              graded: 2,
+              correct: 2,
+              timed: 9,
+              millis: 999_999_999,
+            },
+          ],
+        }),
+      );
+      const s = createService(() => current);
+      const day = s.days()[0];
+      expect(day.timed).toBe(2);
+      expect(day.millis).toBe(2 * MAX_TIMED_DECISION_MS);
+      expect(s.paceLast7()).toBe(MAX_TIMED_DECISION_MS / 1000);
     });
   });
 
