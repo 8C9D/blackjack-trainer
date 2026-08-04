@@ -817,3 +817,20 @@ Same question as the last review pass — not "does the feature work" but "what 
 - **The backup file is a cross-platform contract, and both new fields ride in it.** Neither backup implementation knows any store's shape (the web copies the `blackjack-` namespace as strings; iOS copies each key's JSON bytes), so `missedCounts`, `timed` and `millis` move between browser and phone untouched — but only because both platforms write the same field names.
   That was true by review alone, so each side now pins the practice-day key set in a test that names the other platform as the reason.
 - **Validation.** +3 unit tests (1338) and +2 Swift (506).
+
+### Post-roadmap continued: what the weak-spot list knew and would not say (2026-08-04)
+
+Five slices, found by the usual question — where does the app do something and never say anything about it — plus the accessibility pass that was already in the tree.
+
+- **The flow's chrome had no name for a screen reader.** The goal ring and the session bar are `progressbar`s now, with clamped `aria-valuenow`/`max` so a repaired preference cannot emit a value outside its own range; the streak row's seven dots carry per-day volume and goal state rather than only the streak headline; the cards on the table are labelled groups; and the Done screen has a heading, which the route sweep could never have caught because it only measures a screen's opening state.
+  The Done screen also said "% today" for a figure bound to `session.accuracy()` — the round's, not the day's — on both platforms.
+- **A deviation was filed with the counts it was missed at, and they were never shown.** `missedCounts` has always fed the re-deal (16 vs 10 comes back at a count that beat you) and appeared nowhere on screen.
+  Progress and the Done screen now read "missed 3 of 7 at TC -1, +2", deduplicated and low to high, because a hand missed on both sides of its index is two different mistakes and the label carries neither. Basic Strategy files no counts, so it says none.
+- **Progress named your weaknesses on a read-only screen.** The card that lists what is costing you hands now starts the review round the Done screen has always offered, via `?review=1` (iOS: `FlowRoute.drill(_:review:)`), where every hand comes from the weak list — a deviation at a count it was actually missed at.
+  Any other value of the parameter is an ordinary round: a typo should not silently narrow the practice.
+- **Every counted noun now agrees with its count.** "1 hands all time", "1 blackjacks", and — in the line that has to look like arithmetic — "÷ 1 decks".
+  One helper (`countOf`, mirrored in `Engine/Text.swift`) replaces three hand-rolled ternaries and the two local ones that already had it right. Two tests had pinned the wrong copy.
+- **A bad week made that same card unreadable.** Twenty-eight outstanding scenarios rendered twenty-eight rows and pushed the page half again past the viewport, burying the ones actually costing hands.
+  The card names the worst five and states the remainder ("+23 more this week"); the cut is presentational only, which is what makes stating it honest — the review round it starts still draws from all of them.
+- **Validation.** +21 unit tests (1382), +9 Swift (515), +1 E2E (97), and a contrast check of the new action in both themes, since the route sweep never sees a card that needs a miss tally to exist.
+  Corrupt-storage probing over every route found nothing to fix: a negative goal, an unknown rule set, and an unknown counting system are all repaired on load, with no page errors.
