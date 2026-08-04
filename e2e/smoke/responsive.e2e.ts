@@ -26,3 +26,37 @@ test.describe('responsive key-cap hints', () => {
     }
   });
 });
+
+// The chart's cells became tap targets when they learned to start a round, so
+// they owe a minimum size — and a fixed table layout is the one thing a unit
+// test cannot measure.
+test.describe('chart cells as tap targets', () => {
+  test('every cell clears 24px on a phone', async ({ page }) => {
+    await page.setViewportSize(PHONE);
+    await page.goto('/chart');
+
+    const cells = page.locator('.chart__cell--button');
+    await expect(cells.first()).toBeVisible();
+    const boxes = await cells.evaluateAll((nodes) =>
+      nodes.map((n) => {
+        const r = n.getBoundingClientRect();
+        return { w: r.width, h: r.height };
+      }),
+    );
+    expect(boxes.length).toBeGreaterThan(100);
+    expect(Math.min(...boxes.map((b) => b.h))).toBeGreaterThanOrEqual(24);
+    expect(Math.min(...boxes.map((b) => b.w))).toBeGreaterThanOrEqual(24);
+  });
+
+  // Ten columns fitting without a sideways scroll is the reason the chart spells
+  // surrender 'R' at all; the wider cells must not have cost that.
+  test('and the grid still fits without scrolling sideways', async ({ page }) => {
+    await page.setViewportSize(PHONE);
+    await page.goto('/chart');
+    await expect(page.locator('.chart__cell--button').first()).toBeVisible();
+    const overflows = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth,
+    );
+    expect(overflows).toBe(false);
+  });
+});

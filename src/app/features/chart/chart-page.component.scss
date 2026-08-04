@@ -166,9 +166,27 @@
   font-family: inherit;
   cursor: pointer;
   background: transparent;
+  // Every cell is a tap target now, so it owes the 24px minimum. Height is this
+  // element's to give; width belongs to the table's columns, which a fixed
+  // layout will not stretch — the narrow-screen rule below buys what room there
+  // is by spending the page's own margins.
+  min-height: 24px;
 
-  &:hover {
-    filter: brightness(0.94);
+  // A pointer that can hover; a finger cannot, and would otherwise leave the
+  // last cell tapped looking pressed.
+  @media (hover: hover) {
+    &:hover {
+      filter: brightness(0.94);
+    }
+  }
+
+  // The page's own ring, not the browser's: a UA outline is a blue that has no
+  // contrast guarantee against six action colours in two themes.
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    // Inside the cell: the grid's 2px gutters leave no room outside it, and an
+    // offset ring would sit under the neighbouring cell.
+    outline-offset: -2px;
   }
 }
 
@@ -251,8 +269,16 @@
   text-decoration-color: var(--muted);
   cursor: pointer;
 
-  &:hover {
-    text-decoration-color: var(--accent);
+  @media (hover: hover) {
+    &:hover {
+      text-decoration-color: var(--accent);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 }
 
@@ -331,5 +357,27 @@
   &:focus-visible {
     outline: 2px solid var(--focus);
     outline-offset: 2px;
+  }
+}
+
+// Ten columns and a row header have to leave every cell 24px across, which on a
+// small phone means spending the page's own margins on them. It is enough from
+// about 355px up; below that the columns are narrower than the minimum and stay
+// that way, because a strategy chart you have to scroll sideways is not one you
+// can read — the same call that spells surrender 'R' so ten columns fit at all.
+@media (max-width: 420px) {
+  .chart {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .chart__section {
+    padding-left: 0.6rem;
+    padding-right: 0.6rem;
+  }
+
+  .chart__corner,
+  .chart__hand {
+    width: 2.6rem;
   }
 }
