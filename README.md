@@ -502,6 +502,9 @@ no-ops at runtime but document the chart cell.
 - **Installable PWA** — production builds ship the Angular service worker (`ngsw-config.json`; registered when the app goes stable), so the app works offline and installs from the browser.
   Once a complete new version is cached, a dismissible prompt reloads into it without force-activating a mixed bundle.
   The manifest carries 192/512 maskable icons derived from the iOS app icon, plus an `apple-touch-icon`; the page shells pad both safe-area insets so the top bars stay clear of the status bar in iOS standalone mode.
+  **The card art is prefetched at install, not cached as it happens to be dealt.** It sat in the `lazy` asset group with the rest of the images, which meant a fresh install cached none of it: install the app, board a plane, open a drill, and the shell loaded and the drill ran while every card was a blank rectangle with its alt text spilling over it — the hand unreadable, which is the whole of what a trainer shows.
+  A deck is 53 files and ~1.9 MB (~650 KB over the wire), and that is simply the price of the offline claim; the worker registers only once the app is stable, so the fetch never competes with first paint.
+  `e2e/smoke/offline.e2e.ts` holds the line, and is the one spec that needs the real worker: it runs against `E2E_SERVER=dist` and skips rather than silently passing where no worker is registered.
 
 ## iOS app
 
