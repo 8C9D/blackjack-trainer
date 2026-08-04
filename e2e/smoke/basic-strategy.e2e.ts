@@ -20,6 +20,25 @@ test.describe('basic strategy drill', () => {
     await expect(progress).toHaveAttribute('aria-valuenow', '1');
   });
 
+  // A hit is followed by the card it draws, so the decision that lands next is
+  // one the drill could not ask before: three cards deep, where only hit and
+  // stand are still on the table.
+  test('a correct hit plays the hand out', async ({ page }) => {
+    // Seeded so the opening hand is a hard 7 vs 10 — a hit, and the card it
+    // draws leaves a hard 12 that still owes a decision rather than busting.
+    await page.goto('/drill/basic-strategy?seed=9');
+    const hand = page.locator('.stage__hand img');
+    await expect(hand).toHaveCount(2);
+    await expect(page.locator('.drill__question')).toContainText('7');
+
+    await page.keyboard.press('h');
+    await expect(hand).toHaveCount(3);
+    await expect(page.locator('.drill__question')).toContainText('12');
+    await expect(
+      page.getByRole('group', { name: 'Player actions' }).getByRole('button', { name: /Double/ }),
+    ).toBeDisabled();
+  });
+
   test('Escape ends the session back to home', async ({ page }) => {
     await page.goto('/drill/basic-strategy');
     // Wait for the drill to be interactive so its window:keydown listener is

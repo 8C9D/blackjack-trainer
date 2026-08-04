@@ -86,6 +86,15 @@ describe('SettingsPageComponent', () => {
     expect(prefs.prefs().options.doubleAfterSplit).toBe(false);
   });
 
+  it('turns playing hands out off and back on', () => {
+    const { fixture, prefs } = createPage();
+    expect(prefs.prefs().playHandsOut).toBe(true);
+    labelledControl(fixture, 'Play hands out').click();
+    expect(prefs.prefs().playHandsOut).toBe(false);
+    labelledControl(fixture, 'Play hands out').click();
+    expect(prefs.prefs().playHandsOut).toBe(true);
+  });
+
   it('edits the deviations practice mode and true-count source', () => {
     const { fixture, prefs } = createPage();
     labelledControl(fixture, 'Deviation-only').click();

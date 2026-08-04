@@ -91,6 +91,11 @@ export interface FlowPrefs {
   // counting showdown's dealer play).
   readonly ruleSet: RuleSet;
   readonly options: EngineOptions;
+  // Play a hand out in the Basic Strategy drill: a correct hit is followed by
+  // the next card and the next decision, until the hand stands or ends. On by
+  // default — a hit is the one answer that leaves another question behind it,
+  // and the opening decision alone is the chart, not the game.
+  readonly playHandsOut: boolean;
   readonly deviations: DeviationPrefs;
   readonly counting: CountingPrefs;
 }
@@ -104,6 +109,7 @@ export const DEFAULT_FLOW_PREFS: FlowPrefs = {
   theme: 'system',
   ruleSet: 'S17',
   options: DEFAULT_ENGINE_OPTIONS,
+  playHandsOut: true,
   deviations: {
     practiceMode: 'all-hands',
     trueCountSource: 'random',
@@ -152,6 +158,10 @@ export class FlowPrefsService {
 
   setOptions(options: EngineOptions): void {
     this.set({ ...this._prefs(), options });
+  }
+
+  setPlayHandsOut(playHandsOut: boolean): void {
+    this.set({ ...this._prefs(), playHandsOut });
   }
 
   updateDeviations(partial: Partial<DeviationPrefs>): void {
@@ -239,6 +249,7 @@ export function mergePrefs(parsed: unknown): FlowPrefs {
       doubleAfterSplit: bool(opts['doubleAfterSplit'], d.options.doubleAfterSplit),
       lateSurrender: bool(opts['lateSurrender'], d.options.lateSurrender),
     },
+    playHandsOut: bool(p['playHandsOut'], d.playHandsOut),
     deviations: {
       practiceMode: oneOf(
         dev['practiceMode'],

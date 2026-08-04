@@ -1,7 +1,13 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 
-import type { Card, Rank, Scenario, Suit } from '../../core/models/card.model';
+import {
+  ALL_RANKS,
+  type Card,
+  type Rank,
+  type Scenario,
+  type Suit,
+} from '../../core/models/card.model';
 import type { Action, EvaluationResult } from '../../core/models/strategy.model';
 import { BASIC_STRATEGY_STATS_KEY } from '../../core/services/basic-strategy-stats.service';
 import { CardGeneratorService } from '../../core/services/card-generator.service';
@@ -28,13 +34,17 @@ const scenarioOf = (c1: Rank, c2: Rank, up: Rank): Scenario => ({
 // Hard 7 (3+4) vs 6 always hits under S17 — "H" is correct, "S" is wrong.
 const HIT_SCENARIO = scenarioOf('3', '4', '6');
 
+// Hard 19 (10+9) vs 6 always stands, which ends the hand in one decision.
+const STAND_SCENARIO = scenarioOf('10', '9', '6');
+
 // The page exposes its signals/methods as `protected`; at runtime they are
 // plain properties. This mirror lets the tests drive them directly, matching
 // the approach of the pre-Flow page specs.
 type Internals = {
   scenario: { (): Scenario; set(v: Scenario): void };
+  hand: { (): readonly Card[]; set(v: readonly Card[]): void };
   result: { (): EvaluationResult | null };
-  phase: { (): 'question' | 'flash' | 'miss' | 'done' };
+  phase: { (): 'question' | 'flash' | 'miss' | 'over' | 'done' };
   target: { (): number };
   handsToday: () => number;
   legalActions: () => readonly Action[];
@@ -45,6 +55,13 @@ type Internals = {
 
 function asInternals(c: BasicStrategyDrillPageComponent): Internals {
   return c as unknown as Internals;
+}
+
+// Deal a scenario the way the page does: the opening two cards are both the
+// recorded deal and the hand in play.
+function deal(c: Internals, scenario: Scenario): void {
+  c.scenario.set(scenario);
+  c.hand.set(scenario.player);
 }
 
 function createPage(): {
@@ -115,7 +132,7 @@ describe('BasicStrategyDrillPageComponent', () => {
   describe('question line', () => {
     it('computes the hand for the user', () => {
       const { fixture, c } = createPage();
-      c.scenario.set(scenarioOf('A', '7', 'Q'));
+      deal(c, scenarioOf('A', '7', 'Q'));
       fixture.detectChanges();
       const q = fixture.nativeElement.querySelector('.drill__question') as HTMLElement;
       expect(q.textContent!.replace(/\s+/g, ' ').trim()).toBe('Soft 18 vs 10');
@@ -125,7 +142,7 @@ describe('BasicStrategyDrillPageComponent', () => {
   describe('correct answer — grade in place, auto-advance', () => {
     it('flashes the pressed button green and locks input', () => {
       const { fixture, c } = createPage();
-      c.scenario.set(HIT_SCENARIO);
+      deal(c, HIT_SCENARIO);
       fixture.detectChanges();
 
       actionButton(fixture, 'Hit').click();
@@ -139,7 +156,7 @@ describe('BasicStrategyDrillPageComponent', () => {
 
     it('auto-advances to a new hand after the delay with zero extra taps', () => {
       const { fixture, c } = createPage();
-      c.scenario.set(HIT_SCENARIO);
+      deal(c, HIT_SCENARIO);
       fixture.detectChanges();
 
       c.answer('H');
@@ -154,7 +171,7 @@ describe('BasicStrategyDrillPageComponent', () => {
 
     it('ignores further answers while flashing', () => {
       const { c } = createPage();
-      c.scenario.set(HIT_SCENARIO);
+      deal(c, HIT_SCENARIO);
       c.answer('H');
       c.answer('S');
       expect(c.handsToday()).toBe(1);
@@ -176,7 +193,7 @@ describe('BasicStrategyDrillPageComponent', () => {
 
     it('names the correct action on a hit', () => {
       const { fixture, c } = createPage();
-      c.scenario.set(HIT_SCENARIO);
+      deal(c, HIT_SCENARIO);
       fixture.detectChanges();
       actionButton(fixture, 'Hit').click();
       fixture.detectChanges();
@@ -185,7 +202,7 @@ describe('BasicStrategyDrillPageComponent', () => {
 
     it('names the verdict, the correct action, and the reason on a miss', () => {
       const { fixture, c } = createPage();
-      c.scenario.set(HIT_SCENARIO);
+      deal(c, HIT_SCENARIO);
       fixture.detectChanges();
       actionButton(fixture, 'Stand').click();
       fixture.detectChanges();
@@ -196,7 +213,7 @@ describe('BasicStrategyDrillPageComponent', () => {
 
     it('clears on the next hand so the following verdict is a fresh change', () => {
       const { fixture, c } = createPage();
-      c.scenario.set(HIT_SCENARIO);
+      deal(c, HIT_SCENARIO);
       fixture.detectChanges();
       actionButton(fixture, 'Hit').click();
       vi.advanceTimersByTime(ADVANCE_MS);
@@ -208,7 +225,7 @@ describe('BasicStrategyDrillPageComponent', () => {
   describe('miss — the only pause in the loop', () => {
     it('shows the rule in place of the question and waits', () => {
       const { fixture, c } = createPage();
-      c.scenario.set(HIT_SCENARIO);
+      deal(c, HIT_SCENARIO);
       fixture.detectChanges();
 
       actionButton(fixture, 'Stand').click();
@@ -228,7 +245,7 @@ describe('BasicStrategyDrillPageComponent', () => {
 
     it('continues on any key', () => {
       const { c } = createPage();
-      c.scenario.set(HIT_SCENARIO);
+      deal(c, HIT_SCENARIO);
       c.answer('S');
       expect(c.phase()).toBe('miss');
       key(c, 'x');
@@ -238,7 +255,7 @@ describe('BasicStrategyDrillPageComponent', () => {
 
     it('continues on a tap anywhere, but not on the tap that graded the miss', () => {
       const { fixture, c } = createPage();
-      c.scenario.set(HIT_SCENARIO);
+      deal(c, HIT_SCENARIO);
       fixture.detectChanges();
 
       // The grading click bubbles to the host after answer() runs, and is
@@ -253,7 +270,7 @@ describe('BasicStrategyDrillPageComponent', () => {
 
     it('a key-graded miss continues on the very next tap', () => {
       const { c } = createPage();
-      c.scenario.set(HIT_SCENARIO);
+      deal(c, HIT_SCENARIO);
       key(c, 's');
       expect(c.phase()).toBe('miss');
       c.onHostClick();
@@ -264,7 +281,7 @@ describe('BasicStrategyDrillPageComponent', () => {
   describe('poka-yoke', () => {
     it('disables illegal actions and keeps their hotkeys dead', () => {
       const { fixture, c } = createPage();
-      c.scenario.set(HIT_SCENARIO); // non-pair, no ace up, LS off
+      deal(c, HIT_SCENARIO); // non-pair, no ace up, LS off
       fixture.detectChanges();
 
       expect(c.legalActions()).toEqual(['H', 'S', 'D']);
@@ -285,13 +302,13 @@ describe('BasicStrategyDrillPageComponent', () => {
         lateSurrender: true,
       });
       const { c } = createPage();
-      c.scenario.set(HIT_SCENARIO);
+      deal(c, HIT_SCENARIO);
       expect(c.legalActions()).toContain('SUR');
     });
 
     it('offers insurance against a dealer ace and grades it via the engine', () => {
       const { c } = createPage();
-      c.scenario.set(scenarioOf('3', '4', 'A'));
+      deal(c, scenarioOf('3', '4', 'A'));
       expect(c.legalActions()).toContain('INS');
       c.answer('INS');
       expect(c.phase()).toBe('miss');
@@ -299,10 +316,151 @@ describe('BasicStrategyDrillPageComponent', () => {
     });
   });
 
+  // A hit is the one correct answer that leaves another decision behind it. The
+  // drill follows it rather than dealing a fresh hand, which is the only place
+  // in the app a multi-card decision is taught.
+  describe('playing the hand out', () => {
+    // Pin the next card the drill draws. `generateCard` reads rank and suit off
+    // one call each, so a value inside the rank's 1/13 slice picks it exactly.
+    function nextCardIs(rank: Rank): void {
+      const index = ALL_RANKS.indexOf(rank);
+      TestBed.inject(CardGeneratorService).setRandomSource(() => (index + 0.5) / ALL_RANKS.length);
+    }
+
+    function hitOnce(c: Internals, rank: Rank): void {
+      nextCardIs(rank);
+      c.answer('H');
+      vi.advanceTimersByTime(ADVANCE_MS);
+    }
+
+    it('deals the next card and asks the decision it leaves', () => {
+      const { fixture, c } = createPage();
+      deal(c, HIT_SCENARIO); // hard 7 vs 6
+      hitOnce(c, '9');
+      fixture.detectChanges();
+
+      expect(c.phase()).toBe('question');
+      expect(c.hand().length).toBe(3);
+      const q = fixture.nativeElement.querySelector('.drill__question') as HTMLElement;
+      expect(q.textContent!.replace(/\s+/g, ' ').trim()).toBe('Hard 16 vs 6');
+    });
+
+    it('leaves only hit and stand answerable once a card is drawn', () => {
+      const { fixture, c } = createPage();
+      deal(c, HIT_SCENARIO);
+      hitOnce(c, '9');
+      fixture.detectChanges();
+
+      expect(c.legalActions()).toEqual(['H', 'S']);
+      expect(actionButton(fixture, 'Double').disabled).toBe(true);
+      expect(actionButton(fixture, 'Split').disabled).toBe(true);
+    });
+
+    it('grades the continued decision against the hand as it stands', () => {
+      const { c } = createPage();
+      deal(c, HIT_SCENARIO);
+      hitOnce(c, '9'); // hard 16 vs 6 — stand
+      c.answer('H');
+      expect(c.phase()).toBe('miss');
+      expect(c.result()!.reason).toContain('Hard 16 vs dealer 6 under S17: stand.');
+    });
+
+    // A hard 11 doubles on the opening two cards and can only hit once a card
+    // is drawn — the rule the dead Double button is teaching.
+    it('reads the same total differently once doubling has lapsed', () => {
+      const { c } = createPage();
+      deal(c, scenarioOf('5', '3', '6')); // hard 8 vs 6 — hit
+      hitOnce(c, '3'); // hard 11 vs 6, three cards deep
+      c.answer('D');
+      // Double is not even answerable, so the press is dead rather than wrong.
+      expect(c.phase()).toBe('question');
+      c.answer('H');
+      expect(c.phase()).toBe('flash');
+      expect(c.result()!.correct).toBe(true);
+    });
+
+    it('holds the bust on screen, then deals on', () => {
+      const { fixture, c } = createPage();
+      deal(c, scenarioOf('10', '6', '10')); // hard 16 vs 10 — hit
+      hitOnce(c, 'K');
+      fixture.detectChanges();
+
+      expect(c.phase()).toBe('over');
+      expect((fixture.nativeElement.querySelector('.drill__rule') as HTMLElement).textContent).toBe(
+        'Bust — 26.',
+      );
+      // The hit still graded as correct: the play was right, the card was not.
+      expect(c.result()!.correct).toBe(true);
+
+      vi.advanceTimersByTime(ADVANCE_MS * 2);
+      fixture.detectChanges();
+      expect(c.phase()).toBe('question');
+      expect(c.hand().length).toBe(2);
+    });
+
+    it('ends the hand on 21 with nothing left to ask', () => {
+      const { fixture, c } = createPage();
+      deal(c, scenarioOf('10', '6', '10'));
+      hitOnce(c, '5');
+      fixture.detectChanges();
+
+      expect(c.phase()).toBe('over');
+      expect((fixture.nativeElement.querySelector('.drill__rule') as HTMLElement).textContent).toBe(
+        '21 — nothing left to decide.',
+      );
+    });
+
+    // Every decision is a rep, so a hand played out counts for as many as it asks.
+    it('counts each decision toward the day', () => {
+      const { c } = createPage();
+      deal(c, HIT_SCENARIO);
+      hitOnce(c, '2'); // hard 9 vs 6 — double, but three cards deep it hits
+      expect(c.handsToday()).toBe(1);
+      c.answer('H');
+      expect(c.handsToday()).toBe(2);
+    });
+
+    // A `ScenarioRef` names a two-card hand. Filing a three-card 16 under one
+    // would re-deal a hand that can double, which is a different question.
+    it('files a weak spot for the opening decision only', () => {
+      const tally = TestBed.inject(MissTallyService);
+      const { c } = createPage();
+      deal(c, HIT_SCENARIO);
+      hitOnce(c, '9'); // hard 16 vs 6 — stand
+      c.answer('H'); // wrong, but three cards deep
+      expect(c.phase()).toBe('miss');
+      expect(tally.weakSpotFor('basic-strategy')).toBeNull();
+    });
+
+    it('finishes the hand it is on before the Done screen', () => {
+      TestBed.inject(FlowPrefsService).setDailyGoal(1);
+      const { fixture, c } = createPage();
+      deal(c, HIT_SCENARIO);
+      hitOnce(c, '9');
+      // The goal is met, but the hand still owes a decision.
+      expect(c.handsToday()).toBe(1);
+      expect(c.phase()).toBe('question');
+
+      c.answer('S');
+      vi.advanceTimersByTime(ADVANCE_MS);
+      fixture.detectChanges();
+      expect(c.phase()).toBe('done');
+    });
+
+    it('deals a fresh hand instead when the setting is off', () => {
+      TestBed.inject(FlowPrefsService).setPlayHandsOut(false);
+      const { c } = createPage();
+      deal(c, HIT_SCENARIO);
+      hitOnce(c, '9');
+      expect(c.hand().length).toBe(2);
+      expect(c.hand()).toEqual(c.scenario().player);
+    });
+  });
+
   describe('recording', () => {
     it('feeds the legacy stats store, the practice history, and the miss tally', () => {
       const { c } = createPage();
-      c.scenario.set(HIT_SCENARIO);
+      deal(c, HIT_SCENARIO);
       c.answer('H');
 
       const stats = JSON.parse(localStorage.getItem(BASIC_STRATEGY_STATS_KEY)!);
@@ -313,7 +471,7 @@ describe('BasicStrategyDrillPageComponent', () => {
       expect(TestBed.inject(MissTallyService).weakSpotFor('basic-strategy')).toBeNull();
 
       vi.advanceTimersByTime(ADVANCE_MS);
-      c.scenario.set(HIT_SCENARIO);
+      deal(c, HIT_SCENARIO);
       c.answer('S');
       expect(TestBed.inject(MissTallyService).weakSpotFor('basic-strategy')).toEqual(
         expect.objectContaining({ label: '7 vs 6', misses: 1, attempts: 2 }),
@@ -327,9 +485,11 @@ describe('BasicStrategyDrillPageComponent', () => {
       c: Internals,
       hands: number,
     ): void {
+      // One decision per hand: a stand ends the hand where a hit would play it
+      // out, so `hands` answers are `hands` hands.
       for (let i = 0; i < hands; i++) {
-        c.scenario.set(HIT_SCENARIO);
-        c.answer('H');
+        deal(c, STAND_SCENARIO);
+        c.answer('S');
         vi.advanceTimersByTime(ADVANCE_MS);
       }
       fixture.detectChanges();
@@ -356,7 +516,7 @@ describe('BasicStrategyDrillPageComponent', () => {
     it('reaches Done through a final miss after the continue tap', () => {
       TestBed.inject(FlowPrefsService).setDailyGoal(1);
       const { fixture, c } = createPage();
-      c.scenario.set(HIT_SCENARIO);
+      deal(c, HIT_SCENARIO);
       c.answer('S');
       expect(c.phase()).toBe('miss');
       key(c, ' ');

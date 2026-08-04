@@ -127,6 +127,19 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
         </label>
       </section>
 
+      <section class="settings__group" aria-label="Basic Strategy trainer">
+        <h2 class="settings__heading">Basic Strategy</h2>
+        <label>
+          <input type="checkbox" [checked]="prefs().playHandsOut" (change)="togglePlayHandsOut()" />
+          Play hands out (a correct hit deals the next card)
+        </label>
+        <p class="settings__hint">
+          Off, the drill asks the opening decision and deals a fresh hand. On, a hit is followed by
+          the card it draws and the decision that follows — where doubling, splitting and surrender
+          are already gone.
+        </p>
+      </section>
+
       <section class="settings__group" aria-label="Deviations trainer">
         <h2 class="settings__heading">Deviations</h2>
         @if (indexNote(); as note) {
@@ -403,6 +416,10 @@ export class SettingsPageComponent {
   protected toggleOption(key: 'doubleAfterSplit' | 'lateSurrender'): void {
     const options = this.prefs().options;
     this.prefsService.setOptions({ ...options, [key]: !options[key] });
+  }
+
+  protected togglePlayHandsOut(): void {
+    this.prefsService.setPlayHandsOut(!this.prefs().playHandsOut);
   }
 
   protected setPracticeMode(mode: DeviationPracticeMode): void {
