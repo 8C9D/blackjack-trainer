@@ -22,7 +22,18 @@ export interface PracticeDay {
   // hands would report a week of real practice as 0% rather than as unmeasured.
   readonly graded: number;
   readonly correct: number;
+  // Reps the app timed, and the milliseconds they took between them. Counted
+  // separately again: only the strategy drills time a decision (the counting
+  // drills are paced by the app or, for the deck countdown, timed already), and
+  // days written before this have none — untimed, not instant.
+  readonly timed: number;
+  readonly millis: number;
 }
+
+// Longest a single decision can be and still count as one. Past this the
+// trainee put the phone down: a hand you walked away from is not a hand you
+// were slow on, and one of them would swamp a round's average.
+export const MAX_TIMED_DECISION_MS = 60_000;
 
 // One dot of the home screen's 7-day strip. `met` is whether that day reached
 // the daily goal (the condition for a filled dot / streak membership).
@@ -39,6 +50,13 @@ export interface StreakDot {
 // an unpractised (or pre-grading) window is unmeasured, not zero.
 function accuracyOf(graded: number, correct: number): number | null {
   return graded === 0 ? null : Math.round((correct / graded) * 100);
+}
+
+// Mean seconds per timed decision to one decimal, or null when none were timed.
+// A mean rather than a median because only per-day totals are stored, and over
+// a week's hands the cap above is what keeps it honest.
+function paceOf(timed: number, millis: number): number | null {
+  return timed === 0 ? null : Math.round(millis / timed / 100) / 10;
 }
 
 // Local (not UTC) calendar date key — a hand practiced at 23:30 belongs to the
@@ -71,13 +89,24 @@ export class PracticeHistoryService {
   // One graded rep. The verdict is the same one the session streak counts, so a
   // counting round that answers two questions is one rep, right only if both
   // were.
-  recordHand(correct: boolean): void {
+  recordHand(correct: boolean, elapsedMs?: number): void {
     const today = localDateKey(this.now());
+    const millis = plausibleDecisionMs(elapsedMs);
     const days = this._days();
     const existing = days.find((d) => d.date === today);
     const next = existing
-      ? days.map((d) => (d.date === today ? addRep(d, correct) : d))
-      : [...days, { date: today, hands: 1, graded: 1, correct: correct ? 1 : 0 }];
+      ? days.map((d) => (d.date === today ? addRep(d, correct, millis) : d))
+      : [
+          ...days,
+          {
+            date: today,
+            hands: 1,
+            graded: 1,
+            correct: correct ? 1 : 0,
+            timed: millis === null ? 0 : 1,
+            millis: millis ?? 0,
+          },
+        ];
     const pruned = this.prune(next);
     this._days.set(pruned);
     this.persist(pruned);
@@ -123,6 +152,21 @@ export class PracticeHistoryService {
       correct += day?.correct ?? 0;
     }
     return accuracyOf(graded, correct);
+  }
+
+  // How long a decision took over the seven days ending `weeksBack` weeks ago.
+  // Accuracy says whether the practice is working; this says whether it would
+  // survive a table, where the dealer is waiting.
+  paceLast7(weeksBack = 0): number | null {
+    let timed = 0;
+    let millis = 0;
+    const first = weeksBack * 7;
+    for (let back = first; back < first + 7; back++) {
+      const day = this.dayOn(this.dateKeyDaysAgo(back));
+      timed += day?.timed ?? 0;
+      millis += day?.millis ?? 0;
+    }
+    return paceOf(timed, millis);
   }
 
   private dayOn(date: string): PracticeDay | undefined {
@@ -184,13 +228,25 @@ export class PracticeHistoryService {
   }
 }
 
-function addRep(day: PracticeDay, correct: boolean): PracticeDay {
+function addRep(day: PracticeDay, correct: boolean, millis: number | null): PracticeDay {
   return {
     date: day.date,
     hands: day.hands + 1,
     graded: day.graded + 1,
     correct: day.correct + (correct ? 1 : 0),
+    timed: day.timed + (millis === null ? 0 : 1),
+    millis: day.millis + (millis ?? 0),
   };
+}
+
+// A decision counts as timed only when the clock read plausibly: a zero or
+// negative reading is a clock that moved backwards, and anything past the cap
+// is a trainee who walked away. Exported because the drill pages apply the same
+// judgement to the round's own figure — one rule, one place.
+export function plausibleDecisionMs(elapsedMs: number | undefined): number | null {
+  if (elapsedMs === undefined || !Number.isFinite(elapsedMs)) return null;
+  if (elapsedMs <= 0 || elapsedMs > MAX_TIMED_DECISION_MS) return null;
+  return Math.round(elapsedMs);
 }
 
 function mergeDays(a: PracticeDay | undefined, b: PracticeDay): PracticeDay {
@@ -200,6 +256,8 @@ function mergeDays(a: PracticeDay | undefined, b: PracticeDay): PracticeDay {
     hands: capped(a.hands + b.hands),
     graded: capped(a.graded + b.graded),
     correct: capped(a.correct + b.correct),
+    timed: capped(a.timed + b.timed),
+    millis: capped(a.millis + b.millis),
   };
 }
 
@@ -219,7 +277,17 @@ function toPracticeDay(value: unknown): PracticeDay | null {
   const hands = count(day.hands);
   if (hands === null) return null;
   const graded = Math.min(hands, count(day.graded) ?? 0);
-  return { date: day.date, hands, graded, correct: Math.min(graded, count(day.correct) ?? 0) };
+  // A timed rep is a graded one, and no run of them can average past the cap,
+  // so a hand-edited file cannot report an impossible pace either way.
+  const timed = Math.min(graded, count(day.timed) ?? 0);
+  return {
+    date: day.date,
+    hands,
+    graded,
+    correct: Math.min(graded, count(day.correct) ?? 0),
+    timed,
+    millis: Math.min(timed * MAX_TIMED_DECISION_MS, count(day.millis) ?? 0),
+  };
 }
 
 function count(value: unknown): number | null {

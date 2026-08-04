@@ -25,7 +25,10 @@ import {
   type WeakSpot,
 } from '../../core/services/miss-tally.service';
 import { RANDOM_SOURCE } from '../../core/services/random-source';
-import { PracticeHistoryService } from '../../core/services/practice-history.service';
+import {
+  PracticeHistoryService,
+  plausibleDecisionMs,
+} from '../../core/services/practice-history.service';
 import { FlowActionsComponent } from '../../shared/flow-actions.component';
 import { FlowDoneComponent } from '../../shared/flow-done.component';
 import { FlowTopbarComponent } from '../../shared/flow-topbar.component';
@@ -120,6 +123,7 @@ type DrillPhase = 'question' | 'flash' | 'miss' | 'over' | 'done';
           [goalMet]="goalMet()"
           [bestStreak]="session.bestStreak()"
           [accuracy]="session.accuracy()"
+          [medianSeconds]="session.medianSeconds()"
           [weakSpot]="weakSpot()"
           [weakSpots]="weakSpots()"
           [cleared]="clearedSpots()"
@@ -216,6 +220,11 @@ export class DeviationsDrillPageComponent {
   // A review round drills only the weak list; an ordinary round mixes it in.
   private readonly reviewing = signal(false);
 
+  // When the question on screen was put up. A decision's own clock: the app
+  // grades whether the answer was right and has never said how long it took,
+  // which at a table is half of whether you can play.
+  private askedAt = Date.now();
+
   private advanceTimer: ReturnType<typeof setTimeout> | null = null;
   // Swallows the click that graded the miss so it doesn't also continue.
   private suppressNextContinueClick = false;
@@ -232,8 +241,9 @@ export class DeviationsDrillPageComponent {
     const cards = this.hand();
     const result = this.gradeDecision(cards, action);
     this.result.set(result);
+    const elapsedMs = plausibleDecisionMs(Date.now() - this.askedAt) ?? undefined;
     this.stats.recordAttempt(result.correct);
-    this.history.recordHand(result.correct);
+    this.history.recordHand(result.correct, elapsedMs);
     // Only the opening decision has a weak spot to file under: a `ScenarioRef`
     // names a two-card hand, and re-dealing a three-card 16 as a two-card one
     // would ask a different question (that one can double).
@@ -248,7 +258,7 @@ export class DeviationsDrillPageComponent {
         this.scenario().trueCount,
       );
     }
-    this.session.record(result.correct);
+    this.session.record(result.correct, elapsedMs);
 
     if (result.correct) {
       this.phase.set('flash');
@@ -305,6 +315,7 @@ export class DeviationsDrillPageComponent {
     }
     this.result.set(null);
     this.phase.set('question');
+    this.askedAt = Date.now();
   }
 
   protected continueFromMiss(): void {
@@ -353,6 +364,7 @@ export class DeviationsDrillPageComponent {
     this.hand.set(scenario.player);
     this.result.set(null);
     this.phase.set('question');
+    this.askedAt = Date.now();
   }
 
   // Sessions open on the current weak spot when one exists.

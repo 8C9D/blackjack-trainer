@@ -127,6 +127,48 @@ describe('ProgressPageComponent', () => {
       expect(trend.classList.contains('progress__good')).toBe(true);
     });
 
+    // Accuracy says whether the practice is working; the pace says whether it
+    // would survive a table.
+    it('says how long a hand took this week', () => {
+      const history = TestBed.inject(PracticeHistoryService);
+      history.recordHand(true, 3000);
+      history.recordHand(true, 5000);
+      const { fixture } = createPage();
+
+      const lines = [...fixture.nativeElement.querySelectorAll('.progress__accuracy')].map((el) =>
+        (el as HTMLElement).textContent!.replace(/\s+/g, ' ').trim(),
+      );
+      expect(lines.some((line) => line.includes('4s a hand this week'))).toBe(true);
+    });
+
+    // Faster is the good direction here, which the accuracy trend's colours
+    // would get backwards.
+    it('calls a quicker week faster, not "up"', () => {
+      const history = TestBed.inject(PracticeHistoryService);
+      let now = new Date(2026, 6, 10, 12, 0);
+      history.setNowSource(() => now);
+      history.recordHand(true, 6000);
+      now = new Date(2026, 6, 18, 12, 0);
+      history.recordHand(true, 3000);
+      const { fixture } = createPage();
+
+      const trends = [
+        ...fixture.nativeElement.querySelectorAll('.progress__trend'),
+      ] as HTMLElement[];
+      const pace = trends.find((el) => el.textContent!.includes('s the week before'))!;
+      expect(pace.textContent!.trim()).toBe('faster than 6s the week before');
+      expect(pace.classList.contains('progress__good')).toBe(true);
+    });
+
+    it('says nothing about the pace before anything is timed', () => {
+      TestBed.inject(PracticeHistoryService).recordHand(true);
+      const { fixture } = createPage();
+      const lines = [...fixture.nativeElement.querySelectorAll('.progress__accuracy')].map(
+        (el) => (el as HTMLElement).textContent!,
+      );
+      expect(lines.some((line) => line.includes('a hand this week'))).toBe(false);
+    });
+
     it('says nothing about accuracy before anything is graded', () => {
       const { fixture } = createPage();
       expect(fixture.nativeElement.querySelector('.progress__accuracy')).toBeNull();

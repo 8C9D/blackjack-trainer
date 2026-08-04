@@ -32,6 +32,9 @@ const CLEARED_SHOWN = 3;
         @if (accuracy() !== null) {
           · {{ accuracy() }}% today
         }
+        @if (medianSeconds() !== null) {
+          · {{ medianSeconds() }}s a hand
+        }
       </p>
       @if (weakSpot(); as w) {
         <button type="button" class="done__next" (click)="review.emit()">
@@ -63,6 +66,10 @@ export class FlowDoneComponent {
   readonly bestStreak = input.required<number>();
   // Session accuracy percentage (0–100), or null when nothing was answered.
   readonly accuracy = input.required<number | null>();
+  // Seconds the round's middle decision took, or null when none were timed.
+  // Reported, not judged: how fast is fast enough is a table's question, and
+  // the app has no published number to hold a trainee to.
+  readonly medianSeconds = input<number | null>(null);
   readonly weakSpot = input<WeakSpot | null>(null);
   // Every outstanding weak spot, worst first — `weakSpot` is its head. Only
   // the count is shown; the list is what a review round would draw from.
