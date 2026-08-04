@@ -164,6 +164,21 @@ describe('CountFeedbackPanelComponent', () => {
       expect(fixture.nativeElement.textContent).not.toContain('came in');
     });
 
+    // A key-count round carries the shoe's prior, so its drift is over every
+    // card dealt since the shuffle — not over the handful this round streamed.
+    it('counts the cards a drift is over only where the round is the whole count', () => {
+      const round = createPanel(
+        makeRunningCountResult({ userRunningCount: 3, correctRunningCount: 5, isCorrect: false }),
+      );
+      expect(round.nativeElement.textContent).toContain('over 5 cards');
+
+      const shoe = createPanel(
+        makeKeyCountResult({ userRunningCount: -7, correctRunningCount: -5, countCorrect: false }),
+      );
+      expect(shoe.nativeElement.textContent).toContain('came in 2 points low.');
+      expect(shoe.nativeElement.textContent).not.toContain('over 5 cards');
+    });
+
     // Wong Halves answers in halves, so the noun follows the value.
     it('counts a half-point drift as points', () => {
       const fixture = createPanel(
@@ -318,8 +333,25 @@ describe('CountFeedbackPanelComponent', () => {
             deckEstimate: 3,
           }),
         );
-        expect(lines(fixture)).not.toContain('the answer you gave');
-        expect(lines(fixture)).toContain('the count you would have played on.');
+        expect(lines(fixture)).toContain('Your estimate: 6 ÷ 3 decks = true count 2.');
+        expect(lines(fixture)).not.toContain('would have played on');
+      });
+
+      // The answer was the shoe's own count and was marked correct two lines
+      // above, so "the count you would have played on" would contradict it.
+      it('does not claim a count the trainee demonstrably did not play on', () => {
+        const fixture = createPanel(
+          makeTrueCountResult({
+            correctRunningCount: 6,
+            decksRemaining: 2,
+            correctTrueCount: 3,
+            userTrueCount: 3,
+            isCorrect: true,
+            deckEstimate: 3,
+          }),
+        );
+        expect(lines(fixture)).toContain('true count 2.');
+        expect(lines(fixture)).not.toContain('would have played on');
       });
 
       // How far out an estimate is only matters against the count it divides.
