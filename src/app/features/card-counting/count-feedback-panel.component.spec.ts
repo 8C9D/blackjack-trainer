@@ -198,6 +198,22 @@ describe('CountFeedbackPanelComponent', () => {
       expect(text).toContain('decks');
     });
 
+    // The divisor is a number a trainee reads carefully; "÷ 1 decks" reads as a
+    // typo in exactly the line that has to look like arithmetic.
+    it('says one deck, not one decks, in the formula', () => {
+      const fixture = createPanel(
+        makeTrueCountResult({
+          correctRunningCount: 4,
+          decksRemaining: 1,
+          correctTrueCount: 4,
+        }),
+      );
+      const text = (
+        fixture.nativeElement.querySelector('.feedback__formula') as HTMLElement
+      ).textContent!.replace(/\s+/g, ' ');
+      expect(text).toContain('÷ 1 deck =');
+    });
+
     it('does not render the running-count "Your count" label', () => {
       const fixture = createPanel(makeTrueCountResult());
       const dts = Array.from(fixture.nativeElement.querySelectorAll('.feedback__details dt')).map(

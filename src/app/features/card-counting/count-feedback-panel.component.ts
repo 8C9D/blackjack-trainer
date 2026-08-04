@@ -16,6 +16,7 @@ import {
 } from '../../core/models/card-counting.model';
 import { cardCountValue, type CountingSystem } from '../../core/models/counting-system.model';
 import { CardImageComponent } from '../../shared/card-image.component';
+import { countOf } from '../../core/text';
 
 interface BreakdownEntry {
   readonly index: number;
@@ -78,8 +79,9 @@ interface RampBand {
           }
         </dl>
         <p class="feedback__formula">
-          Running count {{ tc.correctRunningCount }} ÷ {{ formatDecks(tc.decksRemaining) }} decks =
-          true count {{ tc.correctTrueCount }}
+          Running count {{ tc.correctRunningCount }} ÷
+          {{ countOf(tc.decksRemaining, 'deck', formatDecks(tc.decksRemaining)) }} = true count
+          {{ tc.correctTrueCount }}
         </p>
       } @else if (keyCountResult(); as kc) {
         <dl class="feedback__details">
@@ -130,9 +132,10 @@ interface RampBand {
           <dd>{{ units(bs.correctUnits) }}</dd>
         </dl>
         <p class="feedback__formula">
-          Running count {{ bs.correctRunningCount }} ÷ {{ formatDecks(bs.decksRemaining) }} decks =
-          true count {{ bs.correctTrueCount }}, which is the
-          {{ rampBandLabel(bs.correctTrueCount) }} band of your spread.
+          Running count {{ bs.correctRunningCount }} ÷
+          {{ countOf(bs.decksRemaining, 'deck', formatDecks(bs.decksRemaining)) }} = true count
+          {{ bs.correctTrueCount }}, which is the {{ rampBandLabel(bs.correctTrueCount) }} band of
+          your spread.
         </p>
         <ul class="feedback__ramp" aria-label="Your bet spread">
           @for (band of rampBands(); track band.label) {
@@ -198,6 +201,10 @@ interface RampBand {
   styleUrl: './count-feedback-panel.component.scss',
 })
 export class CountFeedbackPanelComponent {
+  // Templates can only call class members, so the shared counted-noun
+  // helper is re-exposed rather than imported into the markup.
+  protected readonly countOf = countOf;
+
   readonly result = input.required<CountingDrillResult>();
   readonly system = input.required<CountingSystem>();
   readonly next = output<void>();
@@ -293,7 +300,7 @@ export class CountFeedbackPanelComponent {
 
   // Bets are always whole units, and the singular reads oddly as "1 units".
   protected units(count: number): string {
-    return count === 1 ? '1 unit' : `${count} units`;
+    return countOf(count, 'unit');
   }
 
   // The band label a true count falls in, for the feedback line.

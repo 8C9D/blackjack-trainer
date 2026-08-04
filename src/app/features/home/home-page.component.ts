@@ -18,6 +18,7 @@ import { PracticeHistoryService } from '../../core/services/practice-history.ser
 import { TrueCountStatsService } from '../../core/services/true-count-stats.service';
 import { GoalRingComponent } from '../../shared/goal-ring.component';
 import { StreakDotsComponent } from '../../shared/streak-dots.component';
+import { countOf } from '../../core/text';
 
 interface TrainerCard {
   readonly id: TrainerId;
@@ -128,7 +129,7 @@ export class HomePageComponent {
   protected readonly subtext = computed(() => {
     const remaining = this.goal() - this.handsToday();
     if (remaining <= 0) return 'goal met — one more round?';
-    return `${remaining} ${remaining === 1 ? 'hand' : 'hands'} to today's goal`;
+    return `${countOf(remaining, 'hand')} to today's goal`;
   });
 
   // The two non-primary trainers, always in canonical order so their position

@@ -80,6 +80,7 @@ import { CountingEngineService } from '../../core/services/counting-engine.servi
 import { ShowdownPlayStatsService } from '../../core/services/showdown-play-stats.service';
 import { ShowdownStatsService } from '../../core/services/showdown-stats.service';
 import { CountAnswerFormComponent } from './count-answer-form.component';
+import { countOf } from '../../core/text';
 
 // 'player-turn': the player is acting on the active hand. 'resolved': every hand
 // is settled and the dealer hand revealed. 'exhausted': the shoe ran too low.
@@ -203,7 +204,7 @@ interface PlayVerdict {
              for, so the way out is through it. -->
         <div class="showdown__count-check">
           <p class="showdown__bet-prompt">
-            {{ cardsSeen() }} cards came out at this table. Take the count with you.
+            {{ countOf(cardsSeen(), 'card') }} came out at this table. Take the count with you.
           </p>
           @if (holeCardUnseen()) {
             <!-- Leaving before the peek: the hole card was dealt but never
@@ -455,6 +456,10 @@ interface PlayVerdict {
   styleUrl: './showdown.component.scss',
 })
 export class ShowdownComponent implements OnInit {
+  // Templates can only call class members, so the shared counted-noun
+  // helper is re-exposed rather than imported into the markup.
+  protected readonly countOf = countOf;
+
   // Records win/loss tallies under its pre-Flow key even though the Flow UI
   // no longer surfaces them.
   protected readonly stats = inject(ShowdownStatsService);
