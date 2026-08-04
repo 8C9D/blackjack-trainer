@@ -286,6 +286,30 @@ describe('ProgressPageComponent', () => {
       expect(text(fixture, '.progress__cleared')).toBe('Cleared: 8,8 vs 10');
     });
 
+    // The deviations trainer already re-deals a weak spot at a count it was
+    // missed at; until now nothing said what those counts were.
+    it('names the true counts a deviation was missed at, low to high and deduplicated', () => {
+      const tally = TestBed.inject(MissTallyService);
+      tally.record('deviations', SIXTEEN_V_TEN, false, 2);
+      tally.record('deviations', SIXTEEN_V_TEN, false, -1);
+      tally.record('deviations', SIXTEEN_V_TEN, false, 2);
+
+      const { fixture } = createPage();
+      const spot = fixture.nativeElement.querySelector('.progress__spots li') as HTMLElement;
+      expect(spot.textContent!.replace(/\s+/g, ' ').trim()).toBe(
+        '16 vs 10missed 3 of 3 at TC -1, +2',
+      );
+    });
+
+    it('leaves the count off a basic-strategy spot, where it is not the question', () => {
+      const tally = TestBed.inject(MissTallyService);
+      tally.record('basic-strategy', SIXTEEN_V_TEN, false);
+
+      const { fixture } = createPage();
+      const spot = fixture.nativeElement.querySelector('.progress__spots li') as HTMLElement;
+      expect(spot.textContent).not.toContain('TC');
+    });
+
     it('still shows a trainer whose spots are all cleared', () => {
       const tally = TestBed.inject(MissTallyService);
       tally.record('basic-strategy', SIXTEEN_V_TEN, false);

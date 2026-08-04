@@ -117,6 +117,14 @@ describe('FlowDoneComponent', () => {
     expect(host.reviews).toBe(0);
   });
 
+  it('names the true counts the queued weakness was missed at', () => {
+    const { fixture, host } = create();
+    host.weakSpot.set({ ...WEAK, missedCounts: [2, -1, 2] });
+    fixture.detectChanges();
+    const next = fixture.nativeElement.querySelector('.done__next')!.textContent as string;
+    expect(next.replace(/\s+/g, ' ')).toContain('missed 3 of 7 this week at TC -1, +2');
+  });
+
   it('counts the other outstanding weak spots without naming them', () => {
     const { fixture, host } = create();
     host.weakSpots.set([WEAK, spot('15', 0), spot('12', 0)]);
