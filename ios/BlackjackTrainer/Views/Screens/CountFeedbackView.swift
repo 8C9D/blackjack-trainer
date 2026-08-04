@@ -1,5 +1,12 @@
 import SwiftUI
 
+/// "1 deck", "1.5 decks" — the divisor is formatted before it is counted, and
+/// "÷ 1 decks" reads as a typo in exactly the line that has to look like
+/// arithmetic.
+private func decksLabel(_ decks: Double) -> String {
+    countOf(decks, "deck", display: CountFormat.decks(decks))
+}
+
 /// Counting-drill feedback, mirroring the web `count-feedback-panel`: verdict,
 /// the count/true-count details (with the running ÷ decks formula), an optional
 /// card-by-card breakdown, and "Run again".
@@ -73,7 +80,7 @@ struct CountFeedbackView: View {
             }
             Text(
                 "Running count \(CountFormat.count(trueCount.correctRunningCount)) ÷ "
-                    + "\(CountFormat.decks(trueCount.decksRemaining)) decks = "
+                    + "\(decksLabel(trueCount.decksRemaining)) = "
                     + "true count \(trueCount.correctTrueCount)"
             )
             .font(.footnote)
@@ -139,7 +146,7 @@ struct CountFeedbackView: View {
         detailRow("Your spread says", BetRamp.unitsLabel(result.correctUnits))
         Text(
             "Running count \(CountFormat.count(result.correctRunningCount)) ÷ "
-                + "\(CountFormat.decks(result.decksRemaining)) decks = "
+                + "\(decksLabel(result.decksRemaining)) = "
                 + "true count \(result.correctTrueCount), which is the "
                 + "\(BetRamp.bandLabels[BetRamp.bandIndex(trueCount: result.correctTrueCount)]) "
                 + "band of your spread."

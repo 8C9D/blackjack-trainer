@@ -20,7 +20,7 @@ enum BetRamp {
 
     /// Bets are whole units, and the singular reads oddly as "1 units".
     static func unitsLabel(_ count: Int) -> String {
-        count == 1 ? "1 unit" : "\(count) units"
+        countOf(count, "unit")
     }
 
     /// Which band a true count falls in (true counts arrive already truncated).

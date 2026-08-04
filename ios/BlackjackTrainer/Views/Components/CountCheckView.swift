@@ -21,7 +21,7 @@ struct CountCheckView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("\(cardsSeen) cards came out at this table. Take the count with you.")
+            Text("\(countOf(cardsSeen, "card")) came out at this table. Take the count with you.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.ink)
             if holeCardUnseen {
