@@ -1,3 +1,5 @@
+import { signal, type Signal } from '@angular/core';
+
 // Tolerant localStorage JSON mechanics shared by every persisted store
 // (stats, flow prefs, practice history, miss tally). The mechanics are always
 // the same — SSR-safe guard, parse-or-fallback on read, swallow quota errors
@@ -39,11 +41,32 @@ export function coerceNumericRecord<T extends { readonly [K in keyof T]: number 
   return out as T;
 }
 
+// Whether a write has been refused since the app loaded.
+//
+// localStorage is this app's only persistence, and a refused write is invisible
+// from the inside: the drill goes on grading, the session bar goes on counting,
+// and the Progress screen goes on showing whatever was stored before — so a
+// trainee can practise a whole evening into nothing and be told about it by
+// nobody. The write cannot be recovered here, so the one thing this layer can
+// do is stop the app pretending it happened.
+//
+// Sticky, because it is a report of something that has already been lost: a
+// later write succeeding does not bring the earlier one back.
+const writeRefused = signal(false);
+export const storageWriteRefused: Signal<boolean> = writeRefused.asReadonly();
+
+// Only for tests, which would otherwise leak the flag between cases — the notice
+// is deliberately not clearable at runtime.
+export function resetStorageWriteRefused(): void {
+  writeRefused.set(false);
+}
+
 export function writeJson(key: string, value: unknown): void {
   if (typeof localStorage === 'undefined') return;
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // localStorage can throw on quota / private browsing; tolerate silently.
+    // Quota exhausted, or storage blocked outright (private browsing).
+    writeRefused.set(true);
   }
 }

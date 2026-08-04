@@ -1,15 +1,29 @@
 import { Component, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { RouterLink, RouterOutlet } from '@angular/router';
 
 import { AppUpdateService } from './core/services/app-update.service';
+import { storageWriteRefused } from './core/services/storage';
 import { ThemeService } from './core/services/theme.service';
 
 // The Flow shell is deliberately bare: no navigation chrome anywhere — the
 // home screen's primary action is the app's entire information architecture.
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [RouterLink, RouterOutlet],
   template: `
+    <!-- Takes space rather than floating: a browser that will not keep the
+         practice is a condition, not a prompt, and the drill behind it goes on
+         grading and counting as if nothing were wrong. -->
+    @if (storageRefused()) {
+      <div class="lost" role="alert">
+        <strong>This browser is not saving your practice.</strong>
+        <span>
+          Its storage is full or blocked — private browsing does this. Hands you play now will be
+          gone when you leave.
+        </span>
+        <a routerLink="/settings">Back up what is still stored</a>
+      </div>
+    }
     <router-outlet />
     @if (updates.updateReady()) {
       <aside class="update" aria-label="App update available">
@@ -48,4 +62,5 @@ export class App {
   // it owns the theme service's lifetime; nothing else needs to inject it.
   protected readonly theme = inject(ThemeService);
   protected readonly updates = inject(AppUpdateService);
+  protected readonly storageRefused = storageWriteRefused;
 }
