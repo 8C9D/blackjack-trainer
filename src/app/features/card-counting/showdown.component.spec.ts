@@ -1564,6 +1564,24 @@ describe('ShowdownComponent', () => {
         expect(tallies.weakSpots('basic-strategy')).toEqual([]);
       });
 
+      // The count is what made it an index play, so it goes with the miss: the
+      // Deviations trainer re-deals the hand at a count it was missed at.
+      it('files the count the index play was made at', () => {
+        const { c } = atCount(1);
+        c.onAction('H');
+        expect(TestBed.inject(MissTallyService).weakSpots('deviations')[0].missedCounts).toEqual([
+          0,
+        ]);
+      });
+
+      it('files no count with an ordinary basic-strategy miss', () => {
+        const { c } = atCount(0);
+        c.onAction('S');
+        expect(
+          TestBed.inject(MissTallyService).weakSpots('basic-strategy')[0].missedCounts,
+        ).toEqual([]);
+      });
+
       it('still files an ordinary miss under Basic Strategy', () => {
         const { c } = atCount(0);
         c.onAction('S');

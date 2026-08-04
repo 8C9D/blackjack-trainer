@@ -886,7 +886,12 @@ export class ShowdownComponent implements OnInit {
         ? this.deviations.resolveDeviationDecision(input, basis.trueCount).finalAction
         : this.engine.decide(input).action;
     if (unrestricted !== correct.action) return;
-    this.missTally.record(trainer, scenarioRefFor(player, upcard), wasRight);
+    // An index play is a question about a count, so the count it was played at
+    // goes with it: the Deviations trainer re-deals the hand at a count it was
+    // actually missed at rather than a fresh one.
+    const trueCount =
+      trainer === 'deviations' && basis.kind === 'true-count' ? basis.trueCount : undefined;
+    this.missTally.record(trainer, scenarioRefFor(player, upcard), wasRight, trueCount);
   }
 
   // Between rounds, betting returns to the bet: the count has moved on, so the

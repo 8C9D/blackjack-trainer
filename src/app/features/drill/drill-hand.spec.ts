@@ -173,6 +173,7 @@ describe('pickWeakSpot', () => {
     misses,
     attempts: misses * 2,
     streak: 0,
+    missedCounts: [],
   });
 
   // Feeds the two `random()` calls in order: the share roll, then the

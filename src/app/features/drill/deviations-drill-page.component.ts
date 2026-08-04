@@ -17,7 +17,11 @@ import {
 } from '../../core/services/deviation-evaluator.service';
 import { DeviationStatsService } from '../../core/services/deviation-stats.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
-import { MissTallyService, scenarioRefFor } from '../../core/services/miss-tally.service';
+import {
+  MissTallyService,
+  scenarioRefFor,
+  type WeakSpot,
+} from '../../core/services/miss-tally.service';
 import { RANDOM_SOURCE } from '../../core/services/random-source';
 import { PracticeHistoryService } from '../../core/services/practice-history.service';
 import { FlowActionsComponent } from '../../shared/flow-actions.component';
@@ -220,10 +224,13 @@ export class DeviationsDrillPageComponent {
     this.result.set(result);
     this.stats.recordAttempt(result.correct);
     this.history.recordHand(result.correct);
+    // The count goes in with the miss: here it is half the question, and a hand
+    // re-dealt at a fresh count is a different one.
     this.missTally.record(
       'deviations',
       scenarioRefFor(this.scenario().player, this.scenario().dealerUpcard),
       result.correct,
+      this.scenario().trueCount,
     );
     this.session.record(result.correct);
 
@@ -291,7 +298,7 @@ export class DeviationsDrillPageComponent {
     const weak = this.missTally.weakSpotFor('deviations');
     if (weak) {
       const base = scenarioFromRef(weak.ref, this.random);
-      return { ...base, trueCount: this.pickTrueCount() };
+      return { ...base, trueCount: this.trueCountForWeakSpot(weak) };
     }
     return this.generateScenario();
   }
@@ -306,7 +313,7 @@ export class DeviationsDrillPageComponent {
     const weak = pickWeakSpot(this.weakSpots(), this.random, share);
     if (weak) {
       const base = scenarioFromRef(weak.ref, this.random);
-      return { ...base, trueCount: this.pickTrueCount() };
+      return { ...base, trueCount: this.trueCountForWeakSpot(weak) };
     }
     return this.generateScenario();
   }
@@ -340,6 +347,21 @@ export class DeviationsDrillPageComponent {
     }
     const span = MAX_RANDOM_TRUE_COUNT - MIN_RANDOM_TRUE_COUNT + 1;
     return MIN_RANDOM_TRUE_COUNT + Math.floor(this.random() * span);
+  }
+
+  // A weak spot comes back at a count it was actually missed at. The hand alone
+  // is not the question here: 16 vs 10 is a stand at +2 and a hit at −1, so a
+  // re-deal at a fresh count can ask the side the trainee already had right —
+  // and three of those would clear the spot without teaching anything.
+  // A manually pinned count still wins: that is the trainee saying which
+  // threshold they are drilling.
+  private trueCountForWeakSpot(weak: WeakSpot): number {
+    if (this.prefs.prefs().deviations.trueCountSource === 'manual') return this.pickTrueCount();
+    const counts = weak.missedCounts;
+    // Empty for a spot recorded before the counts were kept: a fresh count is
+    // what that scenario has always come back at.
+    if (counts.length === 0) return this.pickTrueCount();
+    return counts[Math.min(counts.length - 1, Math.floor(this.random() * counts.length))];
   }
 
   private pickTrueCountForRule(rule: DeviationRule): number {
