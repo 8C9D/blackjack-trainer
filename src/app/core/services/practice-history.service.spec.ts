@@ -271,6 +271,7 @@ describe('PracticeHistoryService', () => {
       expect(Object.keys(stored.days[0]).sort()).toEqual([
         'correct',
         'date',
+        'goal',
         'graded',
         'hands',
         'millis',
@@ -320,6 +321,71 @@ describe('PracticeHistoryService', () => {
     it('is zero with no history', () => {
       const s = createService(() => current);
       expect(s.streak(20)).toBe(0);
+    });
+
+    // The streak reads as history, and judging every past day by the number
+    // currently on the Settings screen let one setting rewrite it: raise the
+    // goal and a month of practice reads 0, lower it and days you barely
+    // practised count.
+    describe('a day keeps the goal it was practised under', () => {
+      function seedWithGoals(days: { back: number; hands: number; goal?: number }[]) {
+        const stored = days.map(({ back, hands, goal }) => {
+          const d = new Date(BASE);
+          d.setDate(d.getDate() - back);
+          return { date: localDateKey(d), hands, ...(goal === undefined ? {} : { goal }) };
+        });
+        localStorage.setItem(PRACTICE_HISTORY_KEY, JSON.stringify({ days: stored }));
+        return createService(() => current);
+      }
+
+      it('survives raising the goal', () => {
+        const s = seedWithGoals([
+          { back: 1, hands: 20, goal: 20 },
+          { back: 2, hands: 20, goal: 20 },
+          { back: 3, hands: 20, goal: 20 },
+        ]);
+        expect(s.streak(50)).toBe(3);
+        expect(s.last7(50).filter((d) => d.met).length).toBe(3);
+      });
+
+      it('does not hand back a day that was never met', () => {
+        const s = seedWithGoals([
+          { back: 1, hands: 6, goal: 20 },
+          { back: 2, hands: 20, goal: 20 },
+        ]);
+        expect(s.streak(5)).toBe(0);
+      });
+
+      // Today is still running, so raising the goal is a statement about it too.
+      it('judges today by the goal that is set now', () => {
+        const s = seedWithGoals([{ back: 0, hands: 20, goal: 20 }]);
+        expect(s.streak(50)).toBe(0);
+        expect(s.last7(50)[6].met).toBe(false);
+        expect(s.last7(20)[6].met).toBe(true);
+      });
+
+      // Days written before the goal was stored read as judged by whatever it is
+      // now — exactly what every day did before.
+      it('falls back to the current goal for a day that stored none', () => {
+        const s = seedWithGoals([
+          { back: 1, hands: 20 },
+          { back: 2, hands: 20 },
+        ]);
+        expect(s.streak(20)).toBe(2);
+        expect(s.streak(50)).toBe(0);
+      });
+
+      it('ignores a stored goal a hand-edited file could not have meant', () => {
+        const s = seedWithGoals([{ back: 1, hands: 20, goal: 0 }]);
+        expect(s.streak(20)).toBe(1);
+        expect(s.streak(50)).toBe(0);
+      });
+
+      it('records the goal in force when the day was last practised', () => {
+        const s = createService(() => current);
+        s.recordHand(true);
+        expect(s.days()[0].goal).toBe(20);
+      });
     });
 
     it('an unfinished today does not break a run ending yesterday', () => {
