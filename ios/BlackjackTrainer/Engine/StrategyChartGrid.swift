@@ -6,6 +6,9 @@ struct ChartCell: Identifiable {
     /// The dealer upcard key, unique within its row.
     let id: String
     let action: Action
+    /// The hand this cell is about, in the tally's own terms — what marks it as
+    /// missed, and what the round it starts is pinned to.
+    let ref: ScenarioRef
     /// "missed 3 of 7 this week" when the hand is still outstanding in the
     /// trainer's weak list, nil otherwise. The grid has no room for the words,
     /// so the ring carries it on screen and this carries it to VoiceOver.
@@ -60,6 +63,9 @@ struct DeviationRuleRow: Identifiable {
     let hand: String
     let threshold: String
     let action: Action
+    /// Nil for insurance, which is filed against the hand that was dealt rather
+    /// than against the offer, so there is no one hand to drill.
+    let ref: ScenarioRef?
     /// As `ChartCell.missed`; the list is text, so this one is also shown.
     var missed: String?
 
@@ -167,14 +173,16 @@ enum StrategyChartGrid {
         _ rule: DeviationRule,
         misses: [String: WeakSpot]
     ) -> DeviationRuleRow {
-        DeviationRuleRow(
+        let ref = scenarioRef(for: rule)
+        return DeviationRuleRow(
             // Insurance has no player hand — the dealer's ace is the whole scenario.
             hand: rule.category == "insurance"
                 ? "Dealer ace"
                 : "\(rule.playerHandLabel) vs \(rule.dealerUpcard)",
             threshold: threshold(rule),
             action: Action(rawValue: rule.deviationAction) ?? .hit,
-            missed: scenarioRef(for: rule).flatMap { missLabel(misses, $0) }
+            ref: ref,
+            missed: ref.flatMap { missLabel(misses, $0) }
         )
     }
 
@@ -288,6 +296,7 @@ enum StrategyChartGrid {
                 return ChartCell(
                     id: upcard,
                     action: decision.action,
+                    ref: ref,
                     missed: missLabel(misses, ref)
                 )
             }

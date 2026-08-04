@@ -47,7 +47,8 @@ enum DeviationsFixture {
         seedWeak: ScenarioRef? = nil,
         missedAt: Int? = nil,
         playHandsOut: Bool = true,
-        draws: Rank? = nil
+        draws: Rank? = nil,
+        pinned: ScenarioRef? = nil
     ) -> Harness {
         let defaults = freshDefaults()
         let prefs = FlowPrefsStore(defaults: defaults)
@@ -80,7 +81,8 @@ enum DeviationsFixture {
             missTally: missTally,
             systems: TestEngines.shared.countingSystems,
             scheduler: scheduler,
-            advanceDelay: .zero
+            advanceDelay: .zero,
+            pinned: pinned
         )
         return Harness(model: model, scheduler: scheduler, prefs: prefs, missTally: missTally)
     }

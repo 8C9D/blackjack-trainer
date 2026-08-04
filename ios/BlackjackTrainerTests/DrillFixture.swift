@@ -64,7 +64,8 @@ enum DrillFixture {
         playHandsOut: Bool = true,
         draws: Rank? = nil,
         clock: TestClock? = nil,
-        review: Bool = false
+        review: Bool = false,
+        pinned: ScenarioRef? = nil
     ) -> Harness {
         let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)") ?? .standard
         let prefs = FlowPrefsStore(defaults: defaults)
@@ -87,7 +88,8 @@ enum DrillFixture {
             scheduler: scheduler,
             advanceDelay: .zero,
             now: { testClock.date },
-            review: review
+            review: review,
+            pinned: pinned
         )
         return Harness(
             model: model, scheduler: scheduler, prefs: prefs,

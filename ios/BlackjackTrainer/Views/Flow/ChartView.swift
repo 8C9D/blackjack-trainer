@@ -59,7 +59,8 @@ struct ChartView: View {
                     sections: sections,
                     deviationSections: deviationSections,
                     ruleChips: ruleChips,
-                    indexNote: indexNote
+                    indexNote: indexNote,
+                    onDrill: { trainer, ref in router.go(.drill(trainer, hand: ref)) }
                 ) {
                     router.go(.settings)
                 }
@@ -88,6 +89,9 @@ struct ChartGridView: View {
     /// Set when the trainee's counting system is not the one the indices are
     /// written for; nil (the common case) leaves the list unadorned.
     var indexNote: String?
+    /// Start a round pinned to one hand. The chart is where a trainee looks a
+    /// hand up, and until now it could name the play and do nothing else.
+    var onDrill: (TrainerId, ScenarioRef) -> Void = { _, _ in }
     let onChangeRules: () -> Void
 
     private let rowHeaderWidth: CGFloat = 46
@@ -121,6 +125,12 @@ struct ChartGridView: View {
                         + "Everything not listed here is played straight off the chart, at any "
                         + "count."
                 )
+                // Insurance is the one row with no hand to pin: it is filed
+                // against whatever was dealt, so it has no scenario to drill.
+                note(
+                    "Tap a hand to drill it — every deal that round is that hand, at the counts "
+                        + "your settings give it, so both sides of its index come up."
+                )
                 if let indexNote {
                     AdvisoryNoteView(text: indexNote, alignment: .leading)
                 }
@@ -143,6 +153,9 @@ struct ChartGridView: View {
                         + "Pair rows show the split decision, or the play the hand falls back to "
                         + "when the chart says not to split."
                 )
+                // The page a trainee reads to look a hand up could say what the
+                // play is and nothing else.
+                note("Tap any cell to drill that hand.")
                 // The app has always known which hands keep costing you, and the
                 // page a trainee actually reads never said.
                 if ringedCells > 0 {
@@ -163,70 +176,6 @@ struct ChartGridView: View {
         Text(text)
             .font(.system(size: 12))
             .foregroundStyle(Theme.muted)
-    }
-
-    private func deviationCard(_ section: DeviationSection) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(section.title)
-                .font(.system(size: 11, weight: .semibold))
-                .tracking(1.4)
-                .textCase(.uppercase)
-                .foregroundStyle(Theme.muted)
-
-            VStack(spacing: 0) {
-                ForEach(Array(section.rows.enumerated()), id: \.element.id) { index, row in
-                    if index > 0 {
-                        Divider().overlay(Theme.hairline)
-                    }
-                    deviationRowView(row)
-                }
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface)
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Theme.hairline, lineWidth: 1))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-    }
-
-    private func deviationRowView(_ row: DeviationRuleRow) -> some View {
-        HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(row.hand)
-                    .font(.system(size: 13))
-                    .foregroundStyle(Theme.ink)
-                // The list is text, not a ten-column grid, so an outstanding
-                // rule can say so in words rather than wear the grid's ring.
-                if let missed = row.missed {
-                    Text(missed)
-                        .font(.system(size: 10))
-                        .foregroundStyle(Theme.muted)
-                }
-            }
-            Spacer(minLength: 4)
-            Text(row.threshold)
-                .font(.system(size: 13))
-                .monospacedDigit()
-                .foregroundStyle(Theme.midInk)
-            Text(row.symbol)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Theme.ink)
-                .frame(width: 24)
-                .padding(.vertical, 3)
-                .background(Theme.chartCell(row.action))
-                .clipShape(RoundedRectangle(cornerRadius: 4))
-            Text(row.label)
-                .font(.system(size: 13))
-                .foregroundStyle(Theme.midInk)
-                .frame(width: 74, alignment: .leading)
-        }
-        .padding(.vertical, 7)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            "\(row.hand), true count \(row.threshold): \(row.label)"
-                + (row.missed.map { ". \($0)" } ?? "")
-        )
     }
 
     private var rules: some View {
@@ -296,20 +245,26 @@ struct ChartGridView: View {
     /// carries its own row and column in its label — and its miss count, which
     /// the ring cannot say.
     private func cellView(_ cell: ChartCell, in row: ChartRow) -> some View {
-        Text(cell.symbol)
-            .font(.system(size: 12, weight: .semibold))
-            .monospacedDigit()
-            .foregroundStyle(Theme.ink)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 5)
-            .background(Theme.chartCell(cell.action))
-            .clipShape(RoundedRectangle(cornerRadius: 4))
-            .overlay(missRing(cell.missed != nil))
-            .accessibilityElement()
-            .accessibilityLabel(
-                "\(row.label) versus \(cell.id): \(cell.action.label)"
-                    + (cell.missed.map { ". \($0)" } ?? "")
-            )
+        Button {
+            onDrill(.basicStrategy, cell.ref)
+        } label: {
+            Text(cell.symbol)
+                .font(.system(size: 12, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(Theme.ink)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 5)
+                .background(Theme.chartCell(cell.action))
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .overlay(missRing(cell.missed != nil))
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement()
+        .accessibilityLabel(
+            "\(row.label) versus \(cell.id): \(cell.action.label)"
+                + (cell.missed.map { ". \($0)" } ?? "")
+        )
+        .accessibilityHint("Drills this hand")
     }
 
     /// A hand still outstanding in the rolling week. Every cell is already
@@ -366,6 +321,85 @@ struct ChartGridView: View {
 extension Action {
     /// The five actions a basic-strategy grid can print, in legend order.
     static let chartLegend: [Action] = [.hit, .stand, .double, .split, .surrender]
+}
+
+/// The deviation list's half of the screen. An extension so the struct body stays
+/// inside the lint limit; it reads only what the view was handed.
+extension ChartGridView {
+    private func deviationCard(_ section: DeviationSection) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(section.title)
+                .font(.system(size: 11, weight: .semibold))
+                .tracking(1.4)
+                .textCase(.uppercase)
+                .foregroundStyle(Theme.muted)
+
+            VStack(spacing: 0) {
+                ForEach(Array(section.rows.enumerated()), id: \.element.id) { index, row in
+                    if index > 0 {
+                        Divider().overlay(Theme.hairline)
+                    }
+                    deviationRowView(row)
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surface)
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Theme.hairline, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    @ViewBuilder
+    private func deviationRowView(_ row: DeviationRuleRow) -> some View {
+        if let ref = row.ref {
+            Button { onDrill(.deviations, ref) } label: { deviationRowBody(row) }
+                .buttonStyle(.plain)
+                .accessibilityHint("Drills this hand")
+        } else {
+            deviationRowBody(row)
+        }
+    }
+
+    private func deviationRowBody(_ row: DeviationRuleRow) -> some View {
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(row.hand)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.ink)
+                // The list is text, not a ten-column grid, so an outstanding
+                // rule can say so in words rather than wear the grid's ring.
+                if let missed = row.missed {
+                    Text(missed)
+                        .font(.system(size: 10))
+                        .foregroundStyle(Theme.muted)
+                }
+            }
+            Spacer(minLength: 4)
+            Text(row.threshold)
+                .font(.system(size: 13))
+                .monospacedDigit()
+                .foregroundStyle(Theme.midInk)
+            Text(row.symbol)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Theme.ink)
+                .frame(width: 24)
+                .padding(.vertical, 3)
+                .background(Theme.chartCell(row.action))
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+            Text(row.label)
+                .font(.system(size: 13))
+                .foregroundStyle(Theme.midInk)
+                .frame(width: 74, alignment: .leading)
+        }
+        .padding(.vertical, 7)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            "\(row.hand), true count \(row.threshold): \(row.label)"
+                + (row.missed.map { ". \($0)" } ?? "")
+        )
+    }
 }
 
 #Preview {
