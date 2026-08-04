@@ -286,7 +286,7 @@ one of Hit / Stand / Double / Split / Surrender / Insurance.
   Insurance is treated as a single action choice rather than a separate
   pre-decision prompt.
 - **Keyboard shortcuts** — same bindings as the basic strategy drill: `H` / `S` / `D` / `P` / `R` (surrender) / `I` (insurance); correct answers auto-advance and any key continues after a miss.
-- **Hands are played out too** (the same Settings → Drills toggle). A correct hit deals the next card and asks the decision it leaves, at the same count — and **an index is written against a total**, so the hard-16 rule fires on a three-card 16 exactly as it does on a two-card one.
+- **Hands are played out too** (the same Settings → Drills toggle). In deviation-only practice the _deal_ still comes from an encoded rule; a hand hit onward may land anywhere, and the feedback says so rather than claiming a candidate. A correct hit deals the next card and asks the decision it leaves, at the same count — and **an index is written against a total**, so the hard-16 rule fires on a three-card 16 exactly as it does on a two-card one.
   That is what the showdown has always graded and what no drill taught.
   Past the deal the grid narrows to hit and stand: doubling, splitting and surrender are first-two-card actions, and insurance was settled before the hand was played.
 
@@ -384,6 +384,9 @@ no-ops at runtime but document the chart cell.
   The bars carry volume; the accuracy line is the half that says whether the practice is working, and it stays silent until there are two measured weeks to compare.
   The pace line is the other half of table-readiness — a chart answered perfectly and slowly is not a chart you can play — and it is reported, never judged: the app has no published number to hold a trainee to, so the only claim it makes is the direction against their own week before.
   A decision is timed from the moment its question goes up; anything past a minute is a trainee who walked away and is left out entirely.
+  **Only the opening decision is timed** — the same question the drill has always asked, and the same line the weak-spot tally draws.
+  A continued decision (see "Play hands out") offers two buttons and one total where the deal offers six and a pair-or-soft-or-hard lookup, so counting both would move the week's figure when a setting was turned on rather than when the trainee got faster.
+  The figure does mix the two strategy trainers, and a deviation decision carries a count to read on top of the chart: a week that switched trainers moved its own baseline.
   Read-only, and each section hides itself until there is something to show.
 - **Real card images** — 52 SVGs + face-down back from
   [richardschneider/cardsJS](https://github.com/richardschneider/cardsJS).

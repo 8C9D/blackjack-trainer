@@ -199,7 +199,16 @@ export class BasicStrategyDrillPageComponent {
     const cards = this.hand();
     const result = this.gradeDecision(cards, action);
     this.result.set(result);
-    const elapsedMs = plausibleDecisionMs(Date.now() - this.askedAt) ?? undefined;
+    // Only the opening decision is timed, and for the same reason only it is
+    // filed as a weak spot: it is the question the drill has always asked. A
+    // continued decision offers two buttons and one total where the deal offers
+    // six and a pair-or-soft-or-hard lookup, so mixing them would move the
+    // week's figure when the trainee turned a setting on rather than when they
+    // got faster.
+    const elapsedMs =
+      cards.length === 2
+        ? (plausibleDecisionMs(Date.now() - this.askedAt) ?? undefined)
+        : undefined;
     this.stats.recordAttempt(result.correct);
     this.history.recordHand(result.correct, elapsedMs);
     // Only the opening decision has a weak spot to file under: a `ScenarioRef`
