@@ -74,6 +74,27 @@ struct SystemMetricLabel: Equatable, Identifiable {
     }
 }
 
+/// One column of the printed tag table: the ranks it covers, and that column's
+/// tag for each of the table's rows. Mirrors `SystemTagColumn`.
+struct SystemTagColumn: Equatable, Identifiable {
+    /// `2–6`, `7`, `10–A` — the ranks that share this column's tags.
+    let label: String
+    /// One formatted tag per row of the table, in `rowLabels` order.
+    let values: [String]
+
+    var id: String {
+        label
+    }
+}
+
+/// Mirrors `SystemTagTable`.
+struct SystemTagTable: Equatable {
+    /// `Count` for a rank-only system; `Red` and `Black` for a color-dependent
+    /// one.
+    let rowLabels: [String]
+    let columns: [SystemTagColumn]
+}
+
 /// A counting-system descriptor decoded verbatim from `counting-systems.json`.
 /// Mirrors `counting-system.model.ts` (plus the exporter's derived
 /// `isFractional` flag the counting UI keys off).
@@ -122,6 +143,49 @@ struct CountingSystem: Decodable, Equatable {
             return card.color == .red ? override.red : override.black
         }
         return values[card.rank.rawValue] ?? 0
+    }
+
+    /// The system's tags as a reference table reads them.
+    ///
+    /// Every figure comes back through `value(for:)`, the same accessor the
+    /// engine counts a shoe with, so the table a trainee memorises cannot drift
+    /// from what a miss is graded on — the principle the strategy chart is
+    /// already built on.
+    ///
+    /// Adjacent ranks whose tags all agree share a column, which is how every
+    /// published system table prints ("2–6 +1, 7–9 0, 10–A −1") and the only way
+    /// thirteen ranks fit a phone. The merge is derived, never assumed — a
+    /// system that tagged J apart from 10 would simply print J its own column.
+    /// A color-dependent system gets two rows, and a rank only joins a column
+    /// when it agrees on both. Mirrors `tagTableFor`.
+    var tagTable: SystemTagTable {
+        let suits: [Suit] = colorValues == nil ? [.spades] : [.hearts, .spades]
+        let rowLabels = colorValues == nil ? ["Count"] : ["Red", "Black"]
+        var columns: [SystemTagColumn] = []
+        var run: [Rank] = []
+        var runValues: [String] = []
+
+        func flush() {
+            guard let first = run.first, let last = run.last else { return }
+            let label = run.count == 1 ? first.rawValue : "\(first.rawValue)–\(last.rawValue)"
+            columns.append(SystemTagColumn(label: label, values: runValues))
+        }
+
+        for rank in Card.allRanks {
+            let values = suits.map {
+                CountFormat.signedCount(value(for: Card(rank: rank, suit: $0)))
+            }
+            if !run.isEmpty, values == runValues {
+                run.append(rank)
+                continue
+            }
+            flush()
+            run = [rank]
+            runValues = values
+        }
+        flush()
+
+        return SystemTagTable(rowLabels: rowLabels, columns: columns)
     }
 
     /// Whether this system can host the requested drill mode: true count — and

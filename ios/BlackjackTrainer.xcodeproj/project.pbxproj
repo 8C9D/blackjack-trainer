@@ -13,6 +13,7 @@
 		0672F0196E2D44640C38AE91 /* ShoeFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1686420A2590C6534E31F3E2 /* ShoeFactory.swift */; };
 		073B0D14103843F84299F288 /* DrillSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38181BAA4EC763FE68C1300C /* DrillSessionTests.swift */; };
 		0C9DCB1AD32F6624AB2541F4 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E938F0CC74CC666924D7E3E /* AboutView.swift */; };
+		0E540EFF8FF1687872BFAC54 /* CountReferenceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8027126ED46DF029411B8F4D /* CountReferenceView.swift */; };
 		0E5D83599175AA214BABC1DE /* Backup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2F41958E1ACF796FDC5ECD /* Backup.swift */; };
 		1058350C99040A1626C35D53 /* BackupStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A28D160D350A5339B1DFE979 /* BackupStore.swift */; };
 		11723EBF74A70F6A5257E0CD /* showdown-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = E96987FAD78F068E0FF56D55 /* showdown-vectors.json */; };
@@ -88,6 +89,7 @@
 		77899997FB4C363105417479 /* BackupSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20056C4A5972F33161BAEB4 /* BackupSection.swift */; };
 		7CA47BF6219EAC05D7BF9D0D /* FlowAdvanceScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F8840CC6E0B7C1C81FB294A /* FlowAdvanceScheduler.swift */; };
 		8124C2BFD8BA1EE68E269E3C /* DeviationScenarioGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCFA223B9420BDC9AD027B73 /* DeviationScenarioGeneratorTests.swift */; };
+		818A67AA8C6CAB42ED6F0793 /* CountReference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 421AC9C4695C74F90869659B /* CountReference.swift */; };
 		846B2EEF3BB562DEE492DE65 /* CountFeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F0F142E7986FA01C30FBDC9 /* CountFeedbackView.swift */; };
 		8A5FCA013C37B817EE6309EA /* ShowdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 165C075DFEF13830088AC4E9 /* ShowdownView.swift */; };
 		8BD08F72E75B54564AEAFD90 /* DeviationIndexSystemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D515F12D5142DD5EB526BFE /* DeviationIndexSystemTests.swift */; };
@@ -119,6 +121,7 @@
 		A72B5C6E116DC9D70E9F7055 /* RemindersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 980E7AECAB91B60175930CD3 /* RemindersView.swift */; };
 		A92CDBEB90E70B6B983D8C5D /* Keyboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9F3808F8AC15DEF1BE4DE1B /* Keyboard.swift */; };
 		AD5CA329F1BC4A32BF660060 /* DeviationParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18C6C68585013F882B690DA5 /* DeviationParityTests.swift */; };
+		ADEC7917D22F62B6645F899D /* CountReferenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17F3F4A1DEA5C26E8957C509 /* CountReferenceTests.swift */; };
 		AE6F2FE0E95A40C9E21207A8 /* CardImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DAE402AA61CF04300B0AF9 /* CardImage.swift */; };
 		AEAEFC3279D6B11388006331 /* CountingModel+Presentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ECFF5FEA322560635D1875A /* CountingModel+Presentation.swift */; };
 		B06D127FE60E9EBFA5F89488 /* BasicStrategyDrillModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D838D94610B7BBD18724FCA /* BasicStrategyDrillModel.swift */; };
@@ -228,6 +231,7 @@
 		165C075DFEF13830088AC4E9 /* ShowdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowdownView.swift; sourceTree = "<group>"; };
 		1686420A2590C6534E31F3E2 /* ShoeFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoeFactory.swift; sourceTree = "<group>"; };
 		16AA279657004B2B9271D3CE /* play-deviation-vectors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "play-deviation-vectors.json"; sourceTree = "<group>"; };
+		17F3F4A1DEA5C26E8957C509 /* CountReferenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountReferenceTests.swift; sourceTree = "<group>"; };
 		18C6C68585013F882B690DA5 /* DeviationParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationParityTests.swift; sourceTree = "<group>"; };
 		1965DF5EA178C870607212F6 /* FlowStageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowStageView.swift; sourceTree = "<group>"; };
 		1A1FB0D0470FEEDD9AABEFE2 /* FlowPrefsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowPrefsStoreTests.swift; sourceTree = "<group>"; };
@@ -257,6 +261,7 @@
 		3F0F142E7986FA01C30FBDC9 /* CountFeedbackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountFeedbackView.swift; sourceTree = "<group>"; };
 		40DA33CFF9EA9742E7504A05 /* StatsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsStoreTests.swift; sourceTree = "<group>"; };
 		412EEBB6BE3B2274CC4757FB /* BasicStrategyEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicStrategyEngine.swift; sourceTree = "<group>"; };
+		421AC9C4695C74F90869659B /* CountReference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountReference.swift; sourceTree = "<group>"; };
 		424CE3E5C15E3B885150126A /* BlackjackWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = BlackjackWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		424E0908F1E2CE3970524A47 /* CountingSystemMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountingSystemMetricsTests.swift; sourceTree = "<group>"; };
 		455D3327443EB36780BE24A7 /* PracticeReminders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeReminders.swift; sourceTree = "<group>"; };
@@ -299,6 +304,7 @@
 		7B1046B13D6373233EEA1F35 /* CardCounting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardCounting.swift; sourceTree = "<group>"; };
 		7D8B277C6178E03A08DA261E /* TextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextTests.swift; sourceTree = "<group>"; };
 		7ECFF5FEA322560635D1875A /* CountingModel+Presentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CountingModel+Presentation.swift"; sourceTree = "<group>"; };
+		8027126ED46DF029411B8F4D /* CountReferenceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountReferenceView.swift; sourceTree = "<group>"; };
 		80916791F08727E4F1F41C6E /* DeviationFeedbackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationFeedbackTests.swift; sourceTree = "<group>"; };
 		813FDC8945C6DA0B76114E43 /* DrillFixture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillFixture.swift; sourceTree = "<group>"; };
 		81F4236F3DD46FE168D9EB8F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -487,6 +493,7 @@
 				01B4AFDADA3CF8230C9FA589 /* CountingModelTests.swift */,
 				D730EDEF484D1CCCE5B281C1 /* CountingParityTests.swift */,
 				424E0908F1E2CE3970524A47 /* CountingSystemMetricsTests.swift */,
+				17F3F4A1DEA5C26E8957C509 /* CountReferenceTests.swift */,
 				BA0B879E8B1D853622E0CC86 /* DataLayerTests.swift */,
 				0796FA7E1D39E31A828EADA2 /* DeckSpeedTests.swift */,
 				80916791F08727E4F1F41C6E /* DeviationFeedbackTests.swift */,
@@ -561,6 +568,7 @@
 				379C7FF2338A80383EB718B0 /* CellContext.swift */,
 				CF4D671AA4A053AF40395078 /* CountingEngine.swift */,
 				12BE32AD13FB36B33BAA1B8A /* CountingSystem.swift */,
+				421AC9C4695C74F90869659B /* CountReference.swift */,
 				95DA8025CE95EA6D6ECA67D4 /* DeckSpeed.swift */,
 				0896F4168F59A3A9EBFF7CDE /* Deviation.swift */,
 				F423E49F3EE23CE7C3E35ABB /* DeviationEngine.swift */,
@@ -599,6 +607,7 @@
 				1E91B02DF126680C1AD1E1DB /* BetRampEditor.swift */,
 				EE50DEB7576D2B5A6C544838 /* CardCountingFlowView.swift */,
 				5B05E37DDD485FFB7F97B52C /* ChartView.swift */,
+				8027126ED46DF029411B8F4D /* CountReferenceView.swift */,
 				5A75185EE9CCD47609B7C2CD /* DeviationsDrillModel.swift */,
 				7244BE12FDAD7DBD620EFE49 /* DeviationsDrillView.swift */,
 				A983976406877FBE9E2F5A7C /* DeviationsSection.swift */,
@@ -856,6 +865,8 @@
 				5C7245639BE28FE6E28B62CE /* CountCheckView.swift in Sources */,
 				3434CE6ED21BB54AFE177FD2 /* CountDrift.swift in Sources */,
 				846B2EEF3BB562DEE492DE65 /* CountFeedbackView.swift in Sources */,
+				818A67AA8C6CAB42ED6F0793 /* CountReference.swift in Sources */,
+				0E540EFF8FF1687872BFAC54 /* CountReferenceView.swift in Sources */,
 				4A47A66E72212E35E00844CD /* CountStreamView.swift in Sources */,
 				F6C919CA4ED0021197E1F128 /* CountingEngine.swift in Sources */,
 				AEAEFC3279D6B11388006331 /* CountingModel+Presentation.swift in Sources */,
@@ -949,6 +960,7 @@
 				4DC171F2E11923E6F13DE2DF /* CardImageTests.swift in Sources */,
 				3CC9C30A7E7A343467F7DA05 /* CloudSyncTests.swift in Sources */,
 				9ACD30E81163F378A8FCEB3B /* CountDriftTests.swift in Sources */,
+				ADEC7917D22F62B6645F899D /* CountReferenceTests.swift in Sources */,
 				33492E9B5E4EF3FF48BC4CE1 /* CountingDrillTests.swift in Sources */,
 				BD6E7BF5AA767DA6D790CF8D /* CountingModelTests.swift in Sources */,
 				CA4D608DD9DB115BD8BEDD6B /* CountingParityTests.swift in Sources */,
