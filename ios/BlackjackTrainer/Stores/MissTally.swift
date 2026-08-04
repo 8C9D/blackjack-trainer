@@ -35,7 +35,21 @@ struct WeakSpot: Equatable {
     let attempts: Int
     /// Consecutive correct answers since this scenario was last missed.
     var streak: Int = 0
+    /// True counts this scenario was recently missed at, most recent first. Only
+    /// the Deviations trainer records them: there the count is half the question,
+    /// and a re-deal that draws a fresh one asks something else.
+    var missedCounts: [Int] = []
 }
+
+/// How many missed true counts a scenario remembers. A hand can be missed on
+/// both sides of its index — 16 vs 10 stood at −1, hit at +2 — so one is too few;
+/// five covers a hand's real failure modes without letting a bad week write an
+/// unbounded list to storage. Mirrors `MISSED_COUNT_MEMORY`.
+let missedCountMemory = 5
+
+/// Widest true count worth storing. The trainer's own manual range is ±20; a
+/// stored value outside this is corrupt rather than practice.
+private let maxStoredTrueCount = 30
 
 struct DayTally: Codable, Equatable {
     let date: String
@@ -49,21 +63,45 @@ struct ScenarioTally: Codable, Equatable {
     /// Consecutive correct answers since the last miss. Unlike `days` this is not
     /// windowed: it is the live clear-streak signal, reset by any miss.
     var streak: Int = 0
+    /// The true counts the scenario was missed at, most recent first.
+    var missedCounts: [Int] = []
 
-    init(ref: ScenarioRef, days: [DayTally], streak: Int = 0) {
+    init(ref: ScenarioRef, days: [DayTally], streak: Int = 0, missedCounts: [Int] = []) {
         self.ref = ref
         self.days = days
         self.streak = streak
+        self.missedCounts = missedCounts
     }
 
     /// Hand-rolled so payloads written before clear-streak tracking still decode; a
-    /// fresh 0 just means those scenarios must earn it again.
+    /// fresh 0 just means those scenarios must earn it again. Likewise for the
+    /// missed counts: a scenario stored before they were kept (or by the Basic
+    /// Strategy trainer, which has no count) simply has none.
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         ref = try container.decode(ScenarioRef.self, forKey: .ref)
         days = try container.decode([DayTally].self, forKey: .days)
         streak = try max(0, container.decodeIfPresent(Int.self, forKey: .streak) ?? 0)
+        let stored = try container.decodeIfPresent([Int].self, forKey: .missedCounts) ?? []
+        missedCounts = sanitizeMissedCounts(stored)
     }
+}
+
+/// Newest first, capped, and only for a miss — a correct answer leaves the list
+/// alone, since it is the record of what went wrong. Mirrors
+/// `rememberMissedCount`.
+func rememberMissedCount(_ existing: [Int], correct: Bool, trueCount: Int?) -> [Int] {
+    guard !correct, let trueCount, abs(trueCount) <= maxStoredTrueCount else { return existing }
+    return Array(([trueCount] + existing.filter { $0 != trueCount }).prefix(missedCountMemory))
+}
+
+/// Drops implausible values and duplicates out of a restored list.
+func sanitizeMissedCounts(_ values: [Int]) -> [Int] {
+    var seen: [Int] = []
+    for value in values where abs(value) <= maxStoredTrueCount && !seen.contains(value) {
+        seen.append(value)
+    }
+    return Array(seen.prefix(missedCountMemory))
 }
 
 /// The `ScenarioRef` for a graded hand. Mirrors the web `scenarioRefFor`.
@@ -131,7 +169,16 @@ final class MissTallyStore: CloudSyncable, ReloadableStore {
         state = load(data: defaults.data(forKey: key))
     }
 
-    func record(_ trainer: TalliedTrainer, ref: ScenarioRef, correct: Bool) {
+    /// `trueCount` is the count the question was asked at, and is only meaningful
+    /// where the count is part of the question — the Deviations trainer, and the
+    /// showdown's index plays. A miss remembers it so the scenario can come back
+    /// as the question that was actually missed rather than the hand alone.
+    func record(
+        _ trainer: TalliedTrainer,
+        ref: ScenarioRef,
+        correct: Bool,
+        trueCount: Int? = nil
+    ) {
         let today = localDateKey(now())
         let key = scenarioKey(ref)
         var forTrainer = state[trainer.rawValue] ?? [:]
@@ -150,7 +197,12 @@ final class MissTallyStore: CloudSyncable, ReloadableStore {
         forTrainer[key] = ScenarioTally(
             ref: ref,
             days: pruneDays(days),
-            streak: correct ? existing.streak + 1 : 0
+            streak: correct ? existing.streak + 1 : 0,
+            missedCounts: rememberMissedCount(
+                existing.missedCounts,
+                correct: correct,
+                trueCount: trueCount
+            )
         )
         state[trainer.rawValue] = pruneScenarios(forTrainer)
         persist()
@@ -214,7 +266,8 @@ final class MissTallyStore: CloudSyncable, ReloadableStore {
                     label: scenarioLabel(tally.ref),
                     misses: misses,
                     attempts: attempts,
-                    streak: tally.streak
+                    streak: tally.streak,
+                    missedCounts: tally.missedCounts
                 )
             ))
         }
@@ -242,7 +295,12 @@ final class MissTallyStore: CloudSyncable, ReloadableStore {
         for (key, tally) in forTrainer {
             let days = pruneDays(tally.days)
             if !days.isEmpty {
-                out[key] = ScenarioTally(ref: tally.ref, days: days, streak: tally.streak)
+                out[key] = ScenarioTally(
+                    ref: tally.ref,
+                    days: days,
+                    streak: tally.streak,
+                    missedCounts: tally.missedCounts
+                )
             }
         }
         return out
@@ -274,7 +332,8 @@ final class MissTallyStore: CloudSyncable, ReloadableStore {
                 valid[key] = ScenarioTally(
                     ref: tally.ref,
                     days: pruneDays(tally.days),
-                    streak: tally.streak
+                    streak: tally.streak,
+                    missedCounts: tally.missedCounts
                 )
             }
             out[trainer.rawValue] = pruneScenarios(valid)

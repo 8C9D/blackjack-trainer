@@ -30,15 +30,31 @@ struct DeviationsDrillModelTests {
         let missTally: MissTallyStore
     }
 
-    private func makeHarness(dailyGoal: Int = 20, systemId: String? = nil) -> Harness {
+    private func makeHarness(
+        dailyGoal: Int = 20,
+        systemId: String? = nil,
+        manualTrueCount: Int? = nil,
+        seedWeak: ScenarioRef? = nil,
+        missedAt: Int? = nil
+    ) -> Harness {
         let defaults = freshDefaults()
         let prefs = FlowPrefsStore(defaults: defaults)
         prefs.setDailyGoal(Double(dailyGoal))
         if let systemId {
             prefs.updateCounting { $0.systemId = systemId }
         }
+        if let manualTrueCount {
+            prefs.updateDeviations {
+                $0.trueCountSource = .manual
+                $0.manualTrueCount = manualTrueCount
+            }
+        }
         let history = PracticeHistoryStore(defaults: defaults)
         let missTally = MissTallyStore(defaults: defaults)
+        // Seeded before the model is built: the opening hand is chosen in init.
+        if let seedWeak {
+            missTally.record(.deviations, ref: seedWeak, correct: false, trueCount: missedAt)
+        }
         let stats = SessionStatsStore(key: StatsKeys.deviation, defaults: defaults)
         let scheduler = ManualFlowAdvanceScheduler()
         let model = DeviationsDrillModel(
@@ -128,6 +144,42 @@ struct DeviationsDrillModelTests {
         h.model.answer(.hit)
         #expect(h.missTally.weakSpotFor(.deviations)?.label == "16 vs 10")
         #expect(h.missTally.weakSpotFor(.basicStrategy) == nil)
+    }
+
+    // The count is half a deviation question: 16 vs 10 stands at +2 and hits at
+    // −1. A weak spot re-dealt at a fresh count can ask the side the trainee
+    // already had right — and three of those would clear it without teaching.
+
+    /// −12 is outside the trainer's random range, so drawing it proves the count
+    /// came from the weak spot rather than from a fresh roll.
+    private var hard16v10: ScenarioRef {
+        ScenarioRef(kind: "hard", hand: "16", dealer: "10")
+    }
+
+    @Test func opensTheSessionAtACountTheScenarioWasMissedAt() {
+        let h = makeHarness(seedWeak: hard16v10, missedAt: -12)
+        #expect(h.model.scenario.trueCount == -12)
+    }
+
+    @Test func fallsBackToAFreshCountForASpotRecordedWithoutOne() {
+        let h = makeHarness(seedWeak: hard16v10)
+        let tc = h.model.scenario.trueCount
+        #expect(tc >= DeviationTrainerConstants.minRandomTrueCount)
+        #expect(tc <= DeviationTrainerConstants.maxRandomTrueCount)
+    }
+
+    /// A pinned manual count is the trainee naming the threshold they are
+    /// drilling, so a weak spot must not override it.
+    @Test func aPinnedManualCountStillWins() {
+        let h = makeHarness(manualTrueCount: 4, seedWeak: hard16v10, missedAt: -12)
+        #expect(h.model.scenario.trueCount == 4)
+    }
+
+    @Test func recordsTheCountTheMissWasActuallyMadeAt() {
+        let h = makeHarness()
+        h.model.deal(scenario(.king, .six, vs: .queen, tc: -2)) // hits at −2
+        h.model.answer(.stand)
+        #expect(h.missTally.weakSpotFor(.deviations)?.missedCounts == [-2])
     }
 
     @Test func reachesDoneAndOffersOneMoreRound() {

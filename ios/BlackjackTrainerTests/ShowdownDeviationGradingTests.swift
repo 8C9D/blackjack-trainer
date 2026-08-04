@@ -97,6 +97,22 @@ struct ShowdownDeviationGradingTests {
         #expect(h.missTally.weakSpots(.basicStrategy).isEmpty)
     }
 
+    /// The count is what made it an index play, so it goes with the miss: the
+    /// Deviations trainer re-deals the hand at a count it was missed at.
+    @Test func filesTheCountTheIndexPlayWasMadeAt() throws {
+        let h = try dealt(entryRunningCount: 1)
+        h.model.onAction(.hit)
+        let spot = try #require(h.missTally.weakSpots(.deviations).first)
+        #expect(spot.missedCounts == [0])
+    }
+
+    @Test func filesNoCountWithAnOrdinaryBasicStrategyMiss() throws {
+        let h = try dealt(entryRunningCount: 0)
+        h.model.onAction(.stand)
+        let spot = try #require(h.missTally.weakSpots(.basicStrategy).first)
+        #expect(spot.missedCounts == [])
+    }
+
     @Test func stillFilesAnOrdinaryMissUnderBasicStrategy() throws {
         let h = try dealt(entryRunningCount: 0)
         h.model.onAction(.stand)

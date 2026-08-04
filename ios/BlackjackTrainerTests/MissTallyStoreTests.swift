@@ -91,6 +91,86 @@ struct MissTallyStoreTests {
             == WeakSpot(ref: hard16v10, label: "16 vs 10", misses: 3, attempts: 7, streak: 1))
     }
 
+    // In the Deviations trainer the count is half the question, so the miss
+    // remembers it: the scenario has to come back as the question that beat the
+    // trainee, not as the same hand at a count they already had right.
+
+    @Test func remembersAMissedCountNewestFirstAndIgnoresCorrectAnswers() {
+        let s = store(freshDefaults(), now: { Self.base() })
+        s.record(.deviations, ref: hard16v10, correct: false, trueCount: 2)
+        s.record(.deviations, ref: hard16v10, correct: true, trueCount: -4)
+        s.record(.deviations, ref: hard16v10, correct: false, trueCount: -1)
+        #expect(s.weakSpotFor(.deviations)?.missedCounts == [-1, 2])
+    }
+
+    @Test func promotesARepeatedCountRatherThanStoringItTwice() {
+        let s = store(freshDefaults(), now: { Self.base() })
+        for count in [2, 5, 2] {
+            s.record(.deviations, ref: hard16v10, correct: false, trueCount: count)
+        }
+        #expect(s.weakSpotFor(.deviations)?.missedCounts == [2, 5])
+    }
+
+    @Test func keepsOnlyTheMostRecentFewMissedCounts() {
+        let s = store(freshDefaults(), now: { Self.base() })
+        for count in 1 ... (missedCountMemory + 3) {
+            s.record(.deviations, ref: hard16v10, correct: false, trueCount: count)
+        }
+        let counts = s.weakSpotFor(.deviations)?.missedCounts ?? []
+        #expect(counts.count == missedCountMemory)
+        #expect(counts.first == missedCountMemory + 3)
+    }
+
+    @Test func ignoresACountThatIsNotAPlausibleTrueCount() {
+        let s = store(freshDefaults(), now: { Self.base() })
+        s.record(.deviations, ref: hard16v10, correct: false, trueCount: 5000)
+        #expect(s.weakSpotFor(.deviations)?.missedCounts == [])
+    }
+
+    @Test func recordsNoCountForABasicStrategyMiss() {
+        let s = store(freshDefaults(), now: { Self.base() })
+        s.record(.basicStrategy, ref: hard16v10, correct: false)
+        #expect(s.weakSpotFor(.basicStrategy)?.missedCounts == [])
+    }
+
+    @Test func dropsGarbageAndDuplicatesOutOfARestoredListOfCounts() throws {
+        let defaults = freshDefaults()
+        let stored: [String: Any] = [
+            "deviations": [
+                scenarioKey(hard16v10): [
+                    "ref": ["kind": "hard", "hand": "16", "dealer": "10"],
+                    "days": [["date": localDateKey(Self.base()), "attempts": 1, "misses": 1]],
+                    "streak": 0,
+                    "missedCounts": [3, 3, 900, -2]
+                ]
+            ]
+        ]
+        try defaults.set(
+            JSONSerialization.data(withJSONObject: stored),
+            forKey: StatsKeys.missTally
+        )
+        let s = store(defaults, now: { Self.base() })
+        #expect(s.weakSpotFor(.deviations)?.missedCounts == [3, -2])
+    }
+
+    @Test func survivesAPayloadWrittenBeforeCountsWereKept() throws {
+        let defaults = freshDefaults()
+        let legacy: [String: Any] = [
+            "deviations": [
+                scenarioKey(hard16v10): [
+                    "ref": ["kind": "hard", "hand": "16", "dealer": "10"],
+                    "days": [["date": localDateKey(Self.base()), "attempts": 1, "misses": 1]]
+                ]
+            ]
+        ]
+        try defaults.set(
+            JSONSerialization.data(withJSONObject: legacy),
+            forKey: StatsKeys.missTally
+        )
+        let s = store(defaults, now: { Self.base() })
+        #expect(s.weakSpotFor(.deviations)?.missedCounts == [])
+    }
+
     @Test func picksTheScenarioWithTheMostMissesTiebreakingOnMissRate() {
         let s = store(freshDefaults(), now: { Self.base() })
         // 16v10: 2 misses of 4; A,7v9: 2 misses of 2 (higher rate).
