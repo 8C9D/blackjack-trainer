@@ -133,6 +133,51 @@ describe('DeviationEvaluatorService', () => {
     });
   });
 
+  // The drill plays a hand out once the chart says hit, and the showdown has
+  // always graded index plays on hands deeper than the deal.
+  describe('evaluatePlay — a hand already under way', () => {
+    const deep = (ranks: readonly Rank[], up: Rank, trueCount: number) => ({
+      player: ranks.map((rank) => card(rank)),
+      dealerUpcard: card(up),
+      trueCount,
+      ruleSet,
+      options,
+    });
+
+    // An index is written against a total, so the hard-16 rule fires on a
+    // three-card 16 exactly as it does on a two-card one.
+    it('applies a hard-total index to a three-card hand', () => {
+      const r = evaluator.evaluatePlay(deep(['10', '2', '4'], '10', 0), 'S');
+      expect(r.correct).toBe(true);
+      expect(r.expectedAction).toBe('S');
+      expect(r.basicAction).toBe('H');
+      expect(r.deviationApplied).toBe(true);
+      expect(r.handDescription).toBe('Hard 16');
+      expect(r.explanation).toContain('Hi-Lo deviation');
+    });
+
+    it('grades the same total the other way below the threshold', () => {
+      const r = evaluator.evaluatePlay(deep(['10', '2', '4'], '10', -1), 'S');
+      expect(r.correct).toBe(false);
+      expect(r.expectedAction).toBe('H');
+      expect(r.deviationApplied).toBe(false);
+    });
+
+    // Doubling is a first-two-card action, so an index calling for it can only
+    // leave the play behind it — the same restriction the showdown applies.
+    it('never names an action the hand can no longer take', () => {
+      const r = evaluator.evaluatePlay(deep(['5', '3', '3'], '10', 5), 'H');
+      expect(r.expectedAction).toBe('H');
+      expect(r.correct).toBe(true);
+    });
+
+    it('reads a softened ace as the hard total it became', () => {
+      const r = evaluator.evaluatePlay(deep(['A', '9', '7'], '10', 5), 'S');
+      expect(r.handDescription).toBe('Hard 17');
+      expect(r.expectedAction).toBe('S');
+    });
+  });
+
   describe('rule-set selection', () => {
     it('S17 11 v A at +1 deviates to Double; H17 already doubles via basic strategy', () => {
       const s17 = evaluator.evaluate(scenarioOf('7', '4', 'A', 1), 'D', 'S17', options);

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 
 import { formatSignedCount } from '../models/card-counting.model';
-import { isAce } from '../models/card.model';
+import { isAce, type Card } from '../models/card.model';
 import type {
   DeviationDecision,
   DeviationScenario,
@@ -13,7 +13,11 @@ import {
   type EngineOptions,
   type RuleSet,
 } from '../models/strategy.model';
-import { BasicStrategyEngineService, type EngineInput } from './basic-strategy-engine.service';
+import {
+  BasicStrategyEngineService,
+  type EngineInput,
+  type PlayInput,
+} from './basic-strategy-engine.service';
 import { DeviationEngineService } from './deviation-engine.service';
 
 // Formats a true count for display: positive values get a '+' prefix, zero
@@ -97,6 +101,58 @@ export class DeviationEvaluatorService {
         userAction,
         playing,
         trueCount: scenario.trueCount,
+      }),
+    };
+  }
+
+  // The same verdict for a hand already under way. An index is written against a
+  // total, so it applies to a three-card 16 exactly as it does to a two-card one
+  // — which is what the showdown grades and what the drill can now teach. Two
+  // things are gone by then: doubling, splitting and surrender are first-two-card
+  // actions, and insurance was settled before the hand was played.
+  evaluatePlay(
+    args: {
+      readonly player: readonly Card[];
+      readonly dealerUpcard: Card;
+      readonly trueCount: number;
+      readonly ruleSet: RuleSet;
+      readonly options: EngineOptions;
+    },
+    userAction: Action,
+  ): DeviationTrainerResult {
+    const input: PlayInput = {
+      player: args.player,
+      dealerUpcard: args.dealerUpcard,
+      ruleSet: args.ruleSet,
+      options: args.options,
+      canDouble: false,
+      canSplit: false,
+      canSurrender: false,
+    };
+    const basic = this.basicStrategy.decidePlay(input);
+    const resolved = this.deviationEngine.resolvePlayDecision(input, args.trueCount);
+    const playing: DeviationDecision = {
+      basicAction: basic.action,
+      finalAction: resolved.action,
+      deviationApplied: resolved.deviationApplied,
+      matchedRule: resolved.matchedRule,
+      trueCount: args.trueCount,
+    };
+    return {
+      userAction,
+      expectedAction: resolved.action,
+      basicAction: basic.action,
+      trueCount: args.trueCount,
+      handDescription: basic.handDescription,
+      deviationApplied: resolved.deviationApplied,
+      matchedRule: resolved.matchedRule,
+      source: 'playing',
+      correct: userAction === resolved.action,
+      explanation: explainPlaying({
+        dealerAce: isAce(args.dealerUpcard),
+        userAction,
+        playing,
+        trueCount: args.trueCount,
       }),
     };
   }
