@@ -38,15 +38,34 @@ struct BasicStrategyDrillModelTests {
         #expect(h.model.session.medianSeconds == 2.5)
     }
 
-    @Test func restartsTheClockForEachQuestionIncludingAPlayedOutOne() {
-        let h = DrillFixture.makeHarness(draws: .seven)
-        h.model.deal(DrillFixture.hitScenario)
+    @Test func restartsTheClockOnEveryDeal() {
+        let h = DrillFixture.makeHarness()
+        h.model.deal(DrillFixture.standScenario)
         h.clock.advance(1)
-        h.model.answer(.hit)
-        h.scheduler.fire() // the continuation deals a card
+        h.model.answer(.stand)
+        h.scheduler.fire()
+        h.model.deal(DrillFixture.standScenario)
         h.clock.advance(3)
         h.model.answer(.stand)
-        // 1s then 3s — the second decision is not timed from the first deal.
+        // 1s then 3s — the second hand is not timed from the first deal.
+        #expect(h.history.paceLast7() == 2)
+    }
+
+    /// A continued decision offers two buttons and one total where the deal
+    /// offers six and a pair-or-soft-or-hard lookup. Timing both would move the
+    /// week's figure when the trainee turned a setting on rather than when they
+    /// got faster.
+    @Test func timesTheOpeningDecisionOnly() {
+        let h = DrillFixture.makeHarness(draws: .seven)
+        h.model.deal(DrillFixture.hitScenario)
+        h.clock.advance(2)
+        h.model.answer(.hit)
+        h.scheduler.fire() // the continuation deals a card
+        h.clock.advance(9)
+        h.model.answer(.stand)
+
+        #expect(h.model.hand.count == 3)
+        #expect(h.model.handsToday == 2)
         #expect(h.history.paceLast7() == 2)
     }
 

@@ -134,7 +134,15 @@ final class BasicStrategyDrillModel {
         let evaluation = gradeDecision(action)
         result = evaluation
         stats.recordAttempt(correct: evaluation.correct)
-        let elapsedMs = plausibleDecisionMs(Int(now().timeIntervalSince(askedAt) * 1000))
+        // Only the opening decision is timed, and for the same reason only it is
+        // filed as a weak spot: it is the question the drill has always asked. A
+        // continued decision offers two buttons and one total where the deal
+        // offers six and a pair-or-soft-or-hard lookup, so mixing them would
+        // move the week's figure when the trainee turned a setting on rather
+        // than when they got faster.
+        let elapsedMs = hand.count == 2
+            ? plausibleDecisionMs(Int(now().timeIntervalSince(askedAt) * 1000))
+            : nil
         history.recordHand(correct: evaluation.correct, elapsedMs: elapsedMs)
         // Only the opening decision has a weak spot to file under: a
         // `ScenarioRef` names a two-card hand, and re-dealing a three-card 16 as

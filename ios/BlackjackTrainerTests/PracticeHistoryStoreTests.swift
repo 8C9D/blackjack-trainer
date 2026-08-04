@@ -246,6 +246,45 @@ struct PracticeHistoryStoreTests {
         let reloaded = store(defaults, now: { Self.base() })
         #expect(reloaded.accuracyLast7() == 50)
     }
+}
+
+/// The pace half of the same store, split out to keep each suite inside the
+/// type-body limit.
+@MainActor
+struct PracticeHistoryPaceTests {
+    private static func base() -> Date {
+        makeDate(2026, 7, 10, 18, 30)
+    }
+
+    private static func makeDate(
+        _ year: Int, _ month: Int, _ day: Int, _ hour: Int = 12, _ minute: Int = 0
+    ) -> Date {
+        Calendar.current.date(
+            from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute)
+        ) ?? .distantPast
+    }
+
+    private func freshDefaults() -> UserDefaults {
+        UserDefaults(suiteName: "test-\(UUID().uuidString)") ?? .standard
+    }
+
+    private func store(
+        _ defaults: UserDefaults, now: @escaping () -> Date
+    ) -> PracticeHistoryStore {
+        let store = PracticeHistoryStore(defaults: defaults)
+        store.setNowSource(now)
+        return store
+    }
+
+    private func seed(_ defaults: UserDefaults, days: [[String: Any]]) {
+        let data = (try? JSONSerialization.data(withJSONObject: ["days": days])) ?? Data()
+        defaults.set(data, forKey: StatsKeys.practiceHistory)
+    }
+
+    private func dateKey(daysBefore back: Int) -> String {
+        let date = Calendar.current.date(byAdding: .day, value: -back, to: Self.base())
+        return localDateKey(date ?? Self.base())
+    }
 
     // Accuracy says whether the practice is working; the pace says whether it
     // would survive a table, where the dealer is waiting.
@@ -312,5 +351,22 @@ struct PracticeHistoryStoreTests {
         let s = store(defaults, now: { Self.base() })
         s.recordHand(correct: true, elapsedMs: 3000)
         #expect(store(defaults, now: { Self.base() }).paceLast7() == 3)
+    }
+
+    /// The backup file moves this payload between the phone and the browser, so
+    /// the stored shape is a cross-platform contract rather than this store's
+    /// private business. A field added on one side and not the other is dropped
+    /// silently on the trip.
+    @Test func writesExactlyTheFieldsTheWebStoreReads() throws {
+        let defaults = freshDefaults()
+        let s = store(defaults, now: { Self.base() })
+        s.recordHand(correct: true, elapsedMs: 2500)
+        let data = try #require(defaults.data(forKey: StatsKeys.practiceHistory))
+        let root = try #require(
+            try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        #expect(Array(root.keys) == ["days"])
+        let day = try #require((root["days"] as? [[String: Any]])?.first)
+        #expect(day.keys.sorted() == ["correct", "date", "graded", "hands", "millis", "timed"])
     }
 }
