@@ -35,8 +35,18 @@
 
   &__hand {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 0.8rem;
     --card-width: 104px;
+  }
+
+  // A hand played out can reach five or six cards. Shrink them so a four-card
+  // hand still reads as one row on a phone; deeper hands wrap rather than
+  // shrinking to nothing.
+  &__hand--deep {
+    --card-width: 76px;
+    gap: 0.5rem;
   }
 }
 
@@ -47,5 +57,9 @@
 
   .stage__hand {
     --card-width: 88px;
+  }
+
+  .stage__hand--deep {
+    --card-width: 64px;
   }
 }

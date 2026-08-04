@@ -207,4 +207,28 @@ describe('BasicStrategyEngineService.decidePlay', () => {
       expect(bad).toEqual([]);
     });
   });
+
+  // The drill grades a played-out hand through this, so it has to carry the
+  // same verdict shape `evaluate` does.
+  describe('evaluatePlay', () => {
+    const HARD_16 = play(['10', '4', '2'], '10', 'S17', OPTION_SETS[0]);
+
+    it('grades a continued decision against decidePlay', () => {
+      const right = engine.evaluatePlay(HARD_16, 'H');
+      expect(right.correct).toBe(true);
+      expect(right.userAction).toBe('H');
+      expect(right.reason).toContain('Hard 16 vs dealer 10 under S17: hit');
+
+      const wrong = engine.evaluatePlay(HARD_16, 'S');
+      expect(wrong.correct).toBe(false);
+      expect(wrong.action).toBe('H');
+    });
+
+    it('keeps the insurance verdict of the opening question', () => {
+      const result = engine.evaluatePlay(HARD_16, 'INS');
+      expect(result.correct).toBe(false);
+      expect(result.source).toBe('insurance');
+      expect(result.reason).toContain('never takes insurance');
+    });
+  });
 });

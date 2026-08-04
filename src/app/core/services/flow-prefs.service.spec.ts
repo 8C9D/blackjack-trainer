@@ -151,6 +151,15 @@ describe('FlowPrefsService', () => {
       expect(mergePrefs({ dailyGoal: 15 }).counting.showdownCountCheck).toBe(true);
     });
 
+    // The other default-on setting: the opening decision alone is the chart,
+    // not the game, so a hit is followed unless the trainee says otherwise.
+    it('plays hands out unless it was explicitly turned off', () => {
+      expect(mergePrefs({ playHandsOut: false }).playHandsOut).toBe(false);
+      expect(mergePrefs({ playHandsOut: 'no' }).playHandsOut).toBe(true);
+      // Prefs written before the setting existed play hands out.
+      expect(mergePrefs({ dailyGoal: 15 }).playHandsOut).toBe(true);
+    });
+
     it('normalizes a stored bet spread band by band', () => {
       expect(mergePrefs({ counting: { betRamp: [2, 4, 8, 16, 32] } }).counting.betRamp).toEqual([
         2, 4, 8, 16, 32,

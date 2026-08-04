@@ -13,6 +13,7 @@ import {
   type Scenario,
   type Suit,
 } from '../../core/models/card.model';
+import { handTotal, isSoftHand as isSoftNCardHand } from '../../core/models/hand.model';
 import type { Action, EngineOptions } from '../../core/models/strategy.model';
 import {
   classifyAsPair,
@@ -29,16 +30,26 @@ export interface HandQuestion {
   readonly dealer: string;
 }
 
-export function handQuestion(player: readonly [Card, Card], dealerUpcard: Card): HandQuestion {
+export function handQuestion(player: readonly Card[], dealerUpcard: Card): HandQuestion {
   const dealer = normalizeUpcardKey(dealerUpcard);
-  const pairKey = classifyAsPair(player);
+  // Past two cards there is no pair to name and the ace may have softened, so
+  // the line is the N-card total the chart is about to be read at.
+  if (player.length !== 2) {
+    return {
+      prefix: isSoftNCardHand(player) ? 'Soft' : 'Hard',
+      value: String(handTotal(player)),
+      dealer,
+    };
+  }
+  const opening: readonly [Card, Card] = [player[0], player[1]];
+  const pairKey = classifyAsPair(opening);
   if (pairKey !== null) return { prefix: '', value: `${pairKey},${pairKey}`, dealer };
-  if (isSoftHand(player)) {
-    return { prefix: 'Soft', value: String(11 + softNonAceValue(player)), dealer };
+  if (isSoftHand(opening)) {
+    return { prefix: 'Soft', value: String(11 + softNonAceValue(opening)), dealer };
   }
   return {
     prefix: 'Hard',
-    value: String(cardHighValue(player[0]) + cardHighValue(player[1])),
+    value: String(cardHighValue(opening[0]) + cardHighValue(opening[1])),
     dealer,
   };
 }
@@ -48,14 +59,21 @@ export function handQuestion(player: readonly [Card, Card], dealerUpcard: Card):
 // needs a dealer Ace. Surrender needs Late Surrender in the table rules —
 // except where the caller's engine can expect SUR regardless of the option
 // (the deviations surrender overlay), signalled via `surrenderAlways`.
+//
+// Once a card has been drawn, hit and stand are the whole of it: double, split
+// and surrender are first-two-card actions, and insurance was decided before
+// the hand was played. The grid says so by going dead rather than by hiding
+// them, which is the rule the drill is teaching.
 export function legalActionsFor(
-  player: readonly [Card, Card],
+  player: readonly Card[],
   dealerUpcard: Card,
   options: EngineOptions,
   surrenderAlways = false,
 ): readonly Action[] {
+  if (player.length !== 2) return ['H', 'S'];
+  const opening: readonly [Card, Card] = [player[0], player[1]];
   const legal: Action[] = ['H', 'S', 'D'];
-  if (classifyAsPair(player) !== null) legal.push('P');
+  if (classifyAsPair(opening) !== null) legal.push('P');
   if (surrenderAlways || options.lateSurrender) legal.push('SUR');
   if (isAce(dealerUpcard)) legal.push('INS');
   return legal;

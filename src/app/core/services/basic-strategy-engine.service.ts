@@ -158,8 +158,18 @@ export class BasicStrategyEngineService {
   }
 
   evaluate(input: EngineInput, userAction: Action): EvaluationResult {
-    const decision = this.decide(input);
+    return this.grade(this.decide(input), userAction);
+  }
 
+  // The same grading, for a hand already under way: the drill plays a hand out
+  // once the chart says hit, and every decision after the first is a `decidePlay`
+  // question — the hand may be three cards deep and doubling, splitting and
+  // surrender are gone.
+  evaluatePlay(input: PlayInput, userAction: Action): EvaluationResult {
+    return this.grade(this.decidePlay(input), userAction);
+  }
+
+  private grade(decision: StrategyDecision, userAction: Action): EvaluationResult {
     if (userAction === 'INS') {
       return {
         ...decision,

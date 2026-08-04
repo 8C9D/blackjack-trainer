@@ -45,6 +45,26 @@ describe('handQuestion', () => {
       dealer: '5',
     });
   });
+
+  // Past two cards there is no pair to name, and an ace may have softened.
+  it('labels a hand played out by its N-card total', () => {
+    expect(handQuestion([card('4'), card('4', 'hearts'), card('8')], card('6'))).toEqual({
+      prefix: 'Hard',
+      value: '16',
+      dealer: '6',
+    });
+    expect(handQuestion([card('A'), card('2'), card('4')], card('6'))).toEqual({
+      prefix: 'Soft',
+      value: '17',
+      dealer: '6',
+    });
+    // The ace demotes to 1 rather than reading as a soft 27.
+    expect(handQuestion([card('A'), card('9'), card('7')], card('6'))).toEqual({
+      prefix: 'Hard',
+      value: '17',
+      dealer: '6',
+    });
+  });
 });
 
 describe('legalActionsFor', () => {
@@ -77,6 +97,13 @@ describe('legalActionsFor', () => {
 
   it('offers surrender regardless of the rule when surrenderAlways is set', () => {
     expect(legalActionsFor(NON_PAIR, card('10'), DEFAULT_ENGINE_OPTIONS, true)).toContain('SUR');
+  });
+
+  // Double, split and surrender are first-two-card actions, and insurance was
+  // settled before the hand was played, so a drawn card leaves hit and stand.
+  it('leaves only hit and stand once the hand is past two cards', () => {
+    const deep = [card('8'), card('8', 'hearts'), card('2')];
+    expect(legalActionsFor(deep, card('A'), LS_ON, true)).toEqual(['H', 'S']);
   });
 });
 

@@ -59,6 +59,13 @@ It exists so the E2E suite can assert real outcomes rather than only that the fl
 - **Insurance is always wrong** — picking Insurance is flagged with an explanation that basic strategy never takes the side bet.
 - **Flow grading** — a correct answer flashes in place and auto-advances; a miss is the loop's only pause, showing the correct action and a one-line rationale until you tap or press any key.
 - **Keyboard shortcuts** — `H` / `S` / `D` / `P` / `R` (surrender) / `I` (insurance) for actions.
+- **Hands are played out** (Settings → Basic Strategy → **Play hands out**, on by default).
+  A hit is the one correct answer that leaves another decision behind it, so the drill deals the card and asks again — a three-card 14, then a four-card 18 — until the hand stands, busts, or reaches 21.
+  Every decision counts as a rep and is graded on its own; a bust after a correct hit is held on screen with the total and the play still marked right, because the play was.
+  Past the opening two cards the grid narrows to **hit and stand**: doubling, splitting and surrender are first-two-card actions, and the dead buttons are how that rule is taught.
+  So the same total reads two ways — hard 11 vs 6 doubles on the deal and can only hit once a card is drawn — which is exactly what the chart means and what the showdown has always graded.
+  Only the opening decision files a weak spot: a `ScenarioRef` names a two-card hand, and re-dealing a three-card 16 as a two-card one would ask a different question.
+  Turn it off and the drill asks the opening decision and deals a fresh hand, as it did before.
 
 ### Card Counting Trainer (v2 + v3, plus live shoe & showdown)
 
@@ -354,7 +361,7 @@ no-ops at runtime but document the chart cell.
 - **Adaptive weak-spot practice** — Basic Strategy and Deviations misses are tallied per scenario over a rolling 7-day window. Every round opens on the worst outstanding scenario and then draws ~40% of its hands from the weak list, weighted by miss count, so what you keep missing keeps coming back. A scenario retires from the list once you answer it correctly three times running, and the Done screen names the week's cleared spots.
 - **Review rounds** — the Done screen's queued weakness is a button (`R`): it starts a round drawn entirely from the weak list, falling back to fresh hands if you clear it mid-round.
 - **Flow drill shell** — shared top bar (today's count, session target, current streak, exit), full-screen stage, action buttons with key hints, and a Done screen with the round's accuracy and best streak.
-- **Settings screen** — daily goal, appearance, table rules (H17/S17, DAS, LS), deviation options, and the full counting-drill configuration all live here; the drill pages host no configuration.
+- **Settings screen** — daily goal, appearance, table rules (H17/S17, DAS, LS), whether basic-strategy hands are played out, deviation options, and the full counting-drill configuration all live here; the drill pages host no configuration.
 - **Reset practice data** (Settings → Practice data): a two-step control that clears every stat store, the practice history and streak, the weak-spot tallies, and the showdown record and bankroll through one `PracticeDataService`, so no store is missed.
   Settings themselves are deliberately untouched.
 - **Strategy chart reference** (`/chart`, `C` from home): the hard/soft/pair grids for the active table rules, color-coded per action with a legend.

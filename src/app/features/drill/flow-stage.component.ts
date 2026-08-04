@@ -15,9 +15,12 @@ import { CardImageComponent } from '../../shared/card-image.component';
         <span class="stage__label">Dealer shows</span>
         <app-card-image class="stage__dealer-card" [card]="dealer()" />
       </div>
-      <div class="stage__hand">
-        <app-card-image [card]="player()[0]" />
-        <app-card-image [card]="player()[1]" />
+      <div class="stage__hand" [class.stage__hand--deep]="player().length > 2">
+        <!-- Tracked by index: the trainers deal with replacement, so the same
+             card can appear twice in one hand. -->
+        @for (card of player(); track $index) {
+          <app-card-image [card]="card" />
+        }
       </div>
       <ng-content />
     </div>
@@ -25,6 +28,7 @@ import { CardImageComponent } from '../../shared/card-image.component';
   styleUrl: './flow-stage.component.scss',
 })
 export class FlowStageComponent {
-  readonly player = input.required<readonly [Card, Card]>();
+  // One card or many: a hand played out grows past the opening two.
+  readonly player = input.required<readonly Card[]>();
   readonly dealer = input.required<Card>();
 }

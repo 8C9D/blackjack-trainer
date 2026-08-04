@@ -2,7 +2,8 @@ import { Component, DestroyRef, HostListener, computed, inject, signal } from '@
 import { Router } from '@angular/router';
 
 import { actionForKey, shouldIgnoreKeyboardEvent } from '../../core/keyboard';
-import type { Scenario } from '../../core/models/card.model';
+import type { Card, Scenario } from '../../core/models/card.model';
+import { handTotal } from '../../core/models/hand.model';
 import {
   ACTION_LABELS,
   type Action,
@@ -30,8 +31,9 @@ import {
 import { FlowStageComponent } from './flow-stage.component';
 
 // The drill loop's only states. A correct answer flashes in place and
-// auto-advances; a miss is the loop's only pause; 'done' is the session end.
-type DrillPhase = 'question' | 'flash' | 'miss' | 'done';
+// auto-advances; a miss is the loop's only pause; 'over' holds the beat where a
+// played-out hand ends on its own (bust, or 21); 'done' is the session end.
+type DrillPhase = 'question' | 'flash' | 'miss' | 'over' | 'done';
 
 @Component({
   selector: 'app-basic-strategy-drill-page',
@@ -52,10 +54,14 @@ type DrillPhase = 'question' | 'flash' | 'miss' | 'done';
           (exit)="exitToHome()"
         />
 
-        <app-flow-stage [player]="scenario().player" [dealer]="scenario().dealerUpcard">
+        <app-flow-stage [player]="hand()" [dealer]="scenario().dealerUpcard">
           @if (phase() === 'miss' && result(); as r) {
             <p class="drill__rule">
               <b>Correct: {{ labelFor(r.action) }}.</b> {{ r.reason }}
+            </p>
+          } @else if (phase() === 'over') {
+            <p class="drill__rule">
+              <b>{{ handOver() }}</b>
             </p>
           } @else {
             <p class="drill__question">
@@ -113,6 +119,10 @@ export class BasicStrategyDrillPageComponent {
 
   protected readonly phase = signal<DrillPhase>('question');
   protected readonly scenario = signal<Scenario>(this.firstScenario());
+  // The hand as it stands: the deal's two cards, plus every card a correct hit
+  // has drawn since. The scenario keeps the opening deal, which is what a weak
+  // spot is filed against and what the next hand resets to.
+  protected readonly hand = signal<readonly Card[]>(this.scenario().player);
   protected readonly result = signal<EvaluationResult | null>(null);
   protected readonly target = signal(0);
 
@@ -122,16 +132,19 @@ export class BasicStrategyDrillPageComponent {
   });
 
   protected readonly question = computed(() =>
-    handQuestion(this.scenario().player, this.scenario().dealerUpcard),
+    handQuestion(this.hand(), this.scenario().dealerUpcard),
   );
 
   protected readonly legalActions = computed(() =>
-    legalActionsFor(
-      this.scenario().player,
-      this.scenario().dealerUpcard,
-      this.prefs.prefs().options,
-    ),
+    legalActionsFor(this.hand(), this.scenario().dealerUpcard, this.prefs.prefs().options),
   );
+
+  // Why the played-out hand stopped asking: a hit that busted, or one that
+  // reached 21 and left nothing to decide.
+  protected readonly handOver = computed(() => {
+    const total = handTotal(this.hand());
+    return total > 21 ? `Bust — ${total}.` : `${total} — nothing left to decide.`;
+  });
 
   protected readonly picked = computed<Action | null>(() => this.result()?.userAction ?? null);
   protected readonly correctAction = computed<Action | null>(() => this.result()?.action ?? null);
@@ -150,6 +163,7 @@ export class BasicStrategyDrillPageComponent {
   });
 
   protected readonly verdict = computed(() => {
+    if (this.phase() === 'over') return this.handOver();
     const result = this.result();
     if (result === null) return '';
     const correctAction = ACTION_LABELS[result.action];
@@ -173,35 +187,82 @@ export class BasicStrategyDrillPageComponent {
   protected answer(action: Action): void {
     if (this.phase() !== 'question') return;
     if (!this.legalActions().includes(action)) return;
-    const result = this.engine.evaluate(
-      {
-        player: this.scenario().player,
-        dealerUpcard: this.scenario().dealerUpcard,
-        ruleSet: this.prefs.prefs().ruleSet,
-        options: this.prefs.prefs().options,
-      },
-      action,
-    );
+    const cards = this.hand();
+    const result = this.gradeDecision(cards, action);
     this.result.set(result);
     this.stats.recordAttempt(result.correct);
     this.history.recordHand(result.correct);
-    this.missTally.record(
-      'basic-strategy',
-      scenarioRefFor(this.scenario().player, this.scenario().dealerUpcard),
-      result.correct,
-    );
+    // Only the opening decision has a weak spot to file under: a `ScenarioRef`
+    // names a two-card hand, and re-dealing a three-card 16 as a two-card one
+    // would ask a different question (that one can double).
+    if (cards.length === 2) {
+      this.missTally.record(
+        'basic-strategy',
+        scenarioRefFor(this.scenario().player, this.scenario().dealerUpcard),
+        result.correct,
+      );
+    }
     this.session.record(result.correct);
 
     if (result.correct) {
       this.phase.set('flash');
       this.advanceTimer = setTimeout(() => {
         this.advanceTimer = null;
-        this.advance();
+        this.afterCorrect(action);
       }, this.advanceDelayMs);
     } else {
       this.phase.set('miss');
       this.suppressNextContinueClick = true;
     }
+  }
+
+  // The opening question is `decide`: two cards, every action on the table.
+  // Every question after it is `decidePlay` — the hand is deeper than two cards,
+  // so doubling, splitting and surrender are gone as a matter of the rules.
+  private gradeDecision(cards: readonly Card[], action: Action): EvaluationResult {
+    const dealerUpcard = this.scenario().dealerUpcard;
+    const ruleSet = this.prefs.prefs().ruleSet;
+    const options = this.prefs.prefs().options;
+    if (cards.length === 2) {
+      const player: readonly [Card, Card] = [cards[0], cards[1]];
+      return this.engine.evaluate({ player, dealerUpcard, ruleSet, options }, action);
+    }
+    return this.engine.evaluatePlay(
+      {
+        player: cards,
+        dealerUpcard,
+        ruleSet,
+        options,
+        canDouble: false,
+        canSplit: false,
+        canSurrender: false,
+      },
+      action,
+    );
+  }
+
+  // A hit is the one correct answer that leaves another decision behind it, so
+  // it draws the next card and asks again. Every other action ends the hand,
+  // exactly as it would at a table.
+  private afterCorrect(action: Action): void {
+    if (!this.prefs.prefs().playHandsOut || action !== 'H') {
+      this.advance();
+      return;
+    }
+    const grown = [...this.hand(), this.generator.generateCard()];
+    this.hand.set(grown);
+    // Busting, or reaching 21, ends the hand with nothing left to ask. Hold the
+    // card that did it on screen — that is the answer to the hit — then move on.
+    if (handTotal(grown) >= 21) {
+      this.phase.set('over');
+      this.advanceTimer = setTimeout(() => {
+        this.advanceTimer = null;
+        this.advance();
+      }, this.advanceDelayMs * 2);
+      return;
+    }
+    this.result.set(null);
+    this.phase.set('question');
   }
 
   // Leaving the miss: tap anywhere / press any key.
@@ -248,6 +309,7 @@ export class BasicStrategyDrillPageComponent {
 
   private dealNext(scenario: Scenario): void {
     this.scenario.set(scenario);
+    this.hand.set(scenario.player);
     this.result.set(null);
     this.phase.set('question');
   }
