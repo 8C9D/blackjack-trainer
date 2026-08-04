@@ -7,6 +7,32 @@ private func decksLabel(_ decks: Double) -> String {
     countOf(decks, "deck", display: CountFormat.decks(decks))
 }
 
+/// The same division the running ÷ decks line does, with the divisor the player
+/// actually had. When it lands on the same true count the estimate cost nothing
+/// this round, which is worth saying too: how far out an estimate is only
+/// matters against the running count it divides.
+private func estimateLine(_ runningCount: Double, _ effect: DeckEstimateEffect) -> String {
+    let divided = "Your estimate: \(CountFormat.count(runningCount)) ÷ "
+        + "\(decksLabel(effect.estimate)) = true count \(effect.impliedTrueCount)"
+    if effect.matchesActual {
+        return "\(divided) — the same true count, so the estimate cost nothing here."
+    }
+    let agrees: String = effect.matchesAnswer ? ", and the answer you gave" : ""
+    return "\(divided) — the count you would have played on\(agrees)."
+}
+
+/// What that count would have bet, when the ramp says something different there.
+/// Empty when both land in bands holding the same units, since then the estimate
+/// cost no bet even though it moved the count.
+private func estimateBetLine(_ result: BetSpreadDrillResult,
+                             _ effect: DeckEstimateEffect) -> String {
+    guard !effect.matchesActual else { return "" }
+    let implied = BetRamp.units(trueCount: effect.impliedTrueCount, ramp: result.ramp)
+    guard implied != result.correctUnits else { return "" }
+    return " Your spread bets \(BetRamp.unitsLabel(implied)) there, not "
+        + "\(BetRamp.unitsLabel(result.correctUnits))."
+}
+
 /// Counting-drill feedback, mirroring the web `count-feedback-panel`: verdict,
 /// the count/true-count details (with the running ÷ decks formula), an optional
 /// card-by-card breakdown, and "Run again".
@@ -85,6 +111,16 @@ struct CountFeedbackView: View {
             )
             .font(.footnote)
             .foregroundStyle(Theme.muted)
+            if let effect = DeckEstimateEffect(
+                runningCount: trueCount.correctRunningCount,
+                estimate: trueCount.deckEstimate,
+                correctTrueCount: trueCount.correctTrueCount,
+                userTrueCount: trueCount.userTrueCount
+            ) {
+                Text(estimateLine(trueCount.correctRunningCount, effect))
+                    .font(.footnote)
+                    .foregroundStyle(Theme.muted)
+            }
         case let .keyCount(keyCount):
             keyCountDetails(keyCount)
         case let .betSpread(betSpread):
@@ -153,6 +189,19 @@ struct CountFeedbackView: View {
         )
         .font(.footnote)
         .foregroundStyle(Theme.muted)
+        if let effect = DeckEstimateEffect(
+            runningCount: result.correctRunningCount,
+            estimate: result.deckEstimate,
+            correctTrueCount: result.correctTrueCount,
+            userTrueCount: result.userTrueCount
+        ) {
+            // The bet is what a deck estimate is *for*, so this round can say
+            // what the estimate would have cost in units rather than leaving the
+            // trainee to read it off the spread below.
+            Text(estimateLine(result.correctRunningCount, effect) + estimateBetLine(result, effect))
+                .font(.footnote)
+                .foregroundStyle(Theme.muted)
+        }
         spread(result)
     }
 

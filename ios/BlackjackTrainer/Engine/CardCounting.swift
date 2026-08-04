@@ -153,6 +153,40 @@ struct BetSpreadDrillResult: Equatable {
     let isCorrect: Bool
 }
 
+/// What the player's own decks estimate would have made of the count.
+///
+/// A live-shoe round grades the true count against the shoe's actual decks
+/// remaining and scores the estimate separately as inside the ±0.5 band or not.
+/// Neither figure answers the question the estimate exists for: at a table the
+/// only divisor a counter has is the one they estimated, so an estimate that is
+/// off is a true count that is off — by an amount that depends entirely on the
+/// running count it divides. Being five decks out is nothing at a running count
+/// of -2 and is the whole bet at +12. Mirrors the web `deckEstimateEffect`.
+struct DeckEstimateEffect: Equatable {
+    let estimate: Double
+    /// Running count ÷ the estimate, truncated toward zero exactly as the drill
+    /// truncates the real one.
+    let impliedTrueCount: Int
+    /// The estimate lands on the actual true count anyway.
+    let matchesActual: Bool
+    /// The player's answer is exactly what their estimate implies. Evidence, not
+    /// proof: the drill only ever sees a true count, so it cannot tell a good
+    /// running count divided by a bad estimate from two errors that cancel —
+    /// which is why the panel says the two agree and stops there.
+    let matchesAnswer: Bool
+
+    /// Nil off a classic (preset-decks) round, which asks for no estimate, and
+    /// off an estimate that cannot be divided by.
+    init?(runningCount: Double, estimate: Double?, correctTrueCount: Int, userTrueCount: Int) {
+        guard let estimate, estimate.isFinite, estimate > 0 else { return nil }
+        let implied = Int((runningCount / estimate).rounded(.towardZero))
+        self.estimate = estimate
+        impliedTrueCount = implied
+        matchesActual = implied == correctTrueCount
+        matchesAnswer = implied == userTrueCount
+    }
+}
+
 /// A graded round in any mode (the web's discriminated union).
 enum CountingDrillResult: Equatable {
     case running(RunningCountDrillResult)
