@@ -238,6 +238,89 @@ describe('CountFeedbackPanelComponent', () => {
       );
       expect(fixture.nativeElement.textContent).toContain('Incorrect');
     });
+
+    // The estimate is the only divisor a counter has at a table, so the panel
+    // has to say what this one would have made of the count.
+    describe('what the decks estimate did to the count', () => {
+      const lines = (fixture: ComponentFixture<CountFeedbackPanelComponent>): string =>
+        Array.from(fixture.nativeElement.querySelectorAll('.feedback__formula'))
+          .map((el) => (el as HTMLElement).textContent ?? '')
+          .join(' ')
+          .replace(/\s+/g, ' ');
+
+      it('divides the count by the estimate the player gave', () => {
+        const fixture = createPanel(
+          makeTrueCountResult({
+            correctRunningCount: 6,
+            decksRemaining: 2,
+            correctTrueCount: 3,
+            userTrueCount: 2,
+            isCorrect: false,
+            deckEstimate: 3,
+            deckEstimateWithinBand: false,
+          }),
+        );
+        expect(lines(fixture)).toContain('Your estimate: 6 ÷ 3 decks = true count 2');
+      });
+
+      it('names the answer as the one that estimate implies', () => {
+        const fixture = createPanel(
+          makeTrueCountResult({
+            correctRunningCount: 6,
+            decksRemaining: 2,
+            correctTrueCount: 3,
+            userTrueCount: 2,
+            isCorrect: false,
+            deckEstimate: 3,
+          }),
+        );
+        expect(lines(fixture)).toContain(
+          'the count you would have played on, and the answer you gave',
+        );
+      });
+
+      // A different miss: the estimate moved the count, but not to the answer.
+      it('claims no agreement when the answer is neither figure', () => {
+        const fixture = createPanel(
+          makeTrueCountResult({
+            correctRunningCount: 6,
+            decksRemaining: 2,
+            correctTrueCount: 3,
+            userTrueCount: 5,
+            isCorrect: false,
+            deckEstimate: 3,
+          }),
+        );
+        expect(lines(fixture)).not.toContain('the answer you gave');
+        expect(lines(fixture)).toContain('the count you would have played on.');
+      });
+
+      // How far out an estimate is only matters against the count it divides.
+      it('says an estimate that lands on the same true count cost nothing', () => {
+        const fixture = createPanel(
+          makeTrueCountResult({
+            correctRunningCount: -2,
+            decksRemaining: 5.88,
+            correctTrueCount: 0,
+            userTrueCount: 0,
+            deckEstimate: 3,
+            deckEstimateWithinBand: false,
+          }),
+        );
+        expect(lines(fixture)).toContain('the estimate cost nothing here');
+      });
+
+      it('agrees the noun with the estimate, as the line above it does', () => {
+        const fixture = createPanel(
+          makeTrueCountResult({ deckEstimate: 1, correctRunningCount: 6, correctTrueCount: 3 }),
+        );
+        expect(lines(fixture)).toContain('÷ 1 deck =');
+      });
+
+      it('says nothing off a classic round, which asks for no estimate', () => {
+        expect(lines(createPanel(makeTrueCountResult()))).not.toContain('Your estimate');
+      });
+    });
   });
 
   describe('key-count mode', () => {
@@ -341,6 +424,51 @@ describe('CountFeedbackPanelComponent', () => {
       expect(live.nativeElement.textContent).toContain('Your decks estimate');
       const classic = createPanel(makeBetSpreadResult());
       expect(classic.nativeElement.textContent).not.toContain('Your decks estimate');
+    });
+
+    // The bet is what a deck estimate is for, so this round can price the
+    // estimate in units rather than leave it at a moved true count.
+    it('says what the estimate would have bet when it moves the band', () => {
+      const fixture = createPanel(
+        makeBetSpreadResult({
+          correctRunningCount: 6,
+          decksRemaining: 2,
+          correctTrueCount: 3,
+          userTrueCount: 2,
+          correctUnits: 4,
+          userUnits: 2,
+          countCorrect: false,
+          betCorrect: false,
+          isCorrect: false,
+          deckEstimate: 3,
+          deckEstimateWithinBand: false,
+        }),
+      );
+      const text = (fixture.nativeElement.textContent ?? '').replace(/\s+/g, ' ');
+      expect(text).toContain('Your estimate: 6 ÷ 3 decks = true count 2');
+      expect(text).toContain('Your spread bets 2 units there, not 4 units.');
+    });
+
+    it('prices nothing when the moved count still bets the same units', () => {
+      // +6 over 2 decks is TC +3 (4 units); read as 6 decks it is TC +1, and
+      // the ramp used here bets 4 in both bands.
+      const fixture = createPanel(
+        makeBetSpreadResult({
+          correctRunningCount: 6,
+          decksRemaining: 2,
+          correctTrueCount: 3,
+          userTrueCount: 1,
+          ramp: [4, 4, 4, 8, 12],
+          correctUnits: 4,
+          userUnits: 4,
+          countCorrect: false,
+          isCorrect: false,
+          deckEstimate: 6,
+        }),
+      );
+      const text = (fixture.nativeElement.textContent ?? '').replace(/\s+/g, ' ');
+      expect(text).toContain('true count 1');
+      expect(text).not.toContain('Your spread bets');
     });
 
     it('starts the breakdown running total from the carried prior', () => {

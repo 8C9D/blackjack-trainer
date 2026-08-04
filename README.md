@@ -175,6 +175,20 @@ True count mode has two sources for "decks remaining":
   with a visible notice). Live-shoe rounds grade both answers, persisting the
   true count and the ±0.5-deck estimate to separate stats stores.
 
+  **And the feedback divides by your estimate too.** The two figures above are
+  graded apart — the estimate against a band, the true count against the shoe —
+  which left the question the estimate exists for unanswered: at a table the
+  only divisor a counter has is the one they estimated.
+  So the panel does that division as well: "Your estimate: -2 ÷ 1 deck = true
+  count -2 — the count you would have played on", and it says when the answer
+  given is exactly that, since then the estimate is what moved it.
+  An estimate that lands on the same true count anyway is named as costing
+  nothing, because how far out an estimate is only matters against the running
+  count it divides — five decks out is nothing at -2 and is the whole bet at
+  +12.
+  In bet-spread mode the line is priced: "Your spread bets 2 units there, not
+  4 units."
+
 **Truncation toward zero** — examples: `5 / 2 = 2`, `-5 / 2 = -2`,
 `3 / 0.5 = 6`. This app uses truncation toward zero; other references may round
 differently, and this is the convention the trainer scores against. True-count

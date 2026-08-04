@@ -79,6 +79,12 @@ test.describe('card counting drill', () => {
     await page.getByRole('button', { name: /^Submit/ }).click();
 
     await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1');
+    // The estimate is the divisor the trainee would have played on, so the
+    // feedback divides by it as well as by the shoe's real remainder. Which of
+    // the two sentences lands depends on the shuffle; the division does not.
+    await expect(page.locator('.feedback__formula').last()).toContainText(
+      /Your estimate: -?\d+ ÷ 6 decks = true count/,
+    );
   });
 
   test('a KO key-count round asks for the count, then the advantage call', async ({ page }) => {

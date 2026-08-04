@@ -59,6 +59,47 @@ export function formatSignedCount(value: number): string {
   return value > 0 ? `+${value}` : String(value);
 }
 
+// What the player's own decks estimate would have made of the count.
+//
+// A live-shoe round grades the true count against the shoe's actual decks
+// remaining and scores the estimate separately as inside the ±0.5 band or not.
+// Neither figure answers the question the estimate exists for: at a table the
+// only divisor a counter has is the one they estimated, so an estimate that is
+// off is a true count that is off — by an amount that depends entirely on the
+// running count it divides. Being five decks out is nothing at a running count
+// of -2 and is the whole bet at +12.
+export interface DeckEstimateEffect {
+  readonly estimate: number;
+  // Running count ÷ the estimate, truncated toward zero exactly as the drill
+  // truncates the real one.
+  readonly impliedTrueCount: number;
+  // The estimate lands on the actual true count anyway.
+  readonly matchesActual: boolean;
+  // The player's answer is exactly what their estimate implies. Evidence, not
+  // proof: the drill only ever sees a true count, so it cannot tell a good
+  // running count divided by a bad estimate from two errors that cancel — which
+  // is why the panel says the two agree and stops there.
+  readonly matchesAnswer: boolean;
+}
+
+// Null off a classic (preset-decks) round, which asks for no estimate, and off
+// a stored estimate that cannot be divided by.
+export function deckEstimateEffect(
+  runningCount: number,
+  estimate: number | undefined,
+  correctTrueCount: number,
+  userTrueCount: number,
+): DeckEstimateEffect | null {
+  if (estimate === undefined || !Number.isFinite(estimate) || estimate <= 0) return null;
+  const impliedTrueCount = Math.trunc(runningCount / estimate);
+  return {
+    estimate,
+    impliedTrueCount,
+    matchesActual: impliedTrueCount === correctTrueCount,
+    matchesAnswer: impliedTrueCount === userTrueCount,
+  };
+}
+
 export interface CountingDrillSettings {
   readonly mode: DrillMode;
   readonly numberOfCards: number;
