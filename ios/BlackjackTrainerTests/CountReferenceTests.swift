@@ -123,6 +123,22 @@ struct CountReferenceTests {
         #expect(four.keyCountMissing?.contains("4-deck shoe") == true)
     }
 
+    /// The chart is three references behind one picker, and the screens that
+    /// route here are asking about one of them in particular — Settings picking
+    /// a counting system wants the tags, not the hard totals. Mirrors the web
+    /// `?tab=count`.
+    @Test func theChartRouteCarriesWhichReferenceToOpenOn() {
+        let router = FlowRouter()
+        #expect(router.route == .home)
+
+        router.go(.chart(.count))
+        #expect(router.route == .chart(.count))
+
+        // The home button asks for no tab in particular and gets the grids.
+        router.go(.chart())
+        #expect(router.route == .chart(.basic))
+    }
+
     /// The ranks a column label covers: "7" is one, "2–6" is the slice between
     /// its ends.
     private static func ranks(in label: String) -> [Rank] {

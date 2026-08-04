@@ -68,7 +68,7 @@ struct HomeView: View {
                     }
                 }
                 HStack(spacing: 16) {
-                    quietButton("Chart") { router.go(.chart) }
+                    quietButton("Chart") { router.go(.chart()) }
                     quietButton("Progress") { router.go(.progress) }
                     quietButton("Settings") { router.go(.settings) }
                 }

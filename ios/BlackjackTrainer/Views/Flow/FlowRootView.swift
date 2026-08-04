@@ -20,8 +20,8 @@ struct FlowRootView: View {
             HomeView()
         case .settings:
             SettingsView()
-        case .chart:
-            ChartView()
+        case let .chart(tab):
+            ChartView(tab: tab)
         case .progress:
             PracticeProgressView()
         case let .drill(trainer, review, hand):

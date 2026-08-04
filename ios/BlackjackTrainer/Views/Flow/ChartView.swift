@@ -5,6 +5,10 @@ import SwiftUI
 /// rule set, so the page cannot drift from what a miss is scored on. Read-only —
 /// rules stay a Settings decision. Mirrors the web `chart-page` component.
 struct ChartView: View {
+    /// Which reference to open on. The screens that route here are asking about
+    /// one of the three in particular.
+    var tab: ChartMode = .basic
+
     @Environment(AppModel.self) private var model
     @Environment(FlowRouter.self) private var router
     @State private var mode: ChartMode = .basic
@@ -81,6 +85,9 @@ struct ChartView: View {
                 }
             }
             .background(Theme.ground.ignoresSafeArea())
+            // @State takes its initial value once, before the route's tab is
+            // known, so the opening tab is applied on appear.
+            .onAppear { mode = tab }
             .navigationTitle("Chart")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
