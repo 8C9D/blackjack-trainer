@@ -8,6 +8,10 @@ any license, and it makes no final licensing choice.** It is an engineering
 assessment, not legal advice; confirm any distribution decision with the
 upstream asset license and, if needed, legal counsel.
 
+> **Closed 2026-08-04.**
+> This is a point-in-time audit whose central finding was resolved the day after it ran, as the note below records.
+> It is kept as the record that motivated the licensing decision, not as a current description of the repository.
+
 > **Update (2026-06-03):** The central finding below — that the app code has
 > **no declared license** and there is **no top-level `LICENSE` file** — is
 > **no longer current.** The day after this audit, a top-level **MIT** `LICENSE`

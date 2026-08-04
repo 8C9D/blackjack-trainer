@@ -1,41 +1,30 @@
 # Test Coverage Improvement Report
 
-_Last updated 2026-06-08 to record Gap 6 (the directly-untested engine lookup
-helpers, now closed) and to reconcile the baseline with reality. The 2026-06-02
-pass recorded the feature/shared UI-component coverage pass (Gap 5, closed). The
-2026-05-29 pass below (§5, Improvements 1–4) was run by the
-test-coverage-improver skill._
+> **Closed 2026-08-04.**
+> Every gap this report opened has been resolved, so it is kept as the record of that work rather than as a live plan.
+> Do not patch it with new baselines: the counts in the body are point-in-time records of what each pass measured, and the current baseline belongs in [`README.md`](../README.md).
+> For reference, the suite stood at 60 spec files / 1361 tests when this report was closed, with coverage at 95.86% statements / 93.97% branches / 92.56% functions / 97.73% lines.
 
-> **Update (2026-07-23, docs sync):** Current baseline: **42 spec files / 694 tests passing** (`CI=true npm test`) — the Flow redesign replaced some heavily-specced pre-Flow components, so the total went down while file count went up.
-> The §6 claim that "no E2E layer exists" is now false: a Playwright smoke suite lives in `e2e/` with its own CI job.
-> The §6 coverage-threshold gap is also closed as of this sync: `vitest.config.ts` enforces global thresholds (92% statements / 89% branches / 88% functions / 95% lines) and CI runs `npm run test:coverage`.
-> Still open from §6: bootstrap/routing specs.
+## How it ended
 
-> **Update (2026-07-24, later):** Baseline after the light-theme, adaptive-practice, and seeded-RNG passes: **45 spec files / 746 tests** with coverage at 95.05% statements / 92.54% branches / 91.58% functions / 97.60% lines, all above the `vitest.config.ts` floors.
-> The Playwright suite grew from 14 to **34 tests** (`seeded`, `theme`, and `review-round` specs added); it is green against both `ng serve` and the production bundle, and was re-run eight times to confirm it is not flaky.
-> Two flakes were fixed along the way, both test-side: `responsive.e2e.ts` counted `.kcap` elements with `count()` (which does not auto-wait) and passed vacuously on a cold run, and the new drill specs had to learn the counter-then-grid wait order described in [`docs/e2e-testing-plan.md`](e2e-testing-plan.md).
-> Still open: nothing from §6 — the coverage gate, bootstrap/routing specs, and the E2E layer all exist now.
+The report ran as five passes between 2026-05-29 and 2026-07-24, each validated against a green baseline, committed, and pushed one at a time.
 
-> **Update (2026-07-24):** Bootstrap/routing specs landed in `src/app/app.spec.ts` (lazy-route resolution for all drill/settings routes, redirects, per-route titles).
-> The chart-transcription review also ran: all four chart data files (`h17/s17-basic-strategy.ts`, `h17/s17-deviations.ts`) were compared value-by-value against their cited BJA PDFs (the 2024 basic-strategy pair and the 2018 deviation pair) — 600 basic-strategy cells and 53 deviation rules, including thresholds and directions, matched exactly; no discrepancies.
+- **2026-05-29** (test-coverage-improver skill) closed Gaps 1-4, recorded in §5 as Improvements 1-4: the random-scenario generator, the shared card helpers, and the structural integrity of both the basic-strategy and the deviation charts.
+- **2026-06-02** closed Gap 5, adding a co-located spec for every UI component (10 files / 88 tests).
+- **2026-06-08** closed Gap 6, the three pure lookup helpers in `basic-strategy-engine.service.ts` (`normalizeUpcardKey`, `classifyAsPair`, and the two-card `isSoftHand`) that are explicitly "exported for tests" but were only ever exercised transitively.
+  The same pass found that several gaps the older notes listed as open had been closed by intervening feature work and its own specs, notably value-level chart correctness (`data/chart-values.golden.spec.ts`) and the counting-system registry (`data/counting-systems.spec.ts`).
+- **2026-07-23** closed two of the three §6 items: a Playwright smoke suite now lives in `e2e/` with its own CI job, and `vitest.config.ts` enforces global coverage thresholds (92% statements / 89% branches / 88% functions / 95% lines) that CI checks via `npm run test:coverage`.
+- **2026-07-24** closed the last §6 item, bootstrap/routing specs, in `src/app/app.spec.ts`: lazy-route resolution for every drill and settings route, redirects, and per-route titles.
 
-> **Update (2026-06-08, skill pass):** Re-ran the analysis against the actual
-> tree. **Current baseline: 38 spec files / 713 tests passing** (`ng test`,
-> single run). Several gaps the older notes listed as "open" have since been
-> closed by intervening feature work and their own specs — notably value-level
-> chart correctness (`data/chart-values.golden.spec.ts`) and the counting-system
-> registry (`data/counting-systems.spec.ts`). The one new genuine unit gap this
-> pass found and closed was Gap 6 below: three pure lookup helpers in
-> `basic-strategy-engine.service.ts` (`normalizeUpcardKey`, `classifyAsPair`,
-> the two-card `isSoftHand`) that are explicitly "exported for tests" but were
-> only exercised transitively, never directly.
+Two results from those passes are worth stating here rather than leaving in the body, because they are conclusions rather than open tasks.
 
-> **Update (2026-06-06, docs sync):** The "current verified baseline" quoted
-> throughout (27 spec files / 481 tests) reflects 2026-06-02. Roadmap Slices 5–9
-> (KO / Omega II / Wong Halves counting systems, finite-shoe deck estimation, and
-> the post-count showdown) have since landed with their own specs. **Current
-> baseline: 37 spec files / 710 tests passing** (`CI=true npm test`). The gap
-> analysis below is still accurate; only the totals have grown.
+The chart-transcription review ran on 2026-07-24 and closed the human half of §6's chart-correctness item.
+All four chart data files (`h17/s17-basic-strategy.ts`, `h17/s17-deviations.ts`) were compared value-by-value against their cited BJA PDFs, the 2024 basic-strategy pair and the 2018 deviation pair.
+600 basic-strategy cells and 53 deviation rules, thresholds and directions included, matched exactly, with no discrepancies.
+
+Two E2E flakes were also found and fixed, both test-side rather than product bugs.
+`responsive.e2e.ts` counted `.kcap` elements with `count()`, which does not auto-wait, so it passed vacuously on a cold run.
+The drill specs had to learn the counter-then-grid wait order described in [`e2e-testing-plan.md`](e2e-testing-plan.md).
 
 > **History.** An earlier version of this file (commit `3524480`) described a
 > Karma/Jasmine setup and `core/*.ts` modules that do not exist in this
@@ -65,8 +54,8 @@ test-coverage-improver skill._
   pass (§5, Improvement 5) added **10 spec files / 88 tests**.
   As of 2026-06-02 this stood at 27 spec files / 481 tests; intervening feature
   work plus Gap 6 (§5, Improvement 6) have grown it further.
-  **Current verified baseline: 38 spec files / 713 tests passing**
-  (`ng test`, confirmed 2026-06-08).
+  The last baseline this report verified for itself was **38 spec files / 713 tests passing** (`ng test`, confirmed 2026-06-08).
+  It has grown well past that since; see the closing note at the top.
 - **Test layout**: co-located `*.spec.ts` next to the unit under test.
 
 ### Verified source-vs-spec inventory
@@ -353,11 +342,11 @@ yet have — not "untested units":
   the component specs can't. A docs-only plan for this layer now exists in
   [`docs/e2e-testing-plan.md`](e2e-testing-plan.md) (recommends Playwright, a
   Chromium-only smoke suite, and a separate CI job); no E2E tooling or tests are
-  added yet. **Open (planned).**
+  added yet. **Closed 2026-07-23** — the suite and its CI job exist.
 - **Enforced coverage thresholds** — neither Vitest nor the CI workflow gates on
   a coverage percentage; coverage is asserted by hand-picked specs, not a
   threshold. Adding coverage reporting and a minimum gate would prevent silent
-  regressions. **Open.**
+  regressions. **Closed 2026-07-23** — `vitest.config.ts` carries the floors and CI runs `npm run test:coverage`.
 - **Chart value-correctness (regression guard)** — **now closed** by
   `data/chart-values.golden.spec.ts`, a value-level golden serialization of all
   four hand-transcribed charts (both basic-strategy charts and both deviation
@@ -365,10 +354,10 @@ yet have — not "untested units":
   _regressions_, not original transcription errors: the goldens serialize
   today's values, so re-verifying the charts against the published BJA PDFs
   remains a periodic **human** review task (documented in
-  `docs/repo-current-state.md`), not an automated one. **Closed (regression);
-  open (human source re-verification).**
+  `docs/repo-current-state.md`), not an automated one. **Closed** — the regression
+  guard on 2026-06-08 and the human re-verification on 2026-07-24.
 - **Bootstrap / routing** (`app.config.ts`, `app.routes.ts`, `main.ts`) — Low
-  value; still unspecced. **Open (deferred).**
+  value; still unspecced. **Closed 2026-07-24** — specced in `src/app/app.spec.ts`.
 - **Pure type-only models** (`core/models/*.model.ts` interfaces) — no runtime
   behavior to exercise; not counted as a gap.
 
@@ -386,7 +375,7 @@ basic-strategy, card-stream, deviation-feedback-panel — 10 files / 88 tests).
 Each addition was validated against a green baseline, committed, and pushed one
 at a time; none changed production code.
 
-**Current verified baseline: 38 spec files / 713 tests passing.**
+**Baseline verified by this report: 38 spec files / 713 tests passing (2026-06-08).**
 
 Every `*.component.ts` and every decision-critical service now has a spec, so
 the original UI-component gap is closed. The honest remaining opportunities are
@@ -394,3 +383,5 @@ not "untested units" but higher-level guards the suite still lacks —
 end-to-end tests, an enforced coverage threshold, and a value-by-value
 chart-correctness check against the BJA PDFs (today's chart specs are structural
 only). See §6.
+
+All three of those landed between 2026-07-23 and 2026-07-24, which is what closed this report.

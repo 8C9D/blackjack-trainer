@@ -1,5 +1,8 @@
 # Roadmap Progress
 
+> **Closed 2026-08-04.**
+> The roadmap this cursor drove is complete, so nothing runs next and the log below is kept as the record of how each slice landed.
+
 _Maintained by the `roadmap-slice-autopilot` skill. The cursor below is the
 source of truth for what runs next. Manual edits are fine if you keep the
 format._
@@ -270,8 +273,10 @@ only for systems that carry one (KO alone today).
 
 Adding modes quietly broke two surfaces that had been written when there were two.
 
-- **Home's Card Counting chip summed the running- and true-count stores only.** The key-count call, the bet, and the deck countdown were invisible there, so a trainee who drilled nothing but deck speed saw "new" on the card forever. It now sums every counting store.
-- **The drill's idle screen names the mode it is about to run.** Five modes differ enough — a self-paced deck, two-part answers — that "Start counting" no longer says what is coming. The labels are one shared map (`DRILL_MODE_LABELS`) that Settings' radios now render from too, so the two lists cannot drift.
+- **Home's Card Counting chip summed the running- and true-count stores only.** The key-count call, the bet, and the deck countdown were invisible there, so a trainee who drilled nothing but deck speed saw "new" on the card forever.
+  It now sums every counting store.
+- **The drill's idle screen names the mode it is about to run.** Five modes differ enough — a self-paced deck, two-part answers — that "Start counting" no longer says what is coming.
+  The labels are one shared map (`DRILL_MODE_LABELS`) that Settings' radios now render from too, so the two lists cannot drift.
 - **Validation.** +3 unit tests (1042 total).
 - **iOS mirror.** The same rollup (extracted as `countingAccuracy(_:)` so it is testable without the view) and the same idle-screen line, with `DrillMode.label` as the shared source for Settings' picker and the drill. +2 Swift tests (336 total).
 
@@ -279,8 +284,12 @@ Adding modes quietly broke two surfaces that had been written when there were tw
 
 The oldest drill in counting was the one the app could not do: the timed stream sets the pace, and counting down a deck is about measuring _yours_.
 
-- **Self-paced, and it grades itself.** A shuffled deck with one card burned face down; the other 51 advance only on a tap (or the space bar), timed from the first card to the last. A full deck sums to a known constant — 0 balanced, +4 for KO — so the 51 shown must come to that constant minus the burned card's tag, and the burned card revealed in the feedback is the proof. No system gating: any set of tags can be summed.
-- **The record only moves on a correct round**, because speed with the wrong count is not a counting skill. It persists under its own key (`blackjack-deck-speed-best`) beside the drill's accuracy store, and the Progress screen carries "Fastest deck counted down" under the trainer table. Under 30 seconds is the benchmark the feedback cites when a new best beats it.
+- **Self-paced, and it grades itself.** A shuffled deck with one card burned face down; the other 51 advance only on a tap (or the space bar), timed from the first card to the last.
+  A full deck sums to a known constant — 0 balanced, +4 for KO — so the 51 shown must come to that constant minus the burned card's tag, and the burned card revealed in the feedback is the proof.
+  No system gating: any set of tags can be summed.
+- **The record only moves on a correct round**, because speed with the wrong count is not a counting skill.
+  It persists under its own key (`blackjack-deck-speed-best`) beside the drill's accuracy store, and the Progress screen carries "Fastest deck counted down" under the trainer table.
+  Under 30 seconds is the benchmark the feedback cites when a new best beats it.
 - **The settings that do not apply are hidden**, not just ignored: the length and pacing fields disappear in this mode, replaced by a line explaining what the drill measures.
 - **Validation.** +25 unit tests (1039 total), an E2E that flips all 51 and reads the burned-card proof, and a contrast sweep of the new stage and its feedback in both themes; 76 E2E.
   One of the session's own new tests turned out flaky — a bet-spread assertion that a carried count was non-zero, which is false whenever a round's cards cancel — and now asserts the carry-over itself.
@@ -292,13 +301,19 @@ The oldest drill in counting was the one the app could not do: the timed stream 
 The app drilled count → convert → play, and stopped there.
 Betting is where a counter's edge is actually taken, and it was the one step nothing graded: the showdown let a trainee bet anything at any count and never said a word about it.
 
-- **A fourth drill mode.** `bet-spread` is the true-count round plus the question the count is for — "How many units do you bet?" — asked after the count exactly as the KO drill asks for the advantage call. It reuses the true-count machinery whole (live shoe or classic preset, the deck estimate, the true-count store), so only the second question and its store are new.
-- **The ramp is the player's, not the app's.** Five bands (`TC ≤ +1`, `+2`, `+3`, `+4`, `+5 or more`), whole units 1–100, edited under the mode radio, defaulting to the textbook 1-2-4-8-12 six-deck spread. What to bet follows from bankroll, risk of ruin, rules, and table tolerance — none of which this app knows — so it grades the ramp the trainee intends to play rather than inventing an optimum. A ramp that shrinks as the count rises gets a note, not an error: it is legal, just usually a typo.
-- **Graded at the correct true count**, not the claimed one, and the rep counts only when count and bet are both right — the same strict AND the key-count drill uses. A miscount that leads to the wrong bet is the failure the drill exists to catch.
-- **Validation.** +52 unit tests (1014 total), an E2E round that edits the spread in Settings and reads it back in the feedback, and a contrast sweep of the spread editor, the bet question, and the accent-filled matched band, in both themes; 73 E2E. `counting-vectors` (schema /3) carries `betRampCases` for the iOS port.
+- **A fourth drill mode.** `bet-spread` is the true-count round plus the question the count is for — "How many units do you bet?" — asked after the count exactly as the KO drill asks for the advantage call.
+  It reuses the true-count machinery whole (live shoe or classic preset, the deck estimate, the true-count store), so only the second question and its store are new.
+- **The ramp is the player's, not the app's.** Five bands (`TC ≤ +1`, `+2`, `+3`, `+4`, `+5 or more`), whole units 1–100, edited under the mode radio, defaulting to the textbook 1-2-4-8-12 six-deck spread.
+  What to bet follows from bankroll, risk of ruin, rules, and table tolerance — none of which this app knows — so it grades the ramp the trainee intends to play rather than inventing an optimum.
+  A ramp that shrinks as the count rises gets a note, not an error: it is legal, just usually a typo.
+- **Graded at the correct true count**, not the claimed one, and the rep counts only when count and bet are both right — the same strict AND the key-count drill uses.
+  A miscount that leads to the wrong bet is the failure the drill exists to catch.
+- **Validation.** +52 unit tests (1014 total), an E2E round that edits the spread in Settings and reads it back in the feedback, and a contrast sweep of the spread editor, the bet question, and the accent-filled matched band, in both themes; 73 E2E.
+  `counting-vectors` (schema /3) carries `betRampCases` for the iOS port.
 - **iOS mirror.** `Engine/BetRamp.swift` (bands, bounds, the shrink advisory, tolerant decode) plus `evaluateBetSpread`, a `.betting` drill state, and `BetRampEditor` — a stepper per band inside Settings' Card counting section, since a stepper is what the rest of that screen uses for a number and it cannot produce an out-of-range ramp.
   The mode picker is now a three-way segmented control (Running / True count / Bet spread) for balanced systems. +21 Swift tests (324 total), the ramp vectors graded against the fixture, both themes rendered.
-- **A file-length split the mirror forced.** `CountingModel` was 13 lines short of the 400-line cap, so its read-only half moved to `CountingModel+Presentation.swift` (mode predicates, validation, labels, stat snapshots) — the shape `ShowdownModel+Presentation` already had. Swift's `private` is file-scoped, so the engine and stat stores it reads became internal; the mutators that assign `private(set)` state stayed put.
+- **A file-length split the mirror forced.** `CountingModel` was 13 lines short of the 400-line cap, so its read-only half moved to `CountingModel+Presentation.swift` (mode predicates, validation, labels, stat snapshots) — the shape `ShowdownModel+Presentation` already had.
+  Swift's `private` is file-scoped, so the engine and stat stores it reads became internal; the mutators that assign `private(set)` state stayed put.
 
 ### Post-roadmap continued: resetting practice data (2026-08-02)
 
@@ -341,7 +356,8 @@ A segmented switch above the rules line picks Basic strategy (the grids) or Devi
 - **Insurance** is the one action outside the basic grids' five, so it gets its own cell hue (`--chart-insurance`) and the symbol `I`.
 - **Validation.** +5 unit tests (943 total) and a contrast sweep of the second tab in both themes (65 E2E), since the route sweep only ever measures a screen's opening state.
 - **iOS mirror.** `StrategyChartGrid.deviationSections(rules:)` / `.threshold(_:)` (fed from `charts.deviations`, the same table `DeviationEngine` looks up) plus a `ChartMode` segmented `Picker` and a row list in `ChartGridView`; `Theme.chartInsurance` is the sixth cell hue.
-  +4 Swift tests (295 total). The probe render shows the segmented picker as ImageRenderer's "unsupported" bar, which is a renderer limitation, not the screen: `.pickerStyle(.segmented)` is what Settings already uses in four places.
+  +4 Swift tests (295 total).
+  The probe render shows the segmented picker as ImageRenderer's "unsupported" bar, which is a renderer limitation, not the screen: `.pickerStyle(.segmented)` is what Settings already uses in four places.
 
 ### Post-roadmap continued: the strategy chart reference (2026-08-02)
 
@@ -447,8 +463,12 @@ To extend the roadmap, add new slices to [`docs/roadmap.md`](roadmap.md) and set
 
 The app shipped a dozen counting systems and one set of deviation indices, and never mentioned that they are not the same thing.
 
-- **The bug.** `DeviationsDrillPageComponent` never read `counting.systemId`. A trainee who set the counting system to Omega II or Wong Halves — level-2 and level-3 systems, whose true counts read differently off the same shoe — was graded on BJA's Hi-Lo indices with nothing on screen saying so, and an unbalanced pick (KO, AceMT, Ambition-U) has no true count to compare against at all. Weeks of drilling the wrong threshold, silently.
-- **The fix is attribution, not new charts.** Transcribing Omega II or Wong Halves index numbers would need sources this pass cannot verify, so the honest move is to name the system the numbers belong to. The chart's footnote now opens "Every index here is a Hi-Lo true count", and `deviationIndexNote(system)` returns a standing advisory for any other system — worded differently for balanced systems (a true count that reads differently) than unbalanced ones (no true count at all). It shows on the drill (every hand — a correctness warning, not a dismissible tip), on the deviation chart, and in Settings' Deviations section, where the picker's cost is stated next to the trainer it affects.
+- **The bug.** `DeviationsDrillPageComponent` never read `counting.systemId`.
+  A trainee who set the counting system to Omega II or Wong Halves — level-2 and level-3 systems, whose true counts read differently off the same shoe — was graded on BJA's Hi-Lo indices with nothing on screen saying so, and an unbalanced pick (KO, AceMT, Ambition-U) has no true count to compare against at all.
+  Weeks of drilling the wrong threshold, silently.
+- **The fix is attribution, not new charts.** Transcribing Omega II or Wong Halves index numbers would need sources this pass cannot verify, so the honest move is to name the system the numbers belong to.
+  The chart's footnote now opens "Every index here is a Hi-Lo true count", and `deviationIndexNote(system)` returns a standing advisory for any other system — worded differently for balanced systems (a true count that reads differently) than unbalanced ones (no true count at all).
+  It shows on the drill (every hand — a correctness warning, not a dismissible tip), on the deviation chart, and in Settings' Deviations section, where the picker's cost is stated next to the trainer it affects.
 - **One dedup on the way past.** `countingSystemById` is now the single resolver for a stored system id, with the Hi-Lo fallback the card-counting page already had open-coded, so four screens cannot disagree about what a stale id means.
 - **Validation.** +16 unit tests (1058 total), an E2E walking Settings → drill → chart and back, and the new elements checked in both themes (10.9:1 in dark).
 - **iOS mirror.** `DeviationIndexSystem` in `Deviation.swift`, a `Collection<CountingSystem>.system(withId:)` mirror of the resolver, and a shared `AdvisoryNoteView`. +9 Swift tests (345 total), both themes rendered.
@@ -456,56 +476,91 @@ The app shipped a dozen counting systems and one set of deviation indices, and n
 
 ### Post-roadmap continued: the showdown grades the play (2026-08-03)
 
-The bet-spread drill exists because "the showdown let a trainee bet anything at any count and never said a word about it". The same was true of every _playing_ decision, which is the more basic failure: the showdown is the only place the app lets a hand be played out — multi-card hits, splits, doubles, surrender — and it silently accepted a hit on a hard 20.
+The bet-spread drill exists because "the showdown let a trainee bet anything at any count and never said a word about it".
+The same was true of every _playing_ decision, which is the more basic failure: the showdown is the only place the app lets a hand be played out — multi-card hits, splits, doubles, surrender — and it silently accepted a hit on a hard 20.
 
-- **A mid-hand decision, not a chart lookup.** `decide()` answers the opening question: two cards, every action on the table. Playing a hand out asks a narrower one, so `decidePlay(PlayInput)` reads the same charts against the hand as it stands (N cards, via the shared `handTotal`/`isSoftHand`) and against the actions actually on offer. A cell calling for something unavailable falls back the way the published chart reads it: a hard `D` becomes a hit, a soft `Ds` becomes a **stand** (that is what the small 's' means), and a `SUR_*` cell becomes the play named behind it.
-- **The `can*` flags are the table's answer, not the cards'.** Double, split and surrender are first-two-card actions; the engine enforces that itself, so a caller that leaves `canDouble` true on a three-card hand still cannot be told to double. Two hands fall off the chart's edges and are handled explicitly: hard/soft 21 stands, and soft 12 — reachable only as a pair of aces that could not be split — hits. Without that last case the lookup would have indexed `soft[1]` and crashed.
-- **The guard that matters** is an exhaustive agreement test: on all 17,576 two-card hands × upcards × rule sets × DAS/LS pairs, `decidePlay` with nothing withheld must return exactly what `decide` returns. If they ever diverge, `decidePlay` has grown a second, private copy of the chart. A second sweep asserts every non-bust three-card hand comes back hit-or-stand under every offer combination.
-- **It coaches, it does not block.** The verdict names the correct play and the misplay stands and is settled — this is a table, not a quiz. The round's misplays are listed again in the result panel, since a verdict that scrolls past as the next hand is played would be no use. Accuracy persists under `blackjack-showdown-play-stats`, separate from the win/lose/push tally: one measures how the cards fell, the other whether the hand was played right, and only the second is a skill. It gets a "Showdown play" row on Progress.
+- **A mid-hand decision, not a chart lookup.** `decide()` answers the opening question: two cards, every action on the table.
+  Playing a hand out asks a narrower one, so `decidePlay(PlayInput)` reads the same charts against the hand as it stands (N cards, via the shared `handTotal`/`isSoftHand`) and against the actions actually on offer.
+  A cell calling for something unavailable falls back the way the published chart reads it: a hard `D` becomes a hit, a soft `Ds` becomes a **stand** (that is what the small 's' means), and a `SUR_*` cell becomes the play named behind it.
+- **The `can*` flags are the table's answer, not the cards'.** Double, split and surrender are first-two-card actions; the engine enforces that itself, so a caller that leaves `canDouble` true on a three-card hand still cannot be told to double.
+  Two hands fall off the chart's edges and are handled explicitly: hard/soft 21 stands, and soft 12 — reachable only as a pair of aces that could not be split — hits.
+  Without that last case the lookup would have indexed `soft[1]` and crashed.
+- **The guard that matters** is an exhaustive agreement test: on all 17,576 two-card hands × upcards × rule sets × DAS/LS pairs, `decidePlay` with nothing withheld must return exactly what `decide` returns.
+  If they ever diverge, `decidePlay` has grown a second, private copy of the chart.
+  A second sweep asserts every non-bust three-card hand comes back hit-or-stand under every offer combination.
+- **It coaches, it does not block.** The verdict names the correct play and the misplay stands and is settled — this is a table, not a quiz.
+  The round's misplays are listed again in the result panel, since a verdict that scrolls past as the next hand is played would be no use.
+  Accuracy persists under `blackjack-showdown-play-stats`, separate from the win/lose/push tally: one measures how the cards fell, the other whether the hand was played right, and only the second is a skill.
+  It gets a "Showdown play" row on Progress.
 - **Validation.** +21 unit tests (1105 total), a contrast sweep of both verdict states in both themes (seed 2 deals a hand where hitting is a misplay, so the tinted state is reached deterministically), 81 E2E.
 - **iOS mirror.** `decidePlay` + `PlayInput`, `PlayVerdict`, `ShowdownModel+Grading.swift`, and a shared `PlayCoachView`. +14 Swift tests (359 total), both themes rendered.
   Three SwiftLint caps were crossed on the way and fixed rather than left: the reducers now take a `CellContext` (the 5-parameter cap, the shape `KeyCountAnswer` already uses), the verdict views moved out of `ShowdownView`, and the grading moved to its own file — which, because `private(set)` is file-scoped, could only take the _scoring_; `onAction` still does the recording.
 
 ### Post-roadmap continued: persisted data is no longer trusted (2026-08-03)
 
-Every store read its own `localStorage` payload back with a shape check that stopped at `typeof`. That is enough for data this app wrote and nothing else, and the file-backup feature added a supported way for a hand-edited payload to arrive. A `NaN` bankroll, a day tally with more misses than attempts, or a scenario key that does not match the hand it claims to describe all survived the old guards and then poisoned an average, a streak, or a weak-spot ranking with no way to tell from the screen.
+Every store read its own `localStorage` payload back with a shape check that stopped at `typeof`.
+That is enough for data this app wrote and nothing else, and the file-backup feature added a supported way for a hand-edited payload to arrive.
+A `NaN` bankroll, a day tally with more misses than attempts, or a scenario key that does not match the hand it claims to describe all survived the old guards and then poisoned an average, a streak, or a weak-spot ranking with no way to tell from the screen.
 
-- **Validate the value, not just the type.** `Number.isSafeInteger` and explicit ranges replace `typeof x === 'number'`: a miss tally now requires `0 ≤ misses ≤ attempts`, a date key has to be a real calendar day (`isLocalDateKey` round-trips it through `Date`), a manual true count is clamped to ±20, and `buildShoeCards` refuses a deck count outside the options the UI offers. `coerceNumericRecord` rejects non-finite numbers, which is what let a `NaN` through into the stat rollups.
-- **Duplicate keys merge instead of last-one-wins.** Practice history and the miss tally both keyed days by date but stored them in arrays, so a duplicated date silently dropped one entry's hands. Both now fold duplicates together (saturating at `MAX_SAFE_INTEGER`) and sort, which also makes the read deterministic.
+- **Validate the value, not just the type.** `Number.isSafeInteger` and explicit ranges replace `typeof x === 'number'`: a miss tally now requires `0 ≤ misses ≤ attempts`, a date key has to be a real calendar day (`isLocalDateKey` round-trips it through `Date`), a manual true count is clamped to ±20, and `buildShoeCards` refuses a deck count outside the options the UI offers.
+  `coerceNumericRecord` rejects non-finite numbers, which is what let a `NaN` through into the stat rollups.
+- **Duplicate keys merge instead of last-one-wins.** Practice history and the miss tally both keyed days by date but stored them in arrays, so a duplicated date silently dropped one entry's hands.
+  Both now fold duplicates together (saturating at `MAX_SAFE_INTEGER`) and sort, which also makes the read deterministic.
 - **The scenario key has to agree with its ref.** The miss tally's map key is derived from the ref it points at; requiring them to still agree on read keeps one hand from masquerading under another hand's stable identity and inheriting its streak.
-- **Restore is now recoverable.** `localStorage` has no transaction, so `BackupService.restore` snapshots the namespace first, refuses to start if that snapshot cannot be taken, and rolls back on a write failure — a quota or private-mode error no longer turns a valid profile into a half-applied backup. Each outcome gets its own message. The export's object URL is revoked in a `finally`, and an empty backup is now a legal one (an untouched profile is a real thing to back up).
+- **Restore is now recoverable.** `localStorage` has no transaction, so `BackupService.restore` snapshots the namespace first, refuses to start if that snapshot cannot be taken, and rolls back on a write failure — a quota or private-mode error no longer turns a valid profile into a half-applied backup.
+  Each outcome gets its own message.
+  The export's object URL is revoked in a `finally`, and an empty backup is now a legal one (an untouched profile is a real thing to back up).
 - **A media-query listener that outlived the service.** `ThemeService` added a `change` listener and never removed it; it now unregisters through `DestroyRef`, and the deprecated Safari `addListener`/`removeListener` pair is handled as a real fallback rather than an optional call.
 - **Validation.** +30 unit tests (1147 total with the insurance work below).
 
 ### Post-roadmap continued: the showdown grades the insurance call (2026-08-03)
 
-Grading the play left one decision at that table ungraded, and it is the one the drill next door exists to teach: insurance is purely a bet on the count. The showdown already knew the shoe and the system; it just never said whether the number the trainee was carrying was worth acting on.
+Grading the play left one decision at that table ungraded, and it is the one the drill next door exists to teach: insurance is purely a bet on the count.
+The showdown already knew the shoe and the system; it just never said whether the number the trainee was carrying was worth acting on.
 
-- **Graded on the count the player can actually see.** The showdown starts from the running count the drill hands it and adds every card it turns face up. The dealer's hole card is deliberately held back until the next round opens — insurance is decided before it is seen, and scoring against a card the player cannot see would be scoring a different game. `drawHole()` deals and tracks it like any other card, then removes it from the visible count until the deal that reveals it.
-- **Only against numbers that are the system's own.** `countBasisFor` answers what this system's count can be graded as: Hi-Lo gets a true count (the indices are Hi-Lo true counts), KO gets its book's published running-count trigger, and everything else is `ungraded` — dealt and settled exactly as before rather than scored against numbers that are not its own. This is the same honesty the deviation-index advisory already ships.
-- **The index is quoted, never restated.** The verdict reads the threshold off the same chart rule the grading consulted, so a corrected chart cannot leave the sentence citing a number the verdict no longer uses. The spec asserts against `deviationsFor('S17')` rather than the literal `+3` for the same reason.
-- **Whether the bet won is beside the point.** Insurance at a low count that happens to pay 2:1 is still marked a misplay, and that is the whole lesson — the E2E walks exactly that case (seed 14 deals a dealer natural, so the bet wins and the call is still wrong). `PlayVerdict` gained a `headline` sentence in place of the `expected` action, because declining insurance is a correct play with no action to name.
+- **Graded on the count the player can actually see.** The showdown starts from the running count the drill hands it and adds every card it turns face up.
+  The dealer's hole card is deliberately held back until the next round opens — insurance is decided before it is seen, and scoring against a card the player cannot see would be scoring a different game.
+  `drawHole()` deals and tracks it like any other card, then removes it from the visible count until the deal that reveals it.
+- **Only against numbers that are the system's own.** `countBasisFor` answers what this system's count can be graded as: Hi-Lo gets a true count (the indices are Hi-Lo true counts), KO gets its book's published running-count trigger, and everything else is `ungraded` — dealt and settled exactly as before rather than scored against numbers that are not its own.
+  This is the same honesty the deviation-index advisory already ships.
+- **The index is quoted, never restated.** The verdict reads the threshold off the same chart rule the grading consulted, so a corrected chart cannot leave the sentence citing a number the verdict no longer uses.
+  The spec asserts against `deviationsFor('S17')` rather than the literal `+3` for the same reason.
+- **Whether the bet won is beside the point.** Insurance at a low count that happens to pay 2:1 is still marked a misplay, and that is the whole lesson — the E2E walks exactly that case (seed 14 deals a dealer natural, so the bet wins and the call is still wrong).
+  `PlayVerdict` gained a `headline` sentence in place of the `expected` action, because declining insurance is a correct play with no action to name.
 - **Validation.** +13 unit tests (1147 total), +1 E2E (82), both verdict states rendered in both themes.
 - **iOS mirror.** `CountBasis` in `Showdown.swift`, the visible-count bookkeeping in `ShowdownModel`, and `gradeInsurance` alongside the play scoring in `ShowdownModel+Grading.swift`. +8 Swift tests (367 total), both themes rendered.
-  Two SwiftLint caps were crossed and fixed rather than left. `file_length` now sets `ignore_comment_only_lines`, matching the `ignores_comments` that `line_length` already sets: these files run ~25% doc comment by design, and counting that against the cap had already cost real encapsulation once (`CountingModel` was split at 301 lines of _code_, which forced its stores to drop `private`). `type_body_length` already excludes comments, so that one was a genuine size signal and the hand-play flow moved into a same-file `extension` — same file, so the `private(set)` mutators still work, which is the pattern the insurance block in that file already used.
+  Two SwiftLint caps were crossed and fixed rather than left.
+  `file_length` now sets `ignore_comment_only_lines`, matching the `ignores_comments` that `line_length` already sets: these files run ~25% doc comment by design, and counting that against the cap had already cost real encapsulation once (`CountingModel` was split at 301 lines of _code_, which forced its stores to drop `private`).
+  `type_body_length` already excludes comments, so that one was a genuine size signal and the hand-play flow moved into a same-file `extension` — same file, so the `private(set)` mutators still work, which is the pattern the insurance block in that file already used.
 
 ### Post-roadmap continued: showdown misplays become weak spots (2026-08-03)
 
-Grading the play said the right thing and then threw it away. The verdict scrolled past, the round's misplay list cleared on the next deal, and nothing else in the app ever heard about it — so the Basic Strategy drill's adaptive opener, the Done screen's "Drill next", and the Progress weak-spot list all stayed blind to the hands a trainee actually misplays at a table. Progress already labels the row "not a drill of its own — it is basic strategy, scored where the hands are actually played out"; it just wasn't filed like it.
+Grading the play said the right thing and then threw it away.
+The verdict scrolled past, the round's misplay list cleared on the next deal, and nothing else in the app ever heard about it — so the Basic Strategy drill's adaptive opener, the Done screen's "Drill next", and the Progress weak-spot list all stayed blind to the hands a trainee actually misplays at a table.
+Progress already labels the row "not a drill of its own — it is basic strategy, scored where the hands are actually played out"; it just wasn't filed like it.
 
-- **Filed under the trainer it belongs to.** A misplay at the showdown is a basic-strategy miss on that hand, so it goes into `missTally` under `basic-strategy` — the same store the drill writes and reads. Play 16 vs 10 badly at the table and the next Basic Strategy session opens on it, with no new plumbing: the drill already seeds from `weakSpotFor('basic-strategy')`.
-- **Only decisions with an identity to file.** A `ScenarioRef` names a two-card hand — it is the seed the drill re-deals from — so a three-card 16 has nothing to file under and is graded on the felt only. Post-split hands do qualify: their first two cards are a real two-card scenario.
-- **Only when the table asked the drill's question.** The felt can withhold an action the chart wants — a double the free chips cannot back, a split past the box's four-hand cap — and then the correct answer here is not the drill's. Recording it would clear a weak spot on a question the drill never asks. The guard is a direct one: the decision is filed only when the unrestricted `decide()` agrees with the restricted `decidePlay()` answer, so the two engines' existing exhaustive agreement property is what makes it sound.
+- **Filed under the trainer it belongs to.** A misplay at the showdown is a basic-strategy miss on that hand, so it goes into `missTally` under `basic-strategy` — the same store the drill writes and reads.
+  Play 16 vs 10 badly at the table and the next Basic Strategy session opens on it, with no new plumbing: the drill already seeds from `weakSpotFor('basic-strategy')`.
+- **Only decisions with an identity to file.** A `ScenarioRef` names a two-card hand — it is the seed the drill re-deals from — so a three-card 16 has nothing to file under and is graded on the felt only.
+  Post-split hands do qualify: their first two cards are a real two-card scenario.
+- **Only when the table asked the drill's question.** The felt can withhold an action the chart wants — a double the free chips cannot back, a split past the box's four-hand cap — and then the correct answer here is not the drill's.
+  Recording it would clear a weak spot on a question the drill never asks.
+  The guard is a direct one: the decision is filed only when the unrestricted `decide()` agrees with the restricted `decidePlay()` answer, so the two engines' existing exhaustive agreement property is what makes it sound.
 - **Validation.** +4 unit tests (1151 total), +1 E2E (83) walking a misplay at the table through to the weak-spot card on Progress.
 - **iOS mirror.** `GradedPlay` gained a `tallyRef`, so the scoring in `+Grading` still only reads and `record(_:)` in the model does the writing. +4 Swift tests (371 total).
 
 ### Post-roadmap continued: the showdown grades the bet (2026-08-03)
 
-Three decisions are made at that table — how much to bet, whether to insure, how to play the hand — and after the two above, the bet was the last one nobody said anything about. The bet-spread drill exists for it, but that drill asks for a number in the abstract; the showdown is where the chips actually go out, and a trainee could flat-bet the minimum through a +5 shoe and hear nothing.
+Three decisions are made at that table — how much to bet, whether to insure, how to play the hand — and after the two above, the bet was the last one nobody said anything about.
+The bet-spread drill exists for it, but that drill asks for a number in the abstract; the showdown is where the chips actually go out, and a trainee could flat-bet the minimum through a +5 shoe and hear nothing.
 
-- **The ladder became the spread.** Grading was impossible while the bet control offered a fixed 1/2/5/10/25 chip tray and the ramp spoke in units of 1/2/4/8/12: a spread calling for 4 had nothing to put out, and any mapping between the two would have been a rounding rule this repo invented. So the rungs are now the player's own ramp at one chip per unit (`betOptionsFor`), which makes "correct" exact and needs no rule. It also makes the control what it should always have been — the spread you intend to play, rehearsed.
+- **The ladder became the spread.** Grading was impossible while the bet control offered a fixed 1/2/5/10/25 chip tray and the ramp spoke in units of 1/2/4/8/12: a spread calling for 4 had nothing to put out, and any mapping between the two would have been a rounding rule this repo invented.
+  So the rungs are now the player's own ramp at one chip per unit (`betOptionsFor`), which makes "correct" exact and needs no rule.
+  It also makes the control what it should always have been — the spread you intend to play, rehearsed.
 - **Graded on the count before the deal.** `dealAfterBet` snapshots the true count first: the bet was decided on what the player could see at that moment, and dealing moves the count.
-- **A ramp is not an index.** The insurance index is a Hi-Lo number, so `countBasisFor` refuses to apply it to anything else. A bet ramp is the player's own, indexed by whatever true count they keep — so `trueCountFor` is a separate question with a wider answer: every **balanced** system qualifies, exactly as the bet-spread drill already allows. Conflating the two would have silently withheld the verdict from every Omega II or Wong Halves counter.
+- **A ramp is not an index.** The insurance index is a Hi-Lo number, so `countBasisFor` refuses to apply it to anything else.
+  A bet ramp is the player's own, indexed by whatever true count they keep — so `trueCountFor` is a separate question with a wider answer: every **balanced** system qualifies, exactly as the bet-spread drill already allows.
+  Conflating the two would have silently withheld the verdict from every Omega II or Wong Halves counter.
 - **Two guards, both about not scoring a question that was not asked.** A bet is skipped when the system has no true count, and when the bankroll could not have covered the called bet — that rung is offered disabled, so marking it wrong would score a bet the table never let the player place.
 - **A bug this surfaced:** `gradeInsurance` used to null `lastPlay` when it had nothing to say. With the bet graded first, that wiped a verdict that was still true. It now leaves the panel alone.
 - **Validation.** +7 unit tests (1158 total), +1 E2E (84) asserting the rungs are the spread and the verdict names the called bet; both verdict states rendered.
@@ -513,22 +568,30 @@ Three decisions are made at that table — how much to bet, whether to insure, h
 
 ### Post-roadmap continued: iOS backs up to the web's file (2026-08-03)
 
-The web's file backup shipped without an iOS mirror, and the reasoning was recorded at the time: "the iOS app has iCloud sync, the web has this". That is right about what iCloud does — carry a trainee between their own devices, silently — and wrong about what it does not. iCloud cannot carry them **off** the platform: onto the web app, onto someone else's phone, or into a file kept before deleting the app.
+The web's file backup shipped without an iOS mirror, and the reasoning was recorded at the time: "the iOS app has iCloud sync, the web has this".
+That is right about what iCloud does — carry a trainee between their own devices, silently — and wrong about what it does not. iCloud cannot carry them **off** the platform: onto the web app, onto someone else's phone, or into a file kept before deleting the app.
 
-- **The same file, not a second format.** Every store on both sides persists JSON under the same `blackjack-`-prefixed key; iOS holds it as `Data` whose bytes are exactly the string the web holds in `localStorage`. So `BackupStore` reads `defaults.data(forKey:)` as UTF-8 text and writes it back the same way, and one file restores on either platform. `FlowPrefs.jsonObject` was already documented as "matching the web's key/value forms", which is what makes the settings half of the file portable too.
+- **The same file, not a second format.** Every store on both sides persists JSON under the same `blackjack-`-prefixed key; iOS holds it as `Data` whose bytes are exactly the string the web holds in `localStorage`.
+  So `BackupStore` reads `defaults.data(forKey:)` as UTF-8 text and writes it back the same way, and one file restores on either platform.
+  `FlowPrefs.jsonObject` was already documented as "matching the web's key/value forms", which is what makes the settings half of the file portable too.
 - **Defined by the prefix, as the web's is.** A list of stores would silently omit whatever store is added next.
-- **The live stores are re-read, not relaunched.** The web restores by reloading the page; iOS has no reload to hide behind, and asking for a relaunch would be a worse answer than doing the work. `ReloadableStore` is the counterpart to the `reset()` every store already has, and `AppModel` lists them for the same reason `resetPracticeData` does — so a store added later cannot be left holding stale state.
+- **The live stores are re-read, not relaunched.** The web restores by reloading the page; iOS has no reload to hide behind, and asking for a relaunch would be a worse answer than doing the work.
+  `ReloadableStore` is the counterpart to the `reset()` every store already has, and `AppModel` lists them for the same reason `resetPracticeData` does — so a store added later cannot be left holding stale state.
 - **Rolled back on a failed write,** matching the web: `UserDefaults` has no transaction either, so the namespace is snapshotted, replaced, and verified, and a mismatch puts the snapshot back rather than leaving a profile half of each.
-- **Validation.** +13 Swift tests (392 total), including a round-trip through `UserDefaults` and a check that the live store keeps stale state until told to re-read. The section was photographed in the simulator in both themes — `ImageRenderer` cannot draw a `Form`, so Settings is always shot rather than rendered.
+- **Validation.** +13 Swift tests (392 total), including a round-trip through `UserDefaults` and a check that the live store keeps stale state until told to re-read.
+  The section was photographed in the simulator in both themes — `ImageRenderer` cannot draw a `Form`, so Settings is always shot rather than rendered.
 
 ### Post-roadmap continued: reviewing the day's own work (2026-08-03)
 
-Four features landed in one session across both platforms, so the last task was a pass over the session's own diff rather than another feature. It found three real defects, all of them in the newest code and none caught by the tests that shipped with it.
+Four features landed in one session across both platforms, so the last task was a pass over the session's own diff rather than another feature.
+It found three real defects, all of them in the newest code and none caught by the tests that shipped with it.
 
 - **A bet graded off the ladder.** A losing run clamps the carried bet to whatever the stack can still back, which need not be a rung — the ladder is the only way to place a bet, so that figure is one the player never chose, and scoring it marked them wrong for the bankroll's arithmetic.
 - **A bet graded into a shoe that dealt nothing.** `dealHand` bails to `exhausted` when the shoe cannot serve the round, and grading ran anyway: a verdict, a recorded attempt, and a misplay appended to the _previous_ round's list, which the early return had left uncleared.
-- **An iOS restore that iCloud could undo.** The file replaced everything locally while the cloud still held the profile it replaced, so the next external change would adopt the old values straight back. A restore now pushes the restored values up, and the practice-history and prefs reloads fire `onChange` so the home-screen widget stops showing the pre-restore numbers.
-- **The lesson worth keeping:** all three were in the seams _between_ the new code and code that already worked — a clamp, an early return, a sync path. The feature tests exercised the feature; nothing exercised what the feature now sat on top of.
+- **An iOS restore that iCloud could undo.** The file replaced everything locally while the cloud still held the profile it replaced, so the next external change would adopt the old values straight back.
+  A restore now pushes the restored values up, and the practice-history and prefs reloads fire `onChange` so the home-screen widget stops showing the pre-restore numbers.
+- **The lesson worth keeping:** all three were in the seams _between_ the new code and code that already worked — a clamp, an early return, a sync path.
+  The feature tests exercised the feature; nothing exercised what the feature now sat on top of.
 
 ### Post-roadmap continued: the showdown grades against the count, not just the chart (2026-08-03)
 
@@ -536,11 +599,16 @@ The showdown grades all three table decisions, but the play was graded against b
 So the one place in the app where a live count meets an actual hand marked the Illustrious 18 **wrong**: stand 16 vs 10 at a true count of +2, exactly what the Deviations trainer teaches, and the table said "Hit was the play" and filed the hand as a Basic Strategy weak spot.
 One app was teaching two different games.
 
-- **`resolvePlayDecision` is `decidePlay` with an index on top.** The trainer's `resolveDeviationDecision` could not be reused: it takes two cards and assumes every action is on the table, and a hand at the felt may be three cards deep with doubling, splitting or surrender already gone. The new path keeps the trainer's resolution order exactly — surrender overlay, then a charted surrender that must not be downgraded, then the natural category — and returns a `StrategyDecision`, so the caller grades the same way whether or not an index was in play.
-- **A total is a total.** An index is written against a hand's total, so the hard-16 rule applies to a three-card 16 exactly as it does to a two-card one. Only the pair row still needs two cards with the split on offer, mirroring how `decidePlay` takes a lapsed split straight to the total.
-- **Only a play the felt is offering can be the right answer.** A deviation calling for a double the bankroll cannot back, a split past the box's four-hand cap, or a surrender the split already spent is not a play the trainee declined, so the chart's own answer stands. Without that gate the table would mark a hand wrong for an action it never showed.
-- **The index is quoted, not restated.** The verdict reads the threshold off the rule that fired ("stand at true count 0 or higher, and the count is +2") and names what basic strategy alone would have done, so the line teaches instead of just scoring. The chart screen keeps its symbolic `≥ +3` rendering — right for a table column, wrong mid-sentence.
-- **Filed under the trainer that teaches the answer.** An index miss is a Deviations question, so it goes to that drill's weak list rather than Basic Strategy's; filing it under Basic Strategy would have seeded that drill a hand whose chart answer the trainee got right. The existing "did the felt withhold anything" guard is applied against the unrestricted deviation decision in that case, so a split hand whose surrender overlay could not fire is still skipped.
+- **`resolvePlayDecision` is `decidePlay` with an index on top.** The trainer's `resolveDeviationDecision` could not be reused: it takes two cards and assumes every action is on the table, and a hand at the felt may be three cards deep with doubling, splitting or surrender already gone.
+  The new path keeps the trainer's resolution order exactly — surrender overlay, then a charted surrender that must not be downgraded, then the natural category — and returns a `StrategyDecision`, so the caller grades the same way whether or not an index was in play.
+- **A total is a total.** An index is written against a hand's total, so the hard-16 rule applies to a three-card 16 exactly as it does to a two-card one.
+  Only the pair row still needs two cards with the split on offer, mirroring how `decidePlay` takes a lapsed split straight to the total.
+- **Only a play the felt is offering can be the right answer.** A deviation calling for a double the bankroll cannot back, a split past the box's four-hand cap, or a surrender the split already spent is not a play the trainee declined, so the chart's own answer stands.
+  Without that gate the table would mark a hand wrong for an action it never showed.
+- **The index is quoted, not restated.** The verdict reads the threshold off the rule that fired ("stand at true count 0 or higher, and the count is +2") and names what basic strategy alone would have done, so the line teaches instead of just scoring.
+  The chart screen keeps its symbolic `≥ +3` rendering — right for a table column, wrong mid-sentence.
+- **Filed under the trainer that teaches the answer.** An index miss is a Deviations question, so it goes to that drill's weak list rather than Basic Strategy's; filing it under Basic Strategy would have seeded that drill a hand whose chart answer the trainee got right.
+  The existing "did the felt withhold anything" guard is applied against the unrestricted deviation decision in that case, so a split hand whose surrender overlay could not fire is still skipped.
 - **Still only against numbers that are the system's own.** A playing index is a Hi-Lo true count, so every other system is graded on basic strategy alone — the same line insurance already draws, and the reason KO gets its book's insurance trigger and no playing schedule.
 - **Validation.** +14 unit tests on the engine and +7 on the component (1182 total); both verdict states rendered.
 - **iOS mirror.** `PlayDeviationDecision` and `DeviationRule.thresholdClause` in `Deviation.swift`, `resolvePlayDecision` in `DeviationEngine.swift`, and `correctPlay`/`tallyRef` in `ShowdownModel+Grading.swift`; `GradedPlay` gained a `tallyTrainer` so the model still does all the writing. +18 Swift tests (413 total), the coach line rendered in both themes.
@@ -550,33 +618,56 @@ One app was teaching two different games.
 The picker offers **58 counting systems** and, until now, gave no basis for choosing among them beyond a sentence of card values.
 That is the most consequential setting in the app — it decides which drills are even available, which numbers the showdown can grade, and how much work a trainee signs up for per hand — and the app knew nothing about the trade-off it was asking them to make.
 
-- **Three figures, from the table the registry already came from.** Betting correlation, playing efficiency and insurance correlation are published per system on the Blackjack Review comparison page the README has always cited as the source of the 58. The card values were transcribed from it; these three columns were not. They are now, verbatim.
-- **Each one is a drill this app already runs.** Betting correlation is what the bet-spread drill and the showdown's bet measure; playing efficiency is what the Deviations trainer measures; insurance correlation is the one decision that is purely a count of tens. So the numbers are not trivia — they say which of the app's own screens a system will do well on.
-- **Transcribed by matching tag vectors, not names.** The importer keyed each registry entry to its published row by its ten per-rank values, which matched **58 of 58** — independently confirming that every card value already in the registry agrees with the source. Where two systems share a tag vector (Andersen and Tri-Level; C-K and Mentor; DMPro and EBJ III) the source still publishes each its own row, and the name disambiguates so each entry carries its own.
+- **Three figures, from the table the registry already came from.** Betting correlation, playing efficiency and insurance correlation are published per system on the Blackjack Review comparison page the README has always cited as the source of the 58.
+  The card values were transcribed from it; these three columns were not.
+  They are now, verbatim.
+- **Each one is a drill this app already runs.** Betting correlation is what the bet-spread drill and the showdown's bet measure; playing efficiency is what the Deviations trainer measures; insurance correlation is the one decision that is purely a count of tens.
+  So the numbers are not trivia — they say which of the app's own screens a system will do well on.
+- **Transcribed by matching tag vectors, not names.** The importer keyed each registry entry to its published row by its ten per-rank values, which matched **58 of 58** — independently confirming that every card value already in the registry agrees with the source.
+  Where two systems share a tag vector (Andersen and Tri-Level; C-K and Mentor; DMPro and EBJ III) the source still publishes each its own row, and the name disambiguates so each entry carries its own.
 - **Required, not optional.** `SystemMetrics` is a required field on `CountingSystem`, so a system cannot be added without saying what it is good at, and a spec asserts all three are in `[0, 1]` for every entry with spot-checks against the four defaults and the table's extremes.
-- **Figures, not a ranking.** The copy says so in as many words: these measure a system's _tags_, never a trainee. The perfect `1.00` betting correlations on that table belong to Griffin Ultimate and Thorp Ultimate — counts the source itself annotates "only a computer could play this" — and Revere Five-Count's `.43 / .15 / .19` is the app admitting that one of its own options barely tracks anything.
-- **Label/value pairs rather than one string,** because "Insurance" on one line and "correlation .76" on the next reads as two different things. The web wraps between figures with `white-space: nowrap` per figure; iOS uses non-breaking spaces inside each on the drill screen and a right-aligned value column in the Settings form.
+- **Figures, not a ranking.** The copy says so in as many words: these measure a system's _tags_, never a trainee.
+  The perfect `1.00` betting correlations on that table belong to Griffin Ultimate and Thorp Ultimate — counts the source itself annotates "only a computer could play this" — and Revere Five-Count's `.43 / .15 / .19` is the app admitting that one of its own options barely tracks anything.
+- **Label/value pairs rather than one string,** because "Insurance" on one line and "correlation .76" on the next reads as two different things.
+  The web wraps between figures with `white-space: nowrap` per figure; iOS uses non-breaking spaces inside each on the drill screen and a right-aligned value column in the Settings form.
 - **Validation.** +70 unit tests (1252 total), +1 E2E (87) walking the picker from Hi-Lo to a weak system and on to the drill screen; both surfaces shot in both themes.
-- **iOS mirror.** `SystemMetrics` and `metricLabels` on the decoded `CountingSystem`, rendered in the counting section of Settings and on the drill's start screen. The exporter's `counting-systems` fixture went to `/3`. +5 Swift tests (418 total), both screens photographed in the simulator in both themes.
+- **iOS mirror.** `SystemMetrics` and `metricLabels` on the decoded `CountingSystem`, rendered in the counting section of Settings and on the drill's start screen.
+  The exporter's `counting-systems` fixture went to `/3`. +5 Swift tests (418 total), both screens photographed in the simulator in both themes.
 
 ### Post-roadmap continued: the showdown says whose numbers these are, and the delta gets a parity gate (2026-08-03)
 
 Two follow-ons to the deviation grading above, both about the same thing: what the app is entitled to claim.
 
-- **The fourth screen where indices matter.** The Deviations drill, the deviation chart and Settings all warn a trainee whose counting system is not Hi-Lo that the indices are not theirs. The showdown — the one place indices are applied to a hand actually played — said nothing, so an Omega II counter watched their plays graded on basic strategy with no hint why. It now carries the same shared advisory plus the consequence at this table: hands graded on basic strategy alone, and the insurance call left ungraded — or, for KO, graded against its book's own running-count trigger, which is the one thing it does publish. Said once before a card is dealt, not repeated per verdict.
-- **A parity gate for the delta.** `resolvePlayDecision` is now two hand-written implementations of the same restriction-aware resolution, and it is exactly where they can drift: it wraps `decidePlay` rather than `decide`, so it classifies hands more than two cards deep and refuses an index whose play the felt is not offering. Neither axis is touched by the trainer's own vectors.
-- **Only the rows where an index fires.** A full cross-product over the restriction and N-card axes would have doubled the fixture weight in the repo for coverage that is mostly `decidePlay` restated. Instead the exporter declares its `domain` and emits only the combinations where a deviation applies — 2,158 rows out of 70,400 examined, 82 KB — and the Swift test walks the same domain asserting both halves: a listed combination deviates to the named action and rule, an unlisted one does not deviate at all and still equals `decidePlay` (which the basic-strategy vectors already pin exhaustively). The `examined` count is asserted too, so a domain change on the web side surfaces as a mismatch rather than as silently thinner coverage.
-- **It passed on the first run**, which is the answer the gate exists to give: the two implementations already agreed on all 70,400. Verified by breaking each new axis in the Swift engine in turn — dropping the `canDouble` gate produced 210 mismatches, all in the no-double restriction; refusing to classify hands past two cards produced 592, all on the three-card hands. (Breaking the `canSplit` gate produced none, because the classifier already declines to read the pair row when the split has lapsed — the gate is enforced twice.)
+- **The fourth screen where indices matter.** The Deviations drill, the deviation chart and Settings all warn a trainee whose counting system is not Hi-Lo that the indices are not theirs.
+  The showdown — the one place indices are applied to a hand actually played — said nothing, so an Omega II counter watched their plays graded on basic strategy with no hint why.
+  It now carries the same shared advisory plus the consequence at this table: hands graded on basic strategy alone, and the insurance call left ungraded — or, for KO, graded against its book's own running-count trigger, which is the one thing it does publish.
+  Said once before a card is dealt, not repeated per verdict.
+- **A parity gate for the delta.** `resolvePlayDecision` is now two hand-written implementations of the same restriction-aware resolution, and it is exactly where they can drift: it wraps `decidePlay` rather than `decide`, so it classifies hands more than two cards deep and refuses an index whose play the felt is not offering.
+  Neither axis is touched by the trainer's own vectors.
+- **Only the rows where an index fires.** A full cross-product over the restriction and N-card axes would have doubled the fixture weight in the repo for coverage that is mostly `decidePlay` restated.
+  Instead the exporter declares its `domain` and emits only the combinations where a deviation applies — 2,158 rows out of 70,400 examined, 82 KB — and the Swift test walks the same domain asserting both halves: a listed combination deviates to the named action and rule, an unlisted one does not deviate at all and still equals `decidePlay` (which the basic-strategy vectors already pin exhaustively).
+  The `examined` count is asserted too, so a domain change on the web side surfaces as a mismatch rather than as silently thinner coverage.
+- **It passed on the first run**, which is the answer the gate exists to give: the two implementations already agreed on all 70,400.
+  Verified by breaking each new axis in the Swift engine in turn — dropping the `canDouble` gate produced 210 mismatches, all in the no-double restriction; refusing to classify hands past two cards produced 592, all on the three-card hands.
+  (Breaking the `canSplit` gate produced none, because the classifier already declines to read the pair row when the split has lapsed — the gate is enforced twice.)
 - **Validation.** +3 unit tests and +1 E2E (88) for the advisory, +5 Swift tests (422 total) and the new fixture; the advisory rendered on both platforms in both themes.
 
 ### Post-roadmap continued: the hole card, and the week's accuracy (2026-08-03)
 
 Two independent findings, one a defect in the newest grading path and one a hole in what the app has been recording all along.
 
-- **The showdown graded the next bet against a stale count.** The dealer's hole card is held out of the visible running count while it is face down, which is right: insurance is decided before it is seen. But it rejoined the count at the _next deal_ rather than when the round resolved and turned it over — so the bet that opens the next round was graded against a count one card behind the felt, while the decks-remaining divisor already counted it. A trainee who counted the card they could see was marked wrong for it, at exactly the moment a single point most changes the true count. The reveal now folds it in (`resolveRound`), and the reproduction is a two-round vector: a bust hand whose 5 in the hole moves a carried +3 across the ramp's TC +2 boundary.
-- **The history recorded volume and nothing else.** Every rep in the app is graded, the goal ring and the streak have always been fed from a per-day hands count — and per-day _correctness_ was never stored. So the Progress screen could say how much was practised and never how well, and the lifetime accuracy beside it barely moves once a trainee has thousands of attempts. The screen could not answer the one question a trainer exists for.
-- **`graded` is tracked separately from `hands`,** which is the whole reason the migration is honest: a day written by an older build has no verdicts at all, so dividing its correct count by its hands would report a week of real practice as 0%. Days from before the change read as unmeasured, and a day straddling it is measured over the reps that actually carry a verdict. Stored values are clamped into `correct ≤ graded ≤ hands`, so no restored backup or synced payload can show an accuracy over 100%.
-- **A week beside the week before it.** One week's figure is a reading; the direction is what says whether the practice is working, so the line reads "88% correct this week" with "up from 77% the week before" under it, and stays silent until there are two measured weeks to compare. Per-day accuracy rides in the strip's screen-reader text, where a bar's numbers already live.
+- **The showdown graded the next bet against a stale count.** The dealer's hole card is held out of the visible running count while it is face down, which is right: insurance is decided before it is seen.
+  But it rejoined the count at the _next deal_ rather than when the round resolved and turned it over — so the bet that opens the next round was graded against a count one card behind the felt, while the decks-remaining divisor already counted it.
+  A trainee who counted the card they could see was marked wrong for it, at exactly the moment a single point most changes the true count.
+  The reveal now folds it in (`resolveRound`), and the reproduction is a two-round vector: a bust hand whose 5 in the hole moves a carried +3 across the ramp's TC +2 boundary.
+- **The history recorded volume and nothing else.** Every rep in the app is graded, the goal ring and the streak have always been fed from a per-day hands count — and per-day _correctness_ was never stored.
+  So the Progress screen could say how much was practised and never how well, and the lifetime accuracy beside it barely moves once a trainee has thousands of attempts.
+  The screen could not answer the one question a trainer exists for.
+- **`graded` is tracked separately from `hands`,** which is the whole reason the migration is honest: a day written by an older build has no verdicts at all, so dividing its correct count by its hands would report a week of real practice as 0%.
+  Days from before the change read as unmeasured, and a day straddling it is measured over the reps that actually carry a verdict.
+  Stored values are clamped into `correct ≤ graded ≤ hands`, so no restored backup or synced payload can show an accuracy over 100%.
+- **A week beside the week before it.** One week's figure is a reading; the direction is what says whether the practice is working, so the line reads "88% correct this week" with "up from 77% the week before" under it, and stays silent until there are two measured weeks to compare.
+  Per-day accuracy rides in the strip's screen-reader text, where a bar's numbers already live.
 - **Validation.** +10 unit tests (1266 total) across the store and the screen, including the pre-grading migration and the clamp; the card rendered in both themes.
 - **iOS mirror.** `PracticeDay.graded`/`.correct`, `accuracyLast7`, and `ProgressSummary.trend` behind the same week card; the iCloud payload and the `UserDefaults` round trip both carry the counts, and a malformed cloud payload is still nothing to adopt rather than an empty history. +10 Swift tests (432 total), the card photographed in both themes.
 
@@ -586,12 +677,16 @@ The showdown grades three decisions against the count — the bet, the insurance
 The trainee was never once asked for theirs.
 So the screen that exists to put a live count on a real hand was, for the count itself, a spectator sport: dozens of cards came out and the number they were carrying was never tested.
 
-- **The way out runs through the count.** Leaving the table stops on one question — the running count as the player can see it — and answering it is the exit. The bypass button is hidden while the question is up, because a "Back to counting" beside it would make the check optional in the one moment it is worth anything.
-- **Only between rounds.** Mid-hand the dealer's hole card is dealt but face down, so there is no single count both sides could agree is right: the table holds it out of the visible count deliberately, and asking then would grade a different game. An exit from a player turn leaves straight away, as it always did.
+- **The way out runs through the count.** Leaving the table stops on one question — the running count as the player can see it — and answering it is the exit.
+  The bypass button is hidden while the question is up, because a "Back to counting" beside it would make the check optional in the one moment it is worth anything.
+- **Only between rounds.** Mid-hand the dealer's hole card is dealt but face down, so there is no single count both sides could agree is right: the table holds it out of the visible count deliberately, and asking then would grade a different game.
+  An exit from a player turn leaves straight away, as it always did.
 - **The count the player could see, over the cards they saw.** The verdict names the table's count and the drift, in points and in the direction of the error, over the number of cards actually turned face up — the hole card of an unresolved round is dealt but not shown, so it is not one of them.
-- **It feeds the running-count drill's own store,** because it is the same skill: a count held through played-out hands, past splits and dealer draws, is the running count the drill measures, only harder. It is not a second scoreboard.
+- **It feeds the running-count drill's own store,** because it is the same skill: a count held through played-out hands, past splits and dealer draws, is the running count the drill measures, only harder.
+  It is not a second scoreboard.
 - **One answer, not a second guess.** The verdict replaces the answer box, and a further submission is ignored — a stat that improves because the trainee tried again would not be measuring anything.
-- **On by default, and switchable.** It is the only showdown setting that defaults on: the table has been keeping the count all along, and asking for it is the point of the screen. Prefs written before the setting existed get asked; only an explicit `false` turns it off.
+- **On by default, and switchable.** It is the only showdown setting that defaults on: the table has been keeping the count all along, and asking for it is the point of the screen.
+  Prefs written before the setting existed get asked; only an explicit `false` turns it off.
 - **Validation.** +9 unit tests (1275 total) and +2 E2E (90) walking the answer and the Settings opt-out; the question and both verdict states rendered.
 - **iOS mirror.** `ShowdownModel.requestExit` / `answerCountCheck` with the reads in `+Grading`, a `CountCheckView` beside `PlayCoachView` (the answer box is the counting drill's own form), the `showdownCountCheck` pref through the tolerant merge and the Settings toggle. +11 Swift tests (443 total); the question and both verdict states photographed in the simulator in both themes, plus the new Settings row.
 
@@ -600,11 +695,20 @@ So the screen that exists to put a live count on a real hand was, for the count 
 The count check asks the trainee for the count the table has been keeping, which made two long-standing seams matter for the first time: what the table had shown them, and how long it kept dealing.
 Both were found by asking the same question as the review pass above — not "does the feature work" but "what does the app let you get wrong silently".
 
-- **A hole card the table never turned over was going into the trainee's count.** Leaving mid-hand (or at the insurance decision) handed the drill _every_ card the showdown had dealt, the face-down hole card included. The drill folds those into the carried count, so the next round was graded against a count containing a card the trainee could not have seen — their answer, correct for everything on the felt, marked wrong by exactly that card's tag. The count check made it worse than silent: at the insurance decision it confirmed the visible count and then diverged from it one line later.
-- **The fix is the app's own principle, applied one step further.** The insurance call is graded against the visible count because "grading against a card the player cannot see would be grading a different game"; the same holds for the count they leave with. So the exit carries back the cards the table turned face up. A hole card never shown is gone from the shoe and uncounted — which is exactly what a burn card is, and what a real counter does with one — and the count check now says so where it asks.
-- **The showdown dealt on past the cut card, down to the last four cards.** Every other part of the app respects the cut: the counting drill reshuffles at it and says so. The table ignored it, which is not a game any casino deals — and it quietly poisoned the grading, because the true count divides by the decks remaining. The reproduction is the drill's own feedback line at that depth: `running count 3 ÷ 0.5 decks = true count 6`. Bets were being scored against a spread band at counts like that, and index plays against thresholds they clear by a mile.
-- **A dealer stops at the cut card, never mid-round,** so the round in progress when it surfaces still plays out and settles; only the next one is refused. The counting screen withdraws the showdown offer for the same reason and says why, rather than letting the button vanish.
-- **Both were in the seams, again.** The exit handover and the deal-another guard were each written before the count was graded at this table, and each was correct for what the table did then. The tests that shipped with the count check exercised the count check.
+- **A hole card the table never turned over was going into the trainee's count.** Leaving mid-hand (or at the insurance decision) handed the drill _every_ card the showdown had dealt, the face-down hole card included.
+  The drill folds those into the carried count, so the next round was graded against a count containing a card the trainee could not have seen — their answer, correct for everything on the felt, marked wrong by exactly that card's tag.
+  The count check made it worse than silent: at the insurance decision it confirmed the visible count and then diverged from it one line later.
+- **The fix is the app's own principle, applied one step further.** The insurance call is graded against the visible count because "grading against a card the player cannot see would be grading a different game"; the same holds for the count they leave with.
+  So the exit carries back the cards the table turned face up.
+  A hole card never shown is gone from the shoe and uncounted — which is exactly what a burn card is, and what a real counter does with one — and the count check now says so where it asks.
+- **The showdown dealt on past the cut card, down to the last four cards.** Every other part of the app respects the cut: the counting drill reshuffles at it and says so.
+  The table ignored it, which is not a game any casino deals — and it quietly poisoned the grading, because the true count divides by the decks remaining.
+  The reproduction is the drill's own feedback line at that depth: `running count 3 ÷ 0.5 decks = true count 6`.
+  Bets were being scored against a spread band at counts like that, and index plays against thresholds they clear by a mile.
+- **A dealer stops at the cut card, never mid-round,** so the round in progress when it surfaces still plays out and settles; only the next one is refused.
+  The counting screen withdraws the showdown offer for the same reason and says why, rather than letting the button vanish.
+- **Both were in the seams, again.** The exit handover and the deal-another guard were each written before the count was graded at this table, and each was correct for what the table did then.
+  The tests that shipped with the count check exercised the count check.
 - **Validation.** +6 unit tests (1281 total) and +2 E2E (92); the count-check note and the withdrawn offer both rendered in the browser.
 - **iOS mirror.** `ShowdownModel.seenCards` (the hole card tracked by index, so the one card that must not leave with the player is identified exactly) and `cutCardOut` / `showdownAvailable` / `shoeSpent`. +6 Swift tests (449 total); both new lines photographed in the simulator.
 
@@ -614,41 +718,66 @@ The showdown has graded multi-card decisions since the play coach shipped, and i
 The engine has answered them since `decidePlay`.
 The trainer that exists to teach basic strategy asked the opening question and dealt a fresh hand — so the one skill the table graded was the one no drill rehearsed, and the app's own manual-testing guide named the gap: "You never play a hand out on those pages, and there is no multi-card decision practice."
 
-- **A hit is the one answer that leaves another question behind it.** Stand, double, split and surrender end a hand at a table; a hit draws a card and asks again. So that is the whole rule: a correct hit deals the next card and re-asks on the grown hand. Every other action advances as before, and a miss still ends the hand — this is a drill, not a table, and the pause where the chart is read is the teaching.
-- **The narrowed grid is the lesson, not a limitation.** Past two cards `legalActionsFor` returns hit and stand, so Double / Split / Surrender go dead rather than disappearing. That is the rule being taught: they are first-two-card actions. It also makes the same total read two ways — hard 11 vs 6 doubles on the deal and can only hit three cards deep — which is the distinction `PlayInput` was written for and which no drill had ever put in front of a trainee.
-- **One grading path per question, and they are different questions.** The opening decision stays `evaluate`/`decide`; every continued one goes through a new `evaluatePlay`, which is `decidePlay` behind the same verdict shape. `evaluate` was refactored to share the grading (the insurance branch included) so the two cannot drift.
-- **Only the opening decision files a weak spot,** for exactly the reason the showdown gives: re-dealing a three-card 16 as the two-card hand a `ScenarioRef` names would ask a hand that can double, which is a different question with a different answer. The showdown's rule now holds in both places that apply it.
-- **The hand ends where the cards end it.** Busting or reaching 21 leaves nothing to ask, so the drawn card is held on screen for twice the flash with the total said plainly ("Bust — 26.", "21 — nothing left to decide.") while the hit stays graded green: the play was right, the card was not. The live region carries the same line, since the stage conveys it as colour and position.
+- **A hit is the one answer that leaves another question behind it.** Stand, double, split and surrender end a hand at a table; a hit draws a card and asks again.
+  So that is the whole rule: a correct hit deals the next card and re-asks on the grown hand.
+  Every other action advances as before, and a miss still ends the hand — this is a drill, not a table, and the pause where the chart is read is the teaching.
+- **The narrowed grid is the lesson, not a limitation.** Past two cards `legalActionsFor` returns hit and stand, so Double / Split / Surrender go dead rather than disappearing.
+  That is the rule being taught: they are first-two-card actions.
+  It also makes the same total read two ways — hard 11 vs 6 doubles on the deal and can only hit three cards deep — which is the distinction `PlayInput` was written for and which no drill had ever put in front of a trainee.
+- **One grading path per question, and they are different questions.** The opening decision stays `evaluate`/`decide`; every continued one goes through a new `evaluatePlay`, which is `decidePlay` behind the same verdict shape.
+  `evaluate` was refactored to share the grading (the insurance branch included) so the two cannot drift.
+- **Only the opening decision files a weak spot,** for exactly the reason the showdown gives: re-dealing a three-card 16 as the two-card hand a `ScenarioRef` names would ask a hand that can double, which is a different question with a different answer.
+  The showdown's rule now holds in both places that apply it.
+- **The hand ends where the cards end it.** Busting or reaching 21 leaves nothing to ask, so the drawn card is held on screen for twice the flash with the total said plainly ("Bust — 26.", "21 — nothing left to decide.") while the hit stays graded green: the play was right, the card was not.
+  The live region carries the same line, since the stage conveys it as colour and position.
 - **The session finishes the hand it is on.** The target is checked when a hand ends, not when a decision does, so the Done screen never lands between a hit and the card it drew.
-- **On by default, and switchable** (Settings → Basic Strategy → Play hands out). The opening decision alone is the chart, not the game. Prefs written before the setting existed play hands out; an explicit `false` is the only thing that turns it off.
-- **The stage grew a hand.** `FlowStageComponent` took exactly two cards; it now renders any number, shrinking the cards past two and wrapping past what a phone can hold in a row. Verified at four and five cards on a 390 px viewport.
-- **Validation.** +16 unit tests (1297 total) and +1 E2E (93), the E2E seeded (`?seed=9`) so the hand it hits is a hard 7 that draws into a hard 12 rather than busting. Rendered in the browser at three, four and five cards, in both themes, plus the bust beat and the new Settings section. A 40-seed sweep of the real drill exercised continuation, bust and 21 across every opening the generator deals.
-- **iOS mirror.** `FlowPrefs.playHandsOut` through the tolerant merge and the stored shape, `BasicStrategyDrillModel.hand` with `afterCorrect`, `BasicStrategyEngine.evaluatePlay`, the `[Card]` overloads of `handQuestion` / `legalActionsFor`, a `FlowStageView` that takes a hand rather than two cards, and the `.over` phase. +15 Swift tests (464 total); the stage rendered at three, four and five cards plus the bust beat in both themes, and the new Settings section photographed in the simulator in both. The parity fixtures are untouched — `evaluatePlay` wraps `decidePlay`, whose vectors already pin it.
+- **On by default, and switchable** (Settings → Basic Strategy → Play hands out).
+  The opening decision alone is the chart, not the game.
+  Prefs written before the setting existed play hands out; an explicit `false` is the only thing that turns it off.
+- **The stage grew a hand.** `FlowStageComponent` took exactly two cards; it now renders any number, shrinking the cards past two and wrapping past what a phone can hold in a row.
+  Verified at four and five cards on a 390 px viewport.
+- **Validation.** +16 unit tests (1297 total) and +1 E2E (93), the E2E seeded (`?seed=9`) so the hand it hits is a hard 7 that draws into a hard 12 rather than busting.
+  Rendered in the browser at three, four and five cards, in both themes, plus the bust beat and the new Settings section.
+  A 40-seed sweep of the real drill exercised continuation, bust and 21 across every opening the generator deals.
+- **iOS mirror.** `FlowPrefs.playHandsOut` through the tolerant merge and the stored shape, `BasicStrategyDrillModel.hand` with `afterCorrect`, `BasicStrategyEngine.evaluatePlay`, the `[Card]` overloads of `handQuestion` / `legalActionsFor`, a `FlowStageView` that takes a hand rather than two cards, and the `.over` phase. +15 Swift tests (464 total); the stage rendered at three, four and five cards plus the bust beat in both themes, and the new Settings section photographed in the simulator in both.
+  The parity fixtures are untouched — `evaluatePlay` wraps `decidePlay`, whose vectors already pin it.
 
 ### Post-roadmap continued: a deviations weak spot comes back at the count that beat you (2026-08-03)
 
 Adaptive practice promises that what you keep missing keeps coming back.
 For the Deviations trainer it was keeping half that promise: the weak spot recorded the _hand_ and the re-deal drew a **fresh random true count**.
 
-- **The count is half the question.** 16 vs 10 is a stand at +2 and a hit at −1 — the same hand, two different answers, and the whole point of the trainer. Miss it at +2 and the drill could hand it back at −3, where the index never fires and the correct answer is plain basic strategy: the hand the trainee had right all along.
-- **Worse than useless — it cleared the spot.** Three correct answers running retire a scenario. At fresh counts those three could all be the easy side, so the tally would report a learned deviation the trainee had never once answered correctly at the count that beat them.
-- **The miss remembers its count** (`ScenarioTally.missedCounts`, newest first, capped at five). Five because a hand has more than one failure mode — 16 vs 10 can be stood at −1 _and_ hit at +2 — and because a bad week should not write an unbounded list into `localStorage`. A repeat promotes rather than duplicates; a correct answer leaves the list alone, since it is the record of what went wrong.
-- **Only where the count is part of the question.** The Deviations drill passes the scenario's count; the showdown passes the Hi-Lo true count with an _index_ misplay only. Basic Strategy passes none and reads back an empty list — the same random count it always used, which for a chart with no count in it is right.
+- **The count is half the question.** 16 vs 10 is a stand at +2 and a hit at −1 — the same hand, two different answers, and the whole point of the trainer.
+  Miss it at +2 and the drill could hand it back at −3, where the index never fires and the correct answer is plain basic strategy: the hand the trainee had right all along.
+- **Worse than useless — it cleared the spot.** Three correct answers running retire a scenario.
+  At fresh counts those three could all be the easy side, so the tally would report a learned deviation the trainee had never once answered correctly at the count that beat them.
+- **The miss remembers its count** (`ScenarioTally.missedCounts`, newest first, capped at five).
+  Five because a hand has more than one failure mode — 16 vs 10 can be stood at −1 _and_ hit at +2 — and because a bad week should not write an unbounded list into `localStorage`.
+  A repeat promotes rather than duplicates; a correct answer leaves the list alone, since it is the record of what went wrong.
+- **Only where the count is part of the question.** The Deviations drill passes the scenario's count; the showdown passes the Hi-Lo true count with an _index_ misplay only.
+  Basic Strategy passes none and reads back an empty list — the same random count it always used, which for a chart with no count in it is right.
 - **Old and hostile payloads both degrade to the old behaviour.** A tally written before this (or by hand) has no list, and the drill falls back to a fresh count exactly as before; a restored list drops non-integers, duplicates and anything past ±30.
 - **A pinned manual count still wins.** Setting a manual true count is the trainee naming the threshold they are drilling, and a weak spot must not override that.
 - **Validation.** +12 unit tests (1309 total) across the store, the drill and the showdown's filing; walked in the browser, where a hand missed three times at TC +1 now opens the next session at TC +1 rather than a fresh draw.
-- **iOS mirror.** `WeakSpot.missedCounts` / `ScenarioTally.missedCounts` with `rememberMissedCount` and `sanitizeMissedCounts`, the drill's `trueCount(for:random:)`, and `GradedPlay.tallyTrueCount` carrying the showdown's index count into the tally. The hand-rolled `Codable` init decodes the field if present, so an older `UserDefaults` payload — or an iCloud one from a device still on the previous build — adopts cleanly with an empty list. +13 Swift tests (477 total). No new surface, so nothing to photograph: the change is which count the next hand is dealt at.
+- **iOS mirror.** `WeakSpot.missedCounts` / `ScenarioTally.missedCounts` with `rememberMissedCount` and `sanitizeMissedCounts`, the drill's `trueCount(for:random:)`, and `GradedPlay.tallyTrueCount` carrying the showdown's index count into the tally.
+  The hand-rolled `Codable` init decodes the field if present, so an older `UserDefaults` payload — or an iCloud one from a device still on the previous build — adopts cleanly with an empty list. +13 Swift tests (477 total).
+  No new surface, so nothing to photograph: the change is which count the next hand is dealt at.
 
 ### Post-roadmap continued: the Deviations drill plays the hand out too (2026-08-03)
 
 The matching half of the change above, and the one with the sharper claim behind it.
 
-- **An index is written against a total.** The showdown has graded that since the play coach shipped — "a hard-total index applies to a three-card 16 exactly as it does to a two-card one" — and the trainer that exists to teach indices could only ever ask the opening decision. A trainee could pass every Deviations round and still have never once been asked whether the hard-16 rule survives a hit.
-- **`DeviationEvaluatorService.evaluatePlay`** is `resolvePlayDecision` behind the same `DeviationTrainerResult` the drill already renders, so the feedback line, the weak-spot filing and the stats need no special case. The insurance overlay is deliberately not consulted: insurance is settled before the hand is played, and past the deal the grid offers hit and stand only.
-- **The count is the scenario's, not a shoe's,** so it does not move when a card is drawn. This trainer presents the count as given — the showdown is where a live count meets a real hand — and pretending the drawn card nudged it would be inventing a number the screen never showed.
+- **An index is written against a total.** The showdown has graded that since the play coach shipped — "a hard-total index applies to a three-card 16 exactly as it does to a two-card one" — and the trainer that exists to teach indices could only ever ask the opening decision.
+  A trainee could pass every Deviations round and still have never once been asked whether the hard-16 rule survives a hit.
+- **`DeviationEvaluatorService.evaluatePlay`** is `resolvePlayDecision` behind the same `DeviationTrainerResult` the drill already renders, so the feedback line, the weak-spot filing and the stats need no special case.
+  The insurance overlay is deliberately not consulted: insurance is settled before the hand is played, and past the deal the grid offers hit and stand only.
+- **The count is the scenario's, not a shoe's,** so it does not move when a card is drawn.
+  This trainer presents the count as given — the showdown is where a live count meets a real hand — and pretending the drawn card nudged it would be inventing a number the screen never showed.
 - **One setting, both trainers.** `playHandsOut` was always a top-level pref; the Settings section it lives in is now **Drills** rather than Basic Strategy, and its hint names what changes in each.
-- **Validation.** +10 unit tests (1319 total): the evaluator's N-card path (an index firing on a three-card 16, the same total graded the other way one count lower, a lapsed double, a softened ace) and the drill's loop. Walked in the browser to a three-card hard 20 vs 10 at TC +1 with the count still on the question line and only hit and stand live.
-- **iOS mirror.** `DeviationEvaluator.evaluatePlay(_:userAction:)` over a bundled `PlayedOutHand` (the parameter-count limit is why it is a struct), `DeviationEngine.basicPlay` to reach the chart's own answer (`private` is file-scoped to its declaring type), and the model's `hand` / `afterCorrect` / `.over` beside the Basic Strategy one. The model's read-only half moved to an extension to stay inside the type-body limit. +8 Swift tests (485 total); the renamed **Drills** section photographed in the simulator.
+- **Validation.** +10 unit tests (1319 total): the evaluator's N-card path (an index firing on a three-card 16, the same total graded the other way one count lower, a lapsed double, a softened ace) and the drill's loop.
+  Walked in the browser to a three-card hard 20 vs 10 at TC +1 with the count still on the question line and only hit and stand live.
+- **iOS mirror.** `DeviationEvaluator.evaluatePlay(_:userAction:)` over a bundled `PlayedOutHand` (the parameter-count limit is why it is a struct), `DeviationEngine.basicPlay` to reach the chart's own answer (`private` is file-scoped to its declaring type), and the model's `hand` / `afterCorrect` / `.over` beside the Basic Strategy one.
+  The model's read-only half moved to an extension to stay inside the type-body limit. +8 Swift tests (485 total); the renamed **Drills** section photographed in the simulator.
 
 ### Post-roadmap continued: how long the hand took (2026-08-03)
 
@@ -656,21 +785,35 @@ The deck-speed drill exists because the app already believed speed is a counting
 For every play decision the app has graded, it measured accuracy alone.
 A trainee who answers the chart perfectly in eight seconds a hand is not table-ready, and the app called them 100%.
 
-- **A decision's own clock.** The two strategy drills timestamp the question when it goes up and read the clock when the answer lands. Nothing else is timed: the counting drills are paced by the app, and the deck countdown already has a stopwatch and a record.
-- **A hand you walked away from is not a hand you were slow on.** Past `MAX_TIMED_DECISION_MS` (a minute) the reading is dropped — not clamped — and so is a non-positive one, which is a clock that moved backwards. The rep still counts as practised and graded; only its time is missing. `plausibleDecisionMs` is exported so the drill and the store apply that judgement in one place rather than two.
-- **`timed` and `millis` are tracked separately from `graded`,** for the same reason `graded` was tracked separately from `hands`: a day written before this has no readings at all, and dividing zero milliseconds by its hands would report a week of real practice as instant. Those days read as untimed.
-- **Median for the round, mean for the week.** A twenty-hand round is small enough that one interrupted hand would decide a mean, so the Done screen reports the middle decision; the week has only per-day totals stored and hundreds of hands to average, where the cap does the outlier work. The difference is visible in the first walkthrough: a round whose mean was 4.4s had a median of 2.1s.
-- **Reported, never judged.** The deck-speed drill can cite "under 30 seconds" because that benchmark is published. There is no equivalent number for a playing decision, so the app declines to invent one: the pace line says what it took and how it compares with the trainee's own week before, and nothing else. (Faster is the good direction, which is why the pace trend cannot reuse the accuracy trend's — there, up is better.)
-- **Validation.** +17 unit tests (1336 total) across the store, the session's median, and both screens, plus +1 E2E asserting the hand was timed at all (which figure it lands on is a wall-clock question a browser test cannot pin). Walked in the browser: three deliberate hands, the Done line, and the Progress card.
-- **iOS mirror.** `PracticeDay.timed`/`.millis` with `plausibleDecisionMs` and `paceLast7`, `DrillSession.medianSeconds`, an injected `now()` on both drill models (there is no fake-timer equivalent for `Date()` in the Swift tests, so the clock is a seam like the deck-speed drill's), `ProgressSummary.paceTrend`, and the pace line under the accuracy one on the week card. The local save and the iCloud push now share one `payload` builder so the two cannot carry different fields; an older device's payload decodes with no timings and reads as untimed. +19 Swift tests (504 total); the week card rendered in both themes. The shared drill fixture moved to its own file to stay inside the file-length limit.
+- **A decision's own clock.** The two strategy drills timestamp the question when it goes up and read the clock when the answer lands.
+  Nothing else is timed: the counting drills are paced by the app, and the deck countdown already has a stopwatch and a record.
+- **A hand you walked away from is not a hand you were slow on.** Past `MAX_TIMED_DECISION_MS` (a minute) the reading is dropped — not clamped — and so is a non-positive one, which is a clock that moved backwards.
+  The rep still counts as practised and graded; only its time is missing.
+  `plausibleDecisionMs` is exported so the drill and the store apply that judgement in one place rather than two.
+- **`timed` and `millis` are tracked separately from `graded`,** for the same reason `graded` was tracked separately from `hands`: a day written before this has no readings at all, and dividing zero milliseconds by its hands would report a week of real practice as instant.
+  Those days read as untimed.
+- **Median for the round, mean for the week.** A twenty-hand round is small enough that one interrupted hand would decide a mean, so the Done screen reports the middle decision; the week has only per-day totals stored and hundreds of hands to average, where the cap does the outlier work.
+  The difference is visible in the first walkthrough: a round whose mean was 4.4s had a median of 2.1s.
+- **Reported, never judged.** The deck-speed drill can cite "under 30 seconds" because that benchmark is published.
+  There is no equivalent number for a playing decision, so the app declines to invent one: the pace line says what it took and how it compares with the trainee's own week before, and nothing else.
+  (Faster is the good direction, which is why the pace trend cannot reuse the accuracy trend's — there, up is better.)
+- **Validation.** +17 unit tests (1336 total) across the store, the session's median, and both screens, plus +1 E2E asserting the hand was timed at all (which figure it lands on is a wall-clock question a browser test cannot pin).
+  Walked in the browser: three deliberate hands, the Done line, and the Progress card.
+- **iOS mirror.** `PracticeDay.timed`/`.millis` with `plausibleDecisionMs` and `paceLast7`, `DrillSession.medianSeconds`, an injected `now()` on both drill models (there is no fake-timer equivalent for `Date()` in the Swift tests, so the clock is a seam like the deck-speed drill's), `ProgressSummary.paceTrend`, and the pace line under the accuracy one on the week card.
+  The local save and the iCloud push now share one `payload` builder so the two cannot carry different fields; an older device's payload decodes with no timings and reads as untimed. +19 Swift tests (504 total); the week card rendered in both themes.
+  The shared drill fixture moved to its own file to stay inside the file-length limit.
   Two traps: `Text` has no `+=`, so swiftlint's `shorthand_operator` — an error in this config — cannot be satisfied by the obvious rewrite; the line is folded from strings instead, which is also the shape that keeps this file type-checking quickly.
 
 ### Post-roadmap continued: a review pass over the four above (2026-08-03)
 
 Same question as the last review pass — not "does the feature work" but "what does the app now let you get wrong silently" — asked of the work in this session rather than of the app at large.
 
-- **The pace figure was measuring a setting, not a trainee.** Timing every graded decision meant timing the continuations of a played-out hand, which offer two buttons and one total where the deal offers six and a pair-or-soft-or-hard lookup. Turning _Play hands out_ on would therefore have made the week look faster, and the trend line — whose whole claim is "this week against your own week before" — would have reported it as progress. Only the opening decision is timed now, the same line the weak-spot tally already draws for the same reason: it is the question the drill has always asked.
+- **The pace figure was measuring a setting, not a trainee.** Timing every graded decision meant timing the continuations of a played-out hand, which offer two buttons and one total where the deal offers six and a pair-or-soft-or-hard lookup.
+  Turning _Play hands out_ on would therefore have made the week look faster, and the trend line — whose whole claim is "this week against your own week before" — would have reported it as progress.
+  Only the opening decision is timed now, the same line the weak-spot tally already draws for the same reason: it is the question the drill has always asked.
 - **What survived the pass.** The 'over' phase is inert to the keyboard and to a tap (both handlers already gate on their own phase); a setting turned off mid-hand ends the hand and deals a fresh one rather than stranding it; the deviations weak-spot re-deal still honours a pinned manual count and still falls back for a spot filed before counts were kept; and the round median resets with the round.
-- **Deviation-only practice keeps its promise for the deal, not for the draws.** A hand hit onward can land on a total with no encoded rule. That is honest on screen — the feedback says no deviation exists, and the "deviation candidate" badge is not set for a continued decision — and the README now says it too, because a mode named "deviation-only" implies otherwise.
-- **The backup file is a cross-platform contract, and both new fields ride in it.** Neither backup implementation knows any store's shape (the web copies the `blackjack-` namespace as strings; iOS copies each key's JSON bytes), so `missedCounts`, `timed` and `millis` move between browser and phone untouched — but only because both platforms write the same field names. That was true by review alone, so each side now pins the practice-day key set in a test that names the other platform as the reason.
+- **Deviation-only practice keeps its promise for the deal, not for the draws.** A hand hit onward can land on a total with no encoded rule.
+  That is honest on screen — the feedback says no deviation exists, and the "deviation candidate" badge is not set for a continued decision — and the README now says it too, because a mode named "deviation-only" implies otherwise.
+- **The backup file is a cross-platform contract, and both new fields ride in it.** Neither backup implementation knows any store's shape (the web copies the `blackjack-` namespace as strings; iOS copies each key's JSON bytes), so `missedCounts`, `timed` and `millis` move between browser and phone untouched — but only because both platforms write the same field names.
+  That was true by review alone, so each side now pins the practice-day key set in a test that names the other platform as the reason.
 - **Validation.** +3 unit tests (1338) and +2 Swift (506).

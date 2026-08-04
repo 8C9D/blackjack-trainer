@@ -23,7 +23,8 @@ A frontend-only Angular app for practicing four blackjack skills:
 
 All four modes persist independent session stats to `localStorage` and reuse the same card model + cardsJS images.
 The web app runs as a **Flow shell**: it launches into a one-action home screen (Continue the last trainer, a daily-goal ring, and a 7-day streak strip), drills run full screen and auto-advance on correct answers, adapt to the scenarios you keep missing, and all configuration lives on a dedicated Settings screen.
-A native iOS SwiftUI mirror (with a home-screen widget, iCloud sync, and App Store metadata) lives under `ios/`, kept in lockstep with the web engines by exported parity fixtures (see [iOS app](#ios-app)). Both apps read and write the same backup file, so a profile moves between the browser and the phone.
+A native iOS SwiftUI mirror (with a home-screen widget, iCloud sync, and App Store metadata) lives under `ios/`, kept in lockstep with the web engines by exported parity fixtures (see [iOS app](#ios-app)).
+Both apps read and write the same backup file, so a profile moves between the browser and the phone.
 
 ## Quick start
 
@@ -50,7 +51,8 @@ Drills live at `/drill/basic-strategy`, `/drill/card-counting`, and `/drill/devi
 The pre-Flow trainer URLs (`/basic-strategy`, `/card-counting`, `/deviations`) redirect into the flow.
 
 Adding `?seed=<integer>` to any URL (e.g. `/drill/basic-strategy?seed=42`) pins every draw the app makes — hands, card streams, shoe shuffles, true counts, weak-spot picks — so a practice session replays exactly.
-It exists so the E2E suite can assert real outcomes rather than only that the flow advanced, and it is useful for reproducing a specific hand by hand. Without the parameter nothing changes.
+It exists so the E2E suite can assert real outcomes rather than only that the flow advanced, and it is useful for reproducing a specific hand by hand.
+Without the parameter nothing changes.
 
 ## Features
 
@@ -232,20 +234,50 @@ After a live-shoe true-count round, a **"Play a hand vs the dealer"** option
 appears (when the shoe holds enough cards for the opening round). It deals from
 the **same persistent shoe**, depleting it further:
 
-- **One to three boxes** — Settings → Card counting → **Showdown hands** picks how many hands you play at once against the single dealer. The opening round deals in casino order (one card to each box, the dealer's upcard, a second to each box, the dealer's hole card), and each box is then played and settled on its own.
-- **Hit, stand, double, split, and late surrender** — doubling takes exactly one card; pairs re-split up to four hands **per box**; split aces take one card each and stand; a 21 made after splitting is not a natural. The shared table rules govern DAS and LS: a split hand can double only with DAS on, and a box's original two cards may surrender only with LS on. Surrender settles the box as an immediate loss (half the bet comes back when bet sizing is on); never after a split, and the option lapses once a card is drawn. The peek settles any dealer natural before hands are played, which is what makes the surrender genuinely _late_.
+- **One to three boxes** — Settings → Card counting → **Showdown hands** picks how many hands you play at once against the single dealer.
+  The opening round deals in casino order (one card to each box, the dealer's upcard, a second to each box, the dealer's hole card), and each box is then played and settled on its own.
+- **Hit, stand, double, split, and late surrender** — doubling takes exactly one card; pairs re-split up to four hands **per box**; split aces take one card each and stand; a 21 made after splitting is not a natural.
+  The shared table rules govern DAS and LS: a split hand can double only with DAS on, and a box's original two cards may surrender only with LS on.
+  Surrender settles the box as an immediate loss (half the bet comes back when bet sizing is on); never after a split, and the option lapses once a card is drawn.
+  The peek settles any dealer natural before hands are played, which is what makes the surrender genuinely _late_.
 - **Dealer auto-plays** the rule set from the shared table rules: stand on hard 17+, hit soft 17 only under H17.
-- **Settlement** — each hand settles win / lose / push independently; a player natural pays 3:2; a dealer natural beats any non-natural; two naturals push; a player bust loses immediately even if the dealer later busts. A dealer natural ends every box at once, and a box holding a natural is paid immediately and sits out the rest of the round. Multi-hand rounds close with a one-line tally ("2 won, 1 lost"). The showdown keeps a win/lose/push (plus blackjacks) tally under its own `localStorage` key.
-- **Bet sizing (optional)** — Settings → Card counting → **Bet sizing (bankroll)** turns the showdown into a spreading drill. Each round opens on a bet before any card is dealt (the count you just practised is the only information you have), every box posts that bet, and a double or split posts a second one. The rungs on offer are your own configured bet spread — one chip per unit — and the bet is graded against what that spread calls for at the count, so flat-betting a rich shoe is named rather than passing quietly. It is your spread, never a computed optimum: what to bet at a count follows from bankroll, risk of ruin and what the table tolerates, none of which this app knows. Any balanced system is graded on its own true count; an unbalanced one has none to index a ramp by, so its bet is left alone. Hands settle against a persisted bankroll of 500 chips: a win pays the stake, a natural 3:2 on the bet, a push returns it, a loss forfeits it. Chips are abstract units, not currency — what is being drilled is the ratio between the bet and the bankroll. A bet the bankroll cannot back across every box is not offered, and running out of chips offers a reset. Off by default, when the showdown is the pure hand tally above.
-- **Insurance (with bet sizing on)** — when the dealer shows an ace, the round pauses before the hole card is checked: insure every box for half its bet, paid 2:1 on a dealer natural (exactly covering the lost hands) and forfeited otherwise. The classic count-driven side bet — the Hi-Lo deviation chart says take it at TC ≥ +3 — decided with the `I` / `N` keys, and skipped when the free chips cannot back it.
-- **The play is graded against the count, and so is the insurance call** — every hit / stand / double / split / surrender is scored, and the round's misplays are listed again when it settles. The misplay still stands and is settled: this is a table, not a quiz. The insurance call is graded against the count you carried in from the drill plus every card face up at that moment — the hole card the bet is about is deliberately excluded — so insurance at +3 that loses is still marked correct. Both feed one "Showdown play" accuracy, separate from the win/lose/push tally: one measures how the cards fell, the other whether the hand was played right. An opening two-card misplay is also filed as a weak spot for the trainer that teaches the answer, so the hand you played badly at the table is the one the next session opens on. Systems the app has no published trigger for (a level-2 or fractional count) are dealt and settled without a verdict rather than scored against Hi-Lo's numbers; KO is graded on its book's own running-count insurance trigger.
-- **Deviations apply here, because the count is real** — the showdown is the one place in the app where a live count meets an actual hand, so the play is scored against the [deviation chart](#deviations-trainer-v4) laid over basic strategy, not against basic strategy alone. Stand 16 vs 10 at a true count of 0 or higher and the table says so; hit it at −1 and the same hand grades the other way. The verdict names the index it fired on and what basic strategy alone would have done, an index miss is filed as a **Deviations** weak spot rather than a Basic Strategy one, and a hard-total index applies to a three-card 16 exactly as it does to a two-card one. Two limits: an index is a Hi-Lo true count, so every other system is graded on basic strategy alone (the same line insurance already draws), and a deviation calling for a play the felt is not offering — a double the bankroll cannot back, a split past the box's four-hand cap, a surrender the split already spent — leaves the chart's own answer standing.
+- **Settlement** — each hand settles win / lose / push independently; a player natural pays 3:2; a dealer natural beats any non-natural; two naturals push; a player bust loses immediately even if the dealer later busts.
+  A dealer natural ends every box at once, and a box holding a natural is paid immediately and sits out the rest of the round.
+  Multi-hand rounds close with a one-line tally ("2 won, 1 lost").
+  The showdown keeps a win/lose/push (plus blackjacks) tally under its own `localStorage` key.
+- **Bet sizing (optional)** — Settings → Card counting → **Bet sizing (bankroll)** turns the showdown into a spreading drill.
+  Each round opens on a bet before any card is dealt (the count you just practised is the only information you have), every box posts that bet, and a double or split posts a second one.
+  The rungs on offer are your own configured bet spread — one chip per unit — and the bet is graded against what that spread calls for at the count, so flat-betting a rich shoe is named rather than passing quietly.
+  It is your spread, never a computed optimum: what to bet at a count follows from bankroll, risk of ruin and what the table tolerates, none of which this app knows.
+  Any balanced system is graded on its own true count; an unbalanced one has none to index a ramp by, so its bet is left alone.
+  Hands settle against a persisted bankroll of 500 chips: a win pays the stake, a natural 3:2 on the bet, a push returns it, a loss forfeits it.
+  Chips are abstract units, not currency — what is being drilled is the ratio between the bet and the bankroll.
+  A bet the bankroll cannot back across every box is not offered, and running out of chips offers a reset.
+  Off by default, when the showdown is the pure hand tally above.
+- **Insurance (with bet sizing on)** — when the dealer shows an ace, the round pauses before the hole card is checked: insure every box for half its bet, paid 2:1 on a dealer natural (exactly covering the lost hands) and forfeited otherwise.
+  The classic count-driven side bet — the Hi-Lo deviation chart says take it at TC ≥ +3 — decided with the `I` / `N` keys, and skipped when the free chips cannot back it.
+- **The play is graded against the count, and so is the insurance call** — every hit / stand / double / split / surrender is scored, and the round's misplays are listed again when it settles.
+  The misplay still stands and is settled: this is a table, not a quiz.
+  The insurance call is graded against the count you carried in from the drill plus every card face up at that moment — the hole card the bet is about is deliberately excluded — so insurance at +3 that loses is still marked correct.
+  Both feed one "Showdown play" accuracy, separate from the win/lose/push tally: one measures how the cards fell, the other whether the hand was played right.
+  An opening two-card misplay is also filed as a weak spot for the trainer that teaches the answer, so the hand you played badly at the table is the one the next session opens on.
+  Systems the app has no published trigger for (a level-2 or fractional count) are dealt and settled without a verdict rather than scored against Hi-Lo's numbers; KO is graded on its book's own running-count insurance trigger.
+- **Deviations apply here, because the count is real** — the showdown is the one place in the app where a live count meets an actual hand, so the play is scored against the [deviation chart](#deviations-trainer-v4) laid over basic strategy, not against basic strategy alone.
+  Stand 16 vs 10 at a true count of 0 or higher and the table says so; hit it at −1 and the same hand grades the other way.
+  The verdict names the index it fired on and what basic strategy alone would have done, an index miss is filed as a **Deviations** weak spot rather than a Basic Strategy one, and a hard-total index applies to a three-card 16 exactly as it does to a two-card one.
+  Two limits: an index is a Hi-Lo true count, so every other system is graded on basic strategy alone (the same line insurance already draws), and a deviation calling for a play the felt is not offering — a double the bankroll cannot back, a split past the box's four-hand cap, a surrender the split already spent — leaves the chart's own answer standing.
 
-- **And it says whose numbers these are** — a playing index is a Hi-Lo true count, so a trainee counting anything else is told once, before a card is dealt, that the indices are not theirs and what this table can still grade: basic strategy for every hand, plus KO's own running-count trigger for the insurance call where its book publishes one. The same advisory the Deviations drill, the deviation chart and Settings carry, now on the fourth screen where indices matter.
+- **And it says whose numbers these are** — a playing index is a Hi-Lo true count, so a trainee counting anything else is told once, before a card is dealt, that the indices are not theirs and what this table can still grade: basic strategy for every hand, plus KO's own running-count trigger for the insurance call where its book publishes one.
+  The same advisory the Deviations drill, the deviation chart and Settings carry, now on the fourth screen where indices matter.
 
-- **The count check on the way out** — Settings → Card counting → **Ask for the count on the way out** (on by default). Every count-dependent verdict above is scored against a count the table keeps for you, so leaving stops on one question: what the running count is now, over the cards this table turned face up. Answering is the exit — the bypass is hidden while the question is up — and the verdict names the count and how far the answer drifted, in points and direction. It only asks between rounds: mid-hand the dealer's hole card is dealt but face down, so there is no single count both sides could agree on. The answer feeds the same running-count accuracy the counting drill keeps, because it is the same skill through played-out hands, and only the first answer counts.
+- **The count check on the way out** — Settings → Card counting → **Ask for the count on the way out** (on by default).
+  Every count-dependent verdict above is scored against a count the table keeps for you, so leaving stops on one question: what the running count is now, over the cards this table turned face up.
+  Answering is the exit — the bypass is hidden while the question is up — and the verdict names the count and how far the answer drifted, in points and direction.
+  It only asks between rounds: mid-hand the dealer's hole card is dealt but face down, so there is no single count both sides could agree on.
+  The answer feeds the same running-count accuracy the counting drill keeps, because it is the same skill through played-out hands, and only the first answer counts.
 
-- **The cut card stops the table, as it stops a dealer** — the round in progress when the cut card surfaces still plays out and settles, and no round is dealt after it: "Deal another" is refused, and the counting screen offers no showdown off a shoe already past its cut. Dealing on would be a game no casino deals, and it would divide the true count by a sliver of a shoe — a +2 over a tenth of a deck reads as +20, which is what the bet and every index play would then be graded against.
+- **The cut card stops the table, as it stops a dealer** — the round in progress when the cut card surfaces still plays out and settles, and no round is dealt after it: "Deal another" is refused, and the counting screen offers no showdown off a shoe already past its cut.
+  Dealing on would be a game no casino deals, and it would divide the true count by a sliver of a shoe — a +2 over a tenth of a deck reads as +20, which is what the bet and every index play would then be graded against.
 
 Returning from the showdown keeps the depletion it caused, so the next count
 round may reshuffle past the cut card. What comes back with you is what the
@@ -286,7 +318,9 @@ one of Hit / Stand / Double / Split / Surrender / Insurance.
   Insurance is treated as a single action choice rather than a separate
   pre-decision prompt.
 - **Keyboard shortcuts** — same bindings as the basic strategy drill: `H` / `S` / `D` / `P` / `R` (surrender) / `I` (insurance); correct answers auto-advance and any key continues after a miss.
-- **Hands are played out too** (the same Settings → Drills toggle). In deviation-only practice the _deal_ still comes from an encoded rule; a hand hit onward may land anywhere, and the feedback says so rather than claiming a candidate. A correct hit deals the next card and asks the decision it leaves, at the same count — and **an index is written against a total**, so the hard-16 rule fires on a three-card 16 exactly as it does on a two-card one.
+- **Hands are played out too** (the same Settings → Drills toggle).
+  In deviation-only practice the _deal_ still comes from an encoded rule; a hand hit onward may land anywhere, and the feedback says so rather than claiming a candidate.
+  A correct hit deals the next card and asks the decision it leaves, at the same count — and **an index is written against a total**, so the hard-16 rule fires on a three-card 16 exactly as it does on a two-card one.
   That is what the showdown has always graded and what no drill taught.
   Past the deal the grid narrows to hit and stand: doubling, splitting and surrender are first-two-card actions, and insurance was settled before the hand was played.
 
@@ -361,9 +395,12 @@ no-ops at runtime but document the chart cell.
 ### Shared (the Flow shell)
 
 - **Flow home** — one loud primary action ("Continue — last trainer", `Enter`), the other two trainers on stable cards with lifetime-accuracy chips (keys `2` / `3`), the strategy chart (`C`), Settings (`,`), a daily-goal ring, and a 7-day streak strip.
-- **Daily goal & practice history** — every graded rep records to a per-day hands count, its verdict, and (in the two strategy drills) how long the decision took; the goal ring, streak dots, and each drill's session target derive from the count, the Progress screen's weekly accuracy from the verdicts, and its weekly pace from the clock. The daily goal (1–200, default 20) is set in Settings.
+- **Daily goal & practice history** — every graded rep records to a per-day hands count, its verdict, and (in the two strategy drills) how long the decision took; the goal ring, streak dots, and each drill's session target derive from the count, the Progress screen's weekly accuracy from the verdicts, and its weekly pace from the clock.
+  The daily goal (1–200, default 20) is set in Settings.
   Days recorded before verdicts were stored read as unmeasured rather than as 0% correct, which is why the graded count is tracked separately from the hands count.
-- **Adaptive weak-spot practice** — Basic Strategy and Deviations misses are tallied per scenario over a rolling 7-day window. Every round opens on the worst outstanding scenario and then draws ~40% of its hands from the weak list, weighted by miss count, so what you keep missing keeps coming back. A scenario retires from the list once you answer it correctly three times running, and the Done screen names the week's cleared spots.
+- **Adaptive weak-spot practice** — Basic Strategy and Deviations misses are tallied per scenario over a rolling 7-day window.
+  Every round opens on the worst outstanding scenario and then draws ~40% of its hands from the weak list, weighted by miss count, so what you keep missing keeps coming back.
+  A scenario retires from the list once you answer it correctly three times running, and the Done screen names the week's cleared spots.
   **A deviations weak spot comes back at the count that beat you.** There the count is half the question — 16 vs 10 stands at +2 and hits at −1 — so the miss remembers the true count it was made at (the last five, newest first) and the re-deal draws from them.
   Without that the hand came back at a fresh random count, which could ask the side you already had right, and three of those would retire the spot without teaching anything.
   An index play misplayed at the showdown files its count the same way. Basic Strategy records none: with no count in the question, the hand is the whole of it.
@@ -377,7 +414,8 @@ no-ops at runtime but document the chart cell.
   Every cell is `BasicStrategyEngineService.decide()` run on a representative hand rather than a second transcription of the chart data, so what the page shows and what a drill grades cannot drift.
   `SUR_*` and `YN` cells resolve against the live DAS / Late-Surrender settings, and a pair the chart declines to split shows the play it falls back to.
   A second tab lists the deviation chart for the same rule set (insurance, hard, soft, pairs, surrender), each rule as hand, true-count threshold (`≥ +3`, `≤ -1`, `> 0`), and play.
-- **Light and dark themes** — one semantic token set in two palettes (`src/styles.scss`). The palette follows `prefers-color-scheme`; Settings → Appearance pins it, which `ThemeService` applies as `data-theme` on `<html>` and mirrors into the `theme-color` meta so the browser chrome matches.
+- **Light and dark themes** — one semantic token set in two palettes (`src/styles.scss`).
+  The palette follows `prefers-color-scheme`; Settings → Appearance pins it, which `ThemeService` applies as `data-theme` on `<html>` and mirrors into the `theme-color` meta so the browser chrome matches.
 - **Accessibility** — grading is announced through a live region (the action grid conveys it with color and position alone), the Done screen takes focus when it replaces the drill, every screen carries a level-1 heading, focus rings clear 3:1 in both themes, and `prefers-reduced-motion` is honored.
 - **Persistent lifetime stats per trainer** — attempts, correct count, accuracy, current streak, longest streak, each under its own `localStorage` key.
 - **Progress screen** (`/progress`, `P` from home): the week as bars scaled against the daily goal, how much of that week was answered correctly and whether that is up or down on the week before, how long a hand took and whether that is faster or slower than the week before, every stat store's lifetime hands / accuracy / best run (both drills plus the four counting modes), the showdown's W-L-P record and chip position once either exists, and the outstanding and cleared weak spots per trainer.
@@ -390,8 +428,11 @@ no-ops at runtime but document the chart cell.
   Read-only, and each section hides itself until there is something to show.
 - **Real card images** — 52 SVGs + face-down back from
   [richardschneider/cardsJS](https://github.com/richardschneider/cardsJS).
-- **Routing** — `/` (home), `/drill/*`, `/chart`, `/progress`, `/settings`; pre-Flow trainer URLs redirect into the flow. Each route's component is destroyed and recreated by Angular's router, so in-memory drill state (current cards, in-progress answer, the live shoe) resets on navigation; persisted state is rehydrated from `localStorage` on reinit.
-- **Installable PWA** — production builds ship the Angular service worker (`ngsw-config.json`; registered when the app goes stable), so the app works offline and installs from the browser. Once a complete new version is cached, a dismissible prompt reloads into it without force-activating a mixed bundle. The manifest carries 192/512 maskable icons derived from the iOS app icon, plus an `apple-touch-icon`; the page shells pad both safe-area insets so the top bars stay clear of the status bar in iOS standalone mode.
+- **Routing** — `/` (home), `/drill/*`, `/chart`, `/progress`, `/settings`; pre-Flow trainer URLs redirect into the flow.
+  Each route's component is destroyed and recreated by Angular's router, so in-memory drill state (current cards, in-progress answer, the live shoe) resets on navigation; persisted state is rehydrated from `localStorage` on reinit.
+- **Installable PWA** — production builds ship the Angular service worker (`ngsw-config.json`; registered when the app goes stable), so the app works offline and installs from the browser.
+  Once a complete new version is cached, a dismissible prompt reloads into it without force-activating a mixed bundle.
+  The manifest carries 192/512 maskable icons derived from the iOS app icon, plus an `apple-touch-icon`; the page shells pad both safe-area insets so the top bars stay clear of the status bar in iOS standalone mode.
 
 ## iOS app
 
@@ -419,7 +460,7 @@ below for brevity.
 
 ```
 src/app/
-├── app.ts, app.config.ts, app.routes.ts        bootstrap + lazy routes (home / drills / chart / settings)
+├── app.ts, app.config.ts, app.routes.ts        bootstrap + lazy routes (home / drills / chart / progress / settings)
 ├── core/
 │   ├── keyboard.ts                              action hotkeys + shared keydown helpers
 │   ├── models/
@@ -431,15 +472,23 @@ src/app/
 │   │   ├── shoe.model.ts                        Shoe — finite deck, depletion, cut card
 │   │   ├── hand.model.ts                        N-card soft-aware hand math
 │   │   ├── showdown.model.ts                    dealer play + settlement (3:2 naturals)
-│   │   └── bankroll.model.ts                    bet clamping + payouts (chips, not currency)
+│   │   ├── bankroll.model.ts                    bet clamping + payouts (chips, not currency)
+│   │   ├── bet-ramp.model.ts                    the player's own bet spread per true count
+│   │   ├── deck-speed.model.ts                  count-down-a-deck drill (burned card, known sum)
+│   │   └── backup.model.ts                      portable export/restore of every stored key
 │   └── services/
 │       ├── basic-strategy-engine.service.ts     pure-TS basic-strategy logic
 │       ├── counting-engine.service.ts           pure-TS counting engine (system-agnostic)
 │       ├── deviation-engine.service.ts          pure-TS deviation overlay on basic strategy
 │       ├── deviation-evaluator.service.ts       combines basic strategy + deviation + insurance
 │       ├── card-generator.service.ts            random card + sequence generator (RNG seam)
+│       ├── random-source.ts                     RANDOM_SOURCE token — the ?seed= hook
 │       ├── shoe.service.ts                      builds + shuffles a finite Shoe
+│       ├── storage.ts                           tolerant localStorage JSON read/write, shared by every store
 │       ├── flow-prefs.service.ts                last trainer, daily goal, table rules, drill settings
+│       ├── theme.service.ts                     resolves the palette + keeps theme-color in step
+│       ├── app-update.service.ts                service-worker update prompt + reload
+│       ├── backup.service.ts                    export/import the practice-data backup file
 │       ├── practice-history.service.ts          per-day hands → goal ring / streak dots
 │       ├── miss-tally.service.ts                7-day per-scenario miss tally → weak spots
 │       ├── stats-store.ts                       parameterized correct/incorrect stats container
@@ -448,7 +497,11 @@ src/app/
 │       ├── true-count-stats.service.ts          True count StatsStore
 │       ├── deviation-stats.service.ts           Deviations StatsStore
 │       ├── deck-estimation-stats.service.ts     Deck-estimate (±0.5) StatsStore
+│       ├── key-count-stats.service.ts           Key-count advantage call StatsStore
+│       ├── bet-spread-stats.service.ts          Bet-call StatsStore (separate skill from counting)
+│       ├── deck-speed-stats.service.ts          Deck-speed accuracy + fastest correct round
 │       ├── showdown-stats.service.ts            Showdown win/lose/push tally (own shape)
+│       ├── showdown-play-stats.service.ts       Accuracy of the plays made at the showdown table
 │       ├── practice-data.service.ts             one-call reset of every practice store
 │       └── bankroll.service.ts                  Showdown bankroll (chips wagered + net)
 ├── data/
@@ -480,6 +533,7 @@ src/app/
 │       ├── card-stream.component.ts             current card + progress
 │       ├── count-answer-form.component.ts       integer/decimal input + submit
 │       ├── deck-estimate-form.component.ts      half-deck estimate stepper
+│       ├── advantage-form.component.ts          key-count drill's advantage call
 │       ├── count-feedback-panel.component.ts    verdict + breakdown
 │       └── showdown.component.ts                hit/stand/double/split showdown vs dealer
 └── shared/
@@ -671,45 +725,12 @@ the SVGs and ship in the production build to preserve attribution:
 
 ## Roadmap
 
-All nine planned slices are complete — see [`docs/roadmap.md`](docs/roadmap.md)
-and the cursor/handoff log in
-[`docs/roadmap-progress.md`](docs/roadmap-progress.md).
+All nine planned slices are complete.
+[`docs/roadmap.md`](docs/roadmap.md) is the slice-by-slice plan and what each slice shipped; [`docs/roadmap-progress.md`](docs/roadmap-progress.md) is the log of how they landed, and of the post-roadmap work since — the Flow redesign, the E2E suite and coverage gate, seeded sessions, adaptive weak-spot practice, the expansion to 58 counting systems, the light theme and accessibility pass, PWA install, and the native iOS mirror.
+What the app does today is described under [Features](#features) above, so the shipped history is not repeated here.
 
-### Completed
-
-- **Basic Strategy Trainer (v1)** — H17/S17 charts, DAS / LS toggles, insurance.
-- **Running Count Trainer (v2)** — card-stream drills, configurable length and
-  speed.
-- **True Count Trainer (v3)** — decks-remaining presets, truncation toward zero.
-- **Deviations Trainer (v4)** — BJA H17/S17 Hi-Lo deviation overlay on basic
-  strategy, with insurance evaluated at TC ≥ +3.
-- **Lint/format tooling + CI** — `lint` / `format` scripts and a GitHub Actions
-  gate (`lint → test → build`).
-- **Chart golden-file guards** — value-level regression guards for the four
-  chart data files.
-- **Shared blackjack-UI / keyboard refactor** — table, action buttons, feedback
-  shell, rule controls, and the trainer keydown handler shared across trainers.
-- **Counting systems KO, Omega II, Wong Halves** — added alongside Hi-Lo, with
-  `CountValue` widened to support level-2/level-3 and fractional values.
-- **Finite-shoe live deck estimation** — play a real depleting shoe and estimate
-  decks remaining (scored within ±0.5), instead of a fixed preset.
-- **Post-count showdown** — single hand vs the dealer off the live shoe
-  (hit/stand, H17/S17 dealer, 3:2 naturals, win/lose/push tally).
-- **Blackjack Review counting systems** — the comparison-table set added as pure
-  data (Hi-Opt I/II, Zen, Revere Point Count, Mentor, the Griffin / Uston / EBJ
-  families, the color-dependent Red Seven and KISS 2/3, and the computer-only /
-  inverted novelties), on a color-aware counting model — 58 systems in all.
-- **Flow redesign** — the one-action home (continue, daily-goal ring, 7-day streak), full-screen auto-advancing drills, the weak-spot "Drill next" loop, and a dedicated Settings screen replacing all in-drill configuration.
-- **Playwright E2E smoke suite** — navigation, drill flows (basic strategy, card counting, deviations), persistence, responsive, theme, seeded-determinism, and review-round specs in `e2e/`, with a CI job uploading the HTML report.
-- **Showdown doubles and splits** — double takes one card; pairs re-split to four hands; split aces take one card; split 21s pay even money.
-- **iOS SwiftUI app** — the Flow shell mirrored natively (widget, iCloud sync, daily reminder), with fixture-enforced engine parity and App Store collateral prepared. Adaptive weak-spot practice, review rounds, the Appearance preference, and multi-hand showdowns are mirrored too.
-- **Multi-hand showdowns** — one to three simultaneous boxes against a single dealer, on both web and iOS, with the box count in Settings.
-- **Light theme on iOS** — `Theme` resolves every token per color scheme (mirroring the web light/dark palettes) and Settings → Appearance drives `preferredColorScheme`.
-- **Real PWA install** — Angular service worker for offline use, maskable 192/512 icons, apple-touch-icon, and top safe-area handling for iOS standalone.
-- **Coverage gate + deeper E2E** — enforced coverage thresholds (`vitest.config.ts`, run in CI), counting/deviation drill e2e specs, and a value-by-value audit (2026-07-24) of all four chart data files against the published BJA PDFs — every cell matched.
-- **Seeded sessions** — a `?seed=` hook behind one injection token makes every draw reproducible, which is what lets the E2E suite assert exact outcomes instead of only that the flow advanced.
-- **Light theme + accessibility pass** — a second palette over one semantic token set, selectable in Settings or left to the OS, plus live-region grading announcements, Done-screen focus handling, per-screen headings, and reduced-motion support.
-- **Adaptive weak-spot practice** — weighted scenario selection across the whole round, a three-in-a-row clear-streak threshold that retires a scenario, `R` review rounds drawn entirely from the weak list, and the week's cleared spots on the Done screen.
+The iOS app has a plan of its own in [`docs/ios-app-roadmap.md`](docs/ios-app-roadmap.md).
+Phases 0-4 are done and Phase 5, App Store submission, is open.
 
 ### Future (not yet implemented)
 
@@ -720,7 +741,7 @@ Deferred follow-ons, documented in `docs/roadmap-progress.md` and
   only.
   The app no longer hides this: the indices are labelled as Hi-Lo true counts,
   and picking another counting system puts an advisory on the Deviations drill,
-  the deviation chart, and the Deviations settings section.
+  the deviation chart, the Deviations settings section, and the showdown.
 - **App Store submission** — the human/Apple steps in
   [`docs/app-store-submission.md`](docs/app-store-submission.md): hosting the
   privacy/support pages, App Store Connect setup, TestFlight, and review.
