@@ -1,5 +1,12 @@
-import type { DrillMode } from './card-counting.model';
-import { suitColor, type Card, type Rank } from './card.model';
+import { formatSignedCount, type DrillMode } from './card-counting.model';
+import {
+  ALL_RANKS,
+  suitColor,
+  type Card,
+  type CardColor,
+  type Rank,
+  type Suit,
+} from './card.model';
 
 // Per-rank value contribution to the running count. Level-1 systems (Hi-Lo, KO)
 // use -1/0/+1; the level-2 system Omega II also uses ±2; the fractional level-3
@@ -111,6 +118,71 @@ export function metricsParts(system: CountingSystem): readonly SystemMetricLabel
 export function cardCountValue(system: CountingSystem, card: Card): number {
   const override = system.colorValues?.[card.rank];
   return override ? override[suitColor(card.suit)] : system.values[card.rank];
+}
+
+// One column of the printed tag table: the ranks it covers, and that column's
+// tag for each of the table's rows.
+export interface SystemTagColumn {
+  // '2–6', '7', '10–A' — the ranks that share this column's tags.
+  readonly label: string;
+  // One formatted tag per row of the table, in `rowLabels` order.
+  readonly values: readonly string[];
+}
+
+export interface SystemTagTable {
+  // 'Count' for a rank-only system; 'Red' and 'Black' for a color-dependent one.
+  readonly rowLabels: readonly string[];
+  readonly columns: readonly SystemTagColumn[];
+}
+
+// One suit per color, used only to ask `cardCountValue` for that color's tag.
+const COLOR_SUITS: Readonly<Record<CardColor, Suit>> = { red: 'hearts', black: 'spades' };
+
+// The system's tags as a reference table reads them.
+//
+// Every figure comes back through `cardCountValue`, the same accessor the
+// engine counts a shoe with, so the table a trainee memorises cannot drift from
+// what a miss is graded on — the principle the strategy chart is already built
+// on, where each cell is the engine's own decision rather than a second copy.
+//
+// Adjacent ranks whose tags all agree share a column, which is how every
+// published system table prints ("2–6 +1, 7–9 0, 10–A −1") and the only way
+// thirteen ranks fit a phone: a level-3 system's '+1.5' cannot be read in a
+// thirteenth of a 320px screen. The merge is derived, never assumed — a system
+// that tagged J apart from 10 would simply print J its own column.
+//
+// A color-dependent system gets two rows rather than two figures crammed into
+// one cell, and a rank only joins a column when it agrees on both of them.
+export function tagTableFor(system: CountingSystem): SystemTagTable {
+  const colors: readonly CardColor[] = system.colorValues ? ['red', 'black'] : ['black'];
+  const rowLabels = system.colorValues ? ['Red', 'Black'] : ['Count'];
+  const columns: SystemTagColumn[] = [];
+  // The ranks in the column being built, so its label can name the run's ends.
+  let run: Rank[] = [];
+  let runValues: readonly string[] = [];
+
+  const flush = (): void => {
+    if (run.length === 0) return;
+    const first = run[0];
+    const last = run[run.length - 1];
+    columns.push({ label: run.length === 1 ? first : `${first}–${last}`, values: runValues });
+  };
+
+  for (const rank of ALL_RANKS) {
+    const values = colors.map((color) =>
+      formatSignedCount(cardCountValue(system, { rank, suit: COLOR_SUITS[color] })),
+    );
+    if (run.length > 0 && values.every((value, i) => value === runValues[i])) {
+      run.push(rank);
+      continue;
+    }
+    flush();
+    run = [rank];
+    runValues = values;
+  }
+  flush();
+
+  return { rowLabels, columns };
 }
 
 // A KeyCountSchedule resolved for one shoe size — the row the drill and its

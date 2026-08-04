@@ -222,6 +222,46 @@
   box-shadow: inset 0 0 0 2px var(--ink);
 }
 
+// The count tab's tag table. Its columns are runs of ranks rather than single
+// ones ('2–6', '10–A'), so a system a human can actually play is three or four
+// columns and fits anywhere.
+.chart__table--tags {
+  // Sized by its content, not carved into equal shares: a run of ranks and a
+  // three-digit weight are different widths, and the fixed layout the strategy
+  // grids use would spill both into their neighbours.
+  table-layout: auto;
+  // Fills the card at the usual widths; past that the wrapper scrolls rather
+  // than the figures overlapping.
+  min-width: max-content;
+
+  .chart__upcard,
+  .chart__hand,
+  .chart__corner {
+    font-size: 0.7rem;
+    white-space: nowrap;
+    width: auto;
+  }
+
+  .chart__hand,
+  .chart__corner {
+    padding-right: 0.5rem;
+  }
+}
+
+.chart__tags-scroll {
+  overflow-x: auto;
+}
+
+// A tag is a number, not one of the six actions, so it takes the neutral raised
+// surface rather than borrowing an action's colour — nothing here is a play.
+.chart__tag {
+  display: block;
+  background: var(--raised);
+  padding: 0.35rem 0.5rem;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
 // The deviation list: three text columns, not a ten-column grid.
 .chart__table--rules {
   table-layout: auto;

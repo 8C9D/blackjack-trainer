@@ -148,7 +148,7 @@ describe('App', () => {
 
     it('resolves the chart route', async () => {
       const el = await rendered('/chart');
-      expect(el.querySelector('.chart__title')?.textContent).toContain('Strategy chart');
+      expect(el.querySelector('.chart__title')?.textContent).toContain('Chart');
       expect(el.querySelectorAll('.chart__table')).toHaveLength(3);
     });
 

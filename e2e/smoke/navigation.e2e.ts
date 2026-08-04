@@ -37,12 +37,22 @@ test.describe('navigation & routing', () => {
   test('the strategy chart opens from home and comes back', async ({ page }) => {
     await page.getByRole('button', { name: /Chart/ }).click();
     await expect(page).toHaveURL(/\/chart$/);
-    await expect(page).toHaveTitle(/Strategy Chart/);
+    await expect(page).toHaveTitle(/Chart/);
     // Every chart key has a row, and the grid follows the active rule set.
     await expect(page.getByRole('rowheader', { name: '16', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Back' })).toBeVisible();
     await page.getByRole('button', { name: 'Back' }).click();
     await expect(page).toHaveURL(/\/$/);
+  });
+
+  test('the count tab prints the tags the counting drill grades against', async ({ page }) => {
+    await page.getByRole('button', { name: /Chart/ }).click();
+    await page.getByRole('button', { name: 'Count', exact: true }).click();
+    // The default system, and its tags as a published table prints them.
+    await expect(page.getByRole('columnheader', { name: '2–6' })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: '10–A' })).toBeVisible();
+    await expect(page.getByRole('rowheader', { name: 'Count', exact: true })).toBeVisible();
+    await expect(page.getByText('A full deck of these tags sums to 0')).toBeVisible();
   });
 
   test('progress opens from home and counts a practised hand', async ({ page }) => {

@@ -1,11 +1,13 @@
-import type { Card, Rank, Suit } from './card.model';
+import { formatSignedCount } from './card-counting.model';
+import { ALL_RANKS, type Card, type Rank, type Suit } from './card.model';
 import {
   cardCountValue,
   formatCorrelation,
   metricsParts,
+  tagTableFor,
   type CountingSystem,
 } from './counting-system.model';
-import { countingSystemById } from '../../data/counting-systems';
+import { COUNTING_SYSTEMS, countingSystemById } from '../../data/counting-systems';
 
 const card = (rank: Rank, suit: Suit): Card => ({ rank, suit });
 
@@ -85,3 +87,78 @@ describe('metricsParts', () => {
     ]);
   });
 });
+
+describe('tagTableFor', () => {
+  it('collapses a run of ranks that share a tag into one column', () => {
+    expect(tagTableFor(countingSystemById('hi-lo'))).toEqual({
+      rowLabels: ['Count'],
+      columns: [
+        { label: '2–6', values: ['+1'] },
+        { label: '7–9', values: ['0'] },
+        { label: '10–A', values: ['-1'] },
+      ],
+    });
+  });
+
+  it('labels a column of one rank with that rank alone', () => {
+    // KO differs from Hi-Lo only by the 7, which lands it in the low run and
+    // leaves 8–9 as the neutral column.
+    expect(tagTableFor(countingSystemById('ko')).columns.map((c) => c.label)).toEqual([
+      '2–7',
+      '8–9',
+      '10–A',
+    ]);
+    // Wong Halves is fractional, and the ranks it weights apart stay apart.
+    expect(tagTableFor(countingSystemById('wong-halves')).columns).toEqual([
+      { label: '2', values: ['+0.5'] },
+      { label: '3–4', values: ['+1'] },
+      { label: '5', values: ['+1.5'] },
+      { label: '6', values: ['+1'] },
+      { label: '7', values: ['+0.5'] },
+      { label: '8', values: ['0'] },
+      { label: '9', values: ['-0.5'] },
+      { label: '10–A', values: ['-1'] },
+    ]);
+  });
+
+  it('gives a color-dependent system a row per color and breaks the split rank out', () => {
+    // The 7 agrees with 2–6 when red and with 8–9 when black, so it can join
+    // neither: a column is only merged when every row agrees.
+    expect(tagTableFor(COLOR_SYSTEM)).toEqual({
+      rowLabels: ['Red', 'Black'],
+      columns: [
+        { label: '2–6', values: ['+1', '+1'] },
+        { label: '7', values: ['+1', '0'] },
+        { label: '8–9', values: ['0', '0'] },
+        { label: '10–A', values: ['-1', '-1'] },
+      ],
+    });
+  });
+
+  it('reads every tag back through the engine accessor, for every registered system', () => {
+    // The point of the table is that it cannot drift from what a miss is
+    // graded on, so each printed figure is checked against cardCountValue.
+    for (const system of COUNTING_SYSTEMS) {
+      const table = tagTableFor(system);
+      const printed = new Map<Rank, readonly string[]>();
+      for (const column of table.columns) {
+        for (const rank of ranksIn(column.label)) printed.set(rank, column.values);
+      }
+      expect(printed.size, `${system.id} covers every rank`).toBe(ALL_RANKS.length);
+      for (const rank of ALL_RANKS) {
+        const suits: Suit[] = table.rowLabels.length === 2 ? ['hearts', 'spades'] : ['spades'];
+        expect(printed.get(rank), `${system.id} ${rank}`).toEqual(
+          suits.map((suit) => formatSignedCount(cardCountValue(system, card(rank, suit)))),
+        );
+      }
+    }
+  });
+});
+
+// The ranks a column label covers: '7' is one, '2–6' is the ALL_RANKS slice
+// between its ends.
+function ranksIn(label: string): readonly Rank[] {
+  const [first, last] = label.split('–') as [Rank, Rank?];
+  if (last === undefined) return [first];
+  return ALL_RANKS.slice(ALL_RANKS.indexOf(first), ALL_RANKS.indexOf(last) + 1);
+}
