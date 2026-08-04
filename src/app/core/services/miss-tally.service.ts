@@ -1,5 +1,6 @@
 import { Injectable, signal, type Signal } from '@angular/core';
 
+import { formatSignedCount } from '../models/card-counting.model';
 import { cardHighValue, softNonAceValue, type Card } from '../models/card.model';
 import type { DealerUpcard } from '../models/strategy.model';
 import { classifyAsPair, isSoftHand, normalizeUpcardKey } from './basic-strategy-engine.service';
@@ -98,6 +99,16 @@ export function scenarioLabel(ref: ScenarioRef): string {
     case 'pair':
       return `${ref.hand},${ref.hand} vs ${ref.dealer}`;
   }
+}
+
+// The true counts a scenario was recently missed at, deduplicated and read low
+// to high: "TC -1, +2" says the trainee got the hand wrong on both sides of its
+// index, which is a different lesson from missing it twice on the same side.
+// Empty for Basic Strategy, where the count is not part of the question.
+export function missedCountsLabel(spot: WeakSpot): string | null {
+  const distinct = [...new Set(spot.missedCounts)].sort((a, b) => a - b);
+  if (distinct.length === 0) return null;
+  return `TC ${distinct.map(formatSignedCount).join(', ')}`;
 }
 
 // Per-scenario attempt/miss tallies over a rolling 7-day window, keyed by

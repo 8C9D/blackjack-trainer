@@ -13,7 +13,11 @@ import { formatDuration } from '../../core/models/deck-speed.model';
 import { DeviationStatsService } from '../../core/services/deviation-stats.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
 import { KeyCountStatsService } from '../../core/services/key-count-stats.service';
-import { MissTallyService, type WeakSpot } from '../../core/services/miss-tally.service';
+import {
+  MissTallyService,
+  missedCountsLabel,
+  type WeakSpot,
+} from '../../core/services/miss-tally.service';
 import {
   PracticeHistoryService,
   type StreakDot,
@@ -188,7 +192,7 @@ interface WeakSpotGroup {
               @for (spot of group.outstanding; track spot.label) {
                 <li>
                   <b>{{ spot.label }}</b>
-                  <span>missed {{ spot.misses }} of {{ spot.attempts }}</span>
+                  <span>{{ spotDetail(spot) }}</span>
                 </li>
               }
             </ul>
@@ -332,6 +336,14 @@ export class ProgressPageComponent {
   protected dayLabel(day: DayBar): string {
     const hands = `${day.hands} ${day.hands === 1 ? 'hand' : 'hands'}`;
     return day.accuracy === null ? hands : `${hands}, ${day.accuracy}% correct`;
+  }
+
+  // "missed 3 of 7 at TC -1, +2". A deviation missed on both sides of its index
+  // is two different mistakes, and the hand's label carries neither.
+  protected spotDetail(spot: WeakSpot): string {
+    const at = missedCountsLabel(spot);
+    const counts = at === null ? '' : ` at ${at}`;
+    return `missed ${spot.misses} of ${spot.attempts}${counts}`;
   }
 
   protected clearedLabel(cleared: readonly WeakSpot[]): string {

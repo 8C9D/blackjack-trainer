@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 
 import { shouldIgnoreKeyboardEvent } from '../core/keyboard';
-import type { WeakSpot } from '../core/services/miss-tally.service';
+import { missedCountsLabel, type WeakSpot } from '../core/services/miss-tally.service';
 import { GoalRingComponent } from './goal-ring.component';
 
 // How many cleared scenarios are named before the line collapses to a count.
@@ -40,7 +40,7 @@ const CLEARED_SHOWN = 3;
       @if (weakSpot(); as w) {
         <button type="button" class="done__next" (click)="review.emit()">
           Drill my misses: <b>{{ w.label }}</b>
-          <small> missed {{ w.misses }} of {{ w.attempts }} this week{{ othersLabel() }} </small>
+          <small> {{ missLine() }} </small>
           <kbd class="kcap">R</kbd>
         </button>
       }
@@ -87,6 +87,17 @@ export class FlowDoneComponent {
     const others = Math.max(0, this.weakSpots().length - 1);
     if (others === 0) return '';
     return ` · +${others} more`;
+  });
+
+  // "missed 3 of 7 this week at TC -1, +2 · +2 more". The counts are the half
+  // of a deviation the hand alone does not carry — the drill already re-deals
+  // the spot at one of them, and this is where it says so.
+  protected readonly missLine = computed(() => {
+    const spot = this.weakSpot();
+    if (spot === null) return '';
+    const at = missedCountsLabel(spot);
+    const counts = at === null ? '' : ` at ${at}`;
+    return `missed ${spot.misses} of ${spot.attempts} this week${counts}${this.othersLabel()}`;
   });
 
   // "16 vs 10 · A,7 vs 9 · +2 more", or '' when nothing was cleared.

@@ -7,6 +7,7 @@ import {
   MISSED_COUNT_MEMORY,
   MISS_TALLY_KEY,
   MissTallyService,
+  missedCountsLabel,
   scenarioKey,
   scenarioLabel,
   scenarioRefFor,
@@ -366,6 +367,34 @@ describe('MissTallyService', () => {
       ]);
     });
   });
+  describe('missedCountsLabel', () => {
+    const spot = (missedCounts: readonly number[]) => ({
+      ref: HARD_16_V_10,
+      label: '16 vs 10',
+      misses: 1,
+      attempts: 1,
+      streak: 0,
+      missedCounts,
+    });
+
+    it('says nothing for a scenario that files no counts', () => {
+      expect(missedCountsLabel(spot([]))).toBeNull();
+    });
+
+    it('signs every count and reads them low to high', () => {
+      expect(missedCountsLabel(spot([2, -1, 0]))).toBe('TC -1, 0, +2');
+    });
+
+    // Three misses at the same count is one lesson, not three.
+    it('collapses repeats of the same count', () => {
+      expect(missedCountsLabel(spot([2, 2, 2]))).toBe('TC +2');
+    });
+
+    it('keeps both sides of an index, which are opposite mistakes', () => {
+      expect(missedCountsLabel(spot([-1, 2]))).toBe('TC -1, +2');
+    });
+  });
+
   describe('reset', () => {
     it('forgets every tally and the stored payload', () => {
       const s = createService(() => current);
