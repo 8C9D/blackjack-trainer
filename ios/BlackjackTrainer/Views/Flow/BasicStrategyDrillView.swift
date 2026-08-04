@@ -25,16 +25,34 @@ final class BasicStrategyDrillModel {
 
     private(set) var phase: DrillPhase = .question
     private(set) var scenario: Scenario
-    /// The hand as it stands: the deal's two cards, plus every card a correct hit
-    /// has drawn since. The scenario keeps the opening deal, which is what a weak
-    /// spot is filed against and what the next hand resets to.
-    private(set) var hand: [Card]
+    /// Every hand the deal is holding, in the order they are played: one until a
+    /// split makes more. A hand waiting behind the one in play holds a single
+    /// card — its second is dealt when it is reached, as a dealer deals it.
+    private(set) var hands: [[Card]]
+    private(set) var activeIndex = 0
+    /// Split aces take one card each and stand, so those hands are never asked a
+    /// question — the rule the showdown's table already plays.
+    private(set) var splitAces = false
+
+    /// The hand in front of you: the deal's two cards, plus every card a correct
+    /// hit has drawn since. The scenario keeps the opening deal, which is what a
+    /// weak spot is filed against and what the next hand resets to.
+    var hand: [Card] {
+        hands.indices.contains(activeIndex) ? hands[activeIndex] : []
+    }
+
     private(set) var result: EvaluationResult?
     private(set) var target = 0
     let session = DrillSession()
 
     /// A review round drills only the weak list; an ordinary round mixes it in.
     @ObservationIgnored private var reviewing = false
+
+    /// The deal's first decision — the question the drill has always asked, and
+    /// the only one with a weak spot to file or a clock worth reading. A hit
+    /// deepens the hand and a split replaces it; either way what follows is a
+    /// different question from the one the deal put up.
+    @ObservationIgnored private var atDeal = true
 
     init(
         engine: BasicStrategyEngine,
@@ -60,7 +78,7 @@ final class BasicStrategyDrillModel {
         askedAt = now()
         let opening = Self.firstScenario(missTally: missTally, generator: generator)
         scenario = opening
-        hand = opening.player.cards
+        hands = [opening.player.cards]
         prefs.setLastTrainer(.basicStrategy)
         target = nextSessionTarget(handsToday: history.handsToday(), goal: prefs.prefs.dailyGoal)
         // Arriving from Progress's weak-spot card, which is the same promise the
@@ -101,15 +119,30 @@ final class BasicStrategyDrillModel {
         legalActionsFor(
             hand,
             dealerUpcard: scenario.dealerUpcard,
-            options: prefs.prefs.options
+            options: prefs.prefs.options,
+            split: splitContext
         )
     }
 
-    /// Why the played-out hand stopped asking: a hit that busted, or one that
-    /// reached 21 and left nothing to decide.
+    /// What a split has left the hand in front of you. More than one hand in play
+    /// means every one of them came out of a split: a split replaces the hand that
+    /// made it, so there is no unsplit hand left to confuse this with.
+    var splitContext: SplitContext {
+        SplitContext(fromSplit: hands.count > 1, canSplitAgain: hands.count < maxSplitHands)
+    }
+
+    var handLabel: String {
+        hands.count < 2 ? "" : "Hand \(activeIndex + 1) of \(hands.count)"
+    }
+
+    /// Why the played-out hand stopped asking: a hit that busted, one that reached
+    /// 21, or a split ace, which takes its one card and stands.
     var handOver: String {
-        let total = Hand.total(hand)
-        return total > 21 ? "Bust — \(total)." : "\(total) — nothing left to decide."
+        let cards = hand
+        let total = Hand.total(cards)
+        if total > 21 { return "Bust — \(total)." }
+        if splitAces, cards.count == 2 { return "\(total) — split aces take one card." }
+        return "\(total) — nothing left to decide."
     }
 
     var picked: Action? {
@@ -138,23 +171,28 @@ final class BasicStrategyDrillModel {
 
     func answer(_ action: Action) {
         guard phase == .question, legalActions.contains(action) else { return }
+        let openingDecision = atDeal
         let evaluation = gradeDecision(action)
         result = evaluation
+        atDeal = false
         stats.recordAttempt(correct: evaluation.correct)
-        // Only the opening decision is timed, and for the same reason only it is
+        // Only the deal's decision is timed, and for the same reason only it is
         // filed as a weak spot: it is the question the drill has always asked. A
         // continued decision offers two buttons and one total where the deal
         // offers six and a pair-or-soft-or-hard lookup, so mixing them would
         // move the week's figure when the trainee turned a setting on rather
-        // than when they got faster.
-        let elapsedMs = hand.count == 2
+        // than when they got faster. A hand out of a split is two cards again but
+        // is not the deal: it cannot surrender, cannot insure, and doubles only
+        // under DAS.
+        let elapsedMs = openingDecision
             ? plausibleDecisionMs(Int(now().timeIntervalSince(askedAt) * 1000))
             : nil
         history.recordHand(correct: evaluation.correct, elapsedMs: elapsedMs)
-        // Only the opening decision has a weak spot to file under: a
-        // `ScenarioRef` names a two-card hand, and re-dealing a three-card 16 as
-        // a two-card one would ask a different question (that one can double).
-        if hand.count == 2 {
+        // Only the deal's decision has a weak spot to file under: a `ScenarioRef`
+        // names the two cards that were dealt, and re-dealing a three-card 16 —
+        // or the 11 a split of 8s made — as an opening hand asks a different
+        // question.
+        if openingDecision {
             missTally.record(
                 .basicStrategy,
                 ref: scenarioRefFor(scenario.player, dealerUpcard: scenario.dealerUpcard),
@@ -171,21 +209,22 @@ final class BasicStrategyDrillModel {
         }
     }
 
-    /// The opening question is `decide`: two cards, every action on the table.
-    /// Every question after it is `decidePlay` — the hand is deeper than two
-    /// cards, so doubling, splitting and surrender are gone as a matter of the
-    /// rules.
+    /// The deal's question is `decide`: two cards, every action on the table.
+    /// Every question after it is `decidePlay`, told what the table still offers —
+    /// the engine narrows further on its own, since doubling, splitting and
+    /// surrender are first-two-card actions whatever the caller passes.
     private func gradeDecision(_ action: Action) -> EvaluationResult {
-        guard hand.count == 2 else {
+        guard atDeal else {
+            let split = splitContext
             return engine.evaluatePlay(
                 PlayInput(
                     player: hand,
                     dealerUpcard: scenario.dealerUpcard,
                     ruleSet: prefs.prefs.ruleSet,
                     options: prefs.prefs.options,
-                    canDouble: false,
-                    canSplit: false,
-                    canSurrender: false
+                    canDouble: !split.fromSplit || prefs.prefs.options.doubleAfterSplit,
+                    canSplit: split.canSplitAgain,
+                    canSurrender: !split.fromSplit
                 ),
                 userAction: action
             )
@@ -201,27 +240,21 @@ final class BasicStrategyDrillModel {
         )
     }
 
-    /// A hit is the one correct answer that leaves another decision behind it, so
-    /// it draws the next card and asks again. Every other action ends the hand,
-    /// exactly as it would at a table. Internal so tests can drive the loop
-    /// without a real timer.
+    /// A hit and a split are the two correct answers that leave another decision
+    /// behind them: a hit draws the next card and asks again, a split turns one
+    /// hand into two and asks about each in turn. Stand, double and surrender
+    /// finish the hand in front of you, exactly as they would at a table.
+    /// Internal so tests can drive the loop without a real timer.
     func afterCorrect(_ action: Action) {
-        guard prefs.prefs.playHandsOut, action == .hit else {
+        guard prefs.prefs.playHandsOut else {
             advance()
             return
         }
-        hand.append(generator.generateCard())
-        // Busting, or reaching 21, ends the hand with nothing left to ask. Hold
-        // the card that did it on screen — that is the answer to the hit — then
-        // move on.
-        if Hand.total(hand) >= 21 {
-            phase = .over
-            scheduler.schedule(after: advanceDelay * 2) { [weak self] in self?.advance() }
-            return
+        switch action {
+        case .hit: drawToActive()
+        case .split: splitActive()
+        default: finishHand()
         }
-        result = nil
-        phase = .question
-        askedAt = now()
     }
 
     func continueFromMiss() {
@@ -279,10 +312,11 @@ final class BasicStrategyDrillModel {
     /// test seam (mirrors the web page's settable `scenario` signal).
     func deal(_ scenario: Scenario) {
         self.scenario = scenario
-        hand = scenario.player.cards
-        result = nil
-        phase = .question
-        askedAt = now()
+        hands = [scenario.player.cards]
+        activeIndex = 0
+        splitAces = false
+        atDeal = true
+        ask()
     }
 
     private func firstScenario() -> Scenario {
@@ -297,6 +331,66 @@ final class BasicStrategyDrillModel {
             return scenarioFromRef(weak.ref, random: { Double.random(in: 0 ..< 1) })
         }
         return generator.generate()
+    }
+}
+
+/// The hand-by-hand half of the loop: what a correct answer does to the cards in
+/// front of you. An extension so the class body stays inside the lint limit;
+/// `private` is file-scoped, so the generator and scheduler are still in reach.
+@MainActor
+private extension BasicStrategyDrillModel {
+    func drawToActive() {
+        hands[activeIndex].append(generator.generateCard())
+        // Busting, or reaching 21, ends the hand with nothing left to ask.
+        if Hand.total(hand) >= 21 {
+            holdThenFinish()
+            return
+        }
+        ask()
+    }
+
+    /// The two halves each keep one card; the one in play is dealt its second.
+    func splitActive() {
+        splitAces = hand.first?.isAce ?? false
+        hands = splitHandAt(hands, activeIndex)
+        dealSecondCard()
+    }
+
+    /// A hand out of a split arrives holding one card. Deal its second, then ask —
+    /// unless it is a split ace, which takes that card and stands, or it landed on
+    /// 21, which leaves nothing to decide either.
+    func dealSecondCard() {
+        hands[activeIndex].append(generator.generateCard())
+        if splitAces || Hand.total(hand) >= 21 {
+            holdThenFinish()
+            return
+        }
+        ask()
+    }
+
+    /// Hold the card that ended the hand on screen — that is the answer to the
+    /// decision before it — then move on.
+    func holdThenFinish() {
+        phase = .over
+        scheduler.schedule(after: advanceDelay * 2) { [weak self] in self?.finishHand() }
+    }
+
+    /// The hand in front of you is done. A split leaves others waiting behind it;
+    /// when none is left, so is the deal.
+    func finishHand() {
+        let next = activeIndex + 1
+        guard next < hands.count else {
+            advance()
+            return
+        }
+        activeIndex = next
+        dealSecondCard()
+    }
+
+    func ask() {
+        result = nil
+        phase = .question
+        askedAt = now()
     }
 }
 
@@ -344,7 +438,11 @@ struct BasicStrategyDrillView: View {
                 streak: model.session.streak,
                 onExit: leave
             )
-            FlowStageView(player: model.hand, dealer: model.scenario.dealerUpcard) {
+            FlowStageView(
+                player: model.hand,
+                dealer: model.scenario.dealerUpcard,
+                handLabel: model.handLabel
+            ) {
                 DrillLineView(line: stageLine)
             }
             FlowActionsView(

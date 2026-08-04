@@ -7,16 +7,30 @@ struct FlowStageView<Line: View>: View {
     /// One card or many: a hand played out grows past the opening two.
     let player: [Card]
     let dealer: Card
+    /// "Hand 2 of 3" while a split is being played out; empty for a single hand,
+    /// where naming it would only add noise.
+    let handLabel: String
     @ViewBuilder let line: () -> Line
 
-    init(player: [Card], dealer: Card, @ViewBuilder line: @escaping () -> Line) {
+    init(
+        player: [Card],
+        dealer: Card,
+        handLabel: String = "",
+        @ViewBuilder line: @escaping () -> Line
+    ) {
         self.player = player
         self.dealer = dealer
+        self.handLabel = handLabel
         self.line = line
     }
 
-    init(player: TwoCardHand, dealer: Card, @ViewBuilder line: @escaping () -> Line) {
-        self.init(player: player.cards, dealer: dealer, line: line)
+    init(
+        player: TwoCardHand,
+        dealer: Card,
+        handLabel: String = "",
+        @ViewBuilder line: @escaping () -> Line
+    ) {
+        self.init(player: player.cards, dealer: dealer, handLabel: handLabel, line: line)
     }
 
     /// A hand played out can reach five or six cards. Shrink them past two so a
@@ -36,6 +50,15 @@ struct FlowStageView<Line: View>: View {
                 CardImage(dealer, width: 44)
             }
             .padding(.bottom, 20)
+            // A split puts more than one hand in front of you and the stage shows
+            // one at a time, so without this the second is a fresh deal.
+            if !handLabel.isEmpty {
+                Text(handLabel.uppercased())
+                    .font(.system(size: 11))
+                    .tracking(2)
+                    .foregroundStyle(Theme.muted)
+                    .accessibilityHidden(true)
+            }
             // Indexed rather than keyed by card: the trainers deal with
             // replacement, so the same card can appear twice in one hand.
             HStack(spacing: player.count > 2 ? 8 : 12) {
@@ -43,6 +66,8 @@ struct FlowStageView<Line: View>: View {
                     CardImage(card, width: cardWidth)
                 }
             }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(handLabel.isEmpty ? "Your hand" : handLabel)
             line()
                 .padding(.top, 20)
                 .padding(.horizontal, 24)
