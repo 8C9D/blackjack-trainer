@@ -19,6 +19,7 @@ import {
   type TalliedTrainer,
   type WeakSpot,
 } from '../../core/services/miss-tally.service';
+import { countOf } from '../../core/text';
 import { REVIEW_QUERY_PARAM } from '../drill/drill-hand';
 import {
   PracticeHistoryService,
@@ -126,7 +127,8 @@ interface WeakSpotGroup {
           </p>
         }
         <p class="progress__week-note">
-          {{ streakLabel() }} · goal {{ goal() }} hands/day · {{ totalHands() }} hands all time
+          {{ streakLabel() }} · goal {{ countOf(goal(), 'hand') }}/day ·
+          {{ countOf(totalHands(), 'hand') }} all time
         </p>
       </section>
 
@@ -168,8 +170,8 @@ interface WeakSpotGroup {
             <b>{{ showdown().wins }}W</b> · <b>{{ showdown().losses }}L</b> ·
             <b>{{ showdown().pushes }}P</b>
             <small
-              >{{ showdown().hands }} hands · {{ showdown().blackjacks }} blackjacks ·
-              {{ winRate() }}% won</small
+              >{{ countOf(showdown().hands, 'hand') }} ·
+              {{ countOf(showdown().blackjacks, 'blackjack') }} · {{ winRate() }}% won</small
             >
           </p>
           @if (bankroll().wagered > 0) {
@@ -181,7 +183,8 @@ interface WeakSpotGroup {
                 {{ signed(bankroll().net) }}
               </b>
               <small
-                >{{ bankroll().bankroll }} chips on hand · {{ bankroll().wagered }} wagered</small
+                >{{ countOf(bankroll().bankroll, 'chip') }} on hand ·
+                {{ bankroll().wagered }} wagered</small
               >
             </p>
           }
@@ -221,6 +224,10 @@ interface WeakSpotGroup {
   styleUrl: './progress-page.component.scss',
 })
 export class ProgressPageComponent {
+  // Templates can only call class members, so the shared counted-noun
+  // helper is re-exposed rather than imported into the markup.
+  protected readonly countOf = countOf;
+
   private readonly prefs = inject(FlowPrefsService);
   private readonly history = inject(PracticeHistoryService);
   private readonly missTally = inject(MissTallyService);
@@ -345,7 +352,7 @@ export class ProgressPageComponent {
   // The bars carry only height, so the screen-reader text is where a day's
   // numbers actually live.
   protected dayLabel(day: DayBar): string {
-    const hands = `${day.hands} ${day.hands === 1 ? 'hand' : 'hands'}`;
+    const hands = countOf(day.hands, 'hand');
     return day.accuracy === null ? hands : `${hands}, ${day.accuracy}% correct`;
   }
 

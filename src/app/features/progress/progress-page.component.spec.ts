@@ -83,6 +83,15 @@ describe('ProgressPageComponent', () => {
       );
     });
 
+    it('agrees with a one-hand goal and a single hand practised', () => {
+      TestBed.inject(FlowPrefsService).setDailyGoal(1);
+      TestBed.inject(PracticeHistoryService).recordHand(true);
+      const { fixture } = createPage();
+      expect(text(fixture, '.progress__week-note')).toBe(
+        '1-day streak · goal 1 hand/day · 1 hand all time',
+      );
+    });
+
     it('scales the bars against the goal, so an unmet week is not a full bar', () => {
       const prefs = TestBed.inject(FlowPrefsService);
       prefs.setDailyGoal(20);
@@ -242,9 +251,15 @@ describe('ProgressPageComponent', () => {
       const { fixture } = createPage();
 
       expect(text(fixture, '.progress__record')).toBe(
-        '2W · 1L · 1P4 hands · 1 blackjacks · 50% won',
+        '2W · 1L · 1P4 hands · 1 blackjack · 50% won',
       );
       expect(fixture.nativeElement.querySelectorAll('.progress__record')).toHaveLength(1);
+    });
+
+    it('agrees with a single hand rather than reporting "1 hands"', () => {
+      TestBed.inject(ShowdownStatsService).record('lose');
+      const { fixture } = createPage();
+      expect(text(fixture, '.progress__record')).toBe('0W · 1L · 0P1 hand · 0 blackjacks · 0% won');
     });
 
     it('reports the bankroll as a signed net once bets are placed', () => {
