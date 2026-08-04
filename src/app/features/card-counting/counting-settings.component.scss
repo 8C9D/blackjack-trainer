@@ -112,6 +112,31 @@
     text-align: center;
   }
 
+  // Into the chart's count tab, where this system's tags are printed. Styled as
+  // the link it is rather than as a button: it leaves for a reference screen,
+  // it does not change a setting.
+  &__tags-link {
+    display: block;
+    width: 100%;
+    margin: 0 0 0.9rem;
+    padding: 0;
+    background: none;
+    border: 0;
+    font: inherit;
+    text-align: center;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+    color: var(--accent-ink);
+    font-size: 0.85rem;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+      border-radius: 6px;
+    }
+  }
+
   &__metrics {
     display: flex;
     flex-wrap: wrap;

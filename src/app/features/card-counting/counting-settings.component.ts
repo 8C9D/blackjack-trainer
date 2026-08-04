@@ -43,6 +43,16 @@ import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.mo
         calling insurance — the three things drilled here. Published figures for the tags alone, not
         a verdict on the system: a count you keep accurately beats a stronger one you do not.
       </p>
+      <!-- The figures say what the tags are for; this is where the tags
+           themselves are. Picking among 58 systems is the moment a trainee most
+           needs to see what one actually asks them to memorise.
+
+           An output rather than a routerLink: every other control here reports
+           outwards and this component injects nothing, which is what lets it be
+           rendered in a spec with no router behind it. -->
+      <button type="button" class="settings__tags-link" (click)="showTags.emit()">
+        See what each card is worth
+      </button>
       <div class="settings__modes" role="radiogroup" aria-label="Drill mode">
         @for (option of modeOptions; track option.mode) {
           <label class="settings__mode">
@@ -278,6 +288,8 @@ export class CountingSettingsComponent {
   readonly errors = input<readonly string[]>([]);
   readonly disabled = input(false);
 
+  // Into the chart's count tab, where the selected system's tags are printed.
+  readonly showTags = output<void>();
   readonly systemChange = output<string>();
   readonly modeChange = output<DrillMode>();
   readonly numberOfCardsChange = output<number>();

@@ -53,6 +53,32 @@ test.describe('navigation & routing', () => {
     await expect(page.getByRole('columnheader', { name: '10–A' })).toBeVisible();
     await expect(page.getByRole('rowheader', { name: 'Count', exact: true })).toBeVisible();
     await expect(page.getByText('A full deck of these tags sums to 0')).toBeVisible();
+
+    // The tab is in the URL, so it survives a reload and can be linked to.
+    await expect(page).toHaveURL(/\/chart\?tab=count$/);
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Count', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  // Settings picks among 58 counting systems and prints the tags of none of
+  // them; the chart's count tab is where they are.
+  test('the system picker links to the tags of the system it just chose', async ({ page }) => {
+    await page.goto('/settings');
+    await page.getByRole('button', { name: 'See what each card is worth' }).click();
+    await expect(page).toHaveURL(/\/chart\?tab=count$/);
+    await expect(page.getByText('What each card is worth')).toBeVisible();
+  });
+
+  test('the counting drill links to them too, from the screen that names the system', async ({
+    page,
+  }) => {
+    await page.goto('/drill/card-counting');
+    await page.getByRole('link', { name: 'See what each card is worth' }).click();
+    await expect(page).toHaveURL(/\/chart\?tab=count$/);
+    await expect(page.getByText('What each card is worth')).toBeVisible();
   });
 
   test('progress opens from home and counts a practised hand', async ({ page }) => {

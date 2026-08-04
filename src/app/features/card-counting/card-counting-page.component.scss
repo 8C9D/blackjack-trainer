@@ -102,6 +102,20 @@
     font-size: 0.9rem;
   }
 
+  // Into the chart's count tab, where this system's tags are printed. Quiet
+  // enough that it never competes with the primary "Start counting".
+  &__tags {
+    margin-bottom: 1.1rem;
+    color: var(--accent-ink);
+    font-size: 0.85rem;
+
+    &:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+      border-radius: 6px;
+    }
+  }
+
   &__reshuffle {
     margin: 0 0 1rem;
     padding: 0.5rem 0.85rem;
