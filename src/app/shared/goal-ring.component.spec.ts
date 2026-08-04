@@ -53,6 +53,36 @@ describe('GoalRingComponent', () => {
 
   it('exposes an accessible summary', () => {
     const { fixture } = create();
-    expect(ring(fixture).getAttribute('aria-label')).toBe('14 of 20 hands today');
+    const el = ring(fixture);
+    expect(el.getAttribute('role')).toBe('progressbar');
+    expect(el.getAttribute('aria-label')).toBe('14 of 20 hands today');
+    expect(el.getAttribute('aria-valuemin')).toBe('0');
+    expect(el.getAttribute('aria-valuenow')).toBe('14');
+    expect(el.getAttribute('aria-valuemax')).toBe('20');
+  });
+
+  it('keeps ARIA progress values inside the range after the visible count exceeds the goal', () => {
+    const { fixture, host } = create();
+    host.value.set(27);
+    fixture.detectChanges();
+    expect(ring(fixture).getAttribute('aria-valuenow')).toBe('20');
+    expect(ring(fixture).textContent).toContain('27/20');
+  });
+
+  it('clamps a defensive negative value without emitting a negative gradient or ARIA value', () => {
+    const { fixture, host } = create();
+    host.value.set(-2);
+    fixture.detectChanges();
+    expect(ring(fixture).style.getPropertyValue('--ring-fill')).toBe('0deg');
+    expect(ring(fixture).getAttribute('aria-valuenow')).toBe('0');
+  });
+
+  it('keeps semantic progress valid when a caller supplies a non-positive goal', () => {
+    const { fixture, host } = create();
+    host.goal.set(0);
+    fixture.detectChanges();
+    expect(ring(fixture).style.getPropertyValue('--ring-fill')).toBe('360deg');
+    expect(ring(fixture).getAttribute('aria-valuemax')).toBe('1');
+    expect(ring(fixture).getAttribute('aria-valuenow')).toBe('1');
   });
 });

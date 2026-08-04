@@ -11,11 +11,16 @@ import { CardImageComponent } from '../../shared/card-image.component';
   imports: [CardImageComponent],
   template: `
     <div class="stage">
-      <div class="stage__dealer">
+      <div class="stage__dealer" role="group" aria-label="Dealer upcard">
         <span class="stage__label">Dealer shows</span>
         <app-card-image class="stage__dealer-card" [card]="dealer()" />
       </div>
-      <div class="stage__hand" [class.stage__hand--deep]="player().length > 2">
+      <div
+        class="stage__hand"
+        role="group"
+        aria-label="Your hand"
+        [class.stage__hand--deep]="player().length > 2"
+      >
         <!-- Tracked by index: the trainers deal with replacement, so the same
              card can appear twice in one hand. -->
         @for (card of player(); track $index) {

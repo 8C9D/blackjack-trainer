@@ -152,6 +152,82 @@ test.describe('accessibility', () => {
     for (const alt of alts) expect(alt?.trim()).toBeTruthy();
   });
 
+  // Set the daily goal, then grade one hand, so the home glance has a known
+  // ring value and a today entry to describe.
+  async function practiseOneHand(page: Page, goal: string): Promise<void> {
+    await page.goto('/settings');
+    const field = page.getByLabel('Hands per day');
+    await field.fill(goal);
+    await field.dispatchEvent('change');
+
+    await page.goto('/drill/basic-strategy');
+    // The drill binds its key handler on render; a key sent before that is
+    // silently dropped.
+    await expect(page.getByRole('group', { name: 'Player actions' })).toBeVisible();
+    await page.keyboard.press('s');
+  }
+
+  // The ring is a conic gradient and the streak row is seven coloured dots, so
+  // neither carries a single character of text a screen reader could read. Their
+  // ARIA is the whole of what a non-sighted trainee gets from this screen.
+  test('the home glance exposes its ring and streak history to assistive tech', async ({
+    page,
+  }) => {
+    await practiseOneHand(page, '12');
+    await page.goto('/');
+
+    const ring = page.getByRole('progressbar', { name: '1 of 12 hands today' });
+    await expect(ring).toHaveAttribute('aria-valuemin', '0');
+    await expect(ring).toHaveAttribute('aria-valuenow', '1');
+    await expect(ring).toHaveAttribute('aria-valuemax', '12');
+
+    // Per-day volume and goal state, not just the streak headline the visible
+    // caption already carries.
+    const dots = page.getByRole('img', { name: /Last 7 days:/ });
+    await expect(dots).toHaveAttribute('aria-label', /\(today\): 1 hand, goal not met/);
+  });
+
+  test('the drill chrome names its progress bar and groups the cards on the table', async ({
+    page,
+  }) => {
+    await page.goto('/settings');
+    const goal = page.getByLabel('Hands per day');
+    await goal.fill('20');
+    await goal.dispatchEvent('change');
+
+    await page.goto('/drill/basic-strategy');
+    await expect(page.getByRole('group', { name: 'Player actions' })).toBeVisible();
+
+    // A bare percentage tells a screen-reader user nothing about what is being
+    // counted; the value text is what makes the bar mean "hands this session".
+    const progress = page.getByRole('progressbar', { name: 'Session progress' });
+    await expect(progress).toHaveAttribute('aria-valuetext', '0 of 20 hands');
+
+    await expect(page.getByRole('group', { name: 'Dealer upcard' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Your hand' })).toBeVisible();
+
+    await page.keyboard.press('s');
+    await expect(progress).toHaveAttribute('aria-valuetext', '1 of 20 hands');
+  });
+
+  // The route sweep only measures each screen's opening state. The Done screen
+  // swaps out the entire drill chrome — the topbar that carries the trainer name
+  // as the page's <h1> included — so its heading goes unchecked by that sweep.
+  test('the Done screen still carries exactly one page heading', async ({ page }) => {
+    await practiseOneHand(page, '1');
+    // Any key leaves the miss pause; after a correct answer the drill has
+    // already advanced on its own and the key is a no-op.
+    await page.keyboard.press('ArrowRight');
+
+    await expect(page.locator('.done')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+    await expect(page.getByRole('heading', { level: 1, name: 'Session complete' })).toHaveCount(1);
+    await expect(page.getByRole('progressbar', { name: '1 of 1 goal met' })).toHaveAttribute(
+      'aria-valuenow',
+      '1',
+    );
+  });
+
   for (const scheme of ['dark', 'light'] as const) {
     test(`text meets WCAG AA in the ${scheme} theme`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });

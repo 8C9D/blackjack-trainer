@@ -9,12 +9,12 @@ function dot(partial: Partial<StreakDot> & { date: string }): StreakDot {
 }
 
 const SIX_DAY_RUN: StreakDot[] = [
-  dot({ date: '2026-07-04', met: true }),
-  dot({ date: '2026-07-05', met: true }),
-  dot({ date: '2026-07-06', met: true }),
-  dot({ date: '2026-07-07', met: true }),
-  dot({ date: '2026-07-08', met: true }),
-  dot({ date: '2026-07-09', met: true }),
+  dot({ date: '2026-07-04', hands: 20, met: true }),
+  dot({ date: '2026-07-05', hands: 20, met: true }),
+  dot({ date: '2026-07-06', hands: 20, met: true }),
+  dot({ date: '2026-07-07', hands: 20, met: true }),
+  dot({ date: '2026-07-08', hands: 20, met: true }),
+  dot({ date: '2026-07-09', hands: 20, met: true }),
   dot({ date: '2026-07-10', isToday: true }),
 ];
 
@@ -50,6 +50,31 @@ describe('StreakDotsComponent', () => {
   it('labels the streak', () => {
     const { fixture } = create();
     expect(fixture.nativeElement.querySelector('.dots__label').textContent).toBe('6-day streak');
+  });
+
+  it("describes each day's volume and goal state, including today", () => {
+    const { fixture } = create();
+    const graphic = fixture.nativeElement.querySelector('.dots') as HTMLElement;
+    const label = graphic.getAttribute('aria-label')!;
+    expect(label).toContain('6-day streak. Last 7 days:');
+    expect(label).toContain('2026-07-04: 20 hands, goal met');
+    expect(label).toContain('2026-07-10 (today): 0 hands, goal not met');
+  });
+
+  it('uses singular grammar for a one-hand day', () => {
+    const { fixture, host } = create();
+    host.dots.set([dot({ date: '2026-07-10', hands: 1, isToday: true })]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.dots').getAttribute('aria-label')).toContain(
+      '1 hand, goal not met',
+    );
+  });
+
+  it('hides the duplicate visible caption from the accessibility tree', () => {
+    const { fixture } = create();
+    expect(fixture.nativeElement.querySelector('.dots__label').getAttribute('aria-hidden')).toBe(
+      'true',
+    );
   });
 
   it('shows a neutral label with no streak', () => {

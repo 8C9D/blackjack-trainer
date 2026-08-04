@@ -30,6 +30,7 @@ const spot = (label: string, streak: number, misses = 1): WeakSpot => ({
     [goalMet]="goalMet()"
     [bestStreak]="bestStreak()"
     [accuracy]="accuracy()"
+    [medianSeconds]="medianSeconds()"
     [weakSpot]="weakSpot()"
     [weakSpots]="weakSpots()"
     [cleared]="cleared()"
@@ -44,6 +45,7 @@ class HostComponent {
   readonly goalMet = signal(true);
   readonly bestStreak = signal(11);
   readonly accuracy = signal<number | null>(90);
+  readonly medianSeconds = signal<number | null>(2.4);
   readonly weakSpot = signal<WeakSpot | null>(WEAK);
   readonly weakSpots = signal<readonly WeakSpot[]>([WEAK]);
   readonly cleared = signal<readonly WeakSpot[]>([]);
@@ -69,9 +71,22 @@ describe('FlowDoneComponent', () => {
     expect(el.querySelector('.ring')!.textContent).toContain('20/20');
     expect(el.querySelector('.ring')!.textContent).toContain('goal met');
     expect(el.querySelector('.done__peak')!.textContent).toContain('Best streak: 11');
-    expect(el.querySelector('.done__peak')!.textContent).toContain('90% today');
+    expect(el.querySelector('h1')?.textContent).toBe('Session complete');
+    expect(el.querySelector('.done__peak')!.textContent).toContain('90% this round');
+    expect(el.querySelector('.done__peak')!.textContent).toContain('2.4s a hand');
     expect(el.querySelector('.done__next')!.textContent).toContain('Drill my misses: 16 vs 10');
     expect(el.querySelector('.done__next')!.textContent).toContain('missed 3 of 7 this week');
+  });
+
+  it('omits unmeasured round metrics instead of reporting zeroes', () => {
+    const { fixture, host } = create();
+    host.accuracy.set(null);
+    host.medianSeconds.set(null);
+    fixture.detectChanges();
+    const peak = fixture.nativeElement.querySelector('.done__peak')!.textContent as string;
+    expect(peak).toContain('Best streak: 11');
+    expect(peak).not.toContain('%');
+    expect(peak).not.toContain('a hand');
   });
 
   it('omits the weakness card when there is none', () => {

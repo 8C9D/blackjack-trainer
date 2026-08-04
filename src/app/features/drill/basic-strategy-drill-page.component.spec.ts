@@ -583,7 +583,7 @@ describe('BasicStrategyDrillPageComponent', () => {
       expect(el.querySelector('.ring')!.textContent).toContain('3/3');
       expect(el.querySelector('.ring')!.textContent).toContain('goal met');
       expect(el.querySelector('.done__peak')!.textContent).toContain('Best streak: 3');
-      expect(el.querySelector('.done__peak')!.textContent).toContain('100% today');
+      expect(el.querySelector('.done__peak')!.textContent).toContain('100% this round');
       // The drill chrome is gone.
       expect(el.querySelector('app-flow-topbar')).toBeNull();
     });
