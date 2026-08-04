@@ -225,9 +225,12 @@ struct ProgressBodyView: View {
                 .foregroundStyle(Theme.midInk)
                 .accessibilityElement(children: .combine)
             }
-            Text("\(streakLabel) · goal \(goal) hands/day · \(totalHands) hands all time")
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.midInk)
+            Text(
+                "\(streakLabel) · goal \(countOf(goal, "hand"))/day · "
+                    + "\(countOf(totalHands, "hand")) all time"
+            )
+            .font(.system(size: 12))
+            .foregroundStyle(Theme.midInk)
         }
     }
 
@@ -282,8 +285,8 @@ struct ProgressBodyView: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Theme.ink)
                 Text(
-                    "\(showdown.hands) hands · \(showdown.blackjacks) blackjacks · "
-                        + "\(winRate)% won"
+                    "\(countOf(showdown.hands, "hand")) · "
+                        + "\(countOf(showdown.blackjacks, "blackjack")) · \(winRate)% won"
                 )
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.muted)
@@ -294,7 +297,7 @@ struct ProgressBodyView: View {
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(netColor)
                     Text(
-                        "\(CountFormat.count(bankroll.bankroll)) chips on hand · "
+                        "\(chipsLabel(bankroll.bankroll)) on hand · "
                             + "\(CountFormat.count(bankroll.wagered)) wagered"
                     )
                     .font(.system(size: 12))
@@ -337,6 +340,11 @@ struct ProgressBodyView: View {
     }
 
     // MARK: - chrome
+
+    /// "1 chip", "250 chips" — the bankroll is formatted before it is counted.
+    private func chipsLabel(_ chips: Double) -> String {
+        countOf(chips, "chip", display: CountFormat.count(chips))
+    }
 
     private var winRate: Int {
         showdown.hands == 0

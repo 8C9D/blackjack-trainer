@@ -36,7 +36,7 @@ struct HomeView: View {
     private var subtext: String {
         let remaining = goal - handsToday
         if remaining <= 0 { return "goal met — one more round?" }
-        return "\(remaining) \(remaining == 1 ? "hand" : "hands") to today's goal"
+        return "\(countOf(remaining, "hand")) to today's goal"
     }
 
     private var otherTrainers: [TrainerCard] {

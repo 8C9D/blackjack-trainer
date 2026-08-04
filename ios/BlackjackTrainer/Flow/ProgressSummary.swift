@@ -124,7 +124,7 @@ enum ProgressSummary {
     /// The bars carry only height, so the accessibility label is where a day's
     /// numbers actually live.
     static func dayLabel(_ bar: ProgressDayBar) -> String {
-        let hands = "\(bar.weekday): \(bar.hands) hands"
+        let hands = "\(bar.weekday): \(countOf(bar.hands, "hand"))"
         guard let accuracy = bar.accuracy else { return hands }
         return "\(hands), \(accuracy)% correct"
     }
