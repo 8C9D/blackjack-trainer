@@ -16,6 +16,12 @@ final class BasicStrategyDrillModel {
     @ObservationIgnored private let missTally: MissTallyStore
     @ObservationIgnored private let scheduler: FlowAdvanceScheduler
     @ObservationIgnored private let advanceDelay: Duration
+    /// The wall clock, injected so a spec can drive the decision timer. The
+    /// drill grades whether the answer was right and has never said how long it
+    /// took, which at a table is half of whether you can play.
+    @ObservationIgnored private let now: () -> Date
+    /// When the question on screen was put up.
+    @ObservationIgnored private var askedAt = Date()
 
     private(set) var phase: DrillPhase = .question
     private(set) var scenario: Scenario
@@ -38,7 +44,8 @@ final class BasicStrategyDrillModel {
         history: PracticeHistoryStore,
         missTally: MissTallyStore,
         scheduler: FlowAdvanceScheduler? = nil,
-        advanceDelay: Duration = .milliseconds(500)
+        advanceDelay: Duration = .milliseconds(500),
+        now: @escaping () -> Date = { Date() }
     ) {
         self.engine = engine
         self.generator = generator
@@ -48,6 +55,8 @@ final class BasicStrategyDrillModel {
         self.missTally = missTally
         self.scheduler = scheduler ?? RealFlowAdvanceScheduler()
         self.advanceDelay = advanceDelay
+        self.now = now
+        askedAt = now()
         let opening = Self.firstScenario(missTally: missTally, generator: generator)
         scenario = opening
         hand = opening.player.cards
@@ -58,7 +67,8 @@ final class BasicStrategyDrillModel {
     convenience init(
         app: AppModel,
         scheduler: FlowAdvanceScheduler? = nil,
-        advanceDelay: Duration = .milliseconds(500)
+        advanceDelay: Duration = .milliseconds(500),
+        now: @escaping () -> Date = { Date() }
     ) {
         self.init(
             engine: app.basicStrategy,
@@ -67,7 +77,8 @@ final class BasicStrategyDrillModel {
             history: app.practiceHistory,
             missTally: app.missTally,
             scheduler: scheduler,
-            advanceDelay: advanceDelay
+            advanceDelay: advanceDelay,
+            now: now
         )
     }
 
@@ -123,7 +134,8 @@ final class BasicStrategyDrillModel {
         let evaluation = gradeDecision(action)
         result = evaluation
         stats.recordAttempt(correct: evaluation.correct)
-        history.recordHand(correct: evaluation.correct)
+        let elapsedMs = plausibleDecisionMs(Int(now().timeIntervalSince(askedAt) * 1000))
+        history.recordHand(correct: evaluation.correct, elapsedMs: elapsedMs)
         // Only the opening decision has a weak spot to file under: a
         // `ScenarioRef` names a two-card hand, and re-dealing a three-card 16 as
         // a two-card one would ask a different question (that one can double).
@@ -134,7 +146,7 @@ final class BasicStrategyDrillModel {
                 correct: evaluation.correct
             )
         }
-        session.record(evaluation.correct)
+        session.record(evaluation.correct, elapsedMs: elapsedMs)
 
         if evaluation.correct {
             phase = .flash
@@ -194,6 +206,7 @@ final class BasicStrategyDrillModel {
         }
         result = nil
         phase = .question
+        askedAt = now()
     }
 
     func continueFromMiss() {
@@ -254,6 +267,7 @@ final class BasicStrategyDrillModel {
         hand = scenario.player.cards
         result = nil
         phase = .question
+        askedAt = now()
     }
 
     private func firstScenario() -> Scenario {
@@ -290,6 +304,7 @@ struct BasicStrategyDrillView: View {
                     goalMet: model.goalMet,
                     bestStreak: model.session.bestStreak,
                     accuracy: model.session.accuracy,
+                    medianSeconds: model.session.medianSeconds,
                     weakSpot: model.weakSpot,
                     weakSpots: model.weakSpots,
                     cleared: model.clearedSpots,

@@ -19,6 +19,25 @@ struct PracticeDay: Equatable {
     /// unmeasured.
     var graded: Int = 0
     var correct: Int = 0
+    /// Reps the app timed, and the milliseconds they took between them. Counted
+    /// separately again: only the strategy drills time a decision (the counting
+    /// drills are paced by the app or, for the deck countdown, timed already),
+    /// and days written before this have none — untimed, not instant.
+    var timed: Int = 0
+    var millis: Int = 0
+}
+
+/// Longest a single decision can be and still count as one. Past this the
+/// trainee put the phone down: a hand you walked away from is not a hand you
+/// were slow on. Mirrors `MAX_TIMED_DECISION_MS`.
+let maxTimedDecisionMs = 60000
+
+/// A decision counts as timed only when the clock read plausibly: a non-positive
+/// reading is a clock that moved backwards, and anything past the cap is a
+/// trainee who walked away. Mirrors `plausibleDecisionMs`.
+func plausibleDecisionMs(_ elapsedMs: Int?) -> Int? {
+    guard let elapsedMs, elapsedMs > 0, elapsedMs <= maxTimedDecisionMs else { return nil }
+    return elapsedMs
 }
 
 /// One dot of the home screen's 7-day strip. `met` is whether the day reached
@@ -36,6 +55,14 @@ struct StreakDot: Equatable {
 /// an unpractised (or pre-grading) window is unmeasured, not zero.
 private func accuracyOf(graded: Int, correct: Int) -> Int? {
     graded == 0 ? nil : Int((Double(correct) / Double(graded) * 100).rounded())
+}
+
+/// Mean seconds per timed decision to one decimal, or nil when none were timed.
+/// A mean rather than a median because only per-day totals are stored, and over
+/// a week's hands the cap above is what keeps it honest.
+private func paceOf(timed: Int, millis: Int) -> Double? {
+    guard timed > 0 else { return nil }
+    return (Double(millis) / Double(timed) / 100).rounded() / 10
 }
 
 /// Local (not UTC) calendar date key — a hand practiced at 23:30 belongs to the
@@ -84,19 +111,25 @@ final class PracticeHistoryStore: CloudSyncable, ReloadableStore {
     /// One graded rep. The verdict is the same one the session streak counts, so
     /// a counting round that answers two questions is one rep, right only if
     /// both were.
-    func recordHand(correct: Bool) {
+    func recordHand(correct: Bool, elapsedMs: Int? = nil) {
         let today = localDateKey(now())
         let won = correct ? 1 : 0
+        let millis = plausibleDecisionMs(elapsedMs)
         if let index = days.firstIndex(where: { $0.date == today }) {
             let day = days[index]
             days[index] = PracticeDay(
                 date: today,
                 hands: day.hands + 1,
                 graded: day.graded + 1,
-                correct: day.correct + won
+                correct: day.correct + won,
+                timed: day.timed + (millis == nil ? 0 : 1),
+                millis: day.millis + (millis ?? 0)
             )
         } else {
-            days.append(PracticeDay(date: today, hands: 1, graded: 1, correct: won))
+            days.append(PracticeDay(
+                date: today, hands: 1, graded: 1, correct: won,
+                timed: millis == nil ? 0 : 1, millis: millis ?? 0
+            ))
         }
         days = prune(days)
         persist()
@@ -136,6 +169,21 @@ final class PracticeHistoryStore: CloudSyncable, ReloadableStore {
     /// already on the screen; this is the half of practice the app grades every
     /// rep of and has never said anything about — and a week beside the week
     /// before it is the only way the app can answer "am I getting better?".
+    /// How long a decision took over the seven days ending `weeksBack` weeks ago.
+    /// Accuracy says whether the practice is working; this says whether it would
+    /// survive a table, where the dealer is waiting. Mirrors `paceLast7`.
+    func paceLast7(weeksBack: Int = 0) -> Double? {
+        var timed = 0
+        var millis = 0
+        let first = weeksBack * 7
+        for back in first ..< (first + 7) {
+            let day = dayOn(dateKeyDaysAgo(back))
+            timed += day?.timed ?? 0
+            millis += day?.millis ?? 0
+        }
+        return paceOf(timed: timed, millis: millis)
+    }
+
     /// Mirrors the web `accuracyLast7`.
     func accuracyLast7(weeksBack: Int = 0) -> Int? {
         var graded = 0
@@ -209,21 +257,25 @@ final class PracticeHistoryStore: CloudSyncable, ReloadableStore {
                   let hands = (entry["hands"] as? NSNumber)?.intValue
             else { return nil }
             let graded = min(hands, (entry["graded"] as? NSNumber)?.intValue ?? 0)
+            // A timed rep is a graded one, and no run of them can average past
+            // the cap, so a hand-edited file cannot report an impossible pace.
+            let timed = min(graded, (entry["timed"] as? NSNumber)?.intValue ?? 0)
             return PracticeDay(
                 date: date,
                 hands: hands,
                 graded: graded,
-                correct: min(graded, (entry["correct"] as? NSNumber)?.intValue ?? 0)
+                correct: min(graded, (entry["correct"] as? NSNumber)?.intValue ?? 0),
+                timed: timed,
+                millis: min(
+                    timed * maxTimedDecisionMs,
+                    (entry["millis"] as? NSNumber)?.intValue ?? 0
+                )
             )
         }
     }
 
     private static func save(_ days: [PracticeDay], key: String, defaults: UserDefaults) {
-        let payload = ["days": days.map {
-            ["date": $0.date, "hands": $0.hands, "graded": $0.graded, "correct": $0.correct]
-                as [String: Any]
-        }]
-        guard let data = try? JSONSerialization.data(withJSONObject: payload) else { return }
+        guard let data = try? JSONSerialization.data(withJSONObject: payload(days)) else { return }
         defaults.set(data, forKey: key)
     }
 
@@ -246,11 +298,20 @@ final class PracticeHistoryStore: CloudSyncable, ReloadableStore {
 
     func pushToCloud() {
         guard let cloud else { return }
-        let payload = ["days": days.map {
-            ["date": $0.date, "hands": $0.hands, "graded": $0.graded, "correct": $0.correct]
-                as [String: Any]
-        }]
-        guard let data = try? JSONSerialization.data(withJSONObject: payload) else { return }
+        guard let data = try? JSONSerialization.data(withJSONObject: Self.payload(days)) else {
+            return
+        }
         cloud.set(data, forKey: key)
+    }
+
+    /// The stored shape, shared by the local save and the cloud push so the two
+    /// cannot carry different fields.
+    private static func payload(_ days: [PracticeDay]) -> [String: Any] {
+        ["days": days.map {
+            [
+                "date": $0.date, "hands": $0.hands, "graded": $0.graded,
+                "correct": $0.correct, "timed": $0.timed, "millis": $0.millis
+            ] as [String: Any]
+        }]
     }
 }

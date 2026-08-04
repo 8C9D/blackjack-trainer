@@ -94,4 +94,27 @@ struct ProgressSummaryTests {
         #expect(ProgressSummary.signed(-20) == "-20")
         #expect(ProgressSummary.signed(0) == "0")
     }
+
+    /// Faster is the good direction here, which the accuracy trend's colours
+    /// would get backwards.
+    @Test func paceTrendCallsAQuickerWeekFaster() {
+        let trend = ProgressSummary.paceTrend(thisWeek: 3, weekBefore: 6)
+        #expect(trend?.direction == .up)
+        #expect(trend?.label == "faster than 6s the week before")
+    }
+
+    @Test func paceTrendCallsASlowerWeekSlower() {
+        let trend = ProgressSummary.paceTrend(thisWeek: 4.5, weekBefore: 3.2)
+        #expect(trend?.direction == .down)
+        #expect(trend?.label == "slower than 3.2s the week before")
+    }
+
+    @Test func paceTrendStaysSilentWithOnlyOneMeasuredWeek() {
+        #expect(ProgressSummary.paceTrend(thisWeek: 3, weekBefore: nil) == nil)
+        #expect(ProgressSummary.paceTrend(thisWeek: nil, weekBefore: 3) == nil)
+    }
+
+    @Test func paceTrendCallsAnUnchangedWeekLevel() {
+        #expect(ProgressSummary.paceTrend(thisWeek: 3, weekBefore: 3)?.direction == .level)
+    }
 }

@@ -246,4 +246,71 @@ struct PracticeHistoryStoreTests {
         let reloaded = store(defaults, now: { Self.base() })
         #expect(reloaded.accuracyLast7() == 50)
     }
+
+    // Accuracy says whether the practice is working; the pace says whether it
+    // would survive a table, where the dealer is waiting.
+
+    @Test func paceIsNilBeforeAnythingIsTimed() {
+        let s = store(freshDefaults(), now: { Self.base() })
+        s.recordHand(correct: true)
+        #expect(s.paceLast7() == nil)
+    }
+
+    @Test func paceAveragesTheTimedDecisions() {
+        let s = store(freshDefaults(), now: { Self.base() })
+        s.recordHand(correct: true, elapsedMs: 2000)
+        s.recordHand(correct: false, elapsedMs: 3000)
+        s.recordHand(correct: true, elapsedMs: 4000)
+        #expect(s.paceLast7() == 3)
+    }
+
+    /// A hand you walked away from is not a hand you were slow on.
+    @Test func paceIgnoresAReadingPastTheCapOrABackwardsClock() {
+        let s = store(freshDefaults(), now: { Self.base() })
+        s.recordHand(correct: true, elapsedMs: 2000)
+        s.recordHand(correct: true, elapsedMs: maxTimedDecisionMs + 1)
+        s.recordHand(correct: true, elapsedMs: -5)
+        s.recordHand(correct: true, elapsedMs: 0)
+        #expect(s.paceLast7() == 2)
+        #expect(s.days.first?.timed == 1)
+        #expect(s.days.first?.graded == 4)
+    }
+
+    @Test func paceReadsTheWeekBeforeItSeparately() {
+        var current = Self.base()
+        let s = store(freshDefaults(), now: { current })
+        s.recordHand(correct: true, elapsedMs: 5000)
+        current = Self.makeDate(2026, 7, 18, 18, 30)
+        s.recordHand(correct: true, elapsedMs: 2500)
+        #expect(s.paceLast7() == 2.5)
+        #expect(s.paceLast7(weeksBack: 1) == 5)
+    }
+
+    @Test func leavesADayWrittenBeforeTimingUntimedRatherThanInstant() {
+        let defaults = freshDefaults()
+        seed(defaults, days: [["date": "2026-07-10", "hands": 9, "graded": 9, "correct": 9]])
+        let s = store(defaults, now: { Self.base() })
+        #expect(s.paceLast7() == nil)
+    }
+
+    /// A synced payload is not this device's to trust, and no run of decisions
+    /// can average past the cap.
+    @Test func clampsAStoredDayToAPaceTheCapAllows() {
+        let defaults = freshDefaults()
+        seed(defaults, days: [[
+            "date": "2026-07-10", "hands": 2, "graded": 2, "correct": 2,
+            "timed": 9, "millis": 999_999_999
+        ]])
+        let s = store(defaults, now: { Self.base() })
+        #expect(s.days.first?.timed == 2)
+        #expect(s.days.first?.millis == 2 * maxTimedDecisionMs)
+        #expect(s.paceLast7() == Double(maxTimedDecisionMs) / 1000)
+    }
+
+    @Test func persistsTheTimingsAcrossStoreInstances() {
+        let defaults = freshDefaults()
+        let s = store(defaults, now: { Self.base() })
+        s.recordHand(correct: true, elapsedMs: 3000)
+        #expect(store(defaults, now: { Self.base() }).paceLast7() == 3)
+    }
 }

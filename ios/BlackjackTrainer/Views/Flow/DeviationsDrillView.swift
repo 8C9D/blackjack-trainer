@@ -17,6 +17,12 @@ final class DeviationsDrillModel {
     @ObservationIgnored private let missTally: MissTallyStore
     @ObservationIgnored private let scheduler: FlowAdvanceScheduler
     @ObservationIgnored private let advanceDelay: Duration
+    /// The wall clock, injected so a spec can drive the decision timer. The
+    /// drill grades whether the answer was right and has never said how long it
+    /// took, which at a table is half of whether you can play.
+    @ObservationIgnored private let now: () -> Date
+    /// When the question on screen was put up.
+    @ObservationIgnored private var askedAt = Date()
     @ObservationIgnored private let systems: [CountingSystem]
 
     private(set) var phase: DrillPhase = .question
@@ -42,7 +48,8 @@ final class DeviationsDrillModel {
         missTally: MissTallyStore,
         systems: [CountingSystem] = [],
         scheduler: FlowAdvanceScheduler? = nil,
-        advanceDelay: Duration = .milliseconds(500)
+        advanceDelay: Duration = .milliseconds(500),
+        now: @escaping () -> Date = { Date() }
     ) {
         self.evaluator = evaluator
         self.generator = generator
@@ -54,6 +61,8 @@ final class DeviationsDrillModel {
         self.missTally = missTally
         self.scheduler = scheduler ?? RealFlowAdvanceScheduler()
         self.advanceDelay = advanceDelay
+        self.now = now
+        askedAt = now()
         // Placeholder replaced immediately once every stored property is set.
         scenario = DeviationScenario(
             player: TwoCardHand(Card(rank: .two, suit: .spades), Card(rank: .two, suit: .spades)),
@@ -69,7 +78,8 @@ final class DeviationsDrillModel {
     convenience init(
         app: AppModel,
         scheduler: FlowAdvanceScheduler? = nil,
-        advanceDelay: Duration = .milliseconds(500)
+        advanceDelay: Duration = .milliseconds(500),
+        now: @escaping () -> Date = { Date() }
     ) {
         self.init(
             evaluator: app.deviationEvaluator,
@@ -80,7 +90,8 @@ final class DeviationsDrillModel {
             missTally: app.missTally,
             systems: app.countingSystems,
             scheduler: scheduler,
-            advanceDelay: advanceDelay
+            advanceDelay: advanceDelay,
+            now: now
         )
     }
 
@@ -89,7 +100,8 @@ final class DeviationsDrillModel {
         let evaluation = gradeDecision(action)
         result = evaluation
         stats.recordAttempt(correct: evaluation.correct)
-        history.recordHand(correct: evaluation.correct)
+        let elapsedMs = plausibleDecisionMs(Int(now().timeIntervalSince(askedAt) * 1000))
+        history.recordHand(correct: evaluation.correct, elapsedMs: elapsedMs)
         // Only the opening decision has a weak spot to file under: a `ScenarioRef`
         // names a two-card hand, and re-dealing a three-card 16 as a two-card one
         // would ask a different question (that one can double).
@@ -104,7 +116,7 @@ final class DeviationsDrillModel {
                 trueCount: scenario.trueCount
             )
         }
-        session.record(evaluation.correct)
+        session.record(evaluation.correct, elapsedMs: elapsedMs)
 
         if evaluation.correct {
             phase = .flash
@@ -159,6 +171,7 @@ final class DeviationsDrillModel {
         }
         result = nil
         phase = .question
+        askedAt = now()
     }
 
     func continueFromMiss() {
@@ -223,6 +236,7 @@ final class DeviationsDrillModel {
         hand = scenario.player.cards
         result = nil
         phase = .question
+        askedAt = now()
     }
 
     private func firstScenario() -> DeviationScenario {
@@ -388,6 +402,7 @@ struct DeviationsDrillView: View {
                     goalMet: model.goalMet,
                     bestStreak: model.session.bestStreak,
                     accuracy: model.session.accuracy,
+                    medianSeconds: model.session.medianSeconds,
                     weakSpot: model.weakSpot,
                     weakSpots: model.weakSpots,
                     cleared: model.clearedSpots,

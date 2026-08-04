@@ -15,6 +15,10 @@ struct FlowDoneView: View {
     let bestStreak: Int
     /// Session accuracy percentage (0–100), or nil when nothing was answered.
     let accuracy: Int?
+    /// Seconds the round's middle decision took, or nil when none were timed.
+    /// Reported, not judged: how fast is fast enough is a table's question, and
+    /// the app has no published number to hold a trainee to.
+    var medianSeconds: Double?
     var weakSpot: WeakSpot?
     /// Every outstanding weak spot, worst first — `weakSpot` is its head. Only the
     /// count is shown; the list is what a review round would draw from.
@@ -30,8 +34,28 @@ struct FlowDoneView: View {
     private var peakText: Text {
         let base = Text("Best streak: ")
             + Text("\(bestStreak)").bold().foregroundStyle(Theme.good)
-        guard let accuracy else { return base }
-        return base + Text(" · \(accuracy)% today")
+        // Built as strings and folded in, rather than reassigned: `Text` has no
+        // `+=`, and a long chain of `+` is what makes this file slow to
+        // type-check.
+        return peakSuffixes.reduce(base) { $0 + Text($1) }
+    }
+
+    private var peakSuffixes: [String] {
+        var parts: [String] = []
+        if let accuracy {
+            parts.append(" · \(accuracy)% today")
+        }
+        if let medianSeconds {
+            parts.append(" · \(Self.secondsLabel(medianSeconds))s a hand")
+        }
+        return parts
+    }
+
+    /// One decimal, and no trailing `.0` — "3s a hand", not "3.0s a hand".
+    static func secondsLabel(_ seconds: Double) -> String {
+        seconds == seconds.rounded()
+            ? String(Int(seconds.rounded()))
+            : String(format: "%.1f", seconds)
     }
 
     private var othersLabel: String {
