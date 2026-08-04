@@ -19,6 +19,10 @@ final class BasicStrategyDrillModel {
 
     private(set) var phase: DrillPhase = .question
     private(set) var scenario: Scenario
+    /// The hand as it stands: the deal's two cards, plus every card a correct hit
+    /// has drawn since. The scenario keeps the opening deal, which is what a weak
+    /// spot is filed against and what the next hand resets to.
+    private(set) var hand: [Card]
     private(set) var result: EvaluationResult?
     private(set) var target = 0
     let session = DrillSession()
@@ -44,7 +48,9 @@ final class BasicStrategyDrillModel {
         self.missTally = missTally
         self.scheduler = scheduler ?? RealFlowAdvanceScheduler()
         self.advanceDelay = advanceDelay
-        scenario = Self.firstScenario(missTally: missTally, generator: generator)
+        let opening = Self.firstScenario(missTally: missTally, generator: generator)
+        scenario = opening
+        hand = opening.player.cards
         prefs.setLastTrainer(.basicStrategy)
         target = nextSessionTarget(handsToday: history.handsToday(), goal: prefs.prefs.dailyGoal)
     }
@@ -70,15 +76,22 @@ final class BasicStrategyDrillModel {
     }
 
     var question: HandQuestion {
-        handQuestion(scenario.player, dealerUpcard: scenario.dealerUpcard)
+        handQuestion(hand, dealerUpcard: scenario.dealerUpcard)
     }
 
     var legalActions: [Action] {
         legalActionsFor(
-            scenario.player,
+            hand,
             dealerUpcard: scenario.dealerUpcard,
             options: prefs.prefs.options
         )
+    }
+
+    /// Why the played-out hand stopped asking: a hit that busted, or one that
+    /// reached 21 and left nothing to decide.
+    var handOver: String {
+        let total = Hand.total(hand)
+        return total > 21 ? "Bust — \(total)." : "\(total) — nothing left to decide."
     }
 
     var picked: Action? {
@@ -107,7 +120,50 @@ final class BasicStrategyDrillModel {
 
     func answer(_ action: Action) {
         guard phase == .question, legalActions.contains(action) else { return }
-        let evaluation = engine.evaluate(
+        let evaluation = gradeDecision(action)
+        result = evaluation
+        stats.recordAttempt(correct: evaluation.correct)
+        history.recordHand(correct: evaluation.correct)
+        // Only the opening decision has a weak spot to file under: a
+        // `ScenarioRef` names a two-card hand, and re-dealing a three-card 16 as
+        // a two-card one would ask a different question (that one can double).
+        if hand.count == 2 {
+            missTally.record(
+                .basicStrategy,
+                ref: scenarioRefFor(scenario.player, dealerUpcard: scenario.dealerUpcard),
+                correct: evaluation.correct
+            )
+        }
+        session.record(evaluation.correct)
+
+        if evaluation.correct {
+            phase = .flash
+            scheduler.schedule(after: advanceDelay) { [weak self] in self?.afterCorrect(action) }
+        } else {
+            phase = .miss
+        }
+    }
+
+    /// The opening question is `decide`: two cards, every action on the table.
+    /// Every question after it is `decidePlay` — the hand is deeper than two
+    /// cards, so doubling, splitting and surrender are gone as a matter of the
+    /// rules.
+    private func gradeDecision(_ action: Action) -> EvaluationResult {
+        guard hand.count == 2 else {
+            return engine.evaluatePlay(
+                PlayInput(
+                    player: hand,
+                    dealerUpcard: scenario.dealerUpcard,
+                    ruleSet: prefs.prefs.ruleSet,
+                    options: prefs.prefs.options,
+                    canDouble: false,
+                    canSplit: false,
+                    canSurrender: false
+                ),
+                userAction: action
+            )
+        }
+        return engine.evaluate(
             EngineInput(
                 player: scenario.player,
                 dealerUpcard: scenario.dealerUpcard,
@@ -116,22 +172,28 @@ final class BasicStrategyDrillModel {
             ),
             userAction: action
         )
-        result = evaluation
-        stats.recordAttempt(correct: evaluation.correct)
-        history.recordHand(correct: evaluation.correct)
-        missTally.record(
-            .basicStrategy,
-            ref: scenarioRefFor(scenario.player, dealerUpcard: scenario.dealerUpcard),
-            correct: evaluation.correct
-        )
-        session.record(evaluation.correct)
+    }
 
-        if evaluation.correct {
-            phase = .flash
-            scheduler.schedule(after: advanceDelay) { [weak self] in self?.advance() }
-        } else {
-            phase = .miss
+    /// A hit is the one correct answer that leaves another decision behind it, so
+    /// it draws the next card and asks again. Every other action ends the hand,
+    /// exactly as it would at a table. Internal so tests can drive the loop
+    /// without a real timer.
+    func afterCorrect(_ action: Action) {
+        guard prefs.prefs.playHandsOut, action == .hit else {
+            advance()
+            return
         }
+        hand.append(generator.generateCard())
+        // Busting, or reaching 21, ends the hand with nothing left to ask. Hold
+        // the card that did it on screen — that is the answer to the hit — then
+        // move on.
+        if Hand.total(hand) >= 21 {
+            phase = .over
+            scheduler.schedule(after: advanceDelay * 2) { [weak self] in self?.advance() }
+            return
+        }
+        result = nil
+        phase = .question
     }
 
     func continueFromMiss() {
@@ -189,6 +251,7 @@ final class BasicStrategyDrillModel {
     /// test seam (mirrors the web page's settable `scenario` signal).
     func deal(_ scenario: Scenario) {
         self.scenario = scenario
+        hand = scenario.player.cards
         result = nil
         phase = .question
     }
@@ -251,7 +314,7 @@ struct BasicStrategyDrillView: View {
                 streak: model.session.streak,
                 onExit: leave
             )
-            FlowStageView(player: model.scenario.player, dealer: model.scenario.dealerUpcard) {
+            FlowStageView(player: model.hand, dealer: model.scenario.dealerUpcard) {
                 DrillLineView(line: stageLine)
             }
             FlowActionsView(
@@ -281,6 +344,9 @@ struct BasicStrategyDrillView: View {
         if model.phase == .miss, let result = model.result {
             return Text("Correct: \(result.action.label). ").bold().foregroundStyle(Theme.accentInk)
                 + Text(result.reason).foregroundStyle(Theme.midInk)
+        }
+        if model.phase == .over {
+            return Text(model.handOver).bold().foregroundStyle(Theme.accentInk)
         }
         let question = model.question
         let prefix = question.prefix.isEmpty ? Text("") : Text("\(question.prefix) ")

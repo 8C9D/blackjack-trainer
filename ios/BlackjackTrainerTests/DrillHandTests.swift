@@ -83,6 +83,27 @@ struct DrillHandTests {
             .contains(.surrender))
     }
 
+    /// Past two cards there is no pair to name, and an ace may have softened.
+    @Test func labelsAHandPlayedOutByItsNCardTotal() {
+        #expect(handQuestion([card(.four), card(.four, .hearts), card(.eight)],
+                             dealerUpcard: card(.six))
+                == HandQuestion(prefix: "Hard", value: "16", dealer: "6"))
+        #expect(handQuestion([card(.ace), card(.two), card(.four)], dealerUpcard: card(.six))
+            == HandQuestion(prefix: "Soft", value: "17", dealer: "6"))
+        // The ace demotes to 1 rather than reading as a soft 27.
+        #expect(handQuestion([card(.ace), card(.nine), card(.seven)], dealerUpcard: card(.six))
+            == HandQuestion(prefix: "Hard", value: "17", dealer: "6"))
+    }
+
+    /// Double, split and surrender are first-two-card actions, and insurance was
+    /// settled before the hand was played, so a drawn card leaves hit and stand.
+    @Test func leavesOnlyHitAndStandOnceTheHandIsPastTwoCards() {
+        let deep = [card(.eight), card(.eight, .hearts), card(.two)]
+        #expect(legalActionsFor(
+            deep, dealerUpcard: card(.ace), options: lsOn, surrenderAlways: true
+        ) == [.hit, .stand])
+    }
+
     @Test func offersSurrenderRegardlessOfTheRuleWhenSurrenderAlwaysIsSet() {
         #expect(legalActionsFor(
             nonPair, dealerUpcard: card(.ten), options: .default, surrenderAlways: true
