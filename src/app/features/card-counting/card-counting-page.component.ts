@@ -22,6 +22,7 @@ import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.serv
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
 import { DeckSpeedStatsService } from '../../core/services/deck-speed-stats.service';
 import { CardGeneratorService } from '../../core/services/card-generator.service';
+import { CountDriftService } from '../../core/services/count-drift.service';
 import { CountingEngineService } from '../../core/services/counting-engine.service';
 import { DeckEstimationStatsService } from '../../core/services/deck-estimation-stats.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
@@ -234,6 +235,9 @@ export class CardCountingPageComponent {
   protected readonly betSpreadStatsService = inject(BetSpreadStatsService);
   // Deck-speed accuracy plus the fastest correct countdown.
   protected readonly deckSpeedStatsService = inject(DeckSpeedStatsService);
+  // Which side a wrong count lands on, over every mode that answers one — the
+  // half of a miscount accuracy alone never carried.
+  private readonly drift = inject(CountDriftService);
 
   protected readonly session = new DrillSession();
 
@@ -569,6 +573,7 @@ export class CardCountingPageComponent {
       );
       this.result.set(evaluated);
       this.deckSpeedStatsService.recordRound(evaluated.isCorrect, this.elapsedMs);
+      this.drift.record(evaluated.userRunningCount, evaluated.correctRunningCount);
       isCorrect = evaluated.isCorrect;
     } else if (s.mode === 'true-count') {
       if (this.liveShoeTrueCount()) {
@@ -588,6 +593,7 @@ export class CardCountingPageComponent {
       const evaluated = this.engine.evaluate(this.cards(), userCount, this.system());
       this.result.set(evaluated);
       this.statsService.recordAttempt(evaluated.isCorrect);
+      this.drift.record(evaluated.userRunningCount, evaluated.correctRunningCount);
       isCorrect = evaluated.isCorrect;
     }
     // Every graded rep is one hand toward the daily goal.
@@ -614,6 +620,7 @@ export class CardCountingPageComponent {
     );
     this.result.set(evaluated);
     this.statsService.recordAttempt(evaluated.countCorrect);
+    this.drift.record(evaluated.userRunningCount, evaluated.correctRunningCount);
     this.keyCountStatsService.recordAttempt(evaluated.advantageCorrect);
     this.history.recordHand(evaluated.isCorrect);
     this.session.record(evaluated.isCorrect);

@@ -4,6 +4,7 @@ import { Router, provideRouter } from '@angular/router';
 import { BasicStrategyStatsService } from '../../core/services/basic-strategy-stats.service';
 import { BankrollService } from '../../core/services/bankroll.service';
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
+import { CountDriftService } from '../../core/services/count-drift.service';
 import { DeviationStatsService } from '../../core/services/deviation-stats.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
 import { MissTallyService, type ScenarioRef } from '../../core/services/miss-tally.service';
@@ -236,6 +237,40 @@ describe('ProgressPageComponent', () => {
       const cells = fixture.nativeElement.querySelectorAll('.progress__good');
       expect(cells.length).toBe(1);
       expect((cells[0] as HTMLElement).textContent!.trim()).toBe('85%');
+    });
+
+    // Accuracy says a count was wrong and never how, and the two ways to be
+    // wrong want different practice.
+    describe('which side the counts land on', () => {
+      const notes = (fixture: ComponentFixture<ProgressPageComponent>) =>
+        [...fixture.nativeElement.querySelectorAll('.progress__week-note')]
+          .map((n) => (n as HTMLElement).textContent!.replace(/\s+/g, ' ').trim())
+          .join(' ');
+
+      it('says nothing until there are enough counts to lean', () => {
+        const drift = TestBed.inject(CountDriftService);
+        drift.record(3, 5);
+        drift.record(4, 5);
+        expect(notes(createPage().fixture)).not.toContain('low');
+      });
+
+      it('names each side once there are', () => {
+        const drift = TestBed.inject(CountDriftService);
+        for (const [answer, actual] of [
+          [1, 3],
+          [2, 4],
+          [0, 1],
+          [5, 4],
+          [2, 2],
+        ]) {
+          drift.record(answer, actual);
+        }
+        const text = notes(createPage().fixture);
+        expect(text).toContain('Your last 5 counts');
+        expect(text).toContain('3 low');
+        expect(text).toContain('1 high');
+        expect(text).toContain('1 exact');
+      });
     });
   });
 

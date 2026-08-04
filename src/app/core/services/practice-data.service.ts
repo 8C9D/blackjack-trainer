@@ -4,6 +4,7 @@ import { BankrollService } from './bankroll.service';
 import { BasicStrategyStatsService } from './basic-strategy-stats.service';
 import { BetSpreadStatsService } from './bet-spread-stats.service';
 import { CardCountingStatsService } from './card-counting-stats.service';
+import { CountDriftService } from './count-drift.service';
 import { DeckSpeedStatsService } from './deck-speed-stats.service';
 import { DeckEstimationStatsService } from './deck-estimation-stats.service';
 import { DeviationStatsService } from './deviation-stats.service';
@@ -24,6 +25,7 @@ export class PracticeDataService {
     inject(BasicStrategyStatsService),
     inject(DeviationStatsService),
     inject(CardCountingStatsService),
+    inject(CountDriftService),
     inject(TrueCountStatsService),
     inject(DeckEstimationStatsService),
     inject(KeyCountStatsService),

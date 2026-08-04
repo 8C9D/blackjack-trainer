@@ -147,6 +147,21 @@ families, and more) — see the in-app picker for the full list:
   Blackjack Review set and appear in the picker, but are included for completeness
   rather than training.
 
+#### Which side your counts land on
+
+Accuracy says a count was wrong; it never says _how_, and the two ways to be wrong want different practice.
+A count that lands under nearly every time is dropping the same thing each shoe - a rank, or the second card of a pair flashed together.
+One that scatters is being lost and restarted.
+The app has had this figure on every miss it ever graded and threw it away.
+
+- **Every wrong count says how far and which way**, in the words the table's count check has always used: "Your count came in 2 points low over 20 cards."
+  One helper behind both surfaces, since the same miss described two ways reads as two different mistakes.
+  Fractional systems answer in halves, so the noun follows the value ("0.5 points low").
+- **The last 20 answers are remembered** as signed distances, across every mode that answers a running count - the counting drill, the key-count round, the deck-speed countdown, and the count carried out of the showdown - and the Progress screen names the shape: "Your last 20 counts: 14 low · 2 high · 4 exact."
+- **Named, not diagnosed.** The line says which side and adds only that missing on the same side every time and missing all over are different problems; the app has no way to tell which card went missing.
+  It stays silent under five rounds, where a lean is not yet a lean.
+- The true-count modes are left out: their answer is a different number, and the deck-estimate line already accounts for what moved it.
+
 #### Shared mechanics
 
 - **Configurable drill** — number of cards (1–200) and time between cards (≥ 100ms), set on the Settings screen (the drill pages host no configuration).
@@ -696,11 +711,12 @@ different tally and does **not** extend `StatsStore`:
 | Showdown        | `blackjack-showdown-stats`        | `{ hands, wins, losses, pushes, blackjacks }`  |
 | Showdown chips  | `blackjack-showdown-bankroll`     | `{ bankroll, wagered, net }` (bet sizing only) |
 
-The Flow shell adds three keys of its own:
+The Flow shell adds four keys of its own:
 
 | Store            | Key                          | Shape                                                                                 |
 | ---------------- | ---------------------------- | ------------------------------------------------------------------------------------- |
 | Flow prefs       | `blackjack-flow-prefs`       | last trainer, daily goal, theme, table rules, per-trainer drill settings              |
+| Count drift      | `blackjack-count-drift`      | the last 20 running-count answers as signed distances from the real count             |
 | Practice history | `blackjack-practice-history` | per-day hands / graded / correct counts (local calendar dates, pruned past ~400 days) |
 | Miss tally       | `blackjack-miss-tally`       | per-scenario attempt/miss day tallies + clear streak (Basic Strategy, Deviations)     |
 

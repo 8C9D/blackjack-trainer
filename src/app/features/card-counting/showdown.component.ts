@@ -31,7 +31,7 @@ import {
   DEFAULT_BET_RAMP,
   type BetRamp,
 } from '../../core/models/bet-ramp.model';
-import { formatSignedCount } from '../../core/models/card-counting.model';
+import { countDriftLabel, formatSignedCount } from '../../core/models/card-counting.model';
 import { cardHighValue, isAce, type Card } from '../../core/models/card.model';
 import { cardCountValue, type CountingSystem } from '../../core/models/counting-system.model';
 import { deviationIndexNote } from '../../core/models/deviation.model';
@@ -76,6 +76,7 @@ import {
 } from '../../core/services/miss-tally.service';
 import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.service';
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
+import { CountDriftService } from '../../core/services/count-drift.service';
 import { CountingEngineService } from '../../core/services/counting-engine.service';
 import { ShowdownPlayStatsService } from '../../core/services/showdown-play-stats.service';
 import { ShowdownStatsService } from '../../core/services/showdown-stats.service';
@@ -476,6 +477,9 @@ export class ShowdownComponent implements OnInit {
   private readonly betSpreadStats = inject(BetSpreadStatsService);
   // And the count carried off it is the same skill the running-count drill does.
   private readonly countStats = inject(CardCountingStatsService);
+  // The count on the way out is the same skill the drill grades, so which side
+  // it lands on is remembered in the same place.
+  private readonly drift = inject(CountDriftService);
   private readonly countingEngine = inject(CountingEngineService);
 
   // The persistent shoe the player just counted; the showdown deals from it so
@@ -1327,15 +1331,13 @@ export class ShowdownComponent implements OnInit {
     const actual = this.visibleRunningCount();
     const correct = answer === actual;
     this.countStats.recordAttempt(correct);
-    const drift = answer - actual;
+    this.drift.record(answer, actual);
     this.countVerdict.set({
       correct,
       headline: `The running count is ${formatSignedCount(actual)}.`,
       reason: correct
         ? `You carried it through ${this.cardsSeen()} cards at the table.`
-        : `You said ${formatSignedCount(answer)} — ${Math.abs(drift)} ${
-            Math.abs(drift) === 1 ? 'point' : 'points'
-          } ${drift > 0 ? 'high' : 'low'} over ${this.cardsSeen()} cards.`,
+        : `You said ${formatSignedCount(answer)} — ${countDriftLabel(answer - actual)} over ${this.cardsSeen()} cards.`,
     });
   }
 

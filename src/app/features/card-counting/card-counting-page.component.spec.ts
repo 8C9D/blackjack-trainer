@@ -9,6 +9,7 @@ import type {
 import type { CountingSystem } from '../../core/models/counting-system.model';
 import { Shoe } from '../../core/models/shoe.model';
 import { HI_LO } from '../../data/counting-systems';
+import { CountDriftService } from '../../core/services/count-drift.service';
 import { CountingEngineService } from '../../core/services/counting-engine.service';
 import { FlowPrefsService, type CountingPrefs } from '../../core/services/flow-prefs.service';
 import { PracticeHistoryService } from '../../core/services/practice-history.service';
@@ -508,6 +509,35 @@ describe('CardCountingPageComponent', () => {
       const { c } = createPage();
       c.start();
       expect(c.state()).toBe('idle');
+    });
+
+    // Which side a count lands on is the half of a miscount accuracy never
+    // carried, and every mode that answers a running count feeds it.
+    it('records which side the running count landed on', () => {
+      updateSetting('numberOfCards', 1);
+      updateSetting('millisecondsBetweenCards', 100);
+      const { c } = createPage();
+      c.start();
+      vi.advanceTimersByTime(100);
+      c.onAnswer(4);
+      const drift = TestBed.inject(CountDriftService).drifts();
+      expect(drift.length).toBe(1);
+      const graded = c.result() as { correctRunningCount: number };
+      expect(drift[0]).toBe(4 - graded.correctRunningCount);
+    });
+
+    // A true count is a different number; the deck-estimate line accounts for it.
+    it('records no drift for a mode that answers a true count', () => {
+      updateSetting('mode', 'true-count');
+      updateSetting('trueCountSource', 'classic');
+      updateSetting('decksRemaining', 2);
+      updateSetting('numberOfCards', 1);
+      updateSetting('millisecondsBetweenCards', 100);
+      const { c } = createPage();
+      c.start();
+      vi.advanceTimersByTime(100);
+      c.onAnswer(3);
+      expect(TestBed.inject(CountDriftService).drifts()).toEqual([]);
     });
   });
 
