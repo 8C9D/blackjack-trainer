@@ -6,8 +6,15 @@ struct DeviationsDrillView: View {
     @State private var model: DeviationsDrillModel
     let onExit: () -> Void
 
-    init(app: AppModel, review: Bool = false, onExit: @escaping () -> Void) {
-        _model = State(initialValue: DeviationsDrillModel(app: app, review: review))
+    init(
+        app: AppModel,
+        review: Bool = false,
+        pinned: ScenarioRef? = nil,
+        onExit: @escaping () -> Void
+    ) {
+        _model = State(
+            initialValue: DeviationsDrillModel(app: app, review: review, pinned: pinned)
+        )
         self.onExit = onExit
     }
 
@@ -48,6 +55,13 @@ struct DeviationsDrillView: View {
             if let note = model.indexNote {
                 AdvisoryNoteView(text: note)
                     .padding(.top, 10)
+            }
+            if let pinnedLabel = model.pinnedLabel {
+                AdvisoryNoteView(
+                    text: "Drilling \(pinnedLabel) — every hand this round, "
+                        + "at the counts your settings deal."
+                )
+                .padding(.top, 10)
             }
             FlowStageView(
                 player: model.hand,

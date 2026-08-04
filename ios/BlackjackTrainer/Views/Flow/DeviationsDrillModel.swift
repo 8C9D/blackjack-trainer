@@ -42,6 +42,9 @@ final class DeviationsDrillModel {
     /// A review round drills only the weak list; an ordinary round mixes it in.
     @ObservationIgnored private var reviewing = false
 
+    /// One hand, every deal: the chart's own entry into this drill.
+    @ObservationIgnored private(set) var pinned: ScenarioRef?
+
     /// The deal's first decision — the question the drill has always asked, and
     /// the only one with a weak spot to file or a clock worth reading. A hit
     /// deepens the hand and a split replaces it; either way what follows is a
@@ -60,7 +63,8 @@ final class DeviationsDrillModel {
         scheduler: FlowAdvanceScheduler? = nil,
         advanceDelay: Duration = .milliseconds(500),
         now: @escaping () -> Date = { Date() },
-        review: Bool = false
+        review: Bool = false,
+        pinned: ScenarioRef? = nil
     ) {
         self.evaluator = evaluator
         self.generator = generator
@@ -82,6 +86,7 @@ final class DeviationsDrillModel {
         )
         prefs.setLastTrainer(.deviations)
         target = nextSessionTarget(handsToday: history.handsToday(), goal: prefs.prefs.dailyGoal)
+        self.pinned = pinned
         scenario = firstScenario()
         hands = [scenario.player.cards]
         // Arriving from Progress's weak-spot card, which is the same promise the
@@ -96,7 +101,8 @@ final class DeviationsDrillModel {
         scheduler: FlowAdvanceScheduler? = nil,
         advanceDelay: Duration = .milliseconds(500),
         now: @escaping () -> Date = { Date() },
-        review: Bool = false
+        review: Bool = false,
+        pinned: ScenarioRef? = nil
     ) {
         self.init(
             evaluator: app.deviationEvaluator,
@@ -109,7 +115,8 @@ final class DeviationsDrillModel {
             scheduler: scheduler,
             advanceDelay: advanceDelay,
             now: now,
-            review: review
+            review: review,
+            pinned: pinned
         )
     }
 
@@ -224,6 +231,10 @@ final class DeviationsDrillModel {
     private func startRound(reviewing: Bool) {
         guard phase == .done else { return }
         self.reviewing = reviewing
+        // The pin belongs to the round the chart started, the same way review
+        // mode belongs to the round the Done screen started: another round is
+        // ordinary practice unless it is asked for again.
+        pinned = nil
         session.reset()
         target = nextSessionTarget(handsToday: history.handsToday(), goal: prefs.prefs.dailyGoal)
         deal(firstScenario())
@@ -241,15 +252,81 @@ final class DeviationsDrillModel {
         }
         deal(nextScenario())
     }
+}
 
+/// The hand-by-hand half of the loop: what a correct answer does to the cards in
+/// front of you. An extension so the class body stays inside the lint limit;
+/// `private` is file-scoped, so the generator and scheduler are still in reach.
+@MainActor
+private extension DeviationsDrillModel {
+    func drawToActive() {
+        hands[activeIndex].append(generator.generateCard())
+        // Busting, or reaching 21, ends the hand with nothing left to ask.
+        if Hand.total(hand) >= 21 {
+            holdThenFinish()
+            return
+        }
+        ask()
+    }
+
+    /// The two halves each keep one card; the one in play is dealt its second.
+    func splitActive() {
+        splitAces = hand.first?.isAce ?? false
+        hands = splitHandAt(hands, activeIndex)
+        dealSecondCard()
+    }
+
+    /// A hand out of a split arrives holding one card. Deal its second, then ask —
+    /// unless it is a split ace, which takes that card and stands, or it landed on
+    /// 21, which leaves nothing to decide either.
+    func dealSecondCard() {
+        hands[activeIndex].append(generator.generateCard())
+        if splitAces || Hand.total(hand) >= 21 {
+            holdThenFinish()
+            return
+        }
+        ask()
+    }
+
+    /// Hold the card that ended the hand on screen — that is the answer to the
+    /// decision before it — then move on.
+    func holdThenFinish() {
+        phase = .over
+        scheduler.schedule(after: advanceDelay * 2) { [weak self] in self?.finishHand() }
+    }
+
+    /// The hand in front of you is done. A split leaves others waiting behind it;
+    /// when none is left, so is the deal.
+    func finishHand() {
+        let next = activeIndex + 1
+        guard next < hands.count else {
+            advance()
+            return
+        }
+        activeIndex = next
+        dealSecondCard()
+    }
+
+    func ask() {
+        result = nil
+        phase = .question
+        askedAt = now()
+    }
+}
+
+/// Which hand comes next, and at what count. An extension so the class body stays
+/// inside the lint limit; `private` is file-scoped, so the stores are in reach.
+@MainActor
+extension DeviationsDrillModel {
     /// Every later hand: weighted toward the scenarios being missed, so a weakness
     /// gets repetition inside the session that surfaced it. A review round draws
     /// from the weak list every time. This applies in both practice modes — a weak
     /// spot recorded in deviation-only mode is itself a deviation scenario, and
     /// hand one has always been drawn this way.
     private func nextScenario() -> DeviationScenario {
-        let share = reviewing ? 1 : weakSpotShare
         let source = { Double.random(in: 0 ..< 1) }
+        if let pinned { return pinnedScenario(pinned, random: source) }
+        let share = reviewing ? 1 : weakSpotShare
         if let weak = pickWeakSpot(weakSpots, random: source, share: share) {
             let base = scenarioFromRef(weak.ref, random: source)
             return DeviationScenario(
@@ -272,6 +349,9 @@ final class DeviationsDrillModel {
     }
 
     private func firstScenario() -> DeviationScenario {
+        if let pinned {
+            return pinnedScenario(pinned, random: { Double.random(in: 0 ..< 1) })
+        }
         if let weak = missTally.weakSpotFor(.deviations) {
             let source = { Double.random(in: 0 ..< 1) }
             let base = scenarioFromRef(weak.ref, random: source)
@@ -282,6 +362,18 @@ final class DeviationsDrillModel {
             )
         }
         return generateScenario()
+    }
+
+    /// The pinned hand, at whatever count the settings deal: the hand is pinned
+    /// and the count is not, or the round only ever asks the side of an index the
+    /// trainee already knows.
+    private func pinnedScenario(_ ref: ScenarioRef, random: () -> Double) -> DeviationScenario {
+        let base = scenarioFromRef(ref, random: random)
+        return DeviationScenario(
+            player: base.player,
+            dealerUpcard: base.dealerUpcard,
+            trueCount: pickTrueCount()
+        )
     }
 
     /// 'all-hands' draws a uniformly random hand; 'deviation-only' builds the hand
@@ -375,6 +467,12 @@ extension DeviationsDrillModel {
         hands.count < 2 ? "" : "Hand \(activeIndex + 1) of \(hands.count)"
     }
 
+    /// A pinned round narrows the practice to one hand, which is worth saying:
+    /// the count still moves, so nothing else on screen says the hand will not.
+    var pinnedLabel: String? {
+        pinned.map(scenarioLabel)
+    }
+
     /// Why the played-out hand stopped asking: a hit that busted, one that reached
     /// 21, or a split ace, which takes its one card and stands.
     var handOver: String {
@@ -435,65 +533,5 @@ extension DeviationsDrillModel {
 
     var clearedSpots: [WeakSpot] {
         missTally.clearedSpots(.deviations)
-    }
-}
-
-/// The hand-by-hand half of the loop: what a correct answer does to the cards in
-/// front of you. An extension so the class body stays inside the lint limit;
-/// `private` is file-scoped, so the generator and scheduler are still in reach.
-@MainActor
-private extension DeviationsDrillModel {
-    func drawToActive() {
-        hands[activeIndex].append(generator.generateCard())
-        // Busting, or reaching 21, ends the hand with nothing left to ask.
-        if Hand.total(hand) >= 21 {
-            holdThenFinish()
-            return
-        }
-        ask()
-    }
-
-    /// The two halves each keep one card; the one in play is dealt its second.
-    func splitActive() {
-        splitAces = hand.first?.isAce ?? false
-        hands = splitHandAt(hands, activeIndex)
-        dealSecondCard()
-    }
-
-    /// A hand out of a split arrives holding one card. Deal its second, then ask —
-    /// unless it is a split ace, which takes that card and stands, or it landed on
-    /// 21, which leaves nothing to decide either.
-    func dealSecondCard() {
-        hands[activeIndex].append(generator.generateCard())
-        if splitAces || Hand.total(hand) >= 21 {
-            holdThenFinish()
-            return
-        }
-        ask()
-    }
-
-    /// Hold the card that ended the hand on screen — that is the answer to the
-    /// decision before it — then move on.
-    func holdThenFinish() {
-        phase = .over
-        scheduler.schedule(after: advanceDelay * 2) { [weak self] in self?.finishHand() }
-    }
-
-    /// The hand in front of you is done. A split leaves others waiting behind it;
-    /// when none is left, so is the deal.
-    func finishHand() {
-        let next = activeIndex + 1
-        guard next < hands.count else {
-            advance()
-            return
-        }
-        activeIndex = next
-        dealSecondCard()
-    }
-
-    func ask() {
-        result = nil
-        phase = .question
-        askedAt = now()
     }
 }
