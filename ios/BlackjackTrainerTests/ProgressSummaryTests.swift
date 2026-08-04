@@ -89,6 +89,33 @@ struct ProgressSummaryTests {
         )
     }
 
+    @Test func missedCountsLabelReadsLowToHighAndCollapsesRepeats() {
+        func spot(_ counts: [Int]) -> WeakSpot {
+            WeakSpot(
+                ref: ScenarioRef(kind: "hard", hand: "16", dealer: "10"),
+                label: "16 vs 10", misses: 1, attempts: 1, streak: 0, missedCounts: counts
+            )
+        }
+        // Basic Strategy files no counts, so its spots say nothing about one.
+        #expect(ProgressSummary.missedCountsLabel(spot([])) == nil)
+        #expect(ProgressSummary.missedCountsLabel(spot([2, -1, 0])) == "TC -1, 0, +2")
+        // Three misses at the same count is one lesson, not three.
+        #expect(ProgressSummary.missedCountsLabel(spot([2, 2, 2])) == "TC +2")
+        // Both sides of an index are opposite mistakes and both must survive.
+        #expect(ProgressSummary.missedCountsLabel(spot([-1, 2])) == "TC -1, +2")
+    }
+
+    @Test func spotDetailNamesTheCountsOnlyWhenTheScenarioKeptThem() {
+        func spot(_ counts: [Int]) -> WeakSpot {
+            WeakSpot(
+                ref: ScenarioRef(kind: "hard", hand: "16", dealer: "10"),
+                label: "16 vs 10", misses: 3, attempts: 7, streak: 0, missedCounts: counts
+            )
+        }
+        #expect(ProgressSummary.spotDetail(spot([])) == "missed 3 of 7")
+        #expect(ProgressSummary.spotDetail(spot([2, -1])) == "missed 3 of 7 at TC -1, +2")
+    }
+
     @Test func signedChipTotalsCarryTheirSign() {
         #expect(ProgressSummary.signed(45) == "+45")
         #expect(ProgressSummary.signed(-20) == "-20")
