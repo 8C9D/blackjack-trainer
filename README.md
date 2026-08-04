@@ -157,6 +157,7 @@ The app has had this figure on every miss it ever graded and threw it away.
 - **Every wrong count says how far and which way**, in the words the table's count check has always used: "Your count came in 2 points low over 20 cards."
   One helper behind both surfaces, since the same miss described two ways reads as two different mistakes.
   Fractional systems answer in halves, so the noun follows the value ("0.5 points low").
+  The cards are counted only where this round's cards are the whole count: a key-count round carries the shoe's prior, so its drift is over every card dealt since the shuffle and the line drops the figure rather than naming the wrong one.
 - **The last 20 answers are remembered** as signed distances, across every mode that answers a running count - the counting drill, the key-count round, the deck-speed countdown, and the count carried out of the showdown - and the Progress screen names the shape: "Your last 20 counts: 14 low · 2 high · 4 exact."
 - **Named, not diagnosed.** The line says which side and adds only that missing on the same side every time and missing all over are different problems; the app has no way to tell which card went missing.
   It stays silent under five rounds, where a lean is not yet a lean.
@@ -195,8 +196,12 @@ True count mode has two sources for "decks remaining":
   which left the question the estimate exists for unanswered: at a table the
   only divisor a counter has is the one they estimated.
   So the panel does that division as well: "Your estimate: -2 ÷ 1 deck = true
-  count -2 — the count you would have played on", and it says when the answer
-  given is exactly that, since then the estimate is what moved it.
+  count -2."
+  Where the answer given is exactly that, it says so — "the count you would have
+  played on, and the answer you gave" — and only there: an answer that landed
+  somewhere else (the shoe's own count most of all, which is marked _correct_)
+  is not a count the trainee played on, and claiming it would contradict the
+  verdict two lines above.
   An estimate that lands on the same true count anyway is named as costing
   nothing, because how far out an estimate is only matters against the running
   count it divides — five decks out is nothing at -2 and is the whole bet at

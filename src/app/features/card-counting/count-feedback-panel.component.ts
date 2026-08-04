@@ -278,12 +278,13 @@ export class CountFeedbackPanelComponent {
   protected readonly driftLine = computed<string | null>(() => {
     const r = this.result();
     if (r.mode === 'true-count' || r.mode === 'bet-spread') return null;
-    const drift =
-      r.mode === 'key-count' || r.mode === 'running-count' || r.mode === 'deck-speed'
-        ? r.userRunningCount - r.correctRunningCount
-        : 0;
+    const drift = r.userRunningCount - r.correctRunningCount;
     if (drift === 0) return null;
-    return `Your count came in ${countDriftLabel(drift)} over ${countOf(r.cards.length, 'card')}.`;
+    // "over 20 cards" is only true where this round's cards are the whole count.
+    // A key-count round carries the shoe's prior — the drift is over every card
+    // dealt since the shuffle, and this panel knows how many only for the round.
+    const over = r.mode === 'key-count' ? '' : ` over ${countOf(r.cards.length, 'card')}`;
+    return `Your count came in ${countDriftLabel(drift)}${over}.`;
   });
 
   // The estimate is graded on its own (inside ±0.5 or not) and the true count
@@ -382,8 +383,13 @@ export class CountFeedbackPanelComponent {
     if (effect.matchesActual) {
       return `${divided} — the same true count, so the estimate cost nothing here.`;
     }
-    const agrees = effect.matchesAnswer ? ', and the answer you gave' : '';
-    return `${divided} — the count you would have played on${agrees}.`;
+    // "The count you would have played on" is only true where the answer agrees
+    // with the estimate. Say it of an answer that lands somewhere else — the
+    // shoe's own count, most of all, which is marked correct — and the panel
+    // contradicts the verdict two lines above it.
+    return effect.matchesAnswer
+      ? `${divided} — the count you would have played on, and the answer you gave.`
+      : `${divided}.`;
   }
 
   // What that count would have bet, when the ramp says something different

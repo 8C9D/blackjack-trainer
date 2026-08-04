@@ -11,10 +11,14 @@ private func decksLabel(_ decks: Double) -> String {
 /// count check uses on the way out — it is the same skill and the same miss, and
 /// two numbers side by side leave the subtraction to the trainee. Nil on a
 /// correct count.
-private func driftLine(answer: Double, actual: Double, cards: Int) -> String? {
+/// `cards` is nil where this round's cards are not the whole count: a key-count
+/// round carries the shoe's prior, so its drift is over every card dealt since
+/// the shuffle and this panel knows how many only for the round.
+private func driftLine(answer: Double, actual: Double, cards: Int?) -> String? {
     let drift = answer - actual
     guard drift != 0 else { return nil }
-    return "Your count came in \(countDriftLabel(drift)) over \(countOf(cards, "card"))."
+    let over = cards.map { " over \(countOf($0, "card"))" } ?? ""
+    return "Your count came in \(countDriftLabel(drift))\(over)."
 }
 
 /// The same division the running ÷ decks line does, with the divisor the player
@@ -27,8 +31,13 @@ private func estimateLine(_ runningCount: Double, _ effect: DeckEstimateEffect) 
     if effect.matchesActual {
         return "\(divided) — the same true count, so the estimate cost nothing here."
     }
-    let agrees: String = effect.matchesAnswer ? ", and the answer you gave" : ""
-    return "\(divided) — the count you would have played on\(agrees)."
+    // "The count you would have played on" is only true where the answer agrees
+    // with the estimate. Say it of an answer that lands somewhere else — the
+    // shoe's own count, most of all, which is marked correct — and the panel
+    // contradicts the verdict two lines above it.
+    return effect.matchesAnswer
+        ? "\(divided) — the count you would have played on, and the answer you gave."
+        : "\(divided)."
 }
 
 /// What that count would have bet, when the ramp says something different there.
@@ -269,7 +278,7 @@ extension CountFeedbackView {
         if let line = driftLine(
             answer: result.userRunningCount,
             actual: result.correctRunningCount,
-            cards: result.cards.count
+            cards: nil
         ) {
             Text(line)
                 .font(.footnote)
