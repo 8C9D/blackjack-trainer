@@ -309,7 +309,7 @@ struct ProgressBodyView: View {
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(Theme.ink)
                         Spacer(minLength: 8)
-                        Text("missed \(spot.misses) of \(spot.attempts)")
+                        Text(ProgressSummary.spotDetail(spot))
                             .font(.system(size: 12))
                             .foregroundStyle(Theme.muted)
                     }

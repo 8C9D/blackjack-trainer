@@ -152,4 +152,22 @@ enum ProgressSummary {
     static func signed(_ net: Double) -> String {
         CountFormat.signedCount(net)
     }
+
+    /// The true counts a scenario was recently missed at, deduplicated and read
+    /// low to high: "TC -1, +2" says the trainee got the hand wrong on both sides
+    /// of its index, which is a different lesson from missing it twice on the
+    /// same side. Nil for Basic Strategy, where the count is not the question.
+    /// Mirrors `missedCountsLabel`.
+    static func missedCountsLabel(_ spot: WeakSpot) -> String? {
+        let distinct = Set(spot.missedCounts).sorted()
+        guard !distinct.isEmpty else { return nil }
+        return "TC " + distinct.map(DeviationFeedback.formatTrueCount).joined(separator: ", ")
+    }
+
+    /// "missed 3 of 7 at TC -1, +2". A deviation missed on both sides of its index
+    /// is two different mistakes, and the hand's label carries neither.
+    static func spotDetail(_ spot: WeakSpot) -> String {
+        let counts = missedCountsLabel(spot).map { " at \($0)" } ?? ""
+        return "missed \(spot.misses) of \(spot.attempts)\(counts)"
+    }
 }
