@@ -166,4 +166,58 @@ struct CountingDrillTests {
             system: ko, numberOfDecks: 4, priorRunningCount: 0
         ) == nil)
     }
+
+    // MARK: - What the decks estimate did to the count
+
+    @Test func deckEstimateEffectDividesByTheEstimateThePlayerHad() throws {
+        // +6 over a shoe really holding 2 decks is +3; read as 1 deck it is +6.
+        let effect = try #require(DeckEstimateEffect(
+            runningCount: 6, estimate: 1, correctTrueCount: 3, userTrueCount: 6
+        ))
+        #expect(effect.impliedTrueCount == 6)
+        #expect(effect.estimate == 1)
+    }
+
+    @Test func deckEstimateEffectTruncatesTowardZero() {
+        #expect(DeckEstimateEffect(
+            runningCount: 6, estimate: 2.5, correctTrueCount: 2, userTrueCount: 2
+        )?.impliedTrueCount == 2)
+        #expect(DeckEstimateEffect(
+            runningCount: -6, estimate: 2.5, correctTrueCount: -2, userTrueCount: -2
+        )?.impliedTrueCount == -2)
+    }
+
+    @Test func deckEstimateEffectMarksAnEstimateThatCostsNothing() {
+        // Five decks out, and at a running count of -2 it changes nothing.
+        #expect(DeckEstimateEffect(
+            runningCount: -2, estimate: 1, correctTrueCount: 0, userTrueCount: 0
+        )?.matchesActual == false)
+        #expect(DeckEstimateEffect(
+            runningCount: -2, estimate: 3, correctTrueCount: 0, userTrueCount: 0
+        )?.matchesActual == true)
+    }
+
+    @Test func deckEstimateEffectMarksAnAnswerThatFollowsFromIt() {
+        #expect(DeckEstimateEffect(
+            runningCount: 6, estimate: 3, correctTrueCount: 3, userTrueCount: 2
+        )?.matchesAnswer == true)
+        #expect(DeckEstimateEffect(
+            runningCount: 6, estimate: 3, correctTrueCount: 3, userTrueCount: 3
+        )?.matchesAnswer == false)
+    }
+
+    @Test func deckEstimateEffectIsNilWithoutAnEstimateItCanDivideBy() {
+        #expect(DeckEstimateEffect(
+            runningCount: 6, estimate: nil, correctTrueCount: 3, userTrueCount: 3
+        ) == nil)
+        #expect(DeckEstimateEffect(
+            runningCount: 6, estimate: 0, correctTrueCount: 3, userTrueCount: 3
+        ) == nil)
+        #expect(DeckEstimateEffect(
+            runningCount: 6, estimate: -1, correctTrueCount: 3, userTrueCount: 3
+        ) == nil)
+        #expect(DeckEstimateEffect(
+            runningCount: 6, estimate: .nan, correctTrueCount: 3, userTrueCount: 3
+        ) == nil)
+    }
 }
