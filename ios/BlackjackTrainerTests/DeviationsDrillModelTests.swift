@@ -7,83 +7,7 @@ import Testing
 /// session lifecycle.
 @MainActor
 struct DeviationsDrillModelTests {
-    private func card(_ rank: Rank, _ suit: Suit = .spades) -> Card {
-        Card(rank: rank, suit: suit)
-    }
-
-    private func scenario(_ a: Rank, _ b: Rank, vs upcard: Rank, tc: Int) -> DeviationScenario {
-        DeviationScenario(
-            player: TwoCardHand(card(a), card(b, .hearts)),
-            dealerUpcard: card(upcard, .clubs),
-            trueCount: tc
-        )
-    }
-
-    private func freshDefaults() -> UserDefaults {
-        UserDefaults(suiteName: "test-\(UUID().uuidString)") ?? .standard
-    }
-
-    private struct Harness {
-        let model: DeviationsDrillModel
-        let scheduler: ManualFlowAdvanceScheduler
-        let prefs: FlowPrefsStore
-        let missTally: MissTallyStore
-    }
-
-    /// A generator pinned to one rank: `generateCard` reads rank and suit off one
-    /// call each, so a value inside the rank's 1/13 slice picks it exactly.
-    private func generator(drawing rank: Rank?) -> CardGenerator {
-        guard let rank, let index = Card.allRanks.firstIndex(of: rank) else {
-            return CardGenerator()
-        }
-        let value = (Double(index) + 0.5) / Double(Card.allRanks.count)
-        return CardGenerator(random: { value })
-    }
-
-    private func makeHarness(
-        dailyGoal: Int = 20,
-        systemId: String? = nil,
-        manualTrueCount: Int? = nil,
-        seedWeak: ScenarioRef? = nil,
-        missedAt: Int? = nil,
-        playHandsOut: Bool = true,
-        draws: Rank? = nil
-    ) -> Harness {
-        let defaults = freshDefaults()
-        let prefs = FlowPrefsStore(defaults: defaults)
-        prefs.setDailyGoal(Double(dailyGoal))
-        if let systemId {
-            prefs.updateCounting { $0.systemId = systemId }
-        }
-        if let manualTrueCount {
-            prefs.updateDeviations {
-                $0.trueCountSource = .manual
-                $0.manualTrueCount = manualTrueCount
-            }
-        }
-        let history = PracticeHistoryStore(defaults: defaults)
-        let missTally = MissTallyStore(defaults: defaults)
-        // Seeded before the model is built: the opening hand is chosen in init.
-        if let seedWeak {
-            missTally.record(.deviations, ref: seedWeak, correct: false, trueCount: missedAt)
-        }
-        let stats = SessionStatsStore(key: StatsKeys.deviation, defaults: defaults)
-        prefs.setPlayHandsOut(playHandsOut)
-        let scheduler = ManualFlowAdvanceScheduler()
-        let model = DeviationsDrillModel(
-            evaluator: TestEngines.shared.deviationEvaluator,
-            charts: TestEngines.shared.charts,
-            generator: generator(drawing: draws),
-            stats: stats,
-            prefs: prefs,
-            history: history,
-            missTally: missTally,
-            systems: TestEngines.shared.countingSystems,
-            scheduler: scheduler,
-            advanceDelay: .zero
-        )
-        return Harness(model: model, scheduler: scheduler, prefs: prefs, missTally: missTally)
-    }
+    typealias Harness = DeviationsFixture.Harness
 
     @Test func recordsItselfAsTheLastTrainer() {
         let h = makeHarness()
@@ -292,4 +216,31 @@ struct DeviationsDrillModelTests {
         let h = makeHarness(systemId: "does-not-exist")
         #expect(h.model.indexNote == nil)
     }
+}
+
+/// Thin file-scope forwarders to the shared fixture, so the specs above read the
+/// way they did when the harness lived in this file — and so neither suite's body
+/// grows past the lint limit.
+private func card(_ rank: Rank, _ suit: Suit = .spades) -> Card {
+    DeviationsFixture.card(rank, suit)
+}
+
+private func scenario(_ a: Rank, _ b: Rank, vs upcard: Rank, tc: Int) -> DeviationScenario {
+    DeviationsFixture.scenario(a, b, vs: upcard, tc: tc)
+}
+
+@MainActor
+private func makeHarness(
+    dailyGoal: Int = 20,
+    systemId: String? = nil,
+    manualTrueCount: Int? = nil,
+    seedWeak: ScenarioRef? = nil,
+    missedAt: Int? = nil,
+    playHandsOut: Bool = true,
+    draws: Rank? = nil
+) -> DeviationsFixture.Harness {
+    DeviationsFixture.makeHarness(
+        dailyGoal: dailyGoal, systemId: systemId, manualTrueCount: manualTrueCount,
+        seedWeak: seedWeak, missedAt: missedAt, playHandsOut: playHandsOut, draws: draws
+    )
 }

@@ -18,14 +18,6 @@ struct BasicStrategyDrillModelTests {
         DrillFixture.card(rank, suit)
     }
 
-    private func makeHarness(
-        dailyGoal: Int = 20,
-        options: EngineOptions = .default,
-        seedWeak: ScenarioRef? = nil
-    ) -> DrillFixture.Harness {
-        DrillFixture.makeHarness(dailyGoal: dailyGoal, options: options, seedWeak: seedWeak)
-    }
-
     // The app has graded every rep and never said how long it took, which at a
     // table is half of whether the chart is any use to you.
 
@@ -88,18 +80,22 @@ struct BasicStrategyDrillModelTests {
     // MARK: session setup
 
     @Test func recordsItselfAsTheLastTrainer() {
-        let h = makeHarness()
+        let h = DrillFixture.makeHarness()
         #expect(h.prefs.prefs.lastTrainer == .basicStrategy)
     }
 
     @Test func targetsTheDailyGoal() {
-        let h = makeHarness(dailyGoal: 20)
+        let h = DrillFixture.makeHarness(dailyGoal: 20)
         #expect(h.model.target == 20)
         #expect(h.model.handsToday == 0)
     }
 
     @Test func opensOnTheRecordedWeakSpot() {
-        let h = makeHarness(seedWeak: ScenarioRef(kind: "hard", hand: "16", dealer: "10"))
+        let h = DrillFixture.makeHarness(seedWeak: ScenarioRef(
+            kind: "hard",
+            hand: "16",
+            dealer: "10"
+        ))
         #expect(h.model.question == HandQuestion(prefix: "Hard", value: "16", dealer: "10"))
         #expect(h.model.phase == .question)
     }
@@ -107,7 +103,7 @@ struct BasicStrategyDrillModelTests {
     // MARK: correct answer — grade in place, auto-advance
 
     @Test func flashesThenAutoAdvancesWithZeroExtraTaps() {
-        let h = makeHarness()
+        let h = DrillFixture.makeHarness()
         h.model.deal(hitScenario)
         h.model.answer(.hit)
         #expect(h.model.phase == .flash)
@@ -119,7 +115,7 @@ struct BasicStrategyDrillModelTests {
     }
 
     @Test func ignoresFurtherAnswersWhileFlashing() {
-        let h = makeHarness()
+        let h = DrillFixture.makeHarness()
         h.model.deal(hitScenario)
         h.model.answer(.hit)
         h.model.answer(.stand)
@@ -129,7 +125,7 @@ struct BasicStrategyDrillModelTests {
     // MARK: miss — the only pause
 
     @Test func missShowsTheRuleAndWaits() {
-        let h = makeHarness()
+        let h = DrillFixture.makeHarness()
         h.model.deal(hitScenario)
         h.model.answer(.stand)
         #expect(h.model.phase == .miss)
@@ -142,7 +138,7 @@ struct BasicStrategyDrillModelTests {
     }
 
     @Test func continuesFromAMiss() {
-        let h = makeHarness()
+        let h = DrillFixture.makeHarness()
         h.model.deal(hitScenario)
         h.model.answer(.stand)
         #expect(h.model.phase == .miss)
@@ -154,7 +150,7 @@ struct BasicStrategyDrillModelTests {
     // MARK: poka-yoke
 
     @Test func disablesIllegalActionsAndKeepsThemInert() {
-        let h = makeHarness()
+        let h = DrillFixture.makeHarness()
         h.model.deal(hitScenario) // non-pair, no ace up, LS off
         #expect(h.model.legalActions == [.hit, .stand, .double])
         h.model.answer(.split)
@@ -165,13 +161,16 @@ struct BasicStrategyDrillModelTests {
     }
 
     @Test func offersSurrenderOnceLateSurrenderIsOn() {
-        let h = makeHarness(options: EngineOptions(doubleAfterSplit: false, lateSurrender: true))
+        let h = DrillFixture.makeHarness(options: EngineOptions(
+            doubleAfterSplit: false,
+            lateSurrender: true
+        ))
         h.model.deal(hitScenario)
         #expect(h.model.legalActions.contains(.surrender))
     }
 
     @Test func offersInsuranceAgainstADealerAceAndGradesItViaTheEngine() {
-        let h = makeHarness()
+        let h = DrillFixture.makeHarness()
         h.model.deal(Scenario(
             player: TwoCardHand(card(.three), card(.four, .hearts)),
             dealerUpcard: card(.ace, .clubs)
@@ -185,7 +184,7 @@ struct BasicStrategyDrillModelTests {
     // MARK: recording
 
     @Test func feedsStatsHistoryAndTheMissTally() {
-        let h = makeHarness()
+        let h = DrillFixture.makeHarness()
         h.model.deal(hitScenario)
         h.model.answer(.hit)
         #expect(h.stats.stats.attempts == 1)
@@ -205,7 +204,7 @@ struct BasicStrategyDrillModelTests {
     // MARK: session end
 
     @Test func reachesDoneAtTheSessionTarget() {
-        let h = makeHarness(dailyGoal: 3)
+        let h = DrillFixture.makeHarness(dailyGoal: 3)
         #expect(h.model.target == 3)
         for _ in 0 ..< 3 {
             h.model.deal(standScenario)
@@ -218,7 +217,7 @@ struct BasicStrategyDrillModelTests {
     }
 
     @Test func reachesDoneThroughAFinalMiss() {
-        let h = makeHarness(dailyGoal: 1)
+        let h = DrillFixture.makeHarness(dailyGoal: 1)
         h.model.deal(hitScenario)
         h.model.answer(.stand)
         #expect(h.model.phase == .miss)
@@ -227,7 +226,7 @@ struct BasicStrategyDrillModelTests {
     }
 
     @Test func oneMoreRoundStartsAFreshRoundTargetingOneMoreGoal() {
-        let h = makeHarness(dailyGoal: 2)
+        let h = DrillFixture.makeHarness(dailyGoal: 2)
         for _ in 0 ..< 2 {
             h.model.deal(standScenario)
             h.model.answer(.stand)
@@ -245,7 +244,10 @@ struct BasicStrategyDrillModelTests {
     /// that every hand, not just the first.
     @Test func reviewRoundsDealTheWeakSpotOnEveryHand() {
         let pair8s = ScenarioRef(kind: "pair", hand: "8", dealer: "10")
-        let h = makeHarness(dailyGoal: 10, seedWeak: pair8s)
+        // The weak spot is a pair whose correct answer is Split, which otherwise
+        // plays two hands before the next deal — and the next deal is the whole of
+        // what a review round is about.
+        let h = DrillFixture.makeHarness(dailyGoal: 10, seedWeak: pair8s, playHandsOut: false)
         for _ in 0 ..< 10 {
             h.model.deal(standScenario)
             h.model.answer(.stand)
@@ -282,7 +284,12 @@ struct BasicStrategyDrillModelTests {
     /// them. `review: true` is that card's entry into this round.
     @Test func opensStraightIntoAReviewRoundWhenAskedTo() {
         let pair8s = ScenarioRef(kind: "pair", hand: "8", dealer: "10")
-        let h = DrillFixture.makeHarness(dailyGoal: 20, seedWeak: pair8s, review: true)
+        let h = DrillFixture.makeHarness(
+            dailyGoal: 20,
+            seedWeak: pair8s,
+            playHandsOut: false,
+            review: true
+        )
 
         // Hand one opens on the weakness in any round; the hands after it are what
         // separate a review round from an ordinary one, which only weights toward
@@ -305,7 +312,7 @@ struct BasicStrategyDrillModelTests {
     }
 
     @Test func reviewRoundsAreDeclinedWithNothingToReview() {
-        let h = makeHarness(dailyGoal: 1)
+        let h = DrillFixture.makeHarness(dailyGoal: 1)
         h.model.deal(standScenario)
         h.model.answer(.stand)
         h.scheduler.fire()
@@ -318,7 +325,7 @@ struct BasicStrategyDrillModelTests {
 
     @Test func aClearedScenarioLeavesTheWeakList() {
         let pair8s = ScenarioRef(kind: "pair", hand: "8", dealer: "10")
-        let h = makeHarness(dailyGoal: 40, seedWeak: pair8s)
+        let h = DrillFixture.makeHarness(dailyGoal: 40, seedWeak: pair8s)
         for _ in 0 ..< clearStreak {
             h.missTally.record(.basicStrategy, ref: pair8s, correct: true)
         }

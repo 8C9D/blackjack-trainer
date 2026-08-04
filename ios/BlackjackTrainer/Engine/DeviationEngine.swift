@@ -237,6 +237,13 @@ struct PlayedOutHand {
     let trueCount: Int
     let ruleSet: RuleSet
     let options: EngineOptions
+    /// What the table still offers this hand. Insurance is gone either way,
+    /// settled before the hand was played; a hand out of a split is two cards
+    /// again and doubles only under DAS. The default is a hand deeper than two
+    /// cards, where the rules have taken all three away.
+    var canDouble = false
+    var canSplit = false
+    var canSurrender = false
 }
 
 struct DeviationEvaluator {
@@ -280,14 +287,14 @@ struct DeviationEvaluator {
     /// The same verdict for a hand already under way. An index is written against
     /// a total, so it applies to a three-card 16 exactly as it does to a two-card
     /// one — which is what the showdown grades and what the drill can now teach.
-    /// Two things are gone by then: doubling, splitting and surrender are
-    /// first-two-card actions, and insurance was settled before the hand was
-    /// played. Mirrors the web `evaluatePlay`.
+    /// Insurance is gone by then, settled before the hand was played; what else
+    /// the table still offers rides on the hand. Mirrors the web `evaluatePlay`.
     func evaluatePlay(_ hand: PlayedOutHand, userAction: Action) -> DeviationTrainerResult {
         let input = PlayInput(
             player: hand.player, dealerUpcard: hand.dealerUpcard,
             ruleSet: hand.ruleSet, options: hand.options,
-            canDouble: false, canSplit: false, canSurrender: false
+            canDouble: hand.canDouble, canSplit: hand.canSplit,
+            canSurrender: hand.canSurrender
         )
         let basic = engine.basicPlay(input)
         let resolved = engine.resolvePlayDecision(input, trueCount: hand.trueCount)

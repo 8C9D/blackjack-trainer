@@ -110,6 +110,76 @@ struct DrillHandTests {
         ).contains(.surrender))
     }
 
+    // MARK: after a split
+
+    // A hand out of a split is two cards again but is not the hand that was
+    // dealt: insurance was settled before it existed and surrender is a
+    // first-two-cards action of the hand that was.
+
+    private let fromSplit = SplitContext(fromSplit: true, canSplitAgain: true)
+    private let atTheCap = SplitContext(fromSplit: true, canSplitAgain: false)
+
+    @Test func aSplitTakesSurrenderAndInsuranceAwayForGood() {
+        let legal = legalActionsFor(
+            nonPair, dealerUpcard: card(.ace), options: lsOn,
+            surrenderAlways: true, split: fromSplit
+        )
+        #expect(!legal.contains(.surrender))
+        #expect(!legal.contains(.insurance))
+    }
+
+    @Test func aSplitGivesTheDoubleBackOnlyUnderDAS() {
+        #expect(legalActionsFor(
+            nonPair, dealerUpcard: card(.six), options: .default, split: fromSplit
+        ) == [.hit, .stand])
+        let das = EngineOptions(doubleAfterSplit: true, lateSurrender: false)
+        #expect(legalActionsFor(
+            nonPair, dealerUpcard: card(.six), options: das, split: fromSplit
+        ).contains(.double))
+    }
+
+    @Test func aPairReSplitsUntilTheDealIsAtItsCap() {
+        let pair = TwoCardHand(card(.eight), card(.eight, .hearts))
+        #expect(legalActionsFor(
+            pair, dealerUpcard: card(.six), options: .default, split: fromSplit
+        ).contains(.split))
+        #expect(!legalActionsFor(
+            pair, dealerUpcard: card(.six), options: .default, split: atTheCap
+        ).contains(.split))
+    }
+
+    @Test func anUnsplitHandKeepsEveryActionItHad() {
+        #expect(legalActionsFor(
+            nonPair, dealerUpcard: card(.ace), options: lsOn, split: .unsplit
+        ) == legalActionsFor(nonPair, dealerUpcard: card(.ace), options: lsOn))
+    }
+
+    // MARK: splitHandAt
+
+    @Test func splitGivesEachHalfOneCardInPlayingOrder() {
+        let eights = [card(.eight), card(.eight, .hearts)]
+        #expect(splitHandAt([eights], 0) == [[card(.eight)], [card(.eight, .hearts)]])
+    }
+
+    @Test func aReSplitLandsInPlaceSoTheHandsStayInPlayingOrder() {
+        let eights = [card(.eight), card(.eight, .hearts)]
+        let waiting = [card(.nine)]
+        #expect(splitHandAt([eights, waiting], 0)
+            == [[card(.eight)], [card(.eight, .hearts)], waiting])
+    }
+
+    /// Defensive: a one-card hand waiting behind the active one is not a pair to
+    /// split, and nothing should be able to turn it into two.
+    @Test func splitLeavesAnythingThatIsNotATwoCardHandAlone() {
+        #expect(splitHandAt([[card(.eight)]], 0) == [[card(.eight)]])
+        let eights = [card(.eight), card(.eight, .hearts)]
+        #expect(splitHandAt([eights], 3) == [eights])
+    }
+
+    @Test func aDealIsCappedAtFourHands() {
+        #expect(maxSplitHands == 4)
+    }
+
     // MARK: nextSessionTarget
 
     @Test func targetsTheDailyGoalWhileUnderIt() {
