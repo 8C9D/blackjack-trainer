@@ -1204,12 +1204,29 @@ describe('ShowdownComponent', () => {
       expect(c.roundMistakes()).toEqual([]);
     });
 
-    it('names the bet the spread called for when it was not the one placed', () => {
+    // Both numbers, because a headline is only ever shown on a miss and the
+    // correct bet on its own read as a statement about the chips actually out —
+    // on a screen that says "wagered 8" once the hand settles. The bet-spread
+    // drill has always named both, and this is the same decision.
+    it('names the bet placed as well as the one the spread called for', () => {
       // A carried +3 with one deck left is TC +3, where the spread calls for 4.
       const { c } = bet(1, 3);
-      expect(c.lastPlay()).toMatchObject({ correct: false, headline: '4 units was the bet.' });
+      expect(c.lastPlay()).toMatchObject({
+        correct: false,
+        headline: '4 units was the bet, not 1.',
+      });
       expect(c.lastPlay()!.reason).toContain('TC +3');
       expect(c.roundMistakes()[0]).toBe('Bet: 4 at TC +3, not 1');
+    });
+
+    // "1 units" is the reason the counted-noun helper exists.
+    it('agrees the unit noun with the bet the spread called for', () => {
+      // A carried 0 is the TC ≤ +1 band, where the spread calls for 1 unit.
+      const { c } = bet(4, 0);
+      expect(c.lastPlay()).toMatchObject({
+        correct: false,
+        headline: '1 unit was the bet, not 4.',
+      });
     });
 
     it('records the call in the bet-spread accuracy', () => {
