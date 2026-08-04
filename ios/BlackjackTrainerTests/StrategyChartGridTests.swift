@@ -177,6 +177,102 @@ struct StrategyChartGridTests {
         #expect(Action.chartLegend.map(StrategyChartGrid.symbol) == ["H", "S", "D", "P", "R"])
         #expect(Action.chartLegend.map(\.label) == ["Hit", "Stand", "Double", "Split", "Surrender"])
     }
+
+    // MARK: - the hands you keep missing
+
+    /// The tally has always known which hands cost you; the page a trainee reads
+    /// to look one up never said.
+    private func spot(_ kind: String, _ hand: String, _ dealer: String,
+                      misses: Int = 3, attempts: Int = 7) -> WeakSpot {
+        let ref = ScenarioRef(kind: kind, hand: hand, dealer: dealer)
+        return WeakSpot(ref: ref, label: scenarioLabel(ref), misses: misses, attempts: attempts)
+    }
+
+    private func marked(_ sections: [ChartSection]) -> [String] {
+        sections.flatMap { section in
+            section.rows.flatMap { row in
+                row.cells.filter { $0.missed != nil }.map { "\(row.label) vs \($0.id)" }
+            }
+        }
+    }
+
+    @Test func ringsOnlyTheOutstandingHand() throws {
+        let grid = try StrategyChartGrid.sections(
+            engine: engine(), ruleSet: .s17, options: EngineOptions(
+                doubleAfterSplit: false,
+                lateSurrender: false
+            ),
+            misses: StrategyChartGrid.missesByKey([spot("hard", "16", "10")])
+        )
+        #expect(marked(grid) == ["16 vs 10"])
+        #expect(cellMiss(grid, "hard", "16", vs: "10") == "missed 3 of 7 this week")
+    }
+
+    /// The tally keys a soft hand by its total; the chart rows it by the non-ace
+    /// card, and a mismatch here would mark the wrong row.
+    @Test func linesSoftRowsUpWithTheTotalTheDrillFilesThemUnder() throws {
+        let grid = try StrategyChartGrid.sections(
+            engine: engine(), ruleSet: .s17, options: EngineOptions(
+                doubleAfterSplit: false,
+                lateSurrender: false
+            ),
+            misses: StrategyChartGrid.missesByKey([spot("soft", "18", "9")])
+        )
+        #expect(marked(grid) == ["A,7 vs 9"])
+    }
+
+    @Test func ringsAPairByItsRank() throws {
+        let grid = try StrategyChartGrid.sections(
+            engine: engine(), ruleSet: .s17, options: EngineOptions(
+                doubleAfterSplit: false,
+                lateSurrender: false
+            ),
+            misses: StrategyChartGrid.missesByKey([spot("pair", "8", "A")])
+        )
+        #expect(marked(grid) == ["8,8 vs A"])
+    }
+
+    @Test func marksNothingWithoutATally() throws {
+        #expect(try marked(sections()).isEmpty)
+    }
+
+    /// A surrender rule is written over a hard total, and the tally files it as
+    /// that hard total — so the surrender row has to look itself up that way.
+    @Test func marksADeviationRuleAndTheSurrenderWrittenOverIt() throws {
+        let rules = try GameData.loadCharts().deviations["S17"] ?? []
+        let sections = StrategyChartGrid.deviationSections(
+            rules: rules,
+            misses: StrategyChartGrid.missesByKey([spot(
+                "hard",
+                "15",
+                "10",
+                misses: 1,
+                attempts: 3
+            )])
+        )
+        let marked = sections.flatMap(\.rows).filter { $0.missed != nil }
+        #expect(marked.allSatisfy { $0.hand == "Hard 15 vs 10" })
+        #expect(marked.count == 2) // the hard-total rule and its surrender
+        #expect(marked.first?.missed == "missed 1 of 3 this week")
+    }
+
+    @Test func leavesInsuranceAloneAsItIsFiledAgainstNoHand() throws {
+        let rules = try GameData.loadCharts().deviations["S17"] ?? []
+        #expect(try StrategyChartGrid
+            .scenarioRef(for: #require(rules.first { $0.category == "insurance" })) == nil)
+    }
+
+    private func cellMiss(
+        _ sections: [ChartSection],
+        _ sectionId: String,
+        _ label: String,
+        vs upcard: String
+    ) -> String? {
+        sections.first { $0.id == sectionId }?
+            .rows.first { $0.label == label }?
+            .cells.first { $0.id == upcard }?
+            .missed
+    }
 }
 
 private extension Array {

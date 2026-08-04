@@ -6,6 +6,10 @@ struct ChartCell: Identifiable {
     /// The dealer upcard key, unique within its row.
     let id: String
     let action: Action
+    /// "missed 3 of 7 this week" when the hand is still outstanding in the
+    /// trainer's weak list, nil otherwise. The grid has no room for the words,
+    /// so the ring carries it on screen and this carries it to VoiceOver.
+    var missed: String?
 
     var symbol: String {
         StrategyChartGrid.symbol(for: action)
@@ -56,6 +60,8 @@ struct DeviationRuleRow: Identifiable {
     let hand: String
     let threshold: String
     let action: Action
+    /// As `ChartCell.missed`; the list is text, so this one is also shown.
+    var missed: String?
 
     var symbol: String {
         StrategyChartGrid.symbol(for: action)
@@ -80,6 +86,9 @@ struct DeviationSection: Identifiable {
 /// The engine decides on cards, not chart keys, so each row is drawn as a hand
 /// that lands on it.
 enum StrategyChartGrid {
+    /// A soft row's key is its non-ace card; the tally keys it by the total.
+    static let softAceValue = 11
+
     /// Chart shorthand. Surrender is "R", not the BJA charts' "SUR": ten columns
     /// have to fit a phone's width, where three glyphs overrun their cell. Each
     /// cell's accessibility label spells the action out.
@@ -102,12 +111,45 @@ enum StrategyChartGrid {
 
     /// The deviation table for a rule set, grouped for display. Empty groups are
     /// dropped so a chart without, say, surrender rules shows no empty card.
-    static func deviationSections(rules: [DeviationRule]) -> [DeviationSection] {
+    static func deviationSections(
+        rules: [DeviationRule],
+        misses: [String: WeakSpot] = [:]
+    ) -> [DeviationSection] {
         deviationCategories.compactMap { category in
-            let rows = rules.filter { $0.category == category.id }.map(deviationRow)
+            let rows = rules
+                .filter { $0.category == category.id }
+                .map { deviationRow($0, misses: misses) }
             guard !rows.isEmpty else { return nil }
             return DeviationSection(id: category.id, title: category.title, rows: rows)
         }
+    }
+
+    /// The scenario a rule is about, in the tally's own terms. Surrender rules
+    /// are written over a hard total, so they tally as one; insurance is filed
+    /// against whatever hand was dealt rather than against the offer, so it has
+    /// no ref of its own and stays unmarked. Mirrors `deviationScenarioRef`.
+    static func scenarioRef(for rule: DeviationRule) -> ScenarioRef? {
+        switch rule.category {
+        case "insurance": nil
+        case "surrender": ScenarioRef(
+                kind: "hard",
+                hand: rule.playerHand,
+                dealer: rule.dealerUpcard
+            )
+        default: ScenarioRef(kind: rule.category, hand: rule.playerHand, dealer: rule.dealerUpcard)
+        }
+    }
+
+    /// The weak spots a trainer is still carrying, keyed the way a chart cell
+    /// looks one up. Mirrors the web page's own lookup map.
+    static func missesByKey(_ spots: [WeakSpot]) -> [String: WeakSpot] {
+        Dictionary(uniqueKeysWithValues: spots.map { (scenarioKey($0.ref), $0) })
+    }
+
+    /// "missed 3 of 7 this week", or nil when the scenario is not outstanding.
+    static func missLabel(_ misses: [String: WeakSpot], _ ref: ScenarioRef) -> String? {
+        guard let spot = misses[scenarioKey(ref)] else { return nil }
+        return "missed \(spot.misses) of \(spot.attempts) this week"
     }
 
     /// "Take at +3 or above" reads as "≥ +3"; the two count-sign directions carry
@@ -121,21 +163,26 @@ enum StrategyChartGrid {
         }
     }
 
-    private static func deviationRow(_ rule: DeviationRule) -> DeviationRuleRow {
+    private static func deviationRow(
+        _ rule: DeviationRule,
+        misses: [String: WeakSpot]
+    ) -> DeviationRuleRow {
         DeviationRuleRow(
             // Insurance has no player hand — the dealer's ace is the whole scenario.
             hand: rule.category == "insurance"
                 ? "Dealer ace"
                 : "\(rule.playerHandLabel) vs \(rule.dealerUpcard)",
             threshold: threshold(rule),
-            action: Action(rawValue: rule.deviationAction) ?? .hit
+            action: Action(rawValue: rule.deviationAction) ?? .hit,
+            missed: scenarioRef(for: rule).flatMap { missLabel(misses, $0) }
         )
     }
 
     static func sections(
         engine: BasicStrategyEngine,
         ruleSet: RuleSet,
-        options: EngineOptions
+        options: EngineOptions,
+        misses: [String: WeakSpot] = [:]
     ) -> [ChartSection] {
         [
             ChartSection(
@@ -144,9 +191,11 @@ enum StrategyChartGrid {
                 rowHeader: "Total",
                 rows: ChartKeys.hardTotals.map { total in
                     row(
-                        label: total,
-                        player: hardHand(total: Int(total) ?? 5),
-                        engine: engine, ruleSet: ruleSet, options: options
+                        RowSpec(
+                            kind: "hard", handKey: total, label: total,
+                            player: hardHand(total: Int(total) ?? 5)
+                        ),
+                        engine: engine, ruleSet: ruleSet, options: options, misses: misses
                     )
                 }
             ),
@@ -154,11 +203,15 @@ enum StrategyChartGrid {
                 id: "soft",
                 title: "Soft totals",
                 rowHeader: "Hand",
+                // A soft row is keyed by its non-ace card and tallied by its
+                // total, the way the drill files it: A,7 is the scenario 'soft 18'.
                 rows: ChartKeys.softKeys.map { key in
                     row(
-                        label: "A,\(key)",
-                        player: softHand(nonAce: key),
-                        engine: engine, ruleSet: ruleSet, options: options
+                        RowSpec(
+                            kind: "soft", handKey: String(softAceValue + (Int(key) ?? 0)),
+                            label: "A,\(key)", player: softHand(nonAce: key)
+                        ),
+                        engine: engine, ruleSet: ruleSet, options: options, misses: misses
                     )
                 }
             ),
@@ -168,13 +221,24 @@ enum StrategyChartGrid {
                 rowHeader: "Hand",
                 rows: ChartKeys.pairKeys.map { key in
                     row(
-                        label: "\(key),\(key)",
-                        player: pairHand(key: key),
-                        engine: engine, ruleSet: ruleSet, options: options
+                        RowSpec(
+                            kind: "pair", handKey: key, label: "\(key),\(key)",
+                            player: pairHand(key: key)
+                        ),
+                        engine: engine, ruleSet: ruleSet, options: options, misses: misses
                     )
                 }
             )
         ]
+    }
+
+    /// One row's identity: how the tally keys it (`kind`/`handKey`), how the
+    /// chart labels it, and the hand the engine is asked about.
+    private struct RowSpec {
+        let kind: String
+        let handKey: String
+        let label: String
+        let player: TwoCardHand
     }
 
     // MARK: - representative hands
@@ -205,22 +269,27 @@ enum StrategyChartGrid {
     // MARK: - internals
 
     private static func row(
-        label: String,
-        player: TwoCardHand,
+        _ spec: RowSpec,
         engine: BasicStrategyEngine,
         ruleSet: RuleSet,
-        options: EngineOptions
+        options: EngineOptions,
+        misses: [String: WeakSpot]
     ) -> ChartRow {
         ChartRow(
-            label: label,
+            label: spec.label,
             cells: ChartKeys.dealerUpcards.map { upcard in
                 let decision = engine.decide(EngineInput(
-                    player: player,
+                    player: spec.player,
                     dealerUpcard: upcardCard(upcard),
                     ruleSet: ruleSet,
                     options: options
                 ))
-                return ChartCell(id: upcard, action: decision.action)
+                let ref = ScenarioRef(kind: spec.kind, hand: spec.handKey, dealer: upcard)
+                return ChartCell(
+                    id: upcard,
+                    action: decision.action,
+                    missed: missLabel(misses, ref)
+                )
             }
         )
     }

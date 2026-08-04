@@ -17,13 +17,15 @@ struct ChartView: View {
         StrategyChartGrid.sections(
             engine: model.basicStrategy,
             ruleSet: prefs.ruleSet,
-            options: prefs.options
+            options: prefs.options,
+            misses: StrategyChartGrid.missesByKey(model.missTally.weakSpots(.basicStrategy))
         )
     }
 
     private var deviationSections: [DeviationSection] {
         StrategyChartGrid.deviationSections(
-            rules: model.charts.deviations[prefs.ruleSet.rawValue] ?? []
+            rules: model.charts.deviations[prefs.ruleSet.rawValue] ?? [],
+            misses: StrategyChartGrid.missesByKey(model.missTally.weakSpots(.deviations))
         )
     }
 
@@ -90,6 +92,14 @@ struct ChartGridView: View {
 
     private let rowHeaderWidth: CGFloat = 46
 
+    private var ringedCells: Int {
+        sections.flatMap(\.rows).flatMap(\.cells).count { $0.missed != nil }
+    }
+
+    private var markedRules: Int {
+        deviationSections.flatMap(\.rows).count { $0.missed != nil }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Picker("Chart", selection: $mode) {
@@ -114,6 +124,15 @@ struct ChartGridView: View {
                 if let indexNote {
                     AdvisoryNoteView(text: indexNote, alignment: .leading)
                 }
+                // No count here, unlike the grid's: one hand can carry two rules
+                // (a hard total and the surrender written over it), so a tally
+                // of marked rows would read as more weaknesses than there are.
+                if markedRules > 0 {
+                    note(
+                        "Marked hands are ones you have missed in the last 7 days and not yet "
+                            + "answered right three times running."
+                    )
+                }
             } else {
                 ForEach(sections) { section in
                     card(section)
@@ -124,6 +143,14 @@ struct ChartGridView: View {
                         + "Pair rows show the split decision, or the play the hand falls back to "
                         + "when the chart says not to split."
                 )
+                // The app has always known which hands keep costing you, and the
+                // page a trainee actually reads never said.
+                if ringedCells > 0 {
+                    note(
+                        "\(countOf(ringedCells, "ringed cell")) — hands you have missed in the "
+                            + "last 7 days and not yet answered right three times running."
+                    )
+                }
             }
         }
         .padding(.horizontal, 20)
@@ -151,30 +178,7 @@ struct ChartGridView: View {
                     if index > 0 {
                         Divider().overlay(Theme.hairline)
                     }
-                    HStack(spacing: 8) {
-                        Text(row.hand)
-                            .font(.system(size: 13))
-                            .foregroundStyle(Theme.ink)
-                        Spacer(minLength: 4)
-                        Text(row.threshold)
-                            .font(.system(size: 13))
-                            .monospacedDigit()
-                            .foregroundStyle(Theme.midInk)
-                        Text(row.symbol)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(Theme.ink)
-                            .frame(width: 24)
-                            .padding(.vertical, 3)
-                            .background(Theme.chartCell(row.action))
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                        Text(row.label)
-                            .font(.system(size: 13))
-                            .foregroundStyle(Theme.midInk)
-                            .frame(width: 74, alignment: .leading)
-                    }
-                    .padding(.vertical, 7)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("\(row.hand), true count \(row.threshold): \(row.label)")
+                    deviationRowView(row)
                 }
             }
         }
@@ -184,6 +188,45 @@ struct ChartGridView: View {
         .background(Theme.surface)
         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Theme.hairline, lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func deviationRowView(_ row: DeviationRuleRow) -> some View {
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(row.hand)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.ink)
+                // The list is text, not a ten-column grid, so an outstanding
+                // rule can say so in words rather than wear the grid's ring.
+                if let missed = row.missed {
+                    Text(missed)
+                        .font(.system(size: 10))
+                        .foregroundStyle(Theme.muted)
+                }
+            }
+            Spacer(minLength: 4)
+            Text(row.threshold)
+                .font(.system(size: 13))
+                .monospacedDigit()
+                .foregroundStyle(Theme.midInk)
+            Text(row.symbol)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Theme.ink)
+                .frame(width: 24)
+                .padding(.vertical, 3)
+                .background(Theme.chartCell(row.action))
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+            Text(row.label)
+                .font(.system(size: 13))
+                .foregroundStyle(Theme.midInk)
+                .frame(width: 74, alignment: .leading)
+        }
+        .padding(.vertical, 7)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            "\(row.hand), true count \(row.threshold): \(row.label)"
+                + (row.missed.map { ". \($0)" } ?? "")
+        )
     }
 
     private var rules: some View {
@@ -250,7 +293,8 @@ struct ChartGridView: View {
     }
 
     /// The grid has no table semantics for VoiceOver to lean on, so each cell
-    /// carries its own row and column in its label.
+    /// carries its own row and column in its label — and its miss count, which
+    /// the ring cannot say.
     private func cellView(_ cell: ChartCell, in row: ChartRow) -> some View {
         Text(cell.symbol)
             .font(.system(size: 12, weight: .semibold))
@@ -260,8 +304,23 @@ struct ChartGridView: View {
             .padding(.vertical, 5)
             .background(Theme.chartCell(cell.action))
             .clipShape(RoundedRectangle(cornerRadius: 4))
+            .overlay(missRing(cell.missed != nil))
             .accessibilityElement()
-            .accessibilityLabel("\(row.label) versus \(cell.id): \(cell.action.label)")
+            .accessibilityLabel(
+                "\(row.label) versus \(cell.id): \(cell.action.label)"
+                    + (cell.missed.map { ". \($0)" } ?? "")
+            )
+    }
+
+    /// A hand still outstanding in the rolling week. Every cell is already
+    /// coloured by its action, so the mark has to be a shape rather than a hue:
+    /// a ring in the body ink, which reads over all six action colours in both
+    /// themes.
+    @ViewBuilder
+    private func missRing(_ missed: Bool) -> some View {
+        if missed {
+            RoundedRectangle(cornerRadius: 4).strokeBorder(Theme.ink, lineWidth: 2)
+        }
     }
 
     private var legend: some View {
@@ -280,6 +339,21 @@ struct ChartGridView: View {
                         .background(Theme.chartCell(action))
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                     Text(action.label)
+                        .font(.system(size: 13))
+                        .foregroundStyle(Theme.midInk)
+                }
+                .accessibilityElement(children: .combine)
+            }
+            // The ring is a shape, not a colour: every cell is already coloured
+            // by its action, so a seventh hue would collide with the six above.
+            if ringedCells > 0 {
+                HStack(spacing: 6) {
+                    Text(" ")
+                        .font(.system(size: 12, weight: .semibold))
+                        .frame(width: 26)
+                        .padding(.vertical, 3)
+                        .overlay(missRing(true))
+                    Text("Missed this week")
                         .font(.system(size: 13))
                         .foregroundStyle(Theme.midInk)
                 }
