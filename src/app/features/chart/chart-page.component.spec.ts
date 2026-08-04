@@ -7,6 +7,11 @@ import type { HardKey, PairKey, SoftKey } from '../../core/models/strategy.model
 import { classifyAsPair, isSoftHand } from '../../core/services/basic-strategy-engine.service';
 import { FlowPrefsService } from '../../core/services/flow-prefs.service';
 import {
+  MissTallyService,
+  type ScenarioRef,
+  type TalliedTrainer,
+} from '../../core/services/miss-tally.service';
+import {
   ChartPageComponent,
   DEALER_UPCARDS,
   formatDeviationThreshold,
@@ -46,6 +51,14 @@ const PAIR = 2;
 // Column index of a dealer upcard in every table.
 function col(upcard: string): number {
   return DEALER_UPCARDS.indexOf(upcard as (typeof DEALER_UPCARDS)[number]);
+}
+
+function showDeviationsTab(fixture: ComponentFixture<ChartPageComponent>): void {
+  const tab = [...fixture.nativeElement.querySelectorAll('button')].find(
+    (b) => (b as HTMLElement).textContent!.trim() === 'Deviations',
+  ) as HTMLButtonElement;
+  tab.click();
+  fixture.detectChanges();
 }
 
 describe('ChartPageComponent', () => {
@@ -327,6 +340,123 @@ describe('ChartPageComponent', () => {
       TestBed.inject(FlowPrefsService).updateCounting({ systemId: 'ko' });
       const { fixture } = createPage();
       expect(fixture.nativeElement.querySelector('.chart__note--warn')).toBeNull();
+    });
+  });
+
+  // The tally has always known which hands keep costing you; the page a trainee
+  // reads to look one up never said.
+  describe('the hands you keep missing', () => {
+    const missOnce = (trainer: TalliedTrainer, ref: ScenarioRef) =>
+      TestBed.inject(MissTallyService).record(trainer, ref, false);
+
+    // The cell for one (section, row label, dealer upcard).
+    const cell = (
+      fixture: ComponentFixture<ChartPageComponent>,
+      section: number,
+      label: string,
+      upcard: string,
+    ) => {
+      const table = fixture.nativeElement.querySelectorAll('.chart__table')[section] as HTMLElement;
+      const row = [...table.querySelectorAll('tbody tr')].find(
+        (tr) => tr.querySelector('.chart__hand')!.textContent!.trim() === label,
+      )!;
+      return [...row.querySelectorAll('td')][col(upcard)] as HTMLElement;
+    };
+
+    it('rings a hard total that is outstanding, and only that one', () => {
+      missOnce('basic-strategy', { kind: 'hard', hand: '16', dealer: '10' });
+      const { fixture } = createPage();
+      expect(cell(fixture, HARD, '16', '10').classList).toContain('chart__cell--missed');
+      expect(cell(fixture, HARD, '16', '9').classList).not.toContain('chart__cell--missed');
+      expect(cell(fixture, HARD, '15', '10').classList).not.toContain('chart__cell--missed');
+    });
+
+    // The tally keys a soft hand by its total; the chart rows it by the non-ace
+    // card, and a mismatch here would mark the wrong row.
+    it('lines a soft row up with the total the drill files it under', () => {
+      missOnce('basic-strategy', { kind: 'soft', hand: '18', dealer: '9' });
+      const { fixture } = createPage();
+      expect(cell(fixture, SOFT, 'A,7', '9').classList).toContain('chart__cell--missed');
+      expect(cell(fixture, SOFT, 'A,8', '9').classList).not.toContain('chart__cell--missed');
+    });
+
+    it('rings a pair by its rank', () => {
+      missOnce('basic-strategy', { kind: 'pair', hand: '8', dealer: 'A' });
+      const { fixture } = createPage();
+      expect(cell(fixture, PAIR, '8,8', 'A').classList).toContain('chart__cell--missed');
+    });
+
+    // A ring is a shape on a coloured cell, so the count has to reach a screen
+    // reader some other way.
+    it('carries the count in the cell label', () => {
+      const tally = TestBed.inject(MissTallyService);
+      const ref = { kind: 'hard', hand: '16', dealer: '10' } as const;
+      tally.record('basic-strategy', ref, false);
+      tally.record('basic-strategy', ref, true);
+      const { fixture } = createPage();
+      const label = cell(fixture, HARD, '16', '10').getAttribute('aria-label');
+      expect(label).toContain('missed 1 of 2 this week');
+      expect(cell(fixture, HARD, '16', '9').getAttribute('aria-label')).not.toContain('missed');
+    });
+
+    it('drops the ring once the scenario is answered right three times running', () => {
+      const tally = TestBed.inject(MissTallyService);
+      const ref = { kind: 'hard', hand: '16', dealer: '10' } as const;
+      tally.record('basic-strategy', ref, false);
+      for (let i = 0; i < 3; i++) tally.record('basic-strategy', ref, true);
+      const { fixture } = createPage();
+      expect(cell(fixture, HARD, '16', '10').classList).not.toContain('chart__cell--missed');
+    });
+
+    it('says how many cells are ringed, and nothing at all when none are', () => {
+      const clean = createPage();
+      expect(clean.fixture.nativeElement.textContent).not.toContain('ringed');
+      clean.fixture.destroy();
+
+      missOnce('basic-strategy', { kind: 'hard', hand: '16', dealer: '10' });
+      missOnce('basic-strategy', { kind: 'pair', hand: '8', dealer: 'A' });
+      const { fixture } = createPage();
+      expect(fixture.nativeElement.textContent).toContain('2 ringed cells');
+    });
+
+    // The deviations trainer keeps its own tally, and the basic chart is not
+    // where its misses belong.
+    it('keeps each trainer to its own chart', () => {
+      missOnce('deviations', { kind: 'hard', hand: '16', dealer: '10' });
+      const { fixture } = createPage();
+      expect(cell(fixture, HARD, '16', '10').classList).not.toContain('chart__cell--missed');
+    });
+
+    it('marks the deviation rule for a hand missed in that trainer', () => {
+      missOnce('deviations', { kind: 'hard', hand: '16', dealer: '10' });
+      const { fixture } = createPage();
+      showDeviationsTab(fixture);
+      const marked = [...fixture.nativeElement.querySelectorAll('.chart__missed')].map((el) =>
+        (el as HTMLElement).textContent!.replace(/\s+/g, ' ').trim(),
+      );
+      expect(marked).toContain('Hard 16 vs 10 missed 1 of 1 this week');
+      expect(marked.some((text) => text.startsWith('Hard 16 vs 9'))).toBe(false);
+    });
+
+    // A surrender rule is written over a hard total, and the tally files it as
+    // that hard total — so the surrender row has to look itself up that way.
+    it('marks a surrender rule through the hard total it is written over', () => {
+      missOnce('deviations', { kind: 'hard', hand: '15', dealer: '10' });
+      const { fixture } = createPage();
+      showDeviationsTab(fixture);
+      const marked = [...fixture.nativeElement.querySelectorAll('.chart__missed')].map((el) =>
+        (el as HTMLElement).textContent!.replace(/\s+/g, ' ').trim(),
+      );
+      expect(marked.filter((t) => t.startsWith('Hard 15 vs 10')).length).toBe(2);
+    });
+
+    it('leaves the insurance row alone, which is filed against no hand', () => {
+      missOnce('deviations', { kind: 'hard', hand: '16', dealer: '10' });
+      const { fixture } = createPage();
+      showDeviationsTab(fixture);
+      const insurance = fixture.nativeElement.querySelector('.chart__table--rules tbody th')!;
+      expect(insurance.textContent).toContain('Dealer ace');
+      expect(insurance.classList).not.toContain('chart__missed');
     });
   });
 });
