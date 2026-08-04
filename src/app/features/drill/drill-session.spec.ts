@@ -55,6 +55,23 @@ describe('DrillSession', () => {
       s.record(false, 4000);
       expect(s.medianSeconds()).toBe(4);
     });
+
+    it('rounds a sub-second median to one decimal place', () => {
+      const s = new DrillSession();
+      s.record(true, 1250);
+      s.record(true, 1360);
+      expect(s.medianSeconds()).toBe(1.3);
+    });
+
+    it('keeps untimed decisions out of the median while retaining their accuracy', () => {
+      const s = new DrillSession();
+      s.record(false);
+      s.record(true, 1800);
+      s.record(true);
+      expect(s.attempts()).toBe(3);
+      expect(s.accuracy()).toBe(67);
+      expect(s.medianSeconds()).toBe(1.8);
+    });
   });
 
   it('resets for a new round', () => {
