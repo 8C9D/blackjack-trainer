@@ -5,8 +5,14 @@ re-run and rewritten on 2026-06-08 (branch `main`)._
 
 > **Closed 2026-08-04.**
 > This is a point-in-time report, kept as the record of what the 2026-06-08 run found rather than as a current description of the repository.
-> Two of its figures have since drifted and should be re-measured, not read off this page: the repository tracked 389 files then and tracks 545 now, and Finding 6's `npm audit` result of 4 moderate dev-only advisories is now 28 advisories spanning low through critical, some of them in runtime Angular packages rather than dev-only ones.
+> Two of its figures have since drifted and should be re-measured, not read off this page: the repository tracked 389 files then and tracks 545 now, and Finding 6's `npm audit` result of 4 moderate dev-only advisories had grown to 28 spanning low through critical.
 > Re-run the skill rather than patching this file.
+>
+> **The dependency half of that drift was acted on 2026-08-04.**
+> Unlike the rest of this page it was not a stale figure but a live one: the 28 included the Angular framework itself — two template-sanitization XSS bypasses, an i18n XSS, `formatDate`/`digitsInfo` denial of service, and a service-worker header leak on cross-origin redirects, which this app ships a service worker to be hit by.
+> Every Angular package moved 21.2.13 → 21.2.19 (the floor of the last of those advisories) and the lockfile was regenerated, taking the count to **5**.
+> The five left are dev-only and stay: `undici` under `@angular/build` and a Windows path traversal in `@hono/node-server` under the CLI's MCP server.
+> Neither reaches the built bundle, and npm's only offered fix for either is Angular **22** — a major upgrade, and a decision rather than a patch.
 
 ## 1. Scope
 

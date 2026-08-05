@@ -91,12 +91,7 @@ import { countOf } from '../../core/text';
 // hole card is checked. 'count-check' is the way out: the table asks what the
 // cards it dealt did to the count before handing the shoe back.
 type ShowdownPhase =
-  | 'betting'
-  | 'insurance'
-  | 'player-turn'
-  | 'resolved'
-  | 'exhausted'
-  | 'count-check';
+  'betting' | 'insurance' | 'player-turn' | 'resolved' | 'exhausted' | 'count-check';
 
 // Most a pair can be split to (3 splits → 4 hands), the common casino cap. The
 // cap is per box: occupying three boxes does not shrink any one box's splits.
