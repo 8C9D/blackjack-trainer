@@ -102,6 +102,20 @@
   padding: 0.9rem 0.8rem 1rem;
 }
 
+// A section the table rules have taken off the felt. The rows stay legible —
+// this is still the chart — but the plays read as unavailable rather than as
+// something to drill, and the note explaining that leads the section.
+.chart__section--off {
+  .chart__note--off {
+    margin-top: 0;
+    margin-bottom: 0.7rem;
+  }
+
+  .chart__table {
+    opacity: 0.55;
+  }
+}
+
 .chart__table {
   width: 100%;
   table-layout: fixed;
@@ -382,9 +396,11 @@
   color: var(--muted);
 }
 
-// The system-mismatch advisory: a correctness warning, so it reads at full
-// body contrast rather than the muted grey the ordinary footnote uses.
-.chart__note--warn {
+// The system-mismatch advisory and the section a table rule has taken away:
+// correctness notices, so they read at full body contrast rather than the
+// muted grey the ordinary footnote uses.
+.chart__note--warn,
+.chart__note--off {
   margin-top: 0.6rem;
   padding: 0.45rem 0.7rem;
   border: 1px solid var(--hairline);

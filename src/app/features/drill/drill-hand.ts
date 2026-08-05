@@ -74,9 +74,9 @@ export const UNSPLIT: SplitContext = { fromSplit: false, canSplitAgain: true };
 
 // Which of the six actions are answerable for this hand. Hit/Stand/Double are
 // always live on an initial two-card hand; Split needs a pair; Insurance
-// needs a dealer Ace. Surrender needs Late Surrender in the table rules —
-// except where the caller's engine can expect SUR regardless of the option
-// (the deviations surrender overlay), signalled via `surrenderAlways`.
+// needs a dealer Ace; Surrender needs Late Surrender in the table rules. Both
+// trainers ask it the same way, because both are graded against the same table:
+// a deviation index cannot call for a surrender the table does not deal.
 //
 // Once a card has been drawn, hit and stand are the whole of it: double, split
 // and surrender are first-two-card actions, and insurance was decided before
@@ -89,7 +89,6 @@ export function legalActionsFor(
   player: readonly Card[],
   dealerUpcard: Card,
   options: EngineOptions,
-  surrenderAlways = false,
   split: SplitContext = UNSPLIT,
 ): readonly Action[] {
   if (player.length !== 2) return ['H', 'S'];
@@ -97,7 +96,7 @@ export function legalActionsFor(
   const legal: Action[] = ['H', 'S'];
   if (!split.fromSplit || options.doubleAfterSplit) legal.push('D');
   if (classifyAsPair(opening) !== null && split.canSplitAgain) legal.push('P');
-  if (!split.fromSplit && (surrenderAlways || options.lateSurrender)) legal.push('SUR');
+  if (!split.fromSplit && options.lateSurrender) legal.push('SUR');
   if (!split.fromSplit && isAce(dealerUpcard)) legal.push('INS');
   return legal;
 }

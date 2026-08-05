@@ -366,7 +366,11 @@ one of Hit / Stand / Double / Split / Surrender / Insurance.
   That is what the showdown has always graded and what no drill taught.
   Past the deal the grid narrows to hit and stand: doubling, splitting and surrender are first-two-card actions, and insurance was settled before the hand was played.
   A correct split is played out on the same terms, which matters most here because three of the chart's own deviations _are_ splits (T,T v 4 / 5 / 6): the hands they make were graded and then thrown away.
-  An index reads them like any other total — 8,8 v 10 split, then a 7, is the hard 15 the chart stands at +4 and hits below — and the surrender overlay, which this drill otherwise offers whatever the table rule says, is gone once a hand comes out of a split.
+  An index reads them like any other total — 8,8 v 10 split, then a 7, is the hard 15 the chart stands at +4 and hits below — and the surrender overlay is gone once a hand comes out of a split, as surrender is on the hand the dealer dealt.
+- **The surrender indices need a table that deals surrender.**
+  Late Surrender takes the chart's own `SUR_*` cells away when it is off, and it takes the five surrender indices with them: the overlay is gated on the rule, exactly as the showdown's table already gated it.
+  Before that the drill suppressed the basic cell and then insisted on the index anyway — Late Surrender off, hard 15 vs 10 at true count 0, and _Hit_ (the only play on offer, and the one the Basic Strategy drill teaches at the same table) was marked wrong for not being a surrender the felt would not have taken.
+  The action grid follows the same rule, so both trainers now offer the same six buttons under the same table rules.
 
 #### Final-action evaluation
 
@@ -387,7 +391,8 @@ The deviation engine resolves a playing decision in this order:
 1. Compute the live basic-strategy action (honoring DAS / LS toggles).
 2. Check the **surrender deviation overlay** first. Surrender deviations
    live in their own category and convert a non-surrender basic action to
-   SUR when the threshold is met.
+   SUR when the threshold is met — and only where Late Surrender is on, since
+   an index cannot buy back a play the table does not deal.
 3. If the live basic action is already SUR (LS enabled + chart cell is
    `SUR_*`), respect it — do **not** let a hard/soft/pair deviation
    downgrade surrender to stand or hit.
@@ -462,6 +467,7 @@ no-ops at runtime but document the chart cell.
   Every cell is `BasicStrategyEngineService.decide()` run on a representative hand rather than a second transcription of the chart data, so what the page shows and what a drill grades cannot drift.
   `SUR_*` and `YN` cells resolve against the live DAS / Late-Surrender settings, and a pair the chart declines to split shows the play it falls back to.
   A second tab lists the deviation chart for the same rule set (insurance, hard, soft, pairs, surrender), each rule as hand, true-count threshold (`≥ +3`, `≤ -1`, `> 0`), and play.
+  It carries the Late Surrender chip too — the one table rule an index reads, since no deviation is written against DAS — and with the rule off the surrender section says its five plays are not on offer and leaves them dimmed rather than dropping them, because the chart is still the chart.
   **The hands you keep missing are marked on it.** The weak-spot tally has always known which cells are costing you, and the page you actually read to look one up said nothing: an outstanding scenario now wears a ring on the grid (a shape, not a seventh colour — the six actions have spent the palette) with its count in the cell's label, and the deviation list says "missed 3 of 7 this week" under the rule in words, since a text table has room for them.
   A hand clears its mark the same way it leaves the weak list: three correct answers running.
   Each trainer marks its own chart, and a surrender rule looks itself up under the hard total it is written over, because that is how the drill files it.

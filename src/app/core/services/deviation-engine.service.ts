@@ -46,6 +46,9 @@ export interface PlayDeviationDecision extends StrategyDecision {
 //      true count threshold is met. They are checked first because a hard
 //      hand can have both a "regular" deviation and a surrender deviation
 //      (e.g. 16 v 9 has both a SUR-at-low-TC rule and a stand-at-+4 rule).
+//      The overlay needs Late Surrender in the table rules, exactly as the
+//      chart's own SUR_* cells do: an index cannot buy back a play the table
+//      does not deal.
 //   3. If the live basic action is already SUR (LS enabled + chart cell is
 //      SUR_*), respect it: do not let a hard/soft/pair deviation downgrade
 //      surrender to stand/hit. Surrender is more valuable than the
@@ -97,8 +100,13 @@ export class DeviationEngineService {
     // (A,4) → '15', soft 16 (A,5) → '16'), and surrendering a soft 15/16 — which
     // can never bust — is never correct. Gating on category keeps the overlay
     // off soft (and pair) hands whose key would otherwise match a hard rule.
+    //
+    // Late Surrender gates it too — the same gate `resolvePlayDecision` puts on
+    // the table's own surrender. Without it the trainer suppressed the chart's
+    // SUR_* cell (no surrender at this table) and then insisted on the index's
+    // surrender anyway, marking the only play on offer wrong.
     const surrenderRule =
-      category === 'hard'
+      category === 'hard' && input.options.lateSurrender
         ? this.findDeviationRule({
             ruleSet: input.ruleSet,
             category: 'surrender',

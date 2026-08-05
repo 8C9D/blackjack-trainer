@@ -190,7 +190,6 @@ export class BasicStrategyDrillPageComponent {
       this.hand(),
       this.scenario().dealerUpcard,
       this.prefs.prefs().options,
-      false,
       this.splitContext(),
     ),
   );

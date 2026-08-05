@@ -230,14 +230,14 @@ export class DeviationsDrillPageComponent {
     deviationIndexNote(countingSystemById(this.prefs.prefs().counting.systemId)),
   );
 
-  // Surrender stays answerable regardless of the Late Surrender rule: the
-  // deviation surrender overlay can expect SUR either way.
+  // The same six buttons the Basic Strategy drill offers, under the same table
+  // rules: with Late Surrender off there is no surrender to make, and the
+  // surrender overlay no longer asks for one.
   protected readonly legalActions = computed(() =>
     legalActionsFor(
       this.hand(),
       this.scenario().dealerUpcard,
       this.prefs.prefs().options,
-      true,
       this.splitContext(),
     ),
   );

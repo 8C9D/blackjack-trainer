@@ -154,6 +154,9 @@ interface DeviationSectionView {
   readonly id: DeviationCategory;
   readonly title: string;
   readonly rows: readonly DeviationRowView[];
+  // Set where the table rules have taken the whole section off the felt: the
+  // rows stay listed (the chart is the chart) and say they are not on offer.
+  readonly unavailable: string | null;
 }
 
 // The chart the drills grade against, rendered rather than re-encoded: every
@@ -201,8 +204,11 @@ interface DeviationSectionView {
           <span class="chart__chip">{{ ruleSetLabel() }}</span>
           @if (mode() === 'basic') {
             <span class="chart__chip">{{ dasLabel() }}</span>
-            <span class="chart__chip">{{ surrenderLabel() }}</span>
           }
+          <!-- Surrender is on both grids: it decides a basic cell and it decides
+               whether the surrender indices are plays at all. DAS is not — no
+               deviation below is written against it. -->
+          <span class="chart__chip">{{ surrenderLabel() }}</span>
           <button type="button" class="chart__settings" (click)="openSettings()">
             Change rules
           </button>
@@ -279,7 +285,10 @@ interface DeviationSectionView {
         }
       } @else if (mode() === 'deviations') {
         @for (section of deviationSections(); track section.id) {
-          <section class="chart__section">
+          <section class="chart__section" [class.chart__section--off]="section.unavailable">
+            @if (section.unavailable; as note) {
+              <p class="chart__note chart__note--off" role="note">{{ note }}</p>
+            }
             <table class="chart__table chart__table--rules">
               <caption class="chart__caption">
                 {{
@@ -635,10 +644,20 @@ export class ChartPageComponent {
   protected readonly deviationSections = computed<readonly DeviationSectionView[]>(() => {
     const rules = deviationsFor(this.prefs().ruleSet);
     const misses = this.deviationMisses();
+    // Late Surrender is the one table rule these indices depend on — no rule
+    // below is written against DAS — and with it off the surrender overlay does
+    // not fire, so the section would otherwise list five plays the drill will
+    // never ask for and the table will never deal.
+    const noSurrender = !this.prefs().options.lateSurrender;
     return DEVIATION_CATEGORIES.map(({ id, title }) => ({
       id,
       title,
       rows: rules.filter((rule) => rule.category === id).map((rule) => deviationRow(rule, misses)),
+      unavailable:
+        id === 'surrender' && noSurrender
+          ? 'Late Surrender is off in your table rules, so none of these are on offer. ' +
+            'Those hands play off the chart above.'
+          : null,
     })).filter((section) => section.rows.length > 0);
   });
 
