@@ -263,10 +263,25 @@ extension ShowdownView {
             .foregroundStyle(Theme.midInk)
     }
 
+    /// Why no round is on offer. A single box short of the minimum is out of
+    /// chips outright; more boxes than the stack can cover at the minimum is a
+    /// different sentence, since resetting is not the only way out of it.
+    private var shortStackNote: String {
+        guard !model.bankrollStore.bustedOut else {
+            return "Out of chips. Reset the bankroll to keep practising."
+        }
+        let chips = model.bankrollStore.bankroll
+        // Only reachable with two boxes or more: on a single box a bankroll too
+        // short for the minimum is busted out, which the branch above answers.
+        return countOf(chips, "chip", display: Chips.format(chips))
+            + " will not back all \(model.spots) boxes at the table minimum. "
+            + "Reset the bankroll, or play fewer boxes in Settings."
+    }
+
     @ViewBuilder var bettingStage: some View {
-        if model.bankrollStore.bustedOut {
+        if !model.canBackRound {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Out of chips. Reset the bankroll to keep practising.")
+                Text(shortStackNote)
                     .foregroundStyle(Theme.muted)
                 Button { model.resetBankroll() } label: {
                     Text("Reset bankroll").frame(maxWidth: .infinity, minHeight: 30)

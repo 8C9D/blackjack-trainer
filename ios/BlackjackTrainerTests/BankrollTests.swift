@@ -210,6 +210,52 @@ struct BankrollTests {
         #expect(showdown.phase == .betting)
     }
 
+    /// A bet is never nothing — `Bankroll.clampBet` floors at the table minimum
+    /// whatever the bankroll says — so a stack too short for the boxes in play
+    /// would be dealt a round it could not pay for and settle it into a negative
+    /// bankroll, which the next launch would reject and silently reset to 500.
+    @Test func refusesARoundTheBankrollCannotBackAcrossEveryBox() {
+        let store = defaults()
+        let bankroll = BankrollStore(key: StatsKeys.showdownBankroll, defaults: store)
+        bankroll.record(stake: 499, payout: -499)
+        #expect(bankroll.bankroll == 1)
+        // Not busted out — a single box could still be played — but two cannot.
+        #expect(!bankroll.bustedOut)
+
+        let cards = [
+            card(.ten), card(.ten, .hearts), card(.ten, .diamonds),
+            card(.six), card(.six, .hearts), card(.ten, .clubs)
+        ]
+        let showdown = model(cards, spots: 2, bankroll: bankroll)
+        #expect(!showdown.canBackRound)
+
+        showdown.dealAfterBet()
+        #expect(showdown.phase == .betting)
+        #expect(showdown.hands.isEmpty)
+    }
+
+    @Test func settlesEveryBoxOnAStackThatCanBackThem() {
+        let store = defaults()
+        let bankroll = BankrollStore(key: StatsKeys.showdownBankroll, defaults: store)
+        bankroll.record(stake: 498, payout: -498)
+        #expect(bankroll.bankroll == 2)
+
+        // Two boxes of [10,6]=16 against the dealer's [10,10]=20: both lose.
+        let cards = [
+            card(.ten), card(.ten, .hearts), card(.ten, .diamonds),
+            card(.six), card(.six, .hearts), card(.ten, .clubs)
+        ]
+        let showdown = model(cards, spots: 2, bankroll: bankroll)
+        #expect(showdown.canBackRound)
+        showdown.dealAfterBet()
+        showdown.onAction(.stand)
+        showdown.onAction(.stand)
+
+        // Every chip the round says it lost is a chip that left the bankroll.
+        #expect(showdown.roundNet == -2)
+        #expect(bankroll.state == BankrollState(bankroll: 0, wagered: 500, net: -500))
+    }
+
     @Test func leavesTheBankrollAloneWhenBettingIsOff() {
         let cards = [card(.ten), card(.ten, .hearts), card(.nine), card(.eight)]
         let showdown = model(cards, betting: false)
