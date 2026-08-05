@@ -767,7 +767,8 @@ The Flow shell adds four keys of its own:
 | Miss tally       | `blackjack-miss-tally`       | per-scenario attempt/miss day tallies + clear streak (Basic Strategy, Deviations)                                |
 
 Every store loads tolerantly: a malformed or partial payload degrades to defaults field by field, and a read the browser refuses yields the same defaults, because nothing is lost by it.
-The home screen's accuracy chips read the lifetime stats stores; the card-counting card combines the running-count and true-count stores.
+The home screen's accuracy chips read the lifetime stats stores; the card-counting card shows one number for the trainer, so it combines every store above it — the running count, the true count, the deck estimate that divides it, the key-count call, the bet and the deck countdown.
+Leaving one out let the chip disagree with that mode's own Progress row: an estimate missed nine rounds in ten is half the true count wrong, and the chip read 90% straight through it.
 
 **A write the browser refuses is said out loud.** `localStorage` can reject a write — quota exhausted, or storage blocked outright in private browsing — and the failure is invisible from inside the app: the drill goes on grading, the session bar goes on counting, and Progress goes on showing whatever was stored before, so a trainee can practise a whole evening into nothing and be told by nobody.
 The write cannot be recovered, so the one thing the storage layer can do is stop the app pretending it happened: a refused write raises a notice above every screen ("This browser is not saving your practice") that links to the backup export, which reads what _is_ stored and writes it to a file rather than to the browser.

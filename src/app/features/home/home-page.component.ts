@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
 import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.service';
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
+import { DeckEstimationStatsService } from '../../core/services/deck-estimation-stats.service';
 import { DeckSpeedStatsService } from '../../core/services/deck-speed-stats.service';
 import { KeyCountStatsService } from '../../core/services/key-count-stats.service';
 import { BasicStrategyStatsService } from '../../core/services/basic-strategy-stats.service';
@@ -96,6 +97,7 @@ export class HomePageComponent {
   private readonly deviationStats = inject(DeviationStatsService);
   private readonly runningCountStats = inject(CardCountingStatsService);
   private readonly trueCountStats = inject(TrueCountStatsService);
+  private readonly deckEstimationStats = inject(DeckEstimationStatsService);
   private readonly keyCountStats = inject(KeyCountStatsService);
   private readonly betSpreadStats = inject(BetSpreadStatsService);
   private readonly deckSpeedStats = inject(DeckSpeedStatsService);
@@ -170,13 +172,17 @@ export class HomePageComponent {
       case 'deviations':
         return accuracy(this.deviationStats.stats());
       case 'card-counting': {
-        // Every counting mode persists separately — running count, true count,
-        // the key-count call, the bet, the deck countdown — and the card shows
-        // one number for the trainer, so it sums all of them. Leaving any out
-        // would show "new" to someone who has drilled nothing else.
+        // Every counting question persists separately — running count, true
+        // count, the deck estimate that divides it, the key-count call, the bet,
+        // the deck countdown — and the card shows one number for the trainer, so
+        // it sums all of them. Leaving any out would show "new" to someone who
+        // has drilled nothing else, and would let the chip disagree with the
+        // Progress row for the same drill: an estimate missed nine times in ten
+        // is half the true count wrong, and the chip read 90% through it.
         const stores = [
           this.runningCountStats.stats(),
           this.trueCountStats.stats(),
+          this.deckEstimationStats.stats(),
           this.keyCountStats.stats(),
           this.betSpreadStats.stats(),
           this.deckSpeedStats.stats(),
