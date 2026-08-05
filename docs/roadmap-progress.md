@@ -909,3 +909,31 @@ anything about it, and where do two surfaces tell the same story differently.
   The count tab was rendered on the phone in both platforms' worst cases (Griffin Ultimate's ten columns, Red Seven's two rows); the iOS table became wrapping chips rather than columns, since a chip carries its own ranks and needs no column to be read under - which also keeps it renderable, `ImageRenderer` drawing no `ScrollView` content.
   That same limitation left the two new iOS links (in a `ScrollView` and a `Form`) verified by build, lint and tests rather than by eye, their web equivalents having been checked in the browser.
   One iOS test suite was split at its type-body limit by the work rather than beyond it (the miss tally's stored shape).
+
+### Post-roadmap continued: a play the table does not deal, a chip that hid a skill, and the framework's own advisories (2026-08-04)
+
+Five slices.
+Three came from the usual hunt - where does the app do something and never say anything about it, and where do two surfaces tell the same story differently - and two from following the first one out to its edges.
+
+- **The Deviations drill demanded a surrender the table was not dealing.** With Late Surrender off, `decide()` correctly turned the chart's own `SUR_*` cells into hit or stand, and then the surrender overlay fired anyway: hard 15 vs 10 at true count 0 marked _Hit_ wrong - the only play on offer, and the one the Basic Strategy drill teaches at that same table, which had greyed its Surrender button out while this drill left it live.
+  The showdown had gated the overlay on the rule since the play coach shipped (`resolvePlayDecision` checks `canSurrender && options.lateSurrender`); the trainer's path never did, and the drill carried a `surrenderAlways` flag to keep the button answerable for it.
+  Both are gone: one gate, both engines, and the flag with them so it cannot come back.
+  Reproduced end to end in the browser first - the fix changes 174 of the 62,560 parity rows and **zero** of the rows at a table that does deal surrender.
+  The deviation chart tells the same story now: it carries the Late Surrender chip (the one table rule an index reads - no deviation is written against DAS), and with the rule off the surrender section says its five plays are not on offer and dims them rather than dropping them, because the chart is still the chart.
+- **Which left deviation-only practice dealing hands with nothing on them.** Its promise is that every hand has an encoded index, and it drew uniformly from all 26 rules - so at a table without surrender, five of them now built a hand around an index that could not fire and picked a count to straddle a threshold with nothing on the other side of it.
+  The draw is filtered by the same rule as the overlay.
+  A first attempt to pin this at the drill level was deleted rather than kept: it read the same scenario eighty times over and passed without the fix.
+- **The home screen's Card Counting chip hid a skill it was grading.** It summed five of the trainer's six stores, and the missing one was the deck estimate - the divisor the true count is made with, which Progress has always listed as one of that drill's rows.
+  A trainee estimating badly nine rounds in ten read **90%** on the card and **10%** two screens away, from the same practice.
+  The chip is the sum of everything the trainer grades now, and the README sentence describing it - two generations stale, still claiming the running-count and true-count stores alone - says what the code does.
+- **Two Settings toggles were unstyled and ran into each other.** The Settings screen styles its checkbox rows, but that rule is scoped to its own component and stops at the counting fieldset's boundary, so the showdown's two toggles flowed inline as text: "Bet sizing (bankroll)" and "Ask for the count on the way out" shared a line and the second label wrapped under the first checkbox, in the browser's default blue while every other control on the page wore the accent.
+  Both now read as rows, and every checkbox on the screen takes the same box - big enough to hit on a phone, which the ~13px UA default is not.
+  Only a real browser lays that out, so the guard is E2E, and it was checked against the unfixed styles before being kept.
+- **The framework itself was carrying advisories.** `npm audit` stood at 28, and the security report had flagged the drift on 2026-08-04 without acting on it; unlike the rest of that page it was a live figure rather than a stale one.
+  Among them were two template-sanitization XSS bypasses, an i18n XSS, `formatDate` and `digitsInfo` denial of service, and a sensitive-header leak on cross-origin redirects in the service worker - which this app ships one to be hit by.
+  Every Angular package moved 21.2.13 → 21.2.19, the floor of the last of those advisories, and the lockfile was regenerated: **28 → 5**.
+  The five that remain are dev-only (`undici` under `@angular/build`, a Windows path traversal in `@hono/node-server` under the CLI's MCP server), reach no shipped bundle, and npm's only offered fix for either is Angular 22 - a major upgrade, and a decision rather than a patch, so they are documented rather than forced.
+- **Validation.** +9 unit tests (1512), +3 Swift (599), +2 E2E (111), lint and format clean on both platforms, the whole suite re-run on the regenerated dependency tree.
+  Both new E2E tests were confirmed to fail against the unfixed styles and then run six times over for flakiness; the parity fixtures were diffed by hand along the Late Surrender axis rather than trusted.
+  The iOS chart's new notice was rendered to PNG and looked at, which is what found `AdvisoryNoteView` truncating every advisory it has ever shown to a single line's height - fixed with the wrap it always needed.
+  One pre-existing warning is left standing and is the owner's call: `chart-page.component.scss` was already 231 bytes over the 5 kB per-component style budget before this session and is 368 over after it, well inside the 8 kB error threshold.
