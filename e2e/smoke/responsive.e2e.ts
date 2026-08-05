@@ -60,3 +60,51 @@ test.describe('chart cells as tap targets', () => {
     expect(overflows).toBe(false);
   });
 });
+
+// The Settings screen styles its checkbox rows, but that rule is scoped to its
+// own component and stopped at the counting fieldset's boundary — so the two
+// showdown toggles flowed inline as text and the second label wrapped under the
+// first checkbox. Only a real browser lays that out, so only E2E can see it.
+test.describe('settings checkbox rows', () => {
+  // The showdown toggles only exist for a live shoe, which the true-count mode
+  // opens on.
+  async function openShowdownSettings(page: import('@playwright/test').Page): Promise<void> {
+    await page.goto('/settings');
+    // Exactly, or it also matches the Deviations section's "Random true count"
+    // and "Manual true count".
+    await page.getByRole('radio', { name: 'True count', exact: true }).check();
+    await expect(page.locator('.settings__check').first()).toBeVisible();
+  }
+
+  test('each toggle takes a line of its own on a phone', async ({ page }) => {
+    await page.setViewportSize(PHONE);
+    await openShowdownSettings(page);
+
+    const rows = await page.locator('.settings__check').evaluateAll((nodes) =>
+      nodes.map((n) => {
+        const r = n.getBoundingClientRect();
+        return { top: r.top, bottom: r.bottom };
+      }),
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows[1].top).toBeGreaterThanOrEqual(rows[0].bottom);
+  });
+
+  test('and every box on the screen is the same size, big enough to hit', async ({ page }) => {
+    await page.setViewportSize(PHONE);
+    await openShowdownSettings(page);
+
+    const boxes = await page
+      .locator('.settings input[type="checkbox"], .settings__group input[type="checkbox"]')
+      .evaluateAll((nodes) =>
+        nodes.map((n) => {
+          const r = n.getBoundingClientRect();
+          return { w: Math.round(r.width), h: Math.round(r.height) };
+        }),
+      );
+    // The three table/drill rules plus the two showdown toggles.
+    expect(boxes.length).toBeGreaterThanOrEqual(5);
+    expect(Math.min(...boxes.map((b) => b.h))).toBeGreaterThanOrEqual(16);
+    expect(new Set(boxes.map((b) => `${b.w}x${b.h}`)).size).toBe(1);
+  });
+});
