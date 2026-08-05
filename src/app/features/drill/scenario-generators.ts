@@ -17,7 +17,7 @@ import {
   type Suit,
 } from '../../core/models/card.model';
 import type { DeviationRule } from '../../core/models/deviation.model';
-import type { DealerUpcard, RuleSet } from '../../core/models/strategy.model';
+import type { DealerUpcard, EngineOptions, RuleSet } from '../../core/models/strategy.model';
 import { deviationsFor } from '../../core/services/deviation-engine.service';
 
 // Named re-export of the core engine's deviationsFor (which owns the rule-set →
@@ -27,8 +27,18 @@ export function deviationRulesFor(ruleSet: RuleSet): readonly DeviationRule[] {
   return deviationsFor(ruleSet);
 }
 
-export function pickDeviationRule(ruleSet: RuleSet, random: () => number): DeviationRule {
-  const rules = deviationRulesFor(ruleSet);
+// Rules this table can actually deal. The five surrender indices need Late
+// Surrender, and without it the overlay does not fire — so drawing one would
+// build a hand around an index that cannot apply and pick a count to straddle a
+// threshold with nothing on the other side of it, which is the one thing
+// "every hand has an encoded deviation rule" promises not to do.
+export function pickDeviationRule(
+  ruleSet: RuleSet,
+  random: () => number,
+  options: EngineOptions = { doubleAfterSplit: false, lateSurrender: true },
+): DeviationRule {
+  const all = deviationRulesFor(ruleSet);
+  const rules = options.lateSurrender ? all : all.filter((r) => r.category !== 'surrender');
   return rules[Math.floor(random() * rules.length)];
 }
 

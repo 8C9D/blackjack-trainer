@@ -369,6 +369,7 @@ one of Hit / Stand / Double / Split / Surrender / Insurance.
   An index reads them like any other total — 8,8 v 10 split, then a 7, is the hard 15 the chart stands at +4 and hits below — and the surrender overlay is gone once a hand comes out of a split, as surrender is on the hand the dealer dealt.
 - **The surrender indices need a table that deals surrender.**
   Late Surrender takes the chart's own `SUR_*` cells away when it is off, and it takes the five surrender indices with them: the overlay is gated on the rule, exactly as the showdown's table already gated it.
+  Deviation-only practice stops drawing those five as well, since building a hand around an index that cannot fire — and picking a count to straddle a threshold with nothing on the other side of it — is the one thing that mode promises not to do.
   Before that the drill suppressed the basic cell and then insisted on the index anyway — Late Surrender off, hard 15 vs 10 at true count 0, and _Hit_ (the only play on offer, and the one the Basic Strategy drill teaches at the same table) was marked wrong for not being a surrender the felt would not have taken.
   The action grid follows the same rule, so both trainers now offer the same six buttons under the same table rules.
 
