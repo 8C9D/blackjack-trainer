@@ -381,7 +381,7 @@ extension DeviationsDrillModel {
     private func generateScenario() -> DeviationScenario {
         let prefs = prefs.prefs
         if prefs.deviations.practiceMode == .deviationOnly,
-           let rule = scenarioGenerator.pickRule(for: prefs.ruleSet) {
+           let rule = scenarioGenerator.pickRule(for: prefs.ruleSet, options: prefs.options) {
             return scenarioGenerator.scenario(for: rule, trueCount: pickTrueCount(for: rule))
         }
         let base = generator.generate()

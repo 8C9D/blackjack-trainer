@@ -16,8 +16,15 @@ struct DeviationScenarioGenerator {
         rulesByRuleSet[ruleSet.rawValue] ?? []
     }
 
-    func pickRule(for ruleSet: RuleSet) -> DeviationRule? {
-        let rules = rules(for: ruleSet)
+    /// Rules this table can actually deal. The five surrender indices need Late
+    /// Surrender, and without it the overlay does not fire — so drawing one would
+    /// build a hand around an index that cannot apply and pick a count to
+    /// straddle a threshold with nothing on the other side of it, which is the
+    /// one thing "every hand has an encoded deviation rule" promises not to do.
+    func pickRule(for ruleSet: RuleSet, options: EngineOptions = .surrenderOffered)
+        -> DeviationRule? {
+        let all = rules(for: ruleSet)
+        let rules = options.lateSurrender ? all : all.filter { $0.category != "surrender" }
         guard !rules.isEmpty else { return nil }
         return rules[index(rules.count)]
     }
