@@ -238,9 +238,18 @@ interface PlayVerdict {
           The shoe is too low to deal a hand. Return to counting to reshuffle.
         </p>
       } @else if (phase() === 'betting') {
-        @if (bankrollService.bustedOut()) {
+        @if (!canBackRound()) {
           <p class="showdown__exhausted" role="status">
-            Out of chips. Reset the bankroll to keep practising.
+            @if (bankrollService.bustedOut()) {
+              Out of chips. Reset the bankroll to keep practising.
+            } @else {
+              <!-- Only reachable with two boxes or more: on a single box a
+                   bankroll too short for the minimum is busted out, which the
+                   branch above answers. So "boxes" is never a lone box. -->
+              {{ countOf(bankrollService.bankroll(), 'chip', chips(bankrollService.bankroll())) }}
+              will not back all {{ spots() }} boxes at the table minimum. Reset the bankroll, or
+              play fewer boxes in Settings.
+            }
           </p>
           <button type="button" class="showdown__next" (click)="resetBankroll()">
             Reset bankroll
@@ -753,6 +762,21 @@ export class ShowdownComponent implements OnInit {
     return clampBet(value, this.bankrollService.bankroll() / this.spots());
   }
 
+  // Whether the bankroll can back the round about to be dealt: the table
+  // minimum on every occupied box.
+  //
+  // `clampBet` floors at the table minimum whatever the bankroll says — there is
+  // no such thing as a legal bet of nothing — so a stack too short for the boxes
+  // in play would otherwise be dealt a round it cannot pay for, and the losing
+  // settlement that took the bankroll below zero would be refused by
+  // `BankrollService.record` and vanish. The round has to be refused before it
+  // is dealt, not after it is lost.
+  //
+  // Generalises `bustedOut`, which asks the same question of a single box.
+  protected readonly canBackRound = computed(
+    () => this.bankrollService.bankroll() >= MIN_BET * this.spots(),
+  );
+
   // The rungs on offer are the player's own spread, so the bet the count calls
   // for is one the table can actually take.
   protected readonly betOptions = computed(() => betOptionsFor(this.betRamp()));
@@ -770,6 +794,7 @@ export class ShowdownComponent implements OnInit {
 
   protected dealAfterBet(): void {
     if (this.phase() !== 'betting') return;
+    if (!this.canBackRound()) return;
     // Snapshot the count before a card is turned: the bet was decided on what
     // the player could see at that moment, and dealing moves the count.
     const trueCount = this.betTrueCount();
@@ -789,6 +814,14 @@ export class ShowdownComponent implements OnInit {
   }
 
   protected onAction(action: Action): void {
+    // Only what the felt is actually offering gets this far. The buttons render
+    // `playerActions()` and so can only send a legal one, but the keyboard binds
+    // every action letter — and grading runs before the action does, so an
+    // unoffered key would otherwise score a miss (and file a weak spot) for a
+    // play the table never allowed. Same rule the two drill pages state as
+    // "hotkeys for illegal actions are dead, not wrong".
+    if (this.phase() !== 'player-turn') return;
+    if (!this.playerActions().includes(action)) return;
     // Graded before the action is taken: the decision is about the hand as it
     // stands, and hit/split have already changed it by the time they return.
     this.gradePlay(action);
@@ -902,7 +935,7 @@ export class ShowdownComponent implements OnInit {
   // spread should be reconsidered rather than silently repeated.
   protected dealAnother(): void {
     if (this.betting()) {
-      if (this.bankrollService.bustedOut()) return;
+      if (!this.canBackRound()) return;
       // Clear the settled round before the next bet, so nothing on the felt (or
       // in `committed`) belongs to a hand that is already paid.
       this.hands.set([]);
@@ -1391,7 +1424,7 @@ export class ShowdownComponent implements OnInit {
       // round when it is off.
       canNext: () =>
         this.phase() === 'betting'
-          ? !this.bankrollService.bustedOut()
+          ? this.canBackRound()
           : this.phase() === 'resolved' && this.canDealAnother(),
       onNext: () => (this.phase() === 'betting' ? this.dealAfterBet() : this.dealAnother()),
       onAction: (action) => {

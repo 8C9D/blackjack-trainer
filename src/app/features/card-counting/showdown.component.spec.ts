@@ -49,6 +49,7 @@ type Internals = {
   payout(h: PlayerHandView): number;
   signedChips(v: number): string;
   bankrollService: { bankroll(): number; state(): BankrollState; bustedOut(): boolean };
+  canBackRound(): boolean;
   playerCards(): readonly Card[];
   dealerCards(): readonly Card[];
   settlement(): Settlement | null;
@@ -524,6 +525,58 @@ describe('ShowdownComponent', () => {
       c.resetBankroll();
       expect(c.bankrollService.bankroll()).toBe(500);
       expect(c.phase()).toBe('betting');
+    });
+
+    // A bet is never nothing — `clampBet` floors at the table minimum whatever
+    // the bankroll says — so a stack too short for the boxes in play would be
+    // dealt a round it could not pay for. The losing settlement that took the
+    // bankroll below zero was then refused by BankrollService and vanished:
+    // the felt said the round lost two chips while one chip actually moved.
+    it('refuses a round the bankroll cannot back across every box', () => {
+      const { fixture, c } = createShowdown(
+        makeShoe(['10', '10', '10', '6', '6', '10']),
+        'S17',
+        2,
+        true,
+      );
+      // One chip left, and two boxes to fill at a minimum of one each.
+      TestBed.inject(BankrollService).record(499, -499);
+      fixture.detectChanges();
+      expect(c.bankrollService.bankroll()).toBe(1);
+      // Not busted out — a single box could still be played — but two cannot.
+      expect(c.bankrollService.bustedOut()).toBe(false);
+      expect(c.canBackRound()).toBe(false);
+
+      c.dealAfterBet();
+      expect(c.phase()).toBe('betting');
+      expect(c.hands()).toEqual([]);
+      // Enter is dead here too, so the keyboard cannot deal what the button won't.
+      c.onKeyDown(new KeyboardEvent('keydown', { key: 'Enter' }));
+      expect(c.hands()).toEqual([]);
+
+      // And the felt says why, naming the boxes rather than claiming no chips.
+      const text = fixture.nativeElement.textContent as string;
+      expect(text).toContain('1 chip will not back all 2 boxes');
+      expect(text).not.toContain('Out of chips');
+    });
+
+    it('settles every box against the bankroll on a stack that can back them', () => {
+      const { fixture, c } = createShowdown(
+        makeShoe(['10', '10', '10', '6', '6', '10']),
+        'S17',
+        2,
+        true,
+      );
+      TestBed.inject(BankrollService).record(498, -498);
+      fixture.detectChanges();
+      expect(c.canBackRound()).toBe(true);
+      c.dealAfterBet();
+      c.onAction('S');
+      c.onAction('S');
+      // Both 16s lose to the dealer's 20. Every chip the round says it lost is
+      // a chip that actually left the bankroll, and both stakes were wagered.
+      expect(c.roundNet()).toBe(-2);
+      expect(c.bankrollService.state()).toEqual({ bankroll: 0, wagered: 500, net: -500 });
     });
 
     it('shows the chip position and the round result', () => {
@@ -1347,6 +1400,47 @@ describe('ShowdownComponent', () => {
       // The round resolved exactly as it did before grading existed.
       expect(c.settlement()!.outcome).toBe('win');
       expect(c.roundMistakes()).toEqual([]);
+    });
+
+    // The buttons render `playerActions()`, so only the keyboard can reach an
+    // action the felt is not offering — and grading runs before the action, so
+    // an unoffered key used to score a miss, list a misplay and file a weak
+    // spot for a play the table never allowed. Same rule the drill pages keep:
+    // hotkeys for illegal actions are dead, not wrong.
+    it('ignores a hotkey for an action the table is not offering', () => {
+      const tally = TestBed.inject(MissTallyService);
+      // Player [9,7]=16 vs dealer 10, late surrender off: hit or stand, no more.
+      const { c } = createShowdown(makeShoe(['9', '10', '7', '6', '5', '5']), 'S17', 1, false, {
+        doubleAfterSplit: true,
+        lateSurrender: false,
+      });
+      expect(c.playerActions()).toEqual(['H', 'S', 'D']);
+
+      // Insurance is decided in its own phase, and surrender is off the table.
+      c.onKeyDown(new KeyboardEvent('keydown', { key: 'i' }));
+      c.onKeyDown(new KeyboardEvent('keydown', { key: 'r' }));
+
+      expect(c.playStats.stats().attempts).toBe(0);
+      expect(c.roundMistakes()).toEqual([]);
+      expect(c.lastPlay()).toBeNull();
+      expect(tally.weakSpots('basic-strategy')).toEqual([]);
+      expect(c.playerCards().length).toBe(2);
+    });
+
+    it('ignores a double hotkey once the hand is past two cards', () => {
+      // [5,4]=9 vs 10: hit is correct, and the double lapses with the third card.
+      const { c } = createShowdown(makeShoe(['5', '10', '4', '6', '3', '9', '9']));
+      c.onAction('H');
+      expect(c.playerCards().length).toBe(3);
+      expect(c.playerActions()).toEqual(['H', 'S']);
+      const graded = c.playStats.stats().attempts;
+
+      c.onKeyDown(new KeyboardEvent('keydown', { key: 'd' }));
+
+      expect(c.playStats.stats().attempts).toBe(graded);
+      expect(c.roundMistakes()).toEqual([]);
+      expect(c.hands()[0].doubled).toBe(false);
+      expect(c.playerCards().length).toBe(3);
     });
 
     it('names the play that was correct, and lets the misplay stand', () => {
