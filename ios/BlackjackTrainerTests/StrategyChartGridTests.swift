@@ -256,6 +256,22 @@ struct StrategyChartGridTests {
         #expect(marked.first?.missed == "missed 1 of 3 this week")
     }
 
+    /// The five surrender indices are plays the table is not dealing, and a
+    /// chart that lists them silently is the one the drill used to grade
+    /// against. They stay on the page and say so.
+    @Test func saysTheSurrenderIndicesAreOffTheFeltWithoutLateSurrender() throws {
+        let rules = try GameData.loadCharts().deviations["S17"] ?? []
+        let off = StrategyChartGrid.deviationSections(rules: rules, lateSurrender: false)
+        let surrender = try #require(off.first { $0.id == "surrender" })
+        #expect(surrender.unavailable?.contains("Late Surrender is off") == true)
+        #expect(!surrender.rows.isEmpty)
+        #expect(off.filter { $0.unavailable != nil }.count == 1)
+
+        let on = StrategyChartGrid.deviationSections(rules: rules, lateSurrender: true)
+        #expect(on.allSatisfy { $0.unavailable == nil })
+        #expect(on.map(\.id) == off.map(\.id))
+    }
+
     @Test func leavesInsuranceAloneAsItIsFiledAgainstNoHand() throws {
         let rules = try GameData.loadCharts().deviations["S17"] ?? []
         #expect(try StrategyChartGrid

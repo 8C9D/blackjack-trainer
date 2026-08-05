@@ -29,7 +29,8 @@ struct ChartView: View {
     private var deviationSections: [DeviationSection] {
         StrategyChartGrid.deviationSections(
             rules: model.charts.deviations[prefs.ruleSet.rawValue] ?? [],
-            misses: StrategyChartGrid.missesByKey(model.missTally.weakSpots(.deviations))
+            misses: StrategyChartGrid.missesByKey(model.missTally.weakSpots(.deviations)),
+            lateSurrender: prefs.options.lateSurrender
         )
     }
 
@@ -48,11 +49,11 @@ struct ChartView: View {
             .map { CountReference(system: $0, decks: prefs.counting.numberOfDecks) }
     }
 
-    /// The DAS and Late-Surrender chips are dropped in the deviation list: no
-    /// deviation rule reads either option. Table rules are dropped entirely on
-    /// the count tab — they decide a play, and have nothing to do with what a
-    /// card is worth to the count, so the system it does depend on takes their
-    /// place.
+    /// Surrender is on both grids: it decides a basic cell and it decides whether
+    /// the surrender indices are plays at all. DAS is not — no deviation is
+    /// written against it. Table rules are dropped entirely on the count tab —
+    /// they decide a play, and have nothing to do with what a card is worth to
+    /// the count, so the system it does depend on takes their place.
     private var ruleChips: [String] {
         if mode == .count {
             guard let countReference else { return [] }
@@ -61,11 +62,12 @@ struct ChartView: View {
         let ruleSet = prefs.ruleSet == .h17
             ? "H17 — dealer hits soft 17"
             : "S17 — dealer stands soft 17"
-        guard mode == .basic else { return [ruleSet] }
+        let surrender = prefs.options.lateSurrender ? "Late surrender" : "No late surrender"
+        guard mode == .basic else { return [ruleSet, surrender] }
         return [
             ruleSet,
             prefs.options.doubleAfterSplit ? "Double after split" : "No double after split",
-            prefs.options.lateSurrender ? "Late surrender" : "No late surrender"
+            surrender
         ]
     }
 
@@ -362,6 +364,13 @@ extension Action {
 extension ChartGridView {
     private func deviationCard(_ section: DeviationSection) -> some View {
         VStack(alignment: .leading, spacing: 10) {
+            // The rows stay legible — this is still the chart — but the plays
+            // read as unavailable rather than as something to drill, and the
+            // note explaining that leads the section.
+            if let unavailable = section.unavailable {
+                AdvisoryNoteView(text: unavailable, alignment: .leading)
+            }
+
             Text(section.title)
                 .font(.system(size: 11, weight: .semibold))
                 .tracking(1.4)
@@ -376,6 +385,7 @@ extension ChartGridView {
                     deviationRowView(row)
                 }
             }
+            .opacity(section.unavailable == nil ? 1 : 0.55)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 14)

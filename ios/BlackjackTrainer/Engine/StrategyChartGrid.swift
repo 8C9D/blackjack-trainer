@@ -84,6 +84,9 @@ struct DeviationSection: Identifiable {
     let id: String
     let title: String
     let rows: [DeviationRuleRow]
+    /// Set where the table rules have taken the whole section off the felt: the
+    /// rows stay listed (the chart is the chart) and say they are not on offer.
+    var unavailable: String?
 }
 
 /// The pure half of the strategy-chart screen, mirroring the web
@@ -119,16 +122,27 @@ enum StrategyChartGrid {
 
     /// The deviation table for a rule set, grouped for display. Empty groups are
     /// dropped so a chart without, say, surrender rules shows no empty card.
+    /// Late Surrender is the one table rule these indices depend on — no rule is
+    /// written against DAS — and with it off the surrender overlay does not fire,
+    /// so the section would otherwise list five plays the drill will never ask
+    /// for and the table will never deal.
     static func deviationSections(
         rules: [DeviationRule],
-        misses: [String: WeakSpot] = [:]
+        misses: [String: WeakSpot] = [:],
+        lateSurrender: Bool = true
     ) -> [DeviationSection] {
         deviationCategories.compactMap { category in
             let rows = rules
                 .filter { $0.category == category.id }
                 .map { deviationRow($0, misses: misses) }
             guard !rows.isEmpty else { return nil }
-            return DeviationSection(id: category.id, title: category.title, rows: rows)
+            let unavailable = category.id == "surrender" && !lateSurrender
+                ? "Late Surrender is off in your table rules, so none of these are on offer. "
+                + "Those hands play off the chart above."
+                : nil
+            return DeviationSection(
+                id: category.id, title: category.title, rows: rows, unavailable: unavailable
+            )
         }
     }
 

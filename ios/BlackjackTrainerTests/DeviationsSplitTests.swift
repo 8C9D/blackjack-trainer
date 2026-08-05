@@ -54,11 +54,10 @@ struct DeviationsSplitTests {
         #expect(h.model.result?.expectedAction == .hit)
     }
 
-    /// This drill offers Surrender whatever the table rule says, because the
-    /// surrender overlay can expect it either way — but not on a hand out of a
-    /// split, where the rules have taken it away.
+    /// Surrender is a first-two-cards action of the hand the dealer dealt, so a
+    /// table that offers it still does not offer it on a hand out of a split.
     @Test func takesTheSurrenderOverlayOffAHandOutOfASplit() {
-        let h = makeHarness(draws: .seven)
+        let h = makeHarness(draws: .seven, lateSurrender: true)
         h.model.deal(scenario(.eight, .eight, vs: .queen, tc: 4))
         #expect(h.model.legalActions.contains(.surrender))
 
@@ -91,7 +90,12 @@ private func scenario(_ a: Rank, _ b: Rank, vs upcard: Rank, tc: Int) -> Deviati
 }
 
 @MainActor
-private func makeHarness(playHandsOut: Bool = true, draws: Rank? = nil) -> DeviationsFixture
-    .Harness {
-    DeviationsFixture.makeHarness(playHandsOut: playHandsOut, draws: draws)
+private func makeHarness(
+    playHandsOut: Bool = true,
+    draws: Rank? = nil,
+    lateSurrender: Bool = false
+) -> DeviationsFixture.Harness {
+    DeviationsFixture.makeHarness(
+        playHandsOut: playHandsOut, draws: draws, lateSurrender: lateSurrender
+    )
 }
