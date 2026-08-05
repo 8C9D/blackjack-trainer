@@ -29,6 +29,9 @@ struct EngineOptions {
     let lateSurrender: Bool
 
     static let `default` = EngineOptions(doubleAfterSplit: false, lateSurrender: false)
+    /// A table that deals surrender, for callers whose default is the whole
+    /// chart rather than the app's own opening rules.
+    static let surrenderOffered = EngineOptions(doubleAfterSplit: false, lateSurrender: true)
 }
 
 /// Which chart branch produced a decision. Raw values match the fixtures.

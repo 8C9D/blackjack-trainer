@@ -71,4 +71,29 @@ struct DeviationScenarioGeneratorTests {
             }
         }
     }
+
+    /// The surrender overlay needs Late Surrender to fire, so without it a
+    /// surrender rule would build a hand around an index that cannot apply — and
+    /// pick a count to straddle a threshold with nothing on the other side.
+    @Test func neverDrawsASurrenderRuleWithoutLateSurrender() throws {
+        let charts = try GameData.loadCharts()
+        var drawn: Set<String> = []
+        for step in stride(from: 0.0, to: 1.0, by: 0.01) {
+            let generator = DeviationScenarioGenerator(
+                random: { step }, rulesByRuleSet: charts.deviations
+            )
+            for ruleSet in RuleSet.allCases {
+                let off = generator.pickRule(for: ruleSet, options: .default)
+                #expect(off?.category != "surrender")
+                if let category = generator.pickRule(for: ruleSet, options: .surrenderOffered)?
+                    .category {
+                    drawn.insert(category)
+                }
+            }
+        }
+        // And the rest of the chart is still reachable, surrender included, at a
+        // table that deals it.
+        #expect(drawn.contains("surrender"))
+        #expect(drawn.count > 2)
+    }
 }
