@@ -137,9 +137,11 @@ struct HomeView: View {
     }
 
     /// Lifetime accuracy for a trainer card. Counting sums every one of its
-    /// stores — running count, true count, the key-count call, the bet, the deck
-    /// countdown — mirroring the web: the card shows one number for the trainer,
-    /// and leaving a mode out shows "new" to someone who has drilled only that.
+    /// stores — running count, true count, the deck estimate that divides it,
+    /// the key-count call, the bet, the deck countdown — mirroring the web: the
+    /// card shows one number for the trainer, and leaving a question out shows
+    /// "new" to someone who has drilled only that, and lets the chip disagree
+    /// with that question's own Progress row.
     private func accuracy(for id: TrainerId) -> Int? {
         switch id {
         case .basicStrategy:
@@ -150,6 +152,7 @@ struct HomeView: View {
             countingAccuracy([
                 model.runningCountStats.stats,
                 model.trueCountStats.stats,
+                model.deckEstimationStats.stats,
                 model.keyCountStats.stats,
                 model.betSpreadStats.stats,
                 model.deckSpeedStats.stats

@@ -32,14 +32,25 @@ struct HomeHelpersTests {
         func stats(_ attempts: Int, _ correct: Int) -> SessionStats {
             SessionStats(attempts: attempts, correct: correct, streak: 0, longestStreak: correct)
         }
-        // 4 of 5 across the five stores.
-        let mixed = [stats(1, 1), stats(1, 0), stats(1, 1), stats(1, 1), stats(1, 1)]
-        #expect(countingAccuracy(mixed) == 80)
+        // 5 of 6 across the six stores.
+        let mixed = [stats(1, 1), stats(1, 0), stats(1, 1), stats(1, 1), stats(1, 1), stats(1, 1)]
+        #expect(countingAccuracy(mixed) == 83)
         // A trainee who has only ever drilled the newest mode still gets a
         // number, not "new".
         #expect(countingAccuracy([stats(0, 0), stats(0, 0), stats(0, 0), stats(0, 0),
                                   stats(2, 2)]) == 100)
         #expect(countingAccuracy([stats(0, 0), stats(0, 0)]) == nil)
+    }
+
+    /// The estimate is what the true count is divided by, and Progress has always
+    /// listed it as one of this trainer's rows. Leaving it out let the chip read
+    /// 90% for someone missing the divisor nine rounds in ten.
+    @Test func countingAccuracyIncludesTheDeckEstimate() {
+        func stats(_ attempts: Int, _ correct: Int) -> SessionStats {
+            SessionStats(attempts: attempts, correct: correct, streak: 0, longestStreak: correct)
+        }
+        // 19 of 30, not the 18 of 20 the two count stores show on their own.
+        #expect(countingAccuracy([stats(10, 9), stats(10, 9), stats(10, 1)]) == 63)
     }
 
     @Test func everyDrillModeHasItsOwnLabel() {
