@@ -57,6 +57,39 @@ describe('pickDeviationRule', () => {
     const rules = deviationRulesFor('S17');
     expect(pickDeviationRule('S17', () => 0.999_999)).toBe(rules.at(-1));
   });
+
+  // The surrender overlay needs Late Surrender to fire, so without it a
+  // surrender rule would build a hand around an index that cannot apply — and
+  // pick a count to straddle a threshold with nothing on the other side.
+  describe('with Late Surrender off', () => {
+    const LS_OFF = { doubleAfterSplit: false, lateSurrender: false };
+
+    it('never draws a surrender rule', () => {
+      for (const ruleSet of ['S17', 'H17'] as const) {
+        for (let i = 0; i < 500; i++) {
+          expect(pickDeviationRule(ruleSet, Math.random, LS_OFF).category).not.toBe('surrender');
+        }
+      }
+    });
+
+    it('still reaches the rest of the chart, including its last rule', () => {
+      const playable = deviationRulesFor('S17').filter((r) => r.category !== 'surrender');
+      expect(pickDeviationRule('S17', () => 0.999_999, LS_OFF)).toBe(playable.at(-1));
+      const seen = new Set<DeviationRule>();
+      for (let i = 0; i < 500; i++) seen.add(pickDeviationRule('S17', Math.random, LS_OFF));
+      expect(seen.size).toBeGreaterThanOrEqual(5);
+    });
+
+    it('draws them again once the table deals surrender', () => {
+      const seen = new Set<string>();
+      for (let i = 0; i < 500; i++) {
+        seen.add(
+          pickDeviationRule('S17', Math.random, { ...LS_OFF, lateSurrender: true }).category,
+        );
+      }
+      expect(seen.has('surrender')).toBe(true);
+    });
+  });
 });
 
 describe('makePlayerCardsForDeviationRule', () => {

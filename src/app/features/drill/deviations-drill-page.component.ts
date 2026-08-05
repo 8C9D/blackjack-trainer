@@ -559,7 +559,7 @@ export class DeviationsDrillPageComponent {
   private generateScenario(): DeviationScenario {
     const prefs = this.prefs.prefs();
     if (prefs.deviations.practiceMode === 'deviation-only') {
-      const rule = pickDeviationRule(prefs.ruleSet, this.random);
+      const rule = pickDeviationRule(prefs.ruleSet, this.random, prefs.options);
       const { player, dealerUpcard } = generateScenarioForDeviationRule({
         rule,
         random: this.random,
