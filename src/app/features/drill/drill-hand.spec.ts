@@ -94,20 +94,18 @@ describe('legalActionsFor', () => {
     expect(legalActionsFor(NON_PAIR, card('10'), DEFAULT_ENGINE_OPTIONS)).not.toContain('INS');
   });
 
+  // Both trainers ask it this way: the deviation surrender overlay is gated on
+  // the same rule, so there is no caller that wants SUR answerable without it.
   it('gates surrender on the Late Surrender rule', () => {
     expect(legalActionsFor(NON_PAIR, card('10'), DEFAULT_ENGINE_OPTIONS)).not.toContain('SUR');
     expect(legalActionsFor(NON_PAIR, card('10'), LS_ON)).toContain('SUR');
-  });
-
-  it('offers surrender regardless of the rule when surrenderAlways is set', () => {
-    expect(legalActionsFor(NON_PAIR, card('10'), DEFAULT_ENGINE_OPTIONS, true)).toContain('SUR');
   });
 
   // Double, split and surrender are first-two-card actions, and insurance was
   // settled before the hand was played, so a drawn card leaves hit and stand.
   it('leaves only hit and stand once the hand is past two cards', () => {
     const deep = [card('8'), card('8', 'hearts'), card('2')];
-    expect(legalActionsFor(deep, card('A'), LS_ON, true)).toEqual(['H', 'S']);
+    expect(legalActionsFor(deep, card('A'), LS_ON)).toEqual(['H', 'S']);
   });
 
   // A hand out of a split is two cards again but is not the hand that was
@@ -118,31 +116,30 @@ describe('legalActionsFor', () => {
     const AT_THE_CAP = { fromSplit: true, canSplitAgain: false };
 
     it('takes surrender and insurance away for good', () => {
-      const legal = legalActionsFor(NON_PAIR, card('A'), LS_ON, true, FROM_SPLIT);
+      const legal = legalActionsFor(NON_PAIR, card('A'), LS_ON, FROM_SPLIT);
       expect(legal).not.toContain('SUR');
       expect(legal).not.toContain('INS');
     });
 
     it('gives the double back only under DAS', () => {
-      expect(
-        legalActionsFor(NON_PAIR, card('6'), DEFAULT_ENGINE_OPTIONS, false, FROM_SPLIT),
-      ).toEqual(['H', 'S']);
+      expect(legalActionsFor(NON_PAIR, card('6'), DEFAULT_ENGINE_OPTIONS, FROM_SPLIT)).toEqual([
+        'H',
+        'S',
+      ]);
       const das = { ...DEFAULT_ENGINE_OPTIONS, doubleAfterSplit: true };
-      expect(legalActionsFor(NON_PAIR, card('6'), das, false, FROM_SPLIT)).toContain('D');
+      expect(legalActionsFor(NON_PAIR, card('6'), das, FROM_SPLIT)).toContain('D');
     });
 
     it('re-splits a pair until the deal is at its cap', () => {
       const pair: readonly Card[] = [card('8'), card('8', 'hearts')];
-      expect(legalActionsFor(pair, card('6'), DEFAULT_ENGINE_OPTIONS, false, FROM_SPLIT)).toContain(
+      expect(legalActionsFor(pair, card('6'), DEFAULT_ENGINE_OPTIONS, FROM_SPLIT)).toContain('P');
+      expect(legalActionsFor(pair, card('6'), DEFAULT_ENGINE_OPTIONS, AT_THE_CAP)).not.toContain(
         'P',
       );
-      expect(
-        legalActionsFor(pair, card('6'), DEFAULT_ENGINE_OPTIONS, false, AT_THE_CAP),
-      ).not.toContain('P');
     });
 
     it('leaves an unsplit hand every action it had', () => {
-      expect(legalActionsFor(NON_PAIR, card('A'), LS_ON, false, UNSPLIT)).toEqual(
+      expect(legalActionsFor(NON_PAIR, card('A'), LS_ON, UNSPLIT)).toEqual(
         legalActionsFor(NON_PAIR, card('A'), LS_ON),
       );
     });

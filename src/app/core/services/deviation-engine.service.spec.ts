@@ -20,6 +20,9 @@ const baseOptions: EngineOptions = {
   lateSurrender: false,
 };
 
+// The surrender overlay is a Late Surrender play, so every test of it says so.
+const LS_ON: Partial<EngineOptions> = { lateSurrender: true };
+
 const scenario = (
   c1: Rank,
   c2: Rank,
@@ -182,7 +185,7 @@ describe('DeviationEngineService', () => {
     });
 
     it('still surrenders the genuine hard 15 v 9 at the charted threshold (H17)', () => {
-      const at2 = engine.resolveDeviationDecision(scenario('10', '5', '9', 'H17'), 2);
+      const at2 = engine.resolveDeviationDecision(scenario('10', '5', '9', 'H17', LS_ON), 2);
       expect(at2.finalAction).toBe('SUR');
       expect(at2.deviationApplied).toBe(true);
     });
@@ -439,46 +442,99 @@ describe('DeviationEngineService', () => {
   // ─── Surrender overlay ────────────────────────────────────────────────
   describe('surrender overlay (BJA Late Surrender chart)', () => {
     it('16 v 8 surrender @ +4 — Hit below threshold, SUR at/above', () => {
-      const below = engine.resolveDeviationDecision(scenario('10', '6', '8'), 3);
+      const below = engine.resolveDeviationDecision(scenario('10', '6', '8', 'S17', LS_ON), 3);
       expect(below.basicAction).toBe('H');
       expect(below.finalAction).toBe('H');
       expect(below.deviationApplied).toBe(false);
 
-      const at = engine.resolveDeviationDecision(scenario('10', '6', '8'), 4);
+      const at = engine.resolveDeviationDecision(scenario('10', '6', '8', 'S17', LS_ON), 4);
       expect(at.finalAction).toBe('SUR');
       expect(at.deviationApplied).toBe(true);
       expect(at.matchedRule?.category).toBe('surrender');
     });
 
     it('15 v 9 surrender @ +2', () => {
-      const below = engine.resolveDeviationDecision(scenario('10', '5', '9'), 1);
+      const below = engine.resolveDeviationDecision(scenario('10', '5', '9', 'S17', LS_ON), 1);
       expect(below.finalAction).toBe('H');
-      const at = engine.resolveDeviationDecision(scenario('10', '5', '9'), 2);
+      const at = engine.resolveDeviationDecision(scenario('10', '5', '9', 'S17', LS_ON), 2);
       expect(at.finalAction).toBe('SUR');
     });
 
     it('15 v A surrender @ +2 (S17)', () => {
-      const below = engine.resolveDeviationDecision(scenario('10', '5', 'A', 'S17'), 1);
+      const below = engine.resolveDeviationDecision(scenario('10', '5', 'A', 'S17', LS_ON), 1);
       expect(below.finalAction).toBe('H');
-      const at = engine.resolveDeviationDecision(scenario('10', '5', 'A', 'S17'), 2);
+      const at = engine.resolveDeviationDecision(scenario('10', '5', 'A', 'S17', LS_ON), 2);
       expect(at.finalAction).toBe('SUR');
     });
 
-    it('15 v A surrender @ -1+ (H17) — applies at TC >= -1', () => {
-      const at = engine.resolveDeviationDecision(scenario('10', '5', 'A', 'H17'), -1);
+    // H17 charts 15 v A as a plain SUR_H basic cell as well as an index, so at
+    // an H17 table with surrender the hand is given up at any count. What the
+    // index marks is where the two agree — which is what deviationApplied says.
+    it('15 v A surrender @ -1+ (H17) — the index fires at TC >= -1', () => {
+      const at = engine.resolveDeviationDecision(scenario('10', '5', 'A', 'H17', LS_ON), -1);
       expect(at.finalAction).toBe('SUR');
+      expect(at.deviationApplied).toBe(true);
       expect(at.matchedRule?.category).toBe('surrender');
-      const below = engine.resolveDeviationDecision(scenario('10', '5', 'A', 'H17'), -2);
-      expect(below.finalAction).toBe('H');
+      const below = engine.resolveDeviationDecision(scenario('10', '5', 'A', 'H17', LS_ON), -2);
+      expect(below.basicAction).toBe('SUR');
+      expect(below.finalAction).toBe('SUR');
+      expect(below.deviationApplied).toBe(false);
     });
 
     it('16 v 9 surrender @ -1- — applies at TC <= -1 (negative-direction rule)', () => {
-      const at = engine.resolveDeviationDecision(scenario('10', '6', '9'), -1);
+      const at = engine.resolveDeviationDecision(scenario('10', '6', '9', 'S17', LS_ON), -1);
       expect(at.finalAction).toBe('SUR');
+      expect(at.deviationApplied).toBe(true);
       expect(at.matchedRule?.category).toBe('surrender');
-      // Above the threshold, the hard-stand deviation at +4 still applies.
-      const above = engine.resolveDeviationDecision(scenario('10', '6', '9'), 4);
-      expect(above.finalAction).toBe('S');
+      // Above the threshold the chart's own SUR_H cell still stands: a stand
+      // index does not downgrade a surrender the table is offering.
+      const above = engine.resolveDeviationDecision(scenario('10', '6', '9', 'S17', LS_ON), 4);
+      expect(above.finalAction).toBe('SUR');
+      expect(above.deviationApplied).toBe(false);
+      // With no surrender to make, that same hand stands on the +4 index.
+      const noSurrender = engine.resolveDeviationDecision(scenario('10', '6', '9'), 4);
+      expect(noSurrender.finalAction).toBe('S');
+    });
+  });
+
+  // ─── the overlay is a play the table has to be offering ───────────────
+  // Late Surrender off takes the chart's own SUR_* cells away; it has to take
+  // the surrender indices with them, or the trainer marks the only play on
+  // offer wrong and asks for one the table does not deal.
+  describe('surrender overlay with Late Surrender off', () => {
+    it('plays 15 v 10 off the chart at the count its surrender index fires at', () => {
+      const off = engine.resolveDeviationDecision(scenario('10', '5', '10', 'S17'), 0);
+      expect(off.basicAction).toBe('H');
+      expect(off.finalAction).toBe('H');
+      expect(off.deviationApplied).toBe(false);
+      // The same hand at the same count, at a table that deals surrender.
+      const on = engine.resolveDeviationDecision(scenario('10', '5', '10', 'S17', LS_ON), 0);
+      expect(on.finalAction).toBe('SUR');
+    });
+
+    it('leaves no surrender rule as the hint when the table has no surrender', () => {
+      // 15 v 9 has a surrender index and no natural-category rule, so with LS
+      // off there is nothing to hint at — the panel must not cite a play the
+      // trainee could not have made.
+      const off = engine.resolveDeviationDecision(scenario('10', '5', '9', 'S17'), 2);
+      expect(off.finalAction).toBe('H');
+      expect(off.matchedRule).toBeUndefined();
+    });
+
+    it('never surrenders any hard total at any count with the rule off', () => {
+      for (const ruleSet of ['S17', 'H17'] as const) {
+        for (const [c1, c2] of [
+          ['10', '5'],
+          ['10', '6'],
+        ] as const) {
+          for (const up of ['8', '9', '10', 'A'] as const) {
+            for (const tc of [-10, -2, -1, 0, 2, 4, 10]) {
+              const decision = engine.resolveDeviationDecision(scenario(c1, c2, up, ruleSet), tc);
+              expect(decision.finalAction).not.toBe('SUR');
+            }
+          }
+        }
+      }
     });
   });
 
@@ -560,7 +616,7 @@ describe('DeviationEngineService', () => {
   describe('surrender deviation rules — threshold gating', () => {
     it('applies a surrender deviation when its threshold is met', () => {
       // 15 v 9 SUR @ +2 (no natural deviation on 15 v 9).
-      const at = engine.resolveDeviationDecision(scenario('10', '5', '9', 'S17'), 2);
+      const at = engine.resolveDeviationDecision(scenario('10', '5', '9', 'S17', LS_ON), 2);
       expect(at.finalAction).toBe('SUR');
       expect(at.deviationApplied).toBe(true);
       expect(at.matchedRule?.category).toBe('surrender');
@@ -568,18 +624,19 @@ describe('DeviationEngineService', () => {
 
     it('does not apply a surrender deviation when its threshold is unmet', () => {
       // Same cell, below threshold — basic Hit prevails.
-      const below = engine.resolveDeviationDecision(scenario('10', '5', '9', 'S17'), 1);
+      const below = engine.resolveDeviationDecision(scenario('10', '5', '9', 'S17', LS_ON), 1);
       expect(below.basicAction).toBe('H');
       expect(below.finalAction).toBe('H');
       expect(below.deviationApplied).toBe(false);
     });
 
     it('applies a surrender deviation even when a hard deviation also matches', () => {
-      // 16 v 9 with LS off: at TC = -1 the surrender rule (at-or-below -1)
-      // applies; at TC = +4 only the hard stand rule (at-or-above +4) applies.
-      // Demonstrates both rules coexist and are gated by their own thresholds.
+      // 16 v 9: at TC = -1 the surrender rule (at-or-below -1) applies; at
+      // TC = +4 only the hard stand rule (at-or-above +4) does. Read at a table
+      // without surrender, where the chart's own SUR_H cell is out of the way
+      // and both indices are visible on their own thresholds.
       const surrendered = engine.resolveDeviationDecision(
-        scenario('10', '6', '9', 'S17', { lateSurrender: false }),
+        scenario('10', '6', '9', 'S17', LS_ON),
         -1,
       );
       expect(surrendered.finalAction).toBe('SUR');

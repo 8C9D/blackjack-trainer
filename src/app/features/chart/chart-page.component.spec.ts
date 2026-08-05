@@ -309,14 +309,42 @@ describe('ChartPageComponent', () => {
       expect(h17).not.toBe(s17);
     });
 
-    it('drops the DAS and surrender chips, which no deviation reads', () => {
+    // DAS decides basic-strategy cells and no index below; Late Surrender
+    // decides both, so it is the one rule chip that follows onto this tab.
+    it('keeps the surrender chip and drops the DAS one', () => {
       const { fixture } = createPage();
       expect(fixture.nativeElement.querySelectorAll('.chart__chip')).toHaveLength(3);
       showDeviations(fixture);
       const chips = [...fixture.nativeElement.querySelectorAll('.chart__chip')].map((el) =>
         (el as HTMLElement).textContent!.trim(),
       );
-      expect(chips).toEqual(['S17 — dealer stands soft 17']);
+      expect(chips).toEqual(['S17 — dealer stands soft 17', 'No late surrender']);
+    });
+
+    // The five surrender indices are plays the table is not dealing, and a
+    // chart that lists them silently is the one the drill used to grade
+    // against. They stay on the page and say so.
+    it('says the surrender indices are off the felt without Late Surrender', () => {
+      const { fixture } = createPage();
+      showDeviations(fixture);
+      const off = fixture.nativeElement.querySelector('.chart__note--off') as HTMLElement;
+      expect(off.textContent).toContain('Late Surrender is off');
+      expect(
+        fixture.nativeElement.querySelectorAll('.chart__section--off .chart__table--rules'),
+      ).toHaveLength(1);
+    });
+
+    it('drops the notice once the table deals surrender', () => {
+      TestBed.inject(FlowPrefsService).setOptions({
+        doubleAfterSplit: false,
+        lateSurrender: true,
+      });
+      const { fixture } = createPage();
+      showDeviations(fixture);
+      expect(fixture.nativeElement.querySelector('.chart__note--off')).toBeNull();
+      expect(fixture.nativeElement.querySelectorAll('.chart__table--rules').length).toBeGreaterThan(
+        0,
+      );
     });
   });
 
@@ -408,8 +436,10 @@ describe('ChartPageComponent', () => {
       tab.click();
       fixture.detectChanges();
     };
+    // The page's own footnotes, not the per-section "this rule is off" notices,
+    // which sit inside the tables above them.
     const notes = (fixture: ComponentFixture<ChartPageComponent>) =>
-      [...fixture.nativeElement.querySelectorAll('.chart__note')].map((n) =>
+      [...fixture.nativeElement.querySelectorAll('.chart__note:not(.chart__note--off)')].map((n) =>
         (n as HTMLElement).textContent!.trim(),
       );
 

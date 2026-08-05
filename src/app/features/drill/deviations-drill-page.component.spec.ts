@@ -26,7 +26,7 @@ const scenarioOf = (c1: Rank, c2: Rank, up: Rank, trueCount: number): DeviationS
 const SIXTEEN_V_TEN_TC0 = scenarioOf('K', '6', 'Q', 0);
 const SIXTEEN_V_TEN_TC_NEG = scenarioOf('K', '6', 'Q', -2);
 //   Hard 16 (K+6) vs 8 surrenders at TC >= +4 — via the surrender overlay,
-//   which fires regardless of the Late Surrender table rule.
+//   which needs Late Surrender in the table rules, like any surrender.
 const SIXTEEN_V_EIGHT_TC4 = scenarioOf('K', '6', '8', 4);
 //   Dealer ace: insurance becomes correct at TC >= +3.
 const INSURANCE_TC3 = scenarioOf('3', '4', 'A', 3);
@@ -70,6 +70,11 @@ function deal(c: Internals, scenario: DeviationScenario): void {
   c.activeIndex.set(0);
   c.splitAces.set(false);
   c.atDeal.set(true);
+}
+
+// Table rules are read when the page renders, so this runs before createPage.
+function lateSurrender(on: boolean): void {
+  TestBed.inject(FlowPrefsService).setOptions({ doubleAfterSplit: false, lateSurrender: on });
 }
 
 function createPage(): {
@@ -182,13 +187,26 @@ describe('DeviationsDrillPageComponent', () => {
   });
 
   describe('poka-yoke with deviation overlays', () => {
-    it('keeps surrender answerable with Late Surrender off, because the overlay can expect it', () => {
+    it('asks for the overlay surrender at a table that deals one', () => {
+      lateSurrender(true);
       const { c } = createPage();
       deal(c, SIXTEEN_V_EIGHT_TC4);
       expect(c.legalActions()).toContain('SUR');
       c.answer('SUR');
       expect(c.result()!.correct).toBe(true);
       expect(c.result()!.expectedAction).toBe('SUR');
+    });
+
+    // With the rule off there is no surrender to make, and the drill used to
+    // both hide nothing and demand it: the button stayed live and the only play
+    // on offer — the chart's own hit — was marked wrong.
+    it('takes surrender off the grid and out of the answer with the rule off', () => {
+      const { c } = createPage();
+      deal(c, SIXTEEN_V_EIGHT_TC4);
+      expect(c.legalActions()).not.toContain('SUR');
+      c.answer('H');
+      expect(c.result()!.expectedAction).toBe('H');
+      expect(c.result()!.correct).toBe(true);
     });
 
     it('offers insurance only against an ace and grades it by true count', () => {
@@ -490,10 +508,10 @@ describe('DeviationsDrillPageComponent', () => {
       expect(c.result()!.expectedAction).toBe('H');
     });
 
-    // This drill offers Surrender whatever the table rule says, because the
-    // surrender overlay can expect it either way — but not on a hand out of a
-    // split, where the rules have taken it away.
+    // Surrender is a first-two-cards action of the hand the dealer dealt, so a
+    // table that offers it still does not offer it on a hand out of a split.
     it('takes the surrender overlay off a hand out of a split', () => {
+      lateSurrender(true);
       const { c } = createPage();
       deal(c, EIGHTS_V_TEN_TC4);
       expect(c.legalActions()).toContain('SUR');
