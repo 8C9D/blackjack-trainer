@@ -81,6 +81,24 @@ struct FlowPrefsStoreTests {
         #expect(merged.deviations.manualTrueCount == 0)
     }
 
+    /// A hand-edited backup is exactly the payload this merge exists for, and a
+    /// whole number is not enough to make a manual true count practisable: the
+    /// trainer has no indices written outside the range the stepper offers.
+    /// The web loader clamps the same field, and the same file restores on both.
+    @Test func rejectsAManualTrueCountOutsideTheStepperRange() {
+        let high = FlowPrefs.merged(from: ["deviations": ["manualTrueCount": 5000]])
+        #expect(high.deviations.manualTrueCount == FlowPrefs.default.deviations.manualTrueCount)
+
+        let low = FlowPrefs.merged(from: ["deviations": ["manualTrueCount": -21]])
+        #expect(low.deviations.manualTrueCount == FlowPrefs.default.deviations.manualTrueCount)
+
+        // The ends of the range are practisable, so they survive the merge.
+        let edge = FlowPrefs.merged(from: ["deviations": ["manualTrueCount": 20]])
+        #expect(edge.deviations.manualTrueCount == 20)
+        let lowEdge = FlowPrefs.merged(from: ["deviations": ["manualTrueCount": -20]])
+        #expect(lowEdge.deviations.manualTrueCount == -20)
+    }
+
     @Test func returnsDefaultsForANonObjectPayload() {
         #expect(FlowPrefs.merged(from: nil) == FlowPrefs.default)
         #expect(FlowPrefs.merged(from: "x") == FlowPrefs.default)
