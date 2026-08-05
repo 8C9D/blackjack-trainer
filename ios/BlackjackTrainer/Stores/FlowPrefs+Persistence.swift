@@ -77,7 +77,11 @@ private func mergedDeviations(
             DeviationTrueCountSource.self,
             defaults.trueCountSource
         ),
-        manualTrueCount: intValue(raw["manualTrueCount"]) ?? defaults.manualTrueCount
+        // Range-checked, not merely integer-checked: a hand-edited backup is
+        // exactly the payload this merge exists for, and the trainer has no
+        // indices written for a count the Settings stepper cannot reach.
+        manualTrueCount: intValue(raw["manualTrueCount"])
+            .flatMap(validManualTrueCount) ?? defaults.manualTrueCount
     )
 }
 

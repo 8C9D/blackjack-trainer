@@ -22,14 +22,24 @@ enum DeviationTrainerConstants {
     static let maxManualTrueCount = 20
 }
 
-/// Parse a manual true-count entry: an integer in the manual range, else `nil`
-/// (empty, non-integer, decimal, or out of range). Mirrors `parseManualTrueCount`.
-func parseManualTrueCount(_ raw: String) -> Int? {
-    let trimmed = raw.trimmingCharacters(in: .whitespaces)
-    guard trimmed.wholeMatch(of: /-?\d+/) != nil, let value = Int(trimmed) else { return nil }
+/// A manual true count the trainer can actually be set to, or `nil` when it is
+/// outside the range the Settings stepper offers.
+///
+/// The bound lives here rather than at each entry point, so the two ways a count
+/// arrives — typed, or read back out of a stored payload — cannot disagree about
+/// what the trainer will accept.
+func validManualTrueCount(_ value: Int) -> Int? {
     guard value >= DeviationTrainerConstants.minManualTrueCount,
           value <= DeviationTrainerConstants.maxManualTrueCount else { return nil }
     return value
+}
+
+/// Parse a manual true-count entry: an integer in the manual range, else `nil`
+/// (empty, non-integer, decimal, or out of range).
+func parseManualTrueCount(_ raw: String) -> Int? {
+    let trimmed = raw.trimmingCharacters(in: .whitespaces)
+    guard trimmed.wholeMatch(of: /-?\d+/) != nil, let value = Int(trimmed) else { return nil }
+    return validManualTrueCount(value)
 }
 
 /// Presentation formatters for the Deviations feedback (the rationale strings
