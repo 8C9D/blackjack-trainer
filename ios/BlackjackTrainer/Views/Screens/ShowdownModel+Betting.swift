@@ -75,6 +75,20 @@ extension ShowdownModel {
         option * Double(spots) <= bankrollStore.bankroll
     }
 
+    /// Whether the bankroll can back the round about to be dealt: the table
+    /// minimum on every occupied box.
+    ///
+    /// `Bankroll.clampBet` floors at the table minimum whatever the bankroll says
+    /// — there is no such thing as a legal bet of nothing — so a stack too short
+    /// for the boxes in play would otherwise be dealt a round it cannot pay for,
+    /// and settle it into a negative bankroll. The round has to be refused before
+    /// it is dealt, not after it is lost.
+    ///
+    /// Generalises `bustedOut`, which asks the same question of a single box.
+    var canBackRound: Bool {
+        bankrollStore.bankroll >= Bankroll.minBet * Double(spots)
+    }
+
     /// Chips already committed to the felt this round. Only the bankroll's free
     /// chips can back another bet, so a double or split has to fit inside them.
     var committed: Double {

@@ -183,12 +183,12 @@ final class ShowdownModel {
     }
 
     func setBet(_ value: Double) {
-        guard phase == .betting else { return }
+        guard phase == .betting, canBackRound else { return }
         bet = clampedBet(value)
     }
 
     func dealAfterBet() {
-        guard phase == .betting else { return }
+        guard phase == .betting, canBackRound else { return }
         // Snapshot the count before a card is turned: the bet was decided on what
         // the player could see at that moment, and dealing moves the count.
         let trueCount = betTrueCount
@@ -269,7 +269,7 @@ final class ShowdownModel {
     /// spread should be reconsidered rather than silently repeated.
     func dealAnother() {
         if betting {
-            guard !bankrollStore.bustedOut else { return }
+            guard canBackRound else { return }
             // Clear the settled round before the next bet, so nothing on the felt
             // (or in `committed`) belongs to a hand that is already paid.
             hands = []
