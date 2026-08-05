@@ -4,6 +4,7 @@ import { Router, provideRouter } from '@angular/router';
 import { BasicStrategyStatsService } from '../../core/services/basic-strategy-stats.service';
 import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.service';
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
+import { DeckEstimationStatsService } from '../../core/services/deck-estimation-stats.service';
 import { DeckSpeedStatsService } from '../../core/services/deck-speed-stats.service';
 import { KeyCountStatsService } from '../../core/services/key-count-stats.service';
 import { DeviationStatsService } from '../../core/services/deviation-stats.service';
@@ -187,9 +188,23 @@ describe('HomePageComponent', () => {
       recordCorrect(TestBed.inject(KeyCountStatsService), 1);
       recordCorrect(TestBed.inject(BetSpreadStatsService), 1);
       recordCorrect(TestBed.inject(DeckSpeedStatsService), 1);
+      recordCorrect(TestBed.inject(DeckEstimationStatsService), 1);
       const { fixture } = createPage();
-      // 4 of 5 correct across the five stores.
-      expect(countingChip(fixture)).toBe('80%');
+      // 5 of 6 correct across the six stores.
+      expect(countingChip(fixture)).toBe('83%');
+    });
+
+    // The estimate is what the true count is divided by, and Progress has always
+    // listed it as one of this trainer's rows. Leaving it out let the chip read
+    // 90% for someone missing the divisor nine rounds in ten.
+    it('counts the deck estimate the true-count round is graded beside', () => {
+      TestBed.inject(FlowPrefsService).setLastTrainer('basic-strategy');
+      recordCorrect(TestBed.inject(CardCountingStatsService), 9, 1);
+      recordCorrect(TestBed.inject(TrueCountStatsService), 9, 1);
+      recordCorrect(TestBed.inject(DeckEstimationStatsService), 1, 9);
+      const { fixture } = createPage();
+      // 19 of 30, not the 18 of 20 the two count stores show on their own.
+      expect(countingChip(fixture)).toBe('63%');
     });
 
     it('reads as new only when no counting store has an attempt', () => {
