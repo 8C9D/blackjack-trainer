@@ -32,8 +32,9 @@ struct DeviationEngine {
     }
 
     /// Resolution order: surrender deviation (checked first — a hand can have
-    /// both a surrender and a natural deviation) → respect a live surrender →
-    /// natural-category deviation → otherwise the live basic action stands.
+    /// both a surrender and a natural deviation, and it needs Late Surrender in
+    /// the table rules) → respect a live surrender → natural-category deviation
+    /// → otherwise the live basic action stands.
     func resolveDeviationDecision(_ input: EngineInput, trueCount: Int) -> DeviationDecision {
         let basicAction = basic.decide(input).action
         let dealerKey = normalizeUpcardKey(input.dealerUpcard)
@@ -43,7 +44,12 @@ struct DeviationEngine {
         // to a hard hand: a soft hand's total key collides with a hard total
         // (soft 15 (A,4) → '15', soft 16 (A,5) → '16'), and surrendering a soft
         // 15/16 — which can never bust — is never correct.
-        let surrenderRule = category == "hard"
+        //
+        // Late Surrender gates it too — the same gate `resolvePlayDecision` puts
+        // on the table's own surrender. Without it the trainer suppressed the
+        // chart's SUR_* cell (no surrender at this table) and then insisted on
+        // the index's surrender anyway, marking the only play on offer wrong.
+        let surrenderRule = category == "hard" && input.options.lateSurrender
             ? findRule(ruleSet: input.ruleSet, category: "surrender",
                        playerHand: playerHand, dealerUpcard: dealerKey)
             : nil

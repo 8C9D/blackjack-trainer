@@ -100,14 +100,8 @@ struct DrillHandTests {
     @Test func leavesOnlyHitAndStandOnceTheHandIsPastTwoCards() {
         let deep = [card(.eight), card(.eight, .hearts), card(.two)]
         #expect(legalActionsFor(
-            deep, dealerUpcard: card(.ace), options: lsOn, surrenderAlways: true
+            deep, dealerUpcard: card(.ace), options: lsOn
         ) == [.hit, .stand])
-    }
-
-    @Test func offersSurrenderRegardlessOfTheRuleWhenSurrenderAlwaysIsSet() {
-        #expect(legalActionsFor(
-            nonPair, dealerUpcard: card(.ten), options: .default, surrenderAlways: true
-        ).contains(.surrender))
     }
 
     // MARK: after a split
@@ -121,8 +115,7 @@ struct DrillHandTests {
 
     @Test func aSplitTakesSurrenderAndInsuranceAwayForGood() {
         let legal = legalActionsFor(
-            nonPair, dealerUpcard: card(.ace), options: lsOn,
-            surrenderAlways: true, split: fromSplit
+            nonPair, dealerUpcard: card(.ace), options: lsOn, split: fromSplit
         )
         #expect(!legal.contains(.surrender))
         #expect(!legal.contains(.insurance))

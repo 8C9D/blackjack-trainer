@@ -14,6 +14,10 @@ struct AdvisoryNoteView: View {
             .font(.system(size: 12))
             .foregroundStyle(Theme.midInk)
             .multilineTextAlignment(alignment)
+            // Take the height the wrapped text actually needs. Without it the
+            // sentence is offered one line's worth of height and tails off in an
+            // ellipsis — which for a warning loses the half that says what to do.
+            .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: 420, alignment: alignment == .center ? .center : .leading)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)

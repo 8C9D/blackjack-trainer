@@ -48,11 +48,15 @@ enum DeviationsFixture {
         missedAt: Int? = nil,
         playHandsOut: Bool = true,
         draws: Rank? = nil,
-        pinned: ScenarioRef? = nil
+        pinned: ScenarioRef? = nil,
+        lateSurrender: Bool = false
     ) -> Harness {
         let defaults = freshDefaults()
         let prefs = FlowPrefsStore(defaults: defaults)
         prefs.setDailyGoal(Double(dailyGoal))
+        if lateSurrender {
+            prefs.setOptions(EngineOptions(doubleAfterSplit: false, lateSurrender: true))
+        }
         if let systemId {
             prefs.updateCounting { $0.systemId = systemId }
         }

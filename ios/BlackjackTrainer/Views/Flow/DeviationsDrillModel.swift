@@ -499,14 +499,14 @@ extension DeviationsDrillModel {
         return DeviationFeedback.explanation(result, dealerAce: scenario.dealerUpcard.isAce)
     }
 
-    /// Surrender stays answerable regardless of the Late Surrender rule: the
-    /// deviation surrender overlay can expect SUR either way.
+    /// The same six buttons the Basic Strategy drill offers, under the same table
+    /// rules: with Late Surrender off there is no surrender to make, and the
+    /// surrender overlay no longer asks for one.
     var legalActions: [Action] {
         legalActionsFor(
             hand,
             dealerUpcard: scenario.dealerUpcard,
             options: prefs.prefs.options,
-            surrenderAlways: true,
             split: splitContext
         )
     }

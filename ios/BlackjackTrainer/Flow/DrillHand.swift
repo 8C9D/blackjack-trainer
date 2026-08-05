@@ -69,9 +69,9 @@ struct SplitContext: Equatable {
 
 /// Which of the six actions are answerable for this hand. Hit/Stand/Double are
 /// always live; Split needs a pair; Insurance needs a dealer Ace; Surrender needs
-/// Late Surrender — except where the caller's engine can expect SUR regardless
-/// (the deviations surrender overlay), via `surrenderAlways`. Mirrors
-/// `legalActionsFor`.
+/// Late Surrender. Both trainers ask it the same way, because both are graded
+/// against the same table: a deviation index cannot call for a surrender the
+/// table does not deal. Mirrors `legalActionsFor`.
 /// Once a card has been drawn, hit and stand are the whole of it: double, split
 /// and surrender are first-two-card actions, and insurance was decided before the
 /// hand was played. The grid says so by going dead rather than by hiding them,
@@ -82,7 +82,6 @@ func legalActionsFor(
     _ player: [Card],
     dealerUpcard: Card,
     options: EngineOptions,
-    surrenderAlways: Bool = false,
     split: SplitContext = .unsplit
 ) -> [Action] {
     guard player.count == 2 else { return [.hit, .stand] }
@@ -90,7 +89,6 @@ func legalActionsFor(
         TwoCardHand(player[0], player[1]),
         dealerUpcard: dealerUpcard,
         options: options,
-        surrenderAlways: surrenderAlways,
         split: split
     )
 }
@@ -99,13 +97,12 @@ func legalActionsFor(
     _ player: TwoCardHand,
     dealerUpcard: Card,
     options: EngineOptions,
-    surrenderAlways: Bool = false,
     split: SplitContext = .unsplit
 ) -> [Action] {
     var legal: [Action] = [.hit, .stand]
     if !split.fromSplit || options.doubleAfterSplit { legal.append(.double) }
     if HandClassification.pairKey(player) != nil, split.canSplitAgain { legal.append(.split) }
-    if !split.fromSplit, surrenderAlways || options.lateSurrender { legal.append(.surrender) }
+    if !split.fromSplit, options.lateSurrender { legal.append(.surrender) }
     if !split.fromSplit, dealerUpcard.isAce { legal.append(.insurance) }
     return legal
 }

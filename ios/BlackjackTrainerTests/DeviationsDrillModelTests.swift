@@ -47,13 +47,25 @@ struct DeviationsDrillModelTests {
         #expect(h.model.explanation.contains("deviation"))
     }
 
-    @Test func keepsSurrenderAnswerableWithLateSurrenderOff() {
-        let h = makeHarness()
+    @Test func asksForTheOverlaySurrenderAtATableThatDealsOne() {
+        let h = makeHarness(lateSurrender: true)
         h.model.deal(scenario(.king, .six, vs: .eight, tc: 4))
         #expect(h.model.legalActions.contains(.surrender))
         h.model.answer(.surrender)
         #expect(h.model.result?.correct == true)
         #expect(h.model.correctAction == .surrender)
+    }
+
+    /// With the rule off there is no surrender to make, and the drill used to
+    /// both hide nothing and demand it: the button stayed live and the only play
+    /// on offer — the chart's own hit — was marked wrong.
+    @Test func takesSurrenderOffTheGridAndOutOfTheAnswerWithTheRuleOff() {
+        let h = makeHarness()
+        h.model.deal(scenario(.king, .six, vs: .eight, tc: 4))
+        #expect(!h.model.legalActions.contains(.surrender))
+        h.model.answer(.hit)
+        #expect(h.model.correctAction == .hit)
+        #expect(h.model.result?.correct == true)
     }
 
     @Test func offersInsuranceOnlyAgainstAnAceAndGradesItByTrueCount() {
@@ -237,10 +249,12 @@ private func makeHarness(
     seedWeak: ScenarioRef? = nil,
     missedAt: Int? = nil,
     playHandsOut: Bool = true,
-    draws: Rank? = nil
+    draws: Rank? = nil,
+    lateSurrender: Bool = false
 ) -> DeviationsFixture.Harness {
     DeviationsFixture.makeHarness(
         dailyGoal: dailyGoal, systemId: systemId, manualTrueCount: manualTrueCount,
-        seedWeak: seedWeak, missedAt: missedAt, playHandsOut: playHandsOut, draws: draws
+        seedWeak: seedWeak, missedAt: missedAt, playHandsOut: playHandsOut, draws: draws,
+        lateSurrender: lateSurrender
     )
 }
