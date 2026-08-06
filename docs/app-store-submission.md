@@ -17,7 +17,6 @@ roadmap's _App Store specifics & review risk_.
 | App name           | Blackjack Trainer                                         |
 | Subtitle           | Basic strategy & card counting                            |
 | Bundle ID (app)    | `com.arthurzhang.blackjacktrainer.app`                    |
-| Bundle ID (widget) | `com.arthurzhang.blackjacktrainer.app.widget`             |
 | Apple Team         | `C3W798H8U8`                                              |
 | SKU                | `blackjack-trainer-ios` (suggested)                       |
 | Primary category   | Education                                                 |
@@ -31,7 +30,7 @@ roadmap's _App Store specifics & review risk_.
 > just practice.
 >
 > Blackjack Trainer is an educational trainer for the math behind the game. Drill
-> the four skills the pros separate out, each graded instantly against the correct
+> the skills the pros separate out, each graded instantly against the correct
 > play:
 >
 > • Basic Strategy — every hand vs. dealer upcard, with H17/S17, DAS, and
@@ -44,11 +43,10 @@ roadmap's _App Store specifics & review risk_.
 > strategy by the count.
 >
 > Every answer is checked against an engine, with a clear explanation of the
-> correct play. Track your accuracy and streaks per trainer, see them on a
-> home-screen widget, sync across your devices with iCloud, and set an optional
-> daily practice reminder.
+> correct play. Track your accuracy, streaks, and weak spots per trainer, and
+> sync across your devices with iCloud.
 >
-> No wagering. No real or virtual money. Just the strategy.
+> No wagering. No real or virtual money. No chips. Just the strategy.
 
 ## Keywords (draft, ≤100 chars)
 
@@ -59,15 +57,15 @@ blackjack,basic strategy,card counting,trainer,hi-lo,true count,deviations,21,ca
 ## Promotional text (draft, ≤170 chars)
 
 > Practice blackjack basic strategy, card counting, true count, and Hi-Lo
-> deviations — instantly graded, no wagering. Now with a stats widget and daily
-> reminders.
+> deviations — instantly graded, no wagering, with iCloud sync and adaptive
+> weak-spot review.
 
 ## Privacy — App Privacy nutrition labels
 
 **Data Not Collected.** The app has no analytics, no accounts, and no third-party
 SDKs. Per-trainer stats live in on-device `UserDefaults` and, when the user enables
-it, sync through the user's **own** iCloud (NSUbiquitousKeyValueStore) and a local
-App Group for the widget — none of it is collected by or sent to the developer.
+it, sync through the user's **own** iCloud (NSUbiquitousKeyValueStore) — none of
+it is collected by or sent to the developer.
 
 - Answer **"No, we do not collect data from this app"** in the App Privacy section.
 - A **privacy policy URL is still required** by App Store Connect even for
@@ -76,17 +74,36 @@ App Group for the widget — none of it is collected by or sent to the developer
 
 ## Age rating
 
-Answer the questionnaire **honestly** for a no-wager blackjack trainer:
+> **Re-derived after the v1.0 scope trim (2026-08-06).** The earlier answer was
+> written for a build whose showdown table played hands out against a persisted
+> chip bankroll with bet sizing — a simulated-wagering surface. That surface is
+> archived: the shipped app has **no chips, no bankroll, no bets, no payouts,
+> and no hand ever plays out to a win/lose outcome**.
 
-- **Simulated Gambling:** Yes — the app simulates blackjack play (the core
-  activity), though with **no wagering and no real or virtual currency**.
-- All other content categories (violence, mature/suggestive, profanity,
-  horror, unrestricted web access, user-generated content, etc.): **None**.
+What the app now contains, as it bears on the questionnaire:
 
-Expected outcome: a mature rating (commonly **17+**, or the regional equivalent in
-Apple's current age-rating scheme) because of the simulated-gambling category.
-Accept whatever the honest questionnaire yields — do not understate it. Budget one
-review round for the gambling/age-rating angle (roadmap risk register).
+- Flashcard-style drills: a dealt blackjack hand (or a card stream) is shown,
+  the user names the correct play or count, and the answer is graded. No round
+  is settled, nothing is staked, and no currency — real or virtual — exists
+  anywhere in the app.
+- The subject matter is still casino blackjack and card counting: real card
+  faces, dealer upcards, insurance decisions, and instruction aimed at
+  advantage play at a real table.
+
+Questionnaire items this ships against:
+
+- **Simulated Gambling** is the one item in play, and it is a judgment call the
+  human must answer against Apple's current questionnaire wording: the app
+  depicts casino blackjack and teaches gambling-adjacent skills, but simulates
+  no wagering at all. Answer it honestly from the description above — do not
+  copy the old "Yes" forward, and do not assume the trim guarantees a "None".
+- Every other content category (violence, mature/suggestive, profanity, horror,
+  contests, unrestricted web access, user-generated content): **None**.
+
+Do not assume a specific resulting rating. If the honest answers still yield a
+mature rating, accept it; budget one review round for the gambling/age-rating
+angle either way (roadmap risk register), and expect App Review to weigh the
+card-counting instruction independently of the questionnaire.
 
 ## Export compliance
 
@@ -98,15 +115,16 @@ only Apple-provided, exempt encryption (HTTPS/iCloud), no custom/non-exempt cryp
 ## Review notes (suggested, for the App Review team)
 
 > This is an educational blackjack **strategy trainer**. There is **no wagering,
-> no real or virtual currency, and no payouts** — the optional post-count
-> "showdown" only tracks a win/lose/push count for practice. No account or login
-> is required; all data stays on-device or in the user's own iCloud.
+> no real or virtual currency, no payouts, and no hand is ever played out to a
+> win/lose outcome** — the app grades individual decisions (the correct play or
+> the correct count) like flashcards. No account or login is required; all data
+> stays on-device or in the user's own iCloud.
 
 ## Licensing note
 
 App code is **MIT**. The card artwork is the **Vector Playing Card Library 1.3**
 (Chris Aguilar), **LGPL 3.0**; its attribution and full license texts ship in-app
-on the About screen (Slice 2.3). No action needed beyond keeping that screen.
+on the Settings → Licenses screen. No action needed beyond keeping that screen.
 
 ## Human checklist
 
@@ -116,23 +134,22 @@ on the About screen (Slice 2.3). No action needed beyond keeping that screen.
 These can only be done by a human with the Apple Developer account / a device —
 the autopilot cannot and must not represent them as done:
 
-- [ ] **Provision capabilities** for the App ID `com.arthurzhang.blackjacktrainer.app`
-      (and the widget App ID): **iCloud Key-Value Store** (Slice 4.2) and the
-      **App Group** `group.com.arthurzhang.blackjacktrainer` (Slice 4.3); sign with
-      a matching profile. Turn `CODE_SIGNING_ALLOWED` back on for device/archive
-      builds.
+- [ ] **Provision capabilities** for the App ID `com.arthurzhang.blackjacktrainer.app`:
+      **iCloud Key-Value Store** (Slice 4.2); sign with a matching profile. The
+      widget App Group is no longer needed (the widget is archived). Turn
+      `CODE_SIGNING_ALLOWED` back on for device/archive builds.
 - [ ] **Create the App Store Connect record** (bundle ID above) and enter the
       metadata from this doc (name, subtitle, description, keywords, promo text,
       categories).
 - [ ] **Host & link a privacy policy URL** and a **support URL**.
-- [ ] **Answer App Privacy** = Data Not Collected, and the **age-rating
-      questionnaire** as above.
+- [ ] **Answer App Privacy** = Data Not Collected, and **re-answer the
+      age-rating questionnaire** from the re-derived section above.
 - [ ] **Capture screenshots** from a near-final build for the required device
-      sizes (6.9"/6.5" iPhone at minimum; iPad if shipping universal). The four
-      trainer screens + the widget make good shots.
+      sizes (6.9"/6.5" iPhone at minimum; iPad if shipping universal). The
+      existing `ios/AppStore/screenshots-6.9/` set predates the scope trim and
+      must be re-taken from the trimmed build.
 - [ ] **TestFlight (Slice 5.2):** archive, upload, internal/external testing across
-      a device matrix; verify iCloud sync (two devices), the widget on a Home
-      Screen, and notification delivery on schedule.
+      a device matrix; verify iCloud sync (two devices).
 - [ ] **Submit for review (Slice 5.3):** address any rejection (most likely the
       gambling/age-rating angle), then release (phased rollout suggested).
 
