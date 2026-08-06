@@ -1,46 +1,31 @@
 import Foundation
 
-/// What the drill asks for. `keyCount` is the unbalanced-system counterpart of
-/// the live-shoe true-count drill: the shoe's running count starts at the
-/// system's published IRC and the player calls whether it has reached the key
-/// count. Only offered for systems carrying a `KeyCountSchedule` (KO).
-/// `betSpread` is the true-count drill plus the question the count is for: how
-/// many units to bet. Balanced systems only, since it grades a true count first.
-/// `deckSpeed` is the self-paced one: a shuffled deck with a card burned,
-/// counted down against a stopwatch (see `DeckSpeed`).
+/// What the drill asks for: the running count, or the true count derived from
+/// it over the decks remaining (balanced systems only).
 enum DrillMode: String, CaseIterable {
     case runningCount = "running-count"
     case trueCount = "true-count"
-    case keyCount = "key-count"
-    case betSpread = "bet-spread"
-    case deckSpeed = "deck-speed"
 
-    /// The shoe-driven modes: key count always reads a live shoe; the two
-    /// true-count modes only with the live-shoe source. The one predicate behind
-    /// the settings fields, the prefs clamp, and the engine's shoe checks
-    /// (mirrors the web `usesLiveShoe`).
+    /// The shoe-driven configuration: true-count mode with the live-shoe
+    /// source. The one predicate behind the settings fields, the prefs clamp,
+    /// and the engine's shoe checks (mirrors the web `usesLiveShoe`).
     func usesLiveShoe(source: TrueCountSource) -> Bool {
-        self == .keyCount || (asksTrueCount && source == .liveShoe)
+        asksTrueCount && source == .liveShoe
     }
 
     /// The label every surface uses — Settings' picker, and the drill's idle
-    /// screen, which names the mode it is about to run now that they differ
-    /// this much.
+    /// screen, which names the mode it is about to run.
     var label: String {
         switch self {
         case .runningCount: "Running count"
         case .trueCount: "True count"
-        case .keyCount: "Key count"
-        case .betSpread: "Bet spread"
-        case .deckSpeed: "Deck speed"
         }
     }
 
-    /// Modes whose answer is a true count: the true-count drill and the
-    /// bet-spread drill built on top of it. They share the decks-remaining
+    /// Modes whose answer is a true count, sharing the decks-remaining
     /// configuration, the deck estimate, and the true-count stat store.
     var asksTrueCount: Bool {
-        self == .trueCount || self == .betSpread
+        self == .trueCount
     }
 }
 
@@ -59,8 +44,6 @@ struct CountingDrillSettings: Equatable {
     var millisecondsBetweenCards: Int = 1000
     /// Decks remaining for classic (preset) true-count mode.
     var decksRemaining: Double = 1
-    /// Units per true-count band, graded against in bet-spread mode.
-    var betRamp: [Int] = BetRamp.default
     var trueCountSource: TrueCountSource = .liveShoe
     var numberOfDecks: Int = ShoeConstants.defaultNumberOfDecks
     var penetration: Double = ShoeConstants.defaultPenetration
@@ -91,68 +74,6 @@ struct TrueCountDrillResult: Equatable {
     var deckEstimateWithinBand: Bool?
 }
 
-/// The player's two-part key-count answer: the running count they read and
-/// their advantage call.
-struct KeyCountAnswer: Equatable {
-    let runningCount: Double
-    let saidAdvantage: Bool
-}
-
-/// Graded key-count round. The counts stay `Double` like the other results
-/// (KO's are always whole); the schedule values are the resolved row for the
-/// shoe's deck count so the feedback can cite them. Mirrors
-/// `KeyCountDrillResult`.
-struct KeyCountDrillResult: Equatable {
-    let cards: [Card]
-    let correctRunningCount: Double
-    let userRunningCount: Double
-    let countCorrect: Bool
-    /// Running count carried into this round (the IRC itself on a fresh shoe).
-    let priorRunningCount: Double
-    let irc: Int
-    let keyCount: Int
-    let pivot: Int
-    let insuranceCount: Int
-    /// The advantage call: the player has the edge at or above the key count.
-    let hasAdvantage: Bool
-    let userSaidAdvantage: Bool
-    let advantageCorrect: Bool
-    /// The rep is correct only when both the count and the call are.
-    let isCorrect: Bool
-}
-
-/// The player's two-part bet-spread answer: the true count they read and the
-/// units they would put out.
-struct BetSpreadAnswer: Equatable {
-    let trueCount: Int
-    let units: Int
-}
-
-/// Graded bet-spread round: a true-count round (same count, decks, and estimate
-/// fields) plus the bet it was for. The units are graded against the ramp at the
-/// *correct* true count, not the one the player claimed — a miscount that leads
-/// to the wrong bet is exactly the failure the drill is there to catch, as with
-/// the key-count advantage call. Mirrors `BetSpreadDrillResult`.
-struct BetSpreadDrillResult: Equatable {
-    let cards: [Card]
-    let correctRunningCount: Double
-    let decksRemaining: Double
-    let correctTrueCount: Int
-    let userTrueCount: Int
-    let countCorrect: Bool
-    var priorRunningCount: Double = 0
-    var deckEstimate: Double?
-    var deckEstimateWithinBand: Bool?
-    /// The ramp the round was graded against, kept on the result so the feedback
-    /// can show the whole spread without re-reading prefs.
-    let ramp: [Int]
-    let correctUnits: Int
-    let userUnits: Int
-    let betCorrect: Bool
-    /// The rep is correct only when both the true count and the bet are.
-    let isCorrect: Bool
-}
-
 extension CountingDrillResult {
     /// The running count this round asked for, as (answered, real), or nil for
     /// the modes whose answer is a true count — there the deck-estimate line
@@ -160,9 +81,7 @@ extension CountingDrillResult {
     var runningCountAnswer: (answer: Double, actual: Double)? {
         switch self {
         case let .running(result): (result.userRunningCount, result.correctRunningCount)
-        case let .keyCount(result): (result.userRunningCount, result.correctRunningCount)
-        case let .deckSpeed(result): (result.userRunningCount, result.correctRunningCount)
-        case .trueCount, .betSpread: nil
+        case .trueCount: nil
         }
     }
 }
@@ -216,17 +135,11 @@ struct DeckEstimateEffect: Equatable {
 enum CountingDrillResult: Equatable {
     case running(RunningCountDrillResult)
     case trueCount(TrueCountDrillResult)
-    case keyCount(KeyCountDrillResult)
-    case betSpread(BetSpreadDrillResult)
-    case deckSpeed(DeckSpeedDrillResult)
 
     var cards: [Card] {
         switch self {
         case let .running(result): result.cards
         case let .trueCount(result): result.cards
-        case let .keyCount(result): result.cards
-        case let .betSpread(result): result.cards
-        case let .deckSpeed(result): result.cards
         }
     }
 
@@ -234,20 +147,15 @@ enum CountingDrillResult: Equatable {
         switch self {
         case let .running(result): result.isCorrect
         case let .trueCount(result): result.isCorrect
-        case let .keyCount(result): result.isCorrect
-        case let .betSpread(result): result.isCorrect
-        case let .deckSpeed(result): result.isCorrect
         }
     }
 
-    /// Running count carried into the round (live-shoe prior, the IRC-seeded
-    /// key-count prior; 0 otherwise) — the breakdown's starting offset.
+    /// Running count carried into the round (the live-shoe prior; 0 otherwise)
+    /// — the breakdown's starting offset.
     var priorRunningCount: Double {
         switch self {
-        case .running, .deckSpeed: 0
+        case .running: 0
         case let .trueCount(result): result.priorRunningCount
-        case let .keyCount(result): result.priorRunningCount
-        case let .betSpread(result): result.priorRunningCount
         }
     }
 }

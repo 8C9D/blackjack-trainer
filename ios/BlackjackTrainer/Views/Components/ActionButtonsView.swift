@@ -1,9 +1,9 @@
 import SwiftUI
 
 /// Subsettable player-action buttons, mirroring the web `app-action-buttons`.
-/// Defaults to the full set; callers pass a subset (e.g. the showdown's
-/// hit/stand only). Each button wires its hardware-keyboard shortcut and shows
-/// the key hint when a keyboard is attached.
+/// Defaults to the full set; callers may pass a subset. Each button wires its
+/// hardware-keyboard shortcut and shows the key hint when a keyboard is
+/// attached.
 struct ActionButtonsView: View {
     var actions: [Action] = Action.fullTrainerSet
     var disabled = false

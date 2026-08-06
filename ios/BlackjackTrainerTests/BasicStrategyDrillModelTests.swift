@@ -43,24 +43,6 @@ struct BasicStrategyDrillModelTests {
         #expect(h.history.paceLast7() == 2)
     }
 
-    /// A continued decision offers two buttons and one total where the deal
-    /// offers six and a pair-or-soft-or-hard lookup. Timing both would move the
-    /// week's figure when the trainee turned a setting on rather than when they
-    /// got faster.
-    @Test func timesTheOpeningDecisionOnly() {
-        let h = DrillFixture.makeHarness(draws: .seven)
-        h.model.deal(DrillFixture.hitScenario)
-        h.clock.advance(2)
-        h.model.answer(.hit)
-        h.scheduler.fire() // the continuation deals a card
-        h.clock.advance(9)
-        h.model.answer(.stand)
-
-        #expect(h.model.hand.count == 3)
-        #expect(h.model.handsToday == 2)
-        #expect(h.history.paceLast7() == 2)
-    }
-
     /// A hand you walked away from is not a hand you were slow on.
     @Test func leavesAnAbandonedHandOutOfTheFigureEntirely() {
         let h = DrillFixture.makeHarness()
@@ -244,10 +226,7 @@ struct BasicStrategyDrillModelTests {
     /// that every hand, not just the first.
     @Test func reviewRoundsDealTheWeakSpotOnEveryHand() {
         let pair8s = ScenarioRef(kind: "pair", hand: "8", dealer: "10")
-        // The weak spot is a pair whose correct answer is Split, which otherwise
-        // plays two hands before the next deal — and the next deal is the whole of
-        // what a review round is about.
-        let h = DrillFixture.makeHarness(dailyGoal: 10, seedWeak: pair8s, playHandsOut: false)
+        let h = DrillFixture.makeHarness(dailyGoal: 10, seedWeak: pair8s)
         for _ in 0 ..< 10 {
             h.model.deal(standScenario)
             h.model.answer(.stand)
@@ -287,7 +266,6 @@ struct BasicStrategyDrillModelTests {
         let h = DrillFixture.makeHarness(
             dailyGoal: 20,
             seedWeak: pair8s,
-            playHandsOut: false,
             review: true
         )
 
@@ -331,150 +309,6 @@ struct BasicStrategyDrillModelTests {
         }
         #expect(h.model.weakSpots.isEmpty)
         #expect(h.model.clearedSpots.map(\.label) == ["8,8 vs 10"])
-    }
-}
-
-/// A hit is the one correct answer that leaves another decision behind it. The
-/// drill follows it rather than dealing a fresh hand, which is the only place in
-/// the app a multi-card decision is taught.
-@MainActor
-struct BasicStrategyPlayedOutHandTests {
-    // A hit is the one correct answer that leaves another decision behind it. The
-    // drill follows it rather than dealing a fresh hand, which is the only place
-    // in the app a multi-card decision is taught.
-
-    @Test func aCorrectHitDealsTheNextCardAndAsksAgain() {
-        let h = DrillFixture.makeHarness(draws: .nine)
-        h.model.deal(DrillFixture.hitScenario) // hard 7 vs 6
-        h.model.answer(.hit)
-        h.scheduler.fire()
-
-        #expect(h.model.phase == .question)
-        #expect(h.model.hand.count == 3)
-        #expect(h.model.question == HandQuestion(prefix: "Hard", value: "16", dealer: "6"))
-    }
-
-    @Test func onlyHitAndStandSurviveTheFirstCard() {
-        let h = DrillFixture.makeHarness(draws: .nine)
-        h.model.deal(DrillFixture.hitScenario)
-        h.model.answer(.hit)
-        h.scheduler.fire()
-        #expect(h.model.legalActions == [.hit, .stand])
-    }
-
-    @Test func gradesTheContinuedDecisionAgainstTheHandAsItStands() {
-        let h = DrillFixture.makeHarness(draws: .nine)
-        h.model.deal(DrillFixture.hitScenario)
-        h.model.answer(.hit)
-        h.scheduler.fire()
-
-        h.model.answer(.hit) // hard 16 vs 6 — stand
-        #expect(h.model.phase == .miss)
-        let reason = h.model.result?.reason ?? ""
-        #expect(reason.contains("Hard 16 vs dealer 6 under S17: stand."))
-    }
-
-    /// A hard 11 doubles on the opening two cards and can only hit once a card is
-    /// drawn — the rule the dead Double button is teaching.
-    @Test func theSameTotalReadsDifferentlyOnceDoublingHasLapsed() {
-        let h = DrillFixture.makeHarness(draws: .three)
-        h.model.deal(Scenario(
-            player: TwoCardHand(DrillFixture.card(.five), DrillFixture.card(
-                .three,
-                .hearts
-            )), // hard 8 vs 6 — hit
-            dealerUpcard: DrillFixture.card(.six, .clubs)
-        ))
-        h.model.answer(.hit)
-        h.scheduler.fire()
-
-        h.model.answer(.double) // not answerable, so the press is dead rather than wrong
-        #expect(h.model.phase == .question)
-        h.model.answer(.hit)
-        #expect(h.model.phase == .flash)
-        #expect(h.model.result?.correct == true)
-    }
-
-    @Test func holdsTheBustOnScreenThenDealsOn() {
-        let h = DrillFixture.makeHarness(draws: .king)
-        h.model.deal(Scenario(
-            player: TwoCardHand(DrillFixture.card(.ten), DrillFixture.card(
-                .six,
-                .hearts
-            )), // hard 16 vs 10 — hit
-            dealerUpcard: DrillFixture.card(.ten, .clubs)
-        ))
-        h.model.answer(.hit)
-        h.scheduler.fire()
-
-        #expect(h.model.phase == .over)
-        #expect(h.model.handOver == "Bust — 26.")
-        // The hit still graded as correct: the play was right, the card was not.
-        #expect(h.model.result?.correct == true)
-
-        h.scheduler.fire()
-        #expect(h.model.phase == .question)
-        #expect(h.model.hand.count == 2)
-    }
-
-    @Test func endsTheHandOn21WithNothingLeftToAsk() {
-        let h = DrillFixture.makeHarness(draws: .five)
-        h.model.deal(Scenario(
-            player: TwoCardHand(DrillFixture.card(.ten), DrillFixture.card(.six, .hearts)),
-            dealerUpcard: DrillFixture.card(.ten, .clubs)
-        ))
-        h.model.answer(.hit)
-        h.scheduler.fire()
-
-        #expect(h.model.phase == .over)
-        #expect(h.model.handOver == "21 — nothing left to decide.")
-    }
-
-    /// Every decision is a rep, so a hand played out counts for as many as it asks.
-    @Test func countsEachDecisionTowardTheDay() {
-        let h = DrillFixture.makeHarness(draws: .two)
-        h.model.deal(DrillFixture.hitScenario)
-        h.model.answer(.hit) // hard 9 vs 6 — double on the deal, a hit three deep
-        h.scheduler.fire()
-        #expect(h.model.handsToday == 1)
-        h.model.answer(.hit)
-        #expect(h.model.handsToday == 2)
-    }
-
-    /// A `ScenarioRef` names a two-card hand. Filing a three-card 16 under one
-    /// would re-deal a hand that can double, which is a different question.
-    @Test func filesAWeakSpotForTheOpeningDecisionOnly() {
-        let h = DrillFixture.makeHarness(draws: .nine)
-        h.model.deal(DrillFixture.hitScenario)
-        h.model.answer(.hit)
-        h.scheduler.fire()
-
-        h.model.answer(.hit) // wrong, but three cards deep
-        #expect(h.model.phase == .miss)
-        #expect(h.missTally.weakSpotFor(.basicStrategy) == nil)
-    }
-
-    @Test func finishesTheHandItIsOnBeforeDone() {
-        let h = DrillFixture.makeHarness(dailyGoal: 1, draws: .nine)
-        h.model.deal(DrillFixture.hitScenario)
-        h.model.answer(.hit)
-        h.scheduler.fire()
-        // The goal is met, but the hand still owes a decision.
-        #expect(h.model.handsToday == 1)
-        #expect(h.model.phase == .question)
-
-        h.model.answer(.stand)
-        h.scheduler.fire()
-        #expect(h.model.phase == .done)
-    }
-
-    @Test func dealsAFreshHandInsteadWhenTheSettingIsOff() {
-        let h = DrillFixture.makeHarness(playHandsOut: false, draws: .nine)
-        h.model.deal(DrillFixture.hitScenario)
-        h.model.answer(.hit)
-        h.scheduler.fire()
-        #expect(h.model.hand.count == 2)
-        #expect(h.model.hand == h.model.scenario.player.cards)
     }
 }
 

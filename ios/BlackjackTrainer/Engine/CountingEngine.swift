@@ -98,112 +98,14 @@ struct CountingEngine {
         )
     }
 
-    /// Grade one round of the key-count drill: the claimed running count against
-    /// the IRC-seeded count of every card seen since the shuffle, and the
-    /// advantage call against the system's published key count for this shoe.
-    /// Returns nil when the system has no schedule or the schedule does not
-    /// cover `numberOfDecks` — configuration bugs the UI must gate (the web
-    /// throws here). Mirrors `evaluateKeyCount`.
-    func evaluateKeyCount(
-        _ cards: [Card],
-        answer: KeyCountAnswer,
-        system: CountingSystem,
-        numberOfDecks: Int,
-        priorRunningCount: Double
-    ) -> KeyCountDrillResult? {
-        guard let row = system.keyCounts?.resolved(decks: numberOfDecks) else { return nil }
-        let correct = priorRunningCount + runningCount(cards, system: system)
-        let hasAdvantage = correct >= Double(row.keyCount)
-        let countCorrect = answer.runningCount == correct
-        let advantageCorrect = answer.saidAdvantage == hasAdvantage
-        return KeyCountDrillResult(
-            cards: cards,
-            correctRunningCount: correct,
-            userRunningCount: answer.runningCount,
-            countCorrect: countCorrect,
-            priorRunningCount: priorRunningCount,
-            irc: row.irc,
-            keyCount: row.keyCount,
-            pivot: row.pivot,
-            insuranceCount: row.insuranceCount,
-            hasAdvantage: hasAdvantage,
-            userSaidAdvantage: answer.saidAdvantage,
-            advantageCorrect: advantageCorrect,
-            isCorrect: countCorrect && advantageCorrect
-        )
-    }
-
-    /// Grade one round of the bet-spread drill: the claimed true count exactly
-    /// as `evaluateTrueCount` does, and the claimed bet against the player's ramp
-    /// at the correct true count. The rep counts as correct only when both are
-    /// right. Mirrors `evaluateBetSpread`.
-    func evaluateBetSpread(
-        _ cards: [Card],
-        answer: BetSpreadAnswer,
-        decksRemaining: Double,
-        system: CountingSystem,
-        ramp: [Int],
-        priorRunningCount: Double = 0
-    ) -> BetSpreadDrillResult {
-        let counted = evaluateTrueCount(
-            cards,
-            userTrueCount: answer.trueCount,
-            decksRemaining: decksRemaining,
-            system: system,
-            priorRunningCount: priorRunningCount
-        )
-        let correctUnits = BetRamp.units(trueCount: counted.correctTrueCount, ramp: ramp)
-        let betCorrect = answer.units == correctUnits
-        return BetSpreadDrillResult(
-            cards: cards,
-            correctRunningCount: counted.correctRunningCount,
-            decksRemaining: counted.decksRemaining,
-            correctTrueCount: counted.correctTrueCount,
-            userTrueCount: counted.userTrueCount,
-            countCorrect: counted.isCorrect,
-            priorRunningCount: priorRunningCount,
-            ramp: ramp,
-            correctUnits: correctUnits,
-            userUnits: answer.units,
-            betCorrect: betCorrect,
-            isCorrect: counted.isCorrect && betCorrect
-        )
-    }
-
     /// What one full deck of this system sums to: 0 balanced, +4 for KO. The
-    /// deck-speed arithmetic rests on it, derived from the system's own tags
+    /// chart's balance note rests on it, derived from the system's own tags
     /// rather than from its `balanced` flag.
     func fullDeckCount(_ system: CountingSystem) -> Double {
         let deck = Card.allRanks.flatMap { rank in
             Card.allSuits.map { Card(rank: rank, suit: $0) }
         }
         return runningCount(deck, system: system)
-    }
-
-    /// Grade one round of the deck-speed drill: the claimed count of the 51
-    /// shown, plus the elapsed time against the best correct time so far. A
-    /// round only sets a new best when the count is right.
-    func evaluateDeckSpeed(
-        _ cards: [Card],
-        burnedCard: Card,
-        answer: DeckSpeedAnswer,
-        system: CountingSystem,
-        previousBestMilliseconds: Int?
-    ) -> DeckSpeedDrillResult {
-        let correct = runningCount(cards, system: system)
-        let isCorrect = answer.runningCount == correct
-        let beatsBest = previousBestMilliseconds.map { answer.elapsedMilliseconds < $0 } ?? true
-        return DeckSpeedDrillResult(
-            cards: cards,
-            burnedCard: burnedCard,
-            correctRunningCount: correct,
-            userRunningCount: answer.runningCount,
-            fullDeckCount: fullDeckCount(system),
-            isCorrect: isCorrect,
-            elapsedMilliseconds: answer.elapsedMilliseconds,
-            previousBestMilliseconds: previousBestMilliseconds,
-            isPersonalBest: isCorrect && beatsBest
-        )
     }
 
     /// Validate drill settings, returning every error at once. Mirrors
@@ -226,19 +128,11 @@ struct CountingEngine {
             )
         }
 
-        // The ramp is only graded against in bet-spread mode, so a nonsense ramp
-        // only blocks that drill.
-        if settings.mode == .betSpread {
-            errors.append(contentsOf: BetRamp.validate(settings.betRamp))
-        }
-
-        // The key-count drill always reads a live shoe, so it shares the
-        // shoe-configuration checks with the true-count modes.
         if settings.mode.asksTrueCount, settings.trueCountSource == .classic {
             if settings.decksRemaining <= 0 {
                 errors.append("Decks remaining must be greater than 0.")
             }
-        } else if settings.mode.asksTrueCount || settings.mode == .keyCount {
+        } else if settings.mode.asksTrueCount {
             validateLiveShoe(settings, into: &errors)
         }
 

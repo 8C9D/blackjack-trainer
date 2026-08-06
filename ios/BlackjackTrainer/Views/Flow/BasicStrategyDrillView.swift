@@ -57,9 +57,8 @@ struct BasicStrategyDrillView: View {
                     .padding(.top, 10)
             }
             FlowStageView(
-                player: model.hand,
-                dealer: model.scenario.dealerUpcard,
-                handLabel: model.handLabel
+                player: model.scenario.player,
+                dealer: model.scenario.dealerUpcard
             ) {
                 DrillLineView(line: stageLine)
             }
@@ -90,9 +89,6 @@ struct BasicStrategyDrillView: View {
         if model.phase == .miss, let result = model.result {
             return Text("Correct: \(result.action.label). ").bold().foregroundStyle(Theme.accentInk)
                 + Text(result.reason).foregroundStyle(Theme.midInk)
-        }
-        if model.phase == .over {
-            return Text(model.handOver).bold().foregroundStyle(Theme.accentInk)
         }
         let question = model.question
         let prefix = question.prefix.isEmpty ? Text("") : Text("\(question.prefix) ")

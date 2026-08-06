@@ -1,7 +1,6 @@
 import Foundation
 
-/// N-card, soft-aware hand evaluation shared by the showdown's dealer-play and
-/// settlement logic. Mirrors `hand.model.ts`.
+/// N-card, soft-aware hand evaluation. Mirrors `hand.model.ts`.
 enum Hand {
     private struct Score {
         let total: Int

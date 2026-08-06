@@ -139,7 +139,7 @@ func scenarioLabel(_ ref: ScenarioRef) -> String {
 /// trainer. Drives the Done screen's "Drill next" card and the next session's
 /// opening hand. Mirrors `MissTallyService`.
 @Observable
-final class MissTallyStore: CloudSyncable, ReloadableStore {
+final class MissTallyStore: CloudSyncable {
     @ObservationIgnored let key: String
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let cloud: CloudKeyValueStore?
@@ -165,14 +165,10 @@ final class MissTallyStore: CloudSyncable, ReloadableStore {
         state = load(data: defaults.data(forKey: key))
     }
 
-    func reloadFromDefaults() {
-        state = load(data: defaults.data(forKey: key))
-    }
-
     /// `trueCount` is the count the question was asked at, and is only meaningful
-    /// where the count is part of the question — the Deviations trainer, and the
-    /// showdown's index plays. A miss remembers it so the scenario can come back
-    /// as the question that was actually missed rather than the hand alone.
+    /// where the count is part of the question — the Deviations trainer. A miss
+    /// remembers it so the scenario can come back as the question that was
+    /// actually missed rather than the hand alone.
     func record(
         _ trainer: TalliedTrainer,
         ref: ScenarioRef,

@@ -132,69 +132,6 @@ struct DeviationsDrillModelTests {
         #expect(h.missTally.weakSpotFor(.deviations)?.missedCounts == [-2])
     }
 
-    // An index is written against a total, so it applies to a three-card 16
-    // exactly as it does to a two-card one. The showdown has always graded that;
-    // this is the drill that teaches it.
-
-    /// Hard 12 vs 10 hits at any count; the 4 makes it the hard 16 the
-    /// Illustrious 18 stands at TC 0 or higher.
-    private func hitInto16(_ h: Harness, tc: Int = 0) {
-        h.model.deal(scenario(.ten, .two, vs: .queen, tc: tc))
-        h.model.answer(.hit)
-        h.scheduler.fire()
-    }
-
-    @Test func appliesAHardTotalIndexToAHandThreeCardsDeep() {
-        let h = makeHarness(draws: .four)
-        hitInto16(h)
-        #expect(h.model.hand.count == 3)
-        #expect(h.model.question == HandQuestion(prefix: "Hard", value: "16", dealer: "10"))
-
-        h.model.answer(.stand)
-        #expect(h.model.result?.correct == true)
-        #expect(h.model.result?.deviationApplied == true)
-    }
-
-    @Test func gradesTheSameThreeCard16TheOtherWayOneCountLower() {
-        let h = makeHarness(draws: .four)
-        hitInto16(h, tc: -1)
-        h.model.answer(.stand)
-        #expect(h.model.result?.correct == false)
-        #expect(h.model.result?.expectedAction == .hit)
-    }
-
-    @Test func leavesOnlyHitAndStandOnceACardIsDrawn() {
-        let h = makeHarness(draws: .four)
-        hitInto16(h)
-        #expect(h.model.legalActions == [.hit, .stand])
-    }
-
-    @Test func holdsABustOnScreenThenDealsOn() {
-        let h = makeHarness(draws: .king)
-        hitInto16(h)
-        #expect(h.model.phase == .over)
-        #expect(h.model.handOver == "Bust — 22.")
-
-        h.scheduler.fire()
-        #expect(h.model.phase == .question)
-        #expect(h.model.hand.count == 2)
-    }
-
-    @Test func filesNoWeakSpotForADecisionDeeperThanTheDeal() {
-        let h = makeHarness(draws: .four)
-        hitInto16(h)
-        h.model.answer(.hit) // wrong: the index stands this 16
-        #expect(h.model.phase == .miss)
-        #expect(h.missTally.weakSpotFor(.deviations) == nil)
-    }
-
-    @Test func dealsAFreshHandInsteadWhenTheSettingIsOff() {
-        let h = makeHarness(playHandsOut: false, draws: .four)
-        hitInto16(h)
-        #expect(h.model.hand.count == 2)
-        #expect(h.model.hand == h.model.scenario.player.cards)
-    }
-
     @Test func reachesDoneAndOffersOneMoreRound() {
         let h = makeHarness(dailyGoal: 2)
         for _ in 0 ..< 2 {
@@ -248,13 +185,12 @@ private func makeHarness(
     manualTrueCount: Int? = nil,
     seedWeak: ScenarioRef? = nil,
     missedAt: Int? = nil,
-    playHandsOut: Bool = true,
     draws: Rank? = nil,
     lateSurrender: Bool = false
 ) -> DeviationsFixture.Harness {
     DeviationsFixture.makeHarness(
         dailyGoal: dailyGoal, systemId: systemId, manualTrueCount: manualTrueCount,
-        seedWeak: seedWeak, missedAt: missedAt, playHandsOut: playHandsOut, draws: draws,
+        seedWeak: seedWeak, missedAt: missedAt, draws: draws,
         lateSurrender: lateSurrender
     )
 }

@@ -23,8 +23,7 @@ extension Action {
     }
 
     /// The full ordered action set, matching the web default
-    /// (`['H','S','D','P','SUR','INS']`). Screens pass subsets (e.g. the
-    /// showdown's hit/stand-only set).
+    /// (`['H','S','D','P','SUR','INS']`).
     static let fullTrainerSet: [Action] = [.hit, .stand, .double, .split, .surrender, .insurance]
 }
 

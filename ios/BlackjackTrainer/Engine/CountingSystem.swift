@@ -52,7 +52,7 @@ struct ResolvedKeyCounts: Equatable {
 /// perfect betting correlations belong to counts no human can keep.
 struct SystemMetrics: Decodable, Equatable {
     /// How closely the count tracks the shifting edge — what the bet is sized
-    /// on. The bet-spread drill and the showdown's bet are this in practice.
+    /// on.
     let bettingCorrelation: Double
     /// How well the count indexes a playing decision, which is what a deviation
     /// is. The Deviations trainer is this in practice.
@@ -188,16 +188,14 @@ struct CountingSystem: Decodable, Equatable {
         return SystemTagTable(rowLabels: rowLabels, columns: columns)
     }
 
-    /// Whether this system can host the requested drill mode: true count — and
-    /// the bet spread drilled on top of it — requires a balanced system, the
-    /// key-count drill a published schedule; running count is always available.
-    /// Mirrors the web `modeAllowedFor`.
+    /// Whether this system can host the requested drill mode: true count
+    /// requires a balanced system; running count is always available. Mirrors
+    /// the web `modeAllowedFor`.
     func allows(_ mode: DrillMode) -> Bool {
         switch mode {
-        // Running count and deck speed: any system's tags can be summed.
-        case .runningCount, .deckSpeed: true
-        case .trueCount, .betSpread: balanced
-        case .keyCount: keyCounts != nil
+        // Running count: any system's tags can be summed.
+        case .runningCount: true
+        case .trueCount: balanced
         }
     }
 }

@@ -46,7 +46,6 @@ enum DeviationsFixture {
         manualTrueCount: Int? = nil,
         seedWeak: ScenarioRef? = nil,
         missedAt: Int? = nil,
-        playHandsOut: Bool = true,
         draws: Rank? = nil,
         pinned: ScenarioRef? = nil,
         lateSurrender: Bool = false
@@ -73,7 +72,6 @@ enum DeviationsFixture {
             missTally.record(.deviations, ref: seedWeak, correct: false, trueCount: missedAt)
         }
         let stats = SessionStatsStore(key: StatsKeys.deviation, defaults: defaults)
-        prefs.setPlayHandsOut(playHandsOut)
         let scheduler = ManualFlowAdvanceScheduler()
         let model = DeviationsDrillModel(
             evaluator: TestEngines.shared.deviationEvaluator,

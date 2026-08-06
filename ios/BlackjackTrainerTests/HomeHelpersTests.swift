@@ -55,7 +55,7 @@ struct HomeHelpersTests {
 
     @Test func everyDrillModeHasItsOwnLabel() {
         let labels = DrillMode.allCases.map(\.label)
-        #expect(labels == ["Running count", "True count", "Key count", "Bet spread", "Deck speed"])
+        #expect(labels == ["Running count", "True count"])
         #expect(Set(labels).count == DrillMode.allCases.count)
     }
 }

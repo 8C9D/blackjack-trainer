@@ -61,7 +61,6 @@ enum DrillFixture {
         dailyGoal: Int = 20,
         options: EngineOptions = .default,
         seedWeak: ScenarioRef? = nil,
-        playHandsOut: Bool = true,
         draws: Rank? = nil,
         clock: TestClock? = nil,
         review: Bool = false,
@@ -71,7 +70,6 @@ enum DrillFixture {
         let prefs = FlowPrefsStore(defaults: defaults)
         prefs.setDailyGoal(Double(dailyGoal))
         prefs.setOptions(options)
-        prefs.setPlayHandsOut(playHandsOut)
         let history = PracticeHistoryStore(defaults: defaults)
         let missTally = MissTallyStore(defaults: defaults)
         if let ref = seedWeak { missTally.record(.basicStrategy, ref: ref, correct: false) }

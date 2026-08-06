@@ -68,24 +68,6 @@ struct EngineInput {
     let options: EngineOptions
 }
 
-/// A decision at the table rather than off the chart. `EngineInput` asks the
-/// opening question — two cards, every action on the table. Playing a hand out
-/// asks a narrower one: the hand may be three cards deep, and doubling,
-/// splitting and surrender may already be off the table. Mirrors `PlayInput`.
-struct PlayInput {
-    /// The hand as it stands, one card or many.
-    let player: [Card]
-    let dealerUpcard: Card
-    let ruleSet: RuleSet
-    let options: EngineOptions
-    /// What the *table* allows this hand right now. What the *cards* allow is
-    /// not the caller's to say: all three are first-two-card actions, and the
-    /// engine enforces that itself.
-    let canDouble: Bool
-    let canSplit: Bool
-    let canSurrender: Bool
-}
-
 /// Dealer upcard lookup key: Ace → "A", any ten-value → "10", else the rank.
 func normalizeUpcardKey(_ card: Card) -> String {
     if card.isAce { return "A" }

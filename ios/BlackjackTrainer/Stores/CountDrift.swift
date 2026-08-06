@@ -29,7 +29,7 @@ struct DriftShape: Equatable {
 /// Its own key rather than a field on the running-count stats store, which is a
 /// flat record of counters. Mirrors `CountDriftService`.
 @Observable
-final class CountDriftStore: CloudSyncable, ReloadableStore {
+final class CountDriftStore: CloudSyncable {
     @ObservationIgnored let key: String
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let cloud: CloudKeyValueStore?
@@ -76,10 +76,6 @@ final class CountDriftStore: CloudSyncable, ReloadableStore {
     func reset() {
         drifts = []
         persist()
-    }
-
-    func reloadFromDefaults() {
-        drifts = Self.loaded(data: defaults.data(forKey: key))
     }
 
     private static func loaded(data: Data?) -> [Double] {

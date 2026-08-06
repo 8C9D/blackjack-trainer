@@ -16,20 +16,6 @@ struct HandQuestion: Equatable {
     let dealer: String
 }
 
-/// The question line for a hand as it stands. Past two cards there is no pair to
-/// name and the ace may have softened, so the line is the N-card total the chart
-/// is about to be read at.
-func handQuestion(_ player: [Card], dealerUpcard: Card) -> HandQuestion {
-    guard player.count == 2 else {
-        return HandQuestion(
-            prefix: Hand.isSoft(player) ? "Soft" : "Hard",
-            value: String(Hand.total(player)),
-            dealer: normalizeUpcardKey(dealerUpcard)
-        )
-    }
-    return handQuestion(TwoCardHand(player[0], player[1]), dealerUpcard: dealerUpcard)
-}
-
 func handQuestion(_ player: TwoCardHand, dealerUpcard: Card) -> HandQuestion {
     let dealer = normalizeUpcardKey(dealerUpcard)
     if let pairKey = HandClassification.pairKey(player) {
@@ -49,73 +35,21 @@ func handQuestion(_ player: TwoCardHand, dealerUpcard: Card) -> HandQuestion {
     )
 }
 
-/// Most a pair splits to: three splits, four hands — the common casino cap, and
-/// the same one the showdown's table already enforces per box. Mirrors
-/// `MAX_SPLIT_HANDS`.
-let maxSplitHands = 4
-
-/// What a split has taken away from the hand in front of you. Insurance was
-/// settled on the deal and surrender is a first-two-cards action of the hand the
-/// dealer dealt, so both are gone for good; doubling comes back only under DAS;
-/// and a re-split needs the deal to be under its four-hand cap. Mirrors
-/// `SplitContext`.
-struct SplitContext: Equatable {
-    let fromSplit: Bool
-    let canSplitAgain: Bool
-
-    /// A hand nobody has split: every action is still on the table.
-    static let unsplit = SplitContext(fromSplit: false, canSplitAgain: true)
-}
-
 /// Which of the six actions are answerable for this hand. Hit/Stand/Double are
 /// always live; Split needs a pair; Insurance needs a dealer Ace; Surrender needs
 /// Late Surrender. Both trainers ask it the same way, because both are graded
 /// against the same table: a deviation index cannot call for a surrender the
 /// table does not deal. Mirrors `legalActionsFor`.
-/// Once a card has been drawn, hit and stand are the whole of it: double, split
-/// and surrender are first-two-card actions, and insurance was decided before the
-/// hand was played. The grid says so by going dead rather than by hiding them,
-/// which is the rule the drill is teaching.
-/// A hand that came out of a split is two cards again, but not the hand that was
-/// dealt: `split` is what the table has left it.
-func legalActionsFor(
-    _ player: [Card],
-    dealerUpcard: Card,
-    options: EngineOptions,
-    split: SplitContext = .unsplit
-) -> [Action] {
-    guard player.count == 2 else { return [.hit, .stand] }
-    return legalActionsFor(
-        TwoCardHand(player[0], player[1]),
-        dealerUpcard: dealerUpcard,
-        options: options,
-        split: split
-    )
-}
-
 func legalActionsFor(
     _ player: TwoCardHand,
     dealerUpcard: Card,
-    options: EngineOptions,
-    split: SplitContext = .unsplit
+    options: EngineOptions
 ) -> [Action] {
-    var legal: [Action] = [.hit, .stand]
-    if !split.fromSplit || options.doubleAfterSplit { legal.append(.double) }
-    if HandClassification.pairKey(player) != nil, split.canSplitAgain { legal.append(.split) }
-    if !split.fromSplit, options.lateSurrender { legal.append(.surrender) }
-    if !split.fromSplit, dealerUpcard.isAce { legal.append(.insurance) }
+    var legal: [Action] = [.hit, .stand, .double]
+    if HandClassification.pairKey(player) != nil { legal.append(.split) }
+    if options.lateSurrender { legal.append(.surrender) }
+    if dealerUpcard.isAce { legal.append(.insurance) }
     return legal
-}
-
-/// Split the hand at `index` into two, each keeping one of its cards. The second
-/// card of each is dealt as that hand is reached, exactly as a dealer deals it —
-/// so a hand waiting behind the one in play holds a single card. A re-split lands
-/// its halves in place, which keeps the hands in the order they are played.
-/// Mirrors `splitHandAt`.
-func splitHandAt(_ hands: [[Card]], _ index: Int) -> [[Card]] {
-    guard hands.indices.contains(index), hands[index].count == 2 else { return hands }
-    let hand = hands[index]
-    return Array(hands[..<index]) + [[hand[0]], [hand[1]]] + Array(hands[(index + 1)...])
 }
 
 /// Session target: the next multiple of the daily goal beyond the hands already

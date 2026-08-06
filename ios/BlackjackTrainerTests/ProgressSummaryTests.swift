@@ -141,12 +141,6 @@ struct ProgressSummaryTests {
         #expect(group(7).outstanding.count == 7)
     }
 
-    @Test func signedChipTotalsCarryTheirSign() {
-        #expect(ProgressSummary.signed(45) == "+45")
-        #expect(ProgressSummary.signed(-20) == "-20")
-        #expect(ProgressSummary.signed(0) == "0")
-    }
-
     /// Faster is the good direction here, which the accuracy trend's colours
     /// would get backwards.
     @Test func paceTrendCallsAQuickerWeekFaster() {

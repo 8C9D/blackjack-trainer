@@ -41,83 +41,8 @@ struct BasicStrategyEngine {
         return resolveHard(input.player, dealerKey: dealerKey, chart: chart, options: input.options)
     }
 
-    /// The correct play for a hand mid-round. Resolution priority matches
-    /// `decide` — pair, then soft, then hard — but every branch resolves against
-    /// the actions actually on offer, and totals come from the N-card evaluator
-    /// rather than from two cards. Mirrors `decidePlay`.
-    func decidePlay(_ input: PlayInput) -> StrategyDecision {
-        let chart = chart(for: input.ruleSet)
-        let dealerKey = normalizeUpcardKey(input.dealerUpcard)
-        let cards = input.player
-        // Double, split and surrender are all first-two-card actions. Once a
-        // card has been drawn they are gone as a matter of the rules, whatever
-        // the caller passed.
-        let opening = cards.count == 2
-        let doubleOffered = input.canDouble && opening
-        let surrenderOffered = input.canSurrender && opening
-
-        if input.canSplit, opening,
-           let pairKey = HandClassification.pairKey(TwoCardHand(cards[0], cards[1])) {
-            // Surrender may have lapsed even where the chart's SUR_Y cell wants
-            // it, so the pair branch sees the same narrowed rule the rest does.
-            let narrowed = EngineOptions(
-                doubleAfterSplit: input.options.doubleAfterSplit,
-                lateSurrender: input.options.lateSurrender && surrenderOffered
-            )
-            if let fromPair = resolvePair(
-                cell(chart.pairCell(key: pairKey, upcard: dealerKey), "pair[\(pairKey)]"),
-                pairKey: pairKey,
-                dealerKey: dealerKey,
-                chart: chart,
-                options: narrowed
-            ) {
-                return fromPair
-            }
-        }
-
-        let total = Hand.total(cards)
-        let soft = Hand.isSoft(cards)
-        let context = CellContext(
-            description: "\(soft ? "Soft" : "Hard") \(total)",
-            dealerKey: dealerKey,
-            ruleSet: chart.ruleSet.rawValue,
-            canDouble: doubleOffered,
-            canSurrender: input.options.lateSurrender && surrenderOffered
-        )
-
-        if soft {
-            // Soft 21 is off the top of the chart, which stops at soft 20.
-            if total >= 21 { return context.decision(.stand, .hard, "stand") }
-            // Soft 12 is off the bottom, which starts at soft 13. The only hand
-            // that reaches it is A,A that could not be split, and a soft 12
-            // cannot bust, so it hits.
-            if total < 13 {
-                return context.decision(.hit, .soft, "hit (a pair of aces that cannot be split)")
-            }
-            let key = total - 11
-            let raw = cell(chart.softCell(key: String(key), upcard: dealerKey), "soft[\(key)]")
-            return context.reduceSoft(raw)
-        }
-
-        // Hard 21 (and above) is likewise off the chart.
-        if total >= 21 { return context.decision(.stand, .hard, "stand") }
-        // 2,2 falling through from the pair branch is a hard 4; the chart starts
-        // at 5, and every row below it hits regardless.
-        let key = total < 5 ? 5 : total
-        let raw = cell(chart.hardCell(total: String(key), upcard: dealerKey), "hard[\(key)]")
-        return context.reduceHard(raw)
-    }
-
     func evaluate(_ input: EngineInput, userAction: Action) -> EvaluationResult {
         grade(decide(input), userAction: userAction)
-    }
-
-    /// The same grading, for a hand already under way: the drill plays a hand out
-    /// once the chart says hit, and every decision after the first is a
-    /// `decidePlay` question — the hand may be three cards deep and doubling,
-    /// splitting and surrender are gone. Mirrors the web `evaluatePlay`.
-    func evaluatePlay(_ input: PlayInput, userAction: Action) -> EvaluationResult {
-        grade(decidePlay(input), userAction: userAction)
     }
 
     private func grade(_ decision: StrategyDecision, userAction: Action) -> EvaluationResult {

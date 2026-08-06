@@ -72,15 +72,6 @@ final class StatsCloudSync {
         }
     }
 
-    /// Make the local values authoritative in the cloud. Used after a restore:
-    /// the file has just replaced everything locally while the cloud still holds
-    /// the profile it replaced, so the next external change would adopt the old
-    /// values straight back over the restored ones.
-    func pushAll() {
-        stores.forEach { $0.pushToCloud() }
-        cloud.synchronize()
-    }
-
     deinit {
         if let observer { NotificationCenter.default.removeObserver(observer) }
     }

@@ -30,9 +30,8 @@ struct PracticeDataSection: View {
                     Button("Cancel", role: .cancel) {}
                 } message: {
                     Text(
-                        "This clears every drill's stats, the practice history and streak, your "
-                            + "weak spots, and the showdown record and chips. Your settings stay "
-                            + "as they are."
+                        "This clears every drill's stats, the practice history and streak, and "
+                            + "your weak spots. Your settings stay as they are."
                     )
                 }
             if resetDone {

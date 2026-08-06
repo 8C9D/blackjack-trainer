@@ -18,7 +18,7 @@ struct PinnedHandTests {
     }
 
     @Test func dealsItAgainOnEveryHandOfTheRound() {
-        let h = DrillFixture.makeHarness(playHandsOut: false, pinned: sixteenVsTen)
+        let h = DrillFixture.makeHarness(pinned: sixteenVsTen)
         for _ in 0 ..< 3 {
             #expect(h.model.question == HandQuestion(prefix: "Hard", value: "16", dealer: "10"))
             h.model.answer(.hit)
@@ -29,11 +29,7 @@ struct PinnedHandTests {
     /// The pin belongs to the round the chart started, exactly as review mode
     /// belongs to the round the Done screen started.
     @Test func goesBackToOrdinaryPracticeOnTheRoundAfter() {
-        let h = DrillFixture.makeHarness(
-            dailyGoal: 1,
-            playHandsOut: false,
-            pinned: sixteenVsTen
-        )
+        let h = DrillFixture.makeHarness(dailyGoal: 1, pinned: sixteenVsTen)
         h.model.answer(.hit)
         h.scheduler.fire()
         #expect(h.model.phase == .done)

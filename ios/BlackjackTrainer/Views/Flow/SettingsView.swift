@@ -19,11 +19,7 @@ struct SettingsView: View {
         selectedSystem?.balanced ?? false
     }
 
-    private var keyCountAvailable: Bool {
-        selectedSystem?.allows(.keyCount) ?? false
-    }
-
-    /// Drives the shoe pickers and showdown settings.
+    /// Drives the shoe pickers.
     private var usesLiveShoe: Bool {
         prefs.counting.mode.usesLiveShoe(source: prefs.counting.trueCountSource)
     }
@@ -38,12 +34,10 @@ struct SettingsView: View {
                 dailyGoalSection
                 appearanceSection
                 tableRulesSection
-                basicStrategySection
                 DeviationsSection()
                 countingSection
-                BackupSection()
                 PracticeDataSection()
-                aboutSection
+                licensesSection
             }
             .scrollContentBackground(.hidden)
             .background(Theme.ground.ignoresSafeArea())
@@ -99,26 +93,6 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: Drills
-
-    private var basicStrategySection: some View {
-        Section("Drills") {
-            Toggle("Play hands out", isOn: playHandsOutBinding)
-            Text(
-                "Off, Basic Strategy and Deviations ask the opening decision and deal a "
-                    + "fresh hand. On, a hit is followed by the card it draws and the "
-                    + "decision that follows — where doubling, splitting and surrender are "
-                    + "already gone, and a deviation index still applies because it is "
-                    + "written against a total. A split is followed through too: each half "
-                    + "is dealt a second card and played in turn, re-splitting up to four "
-                    + "hands, with split aces taking one card each. A hand out of a split "
-                    + "cannot surrender or insure, and doubles only under DAS."
-            )
-            .font(.footnote)
-            .foregroundStyle(Theme.muted)
-        }
-    }
-
     // MARK: Card counting
 
     private var countingSection: some View {
@@ -146,10 +120,9 @@ struct SettingsView: View {
                     .foregroundStyle(Theme.midInk)
                     Text(
                         "What this system's tags are good at: sizing the bet, indexing a "
-                            + "playing decision, and calling insurance — the three things "
-                            + "drilled here. Published figures for the tags alone, not a "
-                            + "verdict on the system: a count you keep accurately beats a "
-                            + "stronger one you do not."
+                            + "playing decision, and calling insurance. Published figures for "
+                            + "the tags alone, not a verdict on the system: a count you keep "
+                            + "accurately beats a stronger one you do not."
                     )
                     .font(.caption)
                     .foregroundStyle(Theme.muted)
@@ -167,53 +140,19 @@ struct SettingsView: View {
             }
 
             if trueCountAvailable {
-                // Four modes no longer fit a segmented control on a phone, so
-                // this one is a menu picker like the shoe settings below it.
                 Picker("Mode", selection: modeBinding) {
                     Text(DrillMode.runningCount.label).tag(DrillMode.runningCount)
                     Text(DrillMode.trueCount.label).tag(DrillMode.trueCount)
-                    Text(DrillMode.betSpread.label).tag(DrillMode.betSpread)
-                    Text(DrillMode.deckSpeed.label).tag(DrillMode.deckSpeed)
                 }
-            } else if keyCountAvailable {
-                Picker("Mode", selection: modeBinding) {
-                    Text(DrillMode.runningCount.label).tag(DrillMode.runningCount)
-                    Text(DrillMode.keyCount.label).tag(DrillMode.keyCount)
-                    Text(DrillMode.deckSpeed.label).tag(DrillMode.deckSpeed)
-                }
-                Text(
-                    "This system is unbalanced, so there is no true count. Its published "
-                        + "schedule is drilled instead: the shoe starts at the IRC and you "
-                        + "call whether the running count has reached the key count."
-                )
-                .font(.footnote)
-                .foregroundStyle(Theme.muted)
+                .pickerStyle(.segmented)
             } else {
-                Picker("Mode", selection: modeBinding) {
-                    Text(DrillMode.runningCount.label).tag(DrillMode.runningCount)
-                    Text(DrillMode.deckSpeed.label).tag(DrillMode.deckSpeed)
-                }
-                Text("True count is only trained for balanced systems.")
+                Text("True count is only trained for balanced systems, so this system "
+                    + "is drilled by running count.")
                     .font(.footnote)
                     .foregroundStyle(Theme.muted)
             }
 
-            if prefs.counting.mode == .deckSpeed {
-                Text(
-                    "A shuffled deck with one card burned: you flip the other 51 at your own "
-                        + "pace, against a stopwatch, then give the count. The length and pacing "
-                        + "settings do not apply — the deck is the deck, and the speed is what "
-                        + "is being measured."
-                )
-                .font(.footnote)
-                .foregroundStyle(Theme.muted)
-            } else {
-                countingPacingFields
-            }
-
-            if prefs.counting.mode == .betSpread {
-                BetRampEditor()
-            }
+            countingPacingFields
 
             if prefs.counting.mode.asksTrueCount {
                 Picker("Decks source", selection: countingSourceBinding) {
@@ -241,13 +180,6 @@ struct SettingsView: View {
                         Text("\(Int((value * 100).rounded()))%").tag(value)
                     }
                 }
-                Picker("Showdown hands", selection: showdownSpotsBinding) {
-                    ForEach(Showdown.showdownSpotOptions, id: \.self) { spots in
-                        Text("\(spots)").tag(spots)
-                    }
-                }
-                Toggle("Bet sizing (bankroll)", isOn: showdownBettingBinding)
-                Toggle("Ask for the count on the way out", isOn: showdownCountCheckBinding)
             }
 
             ForEach(countingErrors, id: \.self) { error in
@@ -258,7 +190,7 @@ struct SettingsView: View {
         }
     }
 
-    /// Drill length and pacing — every mode but deck speed, which sets neither.
+    /// Drill length and pacing.
     @ViewBuilder private var countingPacingFields: some View {
         Stepper(
             "Cards per drill: \(prefs.counting.numberOfCards)",
@@ -281,12 +213,11 @@ struct SettingsView: View {
         )
     }
 
-    // MARK: Notifications & about
+    // MARK: Licenses
 
-    private var aboutSection: some View {
+    private var licensesSection: some View {
         Section {
-            NavigationLink("Practice reminders") { RemindersView() }
-            NavigationLink("About & licenses") { AboutView() }
+            NavigationLink("Licenses") { LicensesView() }
         }
     }
 }
@@ -387,40 +318,6 @@ extension SettingsView {
         Binding(
             get: { prefs.theme },
             set: { value in model.flowPrefs.setTheme(value) }
-        )
-    }
-
-    private var showdownSpotsBinding: Binding<Int> {
-        Binding(
-            get: { prefs.counting.showdownSpots },
-            set: { value in
-                model.flowPrefs.updateCounting { $0.showdownSpots = Showdown.clampSpots(value) }
-            }
-        )
-    }
-
-    private var playHandsOutBinding: Binding<Bool> {
-        Binding(
-            get: { prefs.playHandsOut },
-            set: { model.flowPrefs.setPlayHandsOut($0) }
-        )
-    }
-
-    private var showdownBettingBinding: Binding<Bool> {
-        Binding(
-            get: { prefs.counting.showdownBetting },
-            set: { value in
-                model.flowPrefs.updateCounting { $0.showdownBetting = value }
-            }
-        )
-    }
-
-    private var showdownCountCheckBinding: Binding<Bool> {
-        Binding(
-            get: { prefs.counting.showdownCountCheck },
-            set: { value in
-                model.flowPrefs.updateCounting { $0.showdownCountCheck = value }
-            }
         )
     }
 }
