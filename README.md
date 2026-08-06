@@ -24,8 +24,8 @@ A frontend-only Angular app for practicing four blackjack skills:
 
 All four modes persist independent session stats to `localStorage` and reuse the same card model + cardsJS images.
 The web app runs as a **Flow shell**: it launches into a one-action home screen (Continue the last trainer, a daily-goal ring, and a 7-day streak strip), drills run full screen and auto-advance on correct answers, adapt to the scenarios you keep missing, and all configuration lives on a dedicated Settings screen.
-A native iOS SwiftUI mirror (with a home-screen widget, iCloud sync, and App Store metadata) lives under `ios/`, kept in lockstep with the web engines by exported parity fixtures (see [iOS app](#ios-app)).
-Both apps read and write the same backup file, so a profile moves between the browser and the phone.
+A native iOS SwiftUI app lives under `ios/`, kept in lockstep with the web engines by exported parity fixtures (see [iOS app](#ios-app)).
+The iOS app was scope-trimmed to a v1.0 feature set and no longer ships everything on this page; the web app keeps its full feature set.
 
 ## Quick start
 
@@ -520,11 +520,12 @@ no-ops at runtime but document the chart cell.
 
 ## iOS app
 
-`ios/` hosts a native SwiftUI mirror of the trainer (app + home-screen widget), generated with XcodeGen from `ios/project.yml`.
-It ports the Flow shell (home, drills, settings, chart, showdown) and the pure engines to Swift, syncs stats through iCloud Key-Value Store, and offers an optional daily practice reminder.
-Engine parity with the web app is enforced by fixtures: `npm run export:fixtures` (`tools/export-parity-fixtures.ts`) emits `ios/Fixtures/*.json` from the TypeScript engines, the Swift parity tests replay those vectors, and CI fails if the exported fixtures drift from the committed ones.
-Most vector files are exhaustive cross-products, but `play-deviation-vectors.json` lists only the combinations where a playing index actually fires over `decidePlay`, and declares the domain it speaks for.
-The Swift test walks that domain and asserts both halves — a listed combination deviates to the named action and rule, an unlisted one does not deviate at all — so the delta is the whole specification at a fraction of the size.
+`ios/` hosts a native SwiftUI app generated with XcodeGen from `ios/project.yml`, scope-trimmed to a v1.0 feature set.
+It ships the Flow shell (home, the three drills, settings, chart, progress) and the pure engines in Swift, and syncs stats through iCloud Key-Value Store.
+The three trainers are Basic Strategy, Card Counting (running count, and true count off a preset or a live depleting shoe with deck estimation), and Deviations, with the strategy-chart reference, weak-spot review rounds, the daily goal and streak, and all 58 counting systems.
+Nine features the web app keeps were archived out of the iOS build for v1.0 — the post-count showdown table, played-out hands and splits, the deck-speed, key-count and bet-spread counting modes, the backup file, the home-screen widget, practice reminders, and the About screen (its licence texts moved to a Settings → Licenses screen) — see `archived/RESTORE.md` and `TRIM-REPORT.md`.
+On iOS the live-shoe counting drill therefore ends in the ordinary session Done screen, and the backup file no longer bridges a profile between the phone and the browser.
+Engine parity with the web app is enforced by fixtures: `npm run export:fixtures` (`tools/export-parity-fixtures.ts`) emits `ios/Fixtures/*.json` from the TypeScript engines, the Swift parity tests replay the vectors for the kept engines, and CI fails if the exported fixtures drift from the committed ones (fixtures for archived features stay committed, unconsumed).
 `ios/AppStore/` holds submission collateral (privacy policy, support page, 6.9″ screenshots); the submission runbook is `docs/app-store-submission.md` and the iOS roadmap is `docs/ios-app-roadmap.md`.
 
 ## Tech stack
