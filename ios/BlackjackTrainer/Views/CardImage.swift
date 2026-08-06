@@ -4,7 +4,7 @@ import SwiftUI
 ///
 /// The faces and back ship as asset-catalog images with vector data preserved,
 /// so they stay crisp at any trainer size. The artwork is LGPL 3.0 — its
-/// attribution lives in `AboutView`. Asset names mirror the source SVG file
+/// attribution lives in `LicensesView`. Asset names mirror the source SVG file
 /// names (`AS`, `10C`, `KH`, `BLUE_BACK`).
 struct CardImage: View {
     enum Face: Equatable {

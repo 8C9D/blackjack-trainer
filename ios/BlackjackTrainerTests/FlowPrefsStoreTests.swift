@@ -117,51 +117,11 @@ struct FlowPrefsStoreTests {
         // Prefs written before the theme existed must not lose it.
         #expect(FlowPrefs.merged(from: ["dailyGoal": 15]).theme == .system)
     }
-
-    @Test func clampsTheShowdownBoxCountIntoItsSupportedRange() {
-        #expect(FlowPrefs.merged(from: ["counting": ["showdownSpots": 3]])
-            .counting.showdownSpots == 3)
-        #expect(FlowPrefs.merged(from: ["counting": ["showdownSpots": 9]])
-            .counting.showdownSpots == 3)
-        #expect(FlowPrefs.merged(from: ["counting": ["showdownSpots": 0]])
-            .counting.showdownSpots == 1)
-        // Prefs written before the setting existed fall back to a single box.
-        #expect(FlowPrefs.merged(from: ["dailyGoal": 15]).counting.showdownSpots == 1)
-    }
-
-    @Test func keepsShowdownBetSizingOffUnlessTurnedOn() {
-        #expect(FlowPrefs.merged(from: ["counting": ["showdownBetting": true]])
-            .counting.showdownBetting)
-        #expect(!FlowPrefs.merged(from: ["counting": ["showdownBetting": "yes"]])
-            .counting.showdownBetting)
-        // Prefs written before the setting existed stay on the pure hand tally.
-        #expect(!FlowPrefs.merged(from: ["dailyGoal": 15]).counting.showdownBetting)
-    }
-
-    /// The one showdown setting that defaults on: the table has always kept the
-    /// count for the player, and asking for it is the point of the screen.
-    @Test func asksForTheCountOnTheWayOutUnlessExplicitlyTurnedOff() {
-        #expect(!FlowPrefs.merged(from: ["counting": ["showdownCountCheck": false]])
-            .counting.showdownCountCheck)
-        #expect(FlowPrefs.merged(from: ["counting": ["showdownCountCheck": "no"]])
-            .counting.showdownCountCheck)
-        // Prefs written before the setting existed get asked.
-        #expect(FlowPrefs.merged(from: ["dailyGoal": 15]).counting.showdownCountCheck)
-    }
-
-    /// The other default-on setting: the opening decision alone is the chart, not
-    /// the game, so a hit is followed unless the trainee says otherwise.
-    @Test func playsHandsOutUnlessExplicitlyTurnedOff() {
-        #expect(!FlowPrefs.merged(from: ["playHandsOut": false]).playHandsOut)
-        #expect(FlowPrefs.merged(from: ["playHandsOut": "no"]).playHandsOut)
-        // Prefs written before the setting existed play hands out.
-        #expect(FlowPrefs.merged(from: ["dailyGoal": 15]).playHandsOut)
-    }
 }
 
-/// The counting half of the same merge: system-dependent modes, shoe-sized
-/// rounds, and the bet spread. Split from `FlowPrefsStoreTests` to stay inside
-/// the suite's type-body limit.
+/// The counting half of the same merge: system-dependent modes and shoe-sized
+/// rounds. Split from `FlowPrefsStoreTests` to stay inside the suite's
+/// type-body limit.
 struct FlowPrefsCountingMergeTests {
     @Test func fallsBackFromAnUnknownCountingSystem() {
         let counting = FlowPrefs.merged(from: [
@@ -182,35 +142,16 @@ struct FlowPrefsCountingMergeTests {
         #expect(counting.mode == .runningCount)
     }
 
-    @Test func keepsKeyCountModeForKO() {
-        let counting = FlowPrefs.merged(from: [
-            "counting": ["systemId": "ko", "mode": "key-count"]
-        ]).counting
-        #expect(counting.systemId == "ko")
-        #expect(counting.mode == .keyCount)
-    }
-
-    @Test func coercesKeyCountModeAwayFromSystemsWithoutASchedule() {
-        for systemId in ["hi-lo", "red-seven"] {
+    /// A payload stored by a build that still shipped the archived modes (or by
+    /// the web app, which keeps them) names a mode this build no longer hosts.
+    /// It degrades to running count rather than erroring.
+    @Test func coercesAnArchivedModeBackToRunningCount() {
+        for mode in ["key-count", "bet-spread", "deck-speed"] {
             let counting = FlowPrefs.merged(from: [
-                "counting": ["systemId": systemId, "mode": "key-count"]
+                "counting": ["systemId": "hi-lo", "mode": mode]
             ]).counting
-            #expect(counting.systemId == systemId)
-            #expect(counting.mode == .runningCount)
+            #expect(counting.mode == .runningCount, "\(mode)")
         }
-    }
-
-    @Test func rejectsAKeyCountRoundThatWouldConsumeTheWholeShoe() {
-        let counting = FlowPrefs.merged(from: [
-            "counting": [
-                "systemId": "ko",
-                "mode": "key-count",
-                "numberOfDecks": 1,
-                "numberOfCards": 52
-            ]
-        ]).counting
-        #expect(counting.mode == .keyCount)
-        #expect(counting.numberOfCards == FlowPrefs.default.counting.numberOfCards)
     }
 
     @Test func fallsBackFieldByFieldFromUnsupportedCountingNumbers() {
@@ -255,11 +196,7 @@ struct FlowPrefsCountingMergeTests {
                 "decksRemaining": 2.5,
                 "trueCountSource": "live-shoe",
                 "numberOfDecks": 2,
-                "penetration": 0.8,
-                "betRamp": [1, 3, 6, 10, 20],
-                "showdownSpots": 2,
-                "showdownBetting": true,
-                "showdownCountCheck": false
+                "penetration": 0.8
             ]
         ]).counting
         #expect(counting == CountingPrefs(
@@ -270,49 +207,7 @@ struct FlowPrefsCountingMergeTests {
             decksRemaining: 2.5,
             trueCountSource: .liveShoe,
             numberOfDecks: 2,
-            penetration: 0.8,
-            betRamp: [1, 3, 6, 10, 20],
-            showdownSpots: 2,
-            showdownBetting: true,
-            showdownCountCheck: false
+            penetration: 0.8
         ))
-    }
-
-    @Test func normalizesAStoredBetSpreadBandByBand() {
-        #expect(
-            FlowPrefs.merged(from: ["counting": ["betRamp": [2, 4, 8, 16, 32]]])
-                .counting.betRamp == [2, 4, 8, 16, 32]
-        )
-        // A junk band falls back to the default's; the rest survive.
-        #expect(
-            FlowPrefs.merged(from: ["counting": ["betRamp": [2, "x", 8, 16, 32]]])
-                .counting.betRamp == [2, BetRamp.default[1], 8, 16, 32]
-        )
-        // Prefs written before the spread existed get the default.
-        #expect(FlowPrefs.merged(from: ["dailyGoal": 15]).counting.betRamp == BetRamp.default)
-    }
-
-    @Test func keepsBetSpreadForABalancedSystemAndCoercesItAwayOtherwise() {
-        #expect(
-            FlowPrefs.merged(from: ["counting": ["systemId": "hi-lo", "mode": "bet-spread"]])
-                .counting.mode == .betSpread
-        )
-        #expect(
-            FlowPrefs.merged(from: ["counting": ["systemId": "ko", "mode": "bet-spread"]])
-                .counting.mode == .runningCount
-        )
-    }
-
-    @Test func roundTripsTheThemeAndBoxCountThroughTheStoredShape() {
-        var prefs = FlowPrefs.default
-        prefs.theme = .light
-        prefs.counting.showdownSpots = 2
-        prefs.counting.showdownBetting = true
-        prefs.counting.showdownCountCheck = false
-        let restored = FlowPrefs.merged(from: prefs.jsonObject)
-        #expect(restored.theme == .light)
-        #expect(restored.counting.showdownSpots == 2)
-        #expect(restored.counting.showdownBetting)
-        #expect(!restored.counting.showdownCountCheck)
     }
 }

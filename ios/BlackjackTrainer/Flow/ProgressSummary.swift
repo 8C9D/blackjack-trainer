@@ -179,11 +179,6 @@ enum ProgressSummary {
             .joined(separator: " · ")
     }
 
-    /// A signed chip total: "+45", "-20", "0".
-    static func signed(_ net: Double) -> String {
-        CountFormat.signedCount(net)
-    }
-
     /// The true counts a scenario was recently missed at, deduplicated and read
     /// low to high: "TC -1, +2" says the trainee got the hand wrong on both sides
     /// of its index, which is a different lesson from missing it twice on the

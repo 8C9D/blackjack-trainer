@@ -60,18 +60,6 @@ struct CountingPrefs: Equatable {
     var trueCountSource: TrueCountSource
     var numberOfDecks: Int
     var penetration: Double
-    /// The player's own bet spread, in units per true-count band. Graded against
-    /// by the bet-spread drill; ignored by every other mode.
-    var betRamp: [Int]
-    /// Boxes the player occupies in the optional post-count showdown (1–3).
-    var showdownSpots: Int
-    /// Bet sizing in the showdown: each round opens on a bet and settles against a
-    /// persisted bankroll. Off by default.
-    var showdownBetting: Bool
-    /// Ask for the running count on the way out of the showdown. On by default:
-    /// the table deals dozens of cards past the count the drill just graded, and
-    /// keeping it through them is the skill the whole screen is for.
-    var showdownCountCheck: Bool
 
     /// The `CountingDrillSettings` the drill/engine consume (systemId stripped,
     /// mirroring the web's `const { systemId, ...settings } = counting`).
@@ -81,7 +69,6 @@ struct CountingPrefs: Equatable {
             numberOfCards: numberOfCards,
             millisecondsBetweenCards: millisecondsBetweenCards,
             decksRemaining: decksRemaining,
-            betRamp: betRamp,
             trueCountSource: trueCountSource,
             numberOfDecks: numberOfDecks,
             penetration: penetration
@@ -97,11 +84,6 @@ struct FlowPrefs: Equatable {
     var theme: ThemePref
     var ruleSet: RuleSet
     var options: EngineOptions
-    /// Play a hand out in the Basic Strategy drill: a correct hit is followed by
-    /// the next card and the next decision, until the hand stands or ends. On by
-    /// default — a hit is the one answer that leaves another question behind it,
-    /// and the opening decision alone is the chart, not the game.
-    var playHandsOut: Bool
     var deviations: DeviationPrefs
     var counting: CountingPrefs
 }
@@ -118,7 +100,6 @@ extension FlowPrefs {
         theme: .system,
         ruleSet: .s17,
         options: .default,
-        playHandsOut: true,
         deviations: DeviationPrefs(
             practiceMode: .allHands,
             trueCountSource: .random,
@@ -132,11 +113,7 @@ extension FlowPrefs {
             decksRemaining: 1,
             trueCountSource: .liveShoe,
             numberOfDecks: ShoeConstants.defaultNumberOfDecks,
-            penetration: ShoeConstants.defaultPenetration,
-            betRamp: BetRamp.default,
-            showdownSpots: 1,
-            showdownBetting: false,
-            showdownCountCheck: true
+            penetration: ShoeConstants.defaultPenetration
         )
     )
 }
@@ -153,13 +130,11 @@ func clampGoal(_ goal: Double) -> Int {
 /// `FlowPrefsService`: tolerant field-by-field load over defaults, write-through
 /// to iCloud KVS following the stat-store pattern.
 @Observable
-final class FlowPrefsStore: CloudSyncable, ReloadableStore {
+final class FlowPrefsStore: CloudSyncable {
     @ObservationIgnored let key: String
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let cloud: CloudKeyValueStore?
     @ObservationIgnored private let systems: [CountingSystem]
-    /// Fired after a local change (so the widget snapshot can refresh).
-    @ObservationIgnored var onChange: (() -> Void)?
     private(set) var prefs: FlowPrefs
 
     init(
@@ -200,11 +175,6 @@ final class FlowPrefsStore: CloudSyncable, ReloadableStore {
         persist()
     }
 
-    func setPlayHandsOut(_ playHandsOut: Bool) {
-        prefs.playHandsOut = playHandsOut
-        persist()
-    }
-
     func updateDeviations(_ mutate: (inout DeviationPrefs) -> Void) {
         mutate(&prefs.deviations)
         persist()
@@ -215,16 +185,9 @@ final class FlowPrefsStore: CloudSyncable, ReloadableStore {
         persist()
     }
 
-    func reloadFromDefaults() {
-        prefs = Self.load(key: key, defaults: defaults, systems: systems)
-        // The widget shows the daily goal, so a restored one has to reach it.
-        onChange?()
-    }
-
     private func persist() {
         Self.save(prefs, key: key, defaults: defaults)
         pushToCloud()
-        onChange?()
     }
 
     private static func load(
@@ -258,9 +221,6 @@ final class FlowPrefsStore: CloudSyncable, ReloadableStore {
             systems: systems
         )
         Self.save(prefs, key: key, defaults: defaults)
-        // A cross-device sync changed the goal/settings; notify so the widget
-        // snapshot republishes (the publisher listens on onChange).
-        onChange?()
     }
 
     func pushToCloud() {

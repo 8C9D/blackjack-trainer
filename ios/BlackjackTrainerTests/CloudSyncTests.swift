@@ -87,13 +87,17 @@ struct CloudSyncTests {
         #expect(cloud.storage["k"] != nil) // seeded from local
     }
 
-    @Test func showdownStoreSyncs() {
+    /// A device that still runs the full feature set leaves archived-feature
+    /// keys (showdown, bet spread, …) in the shared cloud store. This build owns
+    /// no store for them, so adoption walks its own stores and leaves the
+    /// unknown keys untouched rather than erroring or wiping them.
+    @Test func coordinatorIgnoresUnknownCloudKeys() {
         let cloud = FakeCloud()
-        let deviceA = ShowdownStatsStore(key: "s", defaults: suite(), cloud: cloud)
-        deviceA.record(outcome: .win, playerBlackjack: true)
-        let deviceB = ShowdownStatsStore(key: "s", defaults: suite(), cloud: cloud)
-        deviceB.adoptFromCloud()
-        #expect(deviceB.stats.wins == 1)
-        #expect(deviceB.stats.blackjacks == 1)
+        cloud.storage["blackjack-showdown-stats"] = Data("{\"hands\":3}".utf8)
+        let local = SessionStatsStore(key: "k", defaults: suite(), cloud: cloud)
+        local.recordAttempt(correct: true)
+        _ = StatsCloudSync(cloud: cloud, stores: [local])
+        #expect(cloud.storage["blackjack-showdown-stats"] == Data("{\"hands\":3}".utf8))
+        #expect(local.stats.attempts == 1)
     }
 }

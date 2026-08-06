@@ -91,14 +91,12 @@ func localDateKey(_ date: Date) -> String {
 /// Mirrors `PracticeHistoryService`: tolerant load, 400-day prune on write, and
 /// the stat-store iCloud pattern. The stored key is additive.
 @Observable
-final class PracticeHistoryStore: CloudSyncable, ReloadableStore {
+final class PracticeHistoryStore: CloudSyncable {
     @ObservationIgnored let key: String
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let cloud: CloudKeyValueStore?
     /// Test seam mirroring the web `setNowSource`.
     @ObservationIgnored var now: () -> Date = { Date() }
-    /// Fired after a local change (so the widget snapshot can refresh).
-    @ObservationIgnored var onChange: (() -> Void)?
     /// The daily goal in force, read at write time rather than passed in by each
     /// drill: the call sites would be that many chances to forget, and a day with
     /// no goal falls back to whatever the goal is now — the very thing storing it
@@ -121,13 +119,6 @@ final class PracticeHistoryStore: CloudSyncable, ReloadableStore {
 
     func setNowSource(_ source: @escaping () -> Date) {
         now = source
-    }
-
-    func reloadFromDefaults() {
-        days = Self.load(key: key, defaults: defaults)
-        // A restore changed today's data; notify so the widget snapshot
-        // republishes, exactly as a cross-device adoption does.
-        onChange?()
     }
 
     /// One graded rep. The verdict is the same one the session streak counts, so
@@ -277,7 +268,6 @@ final class PracticeHistoryStore: CloudSyncable, ReloadableStore {
     private func persist() {
         Self.save(days, key: key, defaults: defaults)
         pushToCloud()
-        onChange?()
     }
 
     private static func load(key: String, defaults: UserDefaults) -> [PracticeDay] {
@@ -334,10 +324,6 @@ final class PracticeHistoryStore: CloudSyncable, ReloadableStore {
         else { return }
         days = adopted
         Self.save(days, key: key, defaults: defaults)
-        // A cross-device sync changed today's data; notify so the widget snapshot
-        // republishes (the publisher listens on onChange). No-op before launch
-        // wires it up; the init seed covers that first adoption.
-        onChange?()
     }
 
     func pushToCloud() {

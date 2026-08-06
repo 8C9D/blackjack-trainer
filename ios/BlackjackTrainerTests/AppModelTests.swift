@@ -32,9 +32,6 @@ struct AppModelTests {
         model.runningCountStats.recordAttempt(correct: true)
         model.trueCountStats.recordAttempt(correct: true)
         model.deckEstimationStats.recordAttempt(correct: true)
-        model.keyCountStats.recordAttempt(correct: true)
-        model.showdownStats.record(outcome: .win)
-        model.showdownBankroll.record(stake: 10, payout: -10)
         model.practiceHistory.recordHand(correct: true)
         model.missTally.record(
             .basicStrategy,
@@ -51,9 +48,6 @@ struct AppModelTests {
         #expect(model.runningCountStats.stats == .empty)
         #expect(model.trueCountStats.stats == .empty)
         #expect(model.deckEstimationStats.stats == .empty)
-        #expect(model.keyCountStats.stats == .empty)
-        #expect(model.showdownStats.stats == .empty)
-        #expect(model.showdownBankroll.state == .empty)
         #expect(model.practiceHistory.handsToday() == 0)
         #expect(model.missTally.weakSpots(.basicStrategy).isEmpty)
         // Settings are not practice data.
@@ -70,7 +64,7 @@ struct AppModelTests {
         let model = AppModel()
         let keys = [
             model.basicStrategyStats.key, model.runningCountStats.key, model.trueCountStats.key,
-            model.deviationStats.key, model.deckEstimationStats.key, model.showdownStats.key
+            model.deviationStats.key, model.deckEstimationStats.key
         ]
         #expect(Set(keys).count == keys.count)
     }

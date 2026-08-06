@@ -64,9 +64,8 @@ struct DeviationsDrillView: View {
                 .padding(.top, 10)
             }
             FlowStageView(
-                player: model.hand,
-                dealer: model.scenario.dealerUpcard,
-                handLabel: model.handLabel
+                player: model.scenario.player,
+                dealer: model.scenario.dealerUpcard
             ) {
                 DrillLineView(line: stageLine)
             }
@@ -95,9 +94,6 @@ struct DeviationsDrillView: View {
             return Text("Correct: \(result.expectedAction.label). ").bold()
                 .foregroundStyle(Theme.accentInk)
                 + Text(model.explanation).foregroundStyle(Theme.midInk)
-        }
-        if model.phase == .over {
-            return Text(model.handOver).bold().foregroundStyle(Theme.accentInk)
         }
         let question = model.question
         let prefix = question.prefix.isEmpty ? Text("") : Text("\(question.prefix) ")

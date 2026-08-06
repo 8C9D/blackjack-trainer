@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// Everything the app has been quietly recording, in one place: the week, each
-/// trainer's lifetime accuracy, the showdown ledger, and the scenarios still
-/// costing hands. Read-only — practice is what changes these. Mirrors the web
+/// trainer's lifetime accuracy, and the scenarios still costing hands.
+/// Read-only — practice is what changes these. Mirrors the web
 /// `progress-page` component. (Named around SwiftUI's own `ProgressView`.)
 struct PracticeProgressView: View {
     @Environment(AppModel.self) private var model
@@ -53,14 +53,7 @@ struct PracticeProgressView: View {
             ProgressSummary.row("Deviations", model.deviationStats.stats),
             ProgressSummary.row("Running count", model.runningCountStats.stats),
             ProgressSummary.row("True count", model.trueCountStats.stats),
-            ProgressSummary.row("Deck estimate", model.deckEstimationStats.stats),
-            ProgressSummary.row("Key count call", model.keyCountStats.stats),
-            ProgressSummary.row("Bet spread", model.betSpreadStats.stats),
-            ProgressSummary.row("Deck speed", model.deckSpeedStats.stats),
-            // Not a drill of its own — it is every decision at a table, scored
-            // where the hands are actually played out rather than dealt two at a
-            // time: basic strategy, the indices over it, and the insurance call.
-            ProgressSummary.row("Showdown play", model.showdownPlayStats.stats)
+            ProgressSummary.row("Deck estimate", model.deckEstimationStats.stats)
         ]
     }
 
@@ -95,8 +88,6 @@ struct PracticeProgressView: View {
                     paceTrend: paceTrend,
                     rows: rows,
                     driftShape: model.countDrift.shape(),
-                    showdown: model.showdownStats.stats,
-                    bankroll: model.showdownBankroll.state,
                     weakGroups: weakGroups,
                     onDrillMisses: { router.go(.drill($0, review: true)) }
                 )
@@ -135,8 +126,6 @@ struct ProgressBodyView: View {
     /// Which side the counts land on. Nil under five rounds, where a lean is
     /// not yet a lean.
     var driftShape: DriftShape?
-    let showdown: ShowdownStats
-    let bankroll: BankrollState
     let weakGroups: [ProgressWeakGroup]
     /// Starts a review round in the named trainer. Naming a weakness on a
     /// read-only screen leaves the trainee to go and hope it comes up.
@@ -151,9 +140,6 @@ struct ProgressBodyView: View {
         VStack(alignment: .leading, spacing: 16) {
             weekCard
             trainerCard
-            if showdown.hands > 0 {
-                showdownCard
-            }
             ForEach(weakGroups) { group in
                 weakCard(group)
             }
@@ -326,22 +312,6 @@ struct ProgressBodyView: View {
 
     // MARK: - chrome
 
-    /// "1 chip", "250 chips" — the bankroll is formatted before it is counted.
-    private func chipsLabel(_ chips: Double) -> String {
-        countOf(chips, "chip", display: CountFormat.count(chips))
-    }
-
-    private var winRate: Int {
-        showdown.hands == 0
-            ? 0
-            : Int((Double(showdown.wins) / Double(showdown.hands) * 100).rounded())
-    }
-
-    private var netColor: Color {
-        if bankroll.net > 0 { return Theme.good }
-        return bankroll.net < 0 ? Theme.bad : Theme.ink
-    }
-
     private func columnHeader(_ title: String, width: CGFloat?) -> some View {
         Text(title)
             .font(.system(size: 10, weight: .semibold))
@@ -391,35 +361,6 @@ struct ProgressBodyView: View {
 }
 
 extension ProgressBodyView {
-    private var showdownCard: some View {
-        card("Showdown") {
-            VStack(alignment: .leading, spacing: 3) {
-                Text("\(showdown.wins)W · \(showdown.losses)L · \(showdown.pushes)P")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Theme.ink)
-                Text(
-                    "\(countOf(showdown.hands, "hand")) · "
-                        + "\(countOf(showdown.blackjacks, "blackjack")) · \(winRate)% won"
-                )
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.muted)
-            }
-            if bankroll.wagered > 0 {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(ProgressSummary.signed(bankroll.net))
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(netColor)
-                    Text(
-                        "\(chipsLabel(bankroll.bankroll)) on hand · "
-                            + "\(CountFormat.count(bankroll.wagered)) wagered"
-                    )
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.muted)
-                }
-            }
-        }
-    }
-
     /// Which side the counts land on. Accuracy says a count was wrong and never
     /// how, and the two ways to be wrong want different practice.
     @ViewBuilder

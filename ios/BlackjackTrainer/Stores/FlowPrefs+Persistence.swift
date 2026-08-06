@@ -25,7 +25,6 @@ extension FlowPrefs {
                 doubleAfterSplit: boolValue(opts["doubleAfterSplit"]) ?? d.options.doubleAfterSplit,
                 lateSurrender: boolValue(opts["lateSurrender"]) ?? d.options.lateSurrender
             ),
-            playHandsOut: boolValue(p["playHandsOut"]) ?? d.playHandsOut,
             deviations: mergedDeviations(dev, defaults: d.deviations),
             counting: mergedCounting(cnt, defaults: d.counting, systems: systems)
         )
@@ -42,7 +41,6 @@ extension FlowPrefs {
                 "doubleAfterSplit": options.doubleAfterSplit,
                 "lateSurrender": options.lateSurrender
             ],
-            "playHandsOut": playHandsOut,
             "deviations": [
                 "practiceMode": practiceModeString(deviations.practiceMode),
                 "trueCountSource": deviations.trueCountSource.rawValue,
@@ -56,11 +54,7 @@ extension FlowPrefs {
                 "decksRemaining": counting.decksRemaining,
                 "trueCountSource": counting.trueCountSource.rawValue,
                 "numberOfDecks": counting.numberOfDecks,
-                "penetration": counting.penetration,
-                "betRamp": counting.betRamp,
-                "showdownSpots": counting.showdownSpots,
-                "showdownBetting": counting.showdownBetting,
-                "showdownCountCheck": counting.showdownCountCheck
+                "penetration": counting.penetration
             ]
         ]
     }
@@ -93,9 +87,10 @@ private func mergedCounting(
     let requestedSystemId = raw["systemId"] as? String
     let system = systems.first { $0.id == requestedSystemId }
         ?? systems.first { $0.id == defaults.systemId }
+    // A stored mode this build no longer hosts (an archived mode's raw value,
+    // or a hand-edited payload) falls back to running count via `oneOf`; a mode
+    // the system cannot host clamps the same way.
     let requestedMode = oneOf(raw["mode"], DrillMode.self, defaults.mode)
-    // True count — and the bet spread built on it — needs a balanced system;
-    // the key-count drill a published IRC/key-count schedule (KO).
     let mode: DrillMode = system?.allows(requestedMode) == true ? requestedMode : .runningCount
     let source = oneOf(raw["trueCountSource"], TrueCountSource.self, defaults.trueCountSource)
     let decks = intValue(raw["numberOfDecks"])
@@ -121,13 +116,7 @@ private func mergedCounting(
         numberOfDecks: decks,
         penetration: numberValue(raw["penetration"])
             .flatMap { ShoeConstants.penetrationPresets.contains($0) ? $0 : nil }
-            ?? defaults.penetration,
-        betRamp: BetRamp.normalized(raw["betRamp"]),
-        showdownSpots: Showdown.clampSpots(
-            intValue(raw["showdownSpots"]) ?? defaults.showdownSpots
-        ),
-        showdownBetting: boolValue(raw["showdownBetting"]) ?? defaults.showdownBetting,
-        showdownCountCheck: boolValue(raw["showdownCountCheck"]) ?? defaults.showdownCountCheck
+            ?? defaults.penetration
     )
 }
 

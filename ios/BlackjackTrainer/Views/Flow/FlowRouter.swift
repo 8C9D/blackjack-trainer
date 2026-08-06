@@ -36,13 +36,11 @@ final class FlowRouter {
 }
 
 /// The drill loop's only states. A correct answer flashes in place and
-/// auto-advances; a miss is the loop's only pause; `over` holds the beat where a
-/// played-out hand ends on its own (bust, or 21); `done` is the session end.
+/// auto-advances; a miss is the loop's only pause; `done` is the session end.
 /// Mirrors the web `DrillPhase`.
 enum DrillPhase {
     case question
     case flash
     case miss
-    case over
     case done
 }
