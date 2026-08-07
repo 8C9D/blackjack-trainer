@@ -329,12 +329,17 @@ final class MissTallyStore: CloudSyncable {
     }
 
     private func load(data: Data?) -> [String: [String: ScenarioTally]] {
-        guard let data,
-              let parsed = try? JSONDecoder().decode(
-                  [String: [String: ScenarioTally]].self,
-                  from: data
-              )
-        else { return [:] }
+        guard let data, let parsed = Self.decoded(data) else { return [:] }
+        return sanitized(parsed)
+    }
+
+    private static func decoded(_ data: Data) -> [String: [String: ScenarioTally]]? {
+        try? JSONDecoder().decode([String: [String: ScenarioTally]].self, from: data)
+    }
+
+    private func sanitized(
+        _ parsed: [String: [String: ScenarioTally]]
+    ) -> [String: [String: ScenarioTally]] {
         var out: [String: [String: ScenarioTally]] = [:]
         for trainer in [TalliedTrainer.basicStrategy, .deviations] {
             guard let forTrainer = parsed[trainer.rawValue] else { continue }
@@ -364,8 +369,12 @@ final class MissTallyStore: CloudSyncable {
     }
 
     func adoptFromCloud() {
-        guard let cloud else { return }
-        state = load(data: cloud.data(forKey: key))
+        // Cloud bytes are another device's write and untrusted: a payload that
+        // does not decode leaves valid local state alone rather than wiping it.
+        // Decodable payloads still sanitize entry-by-entry, as at load.
+        guard let cloud, let data = cloud.data(forKey: key),
+              let parsed = Self.decoded(data) else { return }
+        state = sanitized(parsed)
         save(state)
     }
 

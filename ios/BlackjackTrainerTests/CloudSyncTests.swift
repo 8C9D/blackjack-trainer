@@ -87,6 +87,59 @@ struct CloudSyncTests {
         #expect(cloud.storage["k"] != nil) // seeded from local
     }
 
+    /// Data arriving from another device is untrusted input, and `SessionStats`
+    /// already refuses a payload it cannot decode. The same boundary must hold
+    /// for every synced store: cloud bytes that do not decode leave valid local
+    /// state alone rather than resetting it to defaults or empty. (Partial
+    /// tolerance is unchanged — decodable payloads still merge field-by-field.)
+    @Test func undecodableCloudPrefsDoNotReplaceValidLocalPrefs() {
+        let cloud = FakeCloud()
+        let store = FlowPrefsStore(key: "p", defaults: suite(), cloud: cloud)
+        store.setDailyGoal(35)
+        cloud.storage["p"] = Data("not json{".utf8)
+
+        store.adoptFromCloud()
+
+        #expect(store.prefs.dailyGoal == 35)
+    }
+
+    @Test func undecodableCloudMissTallyDoesNotWipeTheLocalTally() {
+        let cloud = FakeCloud()
+        let store = MissTallyStore(key: "m", defaults: suite(), cloud: cloud)
+        store.record(
+            .basicStrategy,
+            ref: ScenarioRef(kind: "hard", hand: "16", dealer: "10"),
+            correct: false
+        )
+        cloud.storage["m"] = Data("not json{".utf8)
+
+        store.adoptFromCloud()
+
+        #expect(store.weakSpotFor(.basicStrategy) != nil)
+    }
+
+    @Test func undecodableCloudDriftsDoNotWipeTheLocalHistory() {
+        let cloud = FakeCloud()
+        let store = CountDriftStore(key: "d", defaults: suite(), cloud: cloud)
+        store.record(answer: 3, actual: 5)
+        cloud.storage["d"] = Data("not json{".utf8)
+
+        store.adoptFromCloud()
+
+        #expect(store.drifts == [-2])
+    }
+
+    @Test func undecodableCloudHistoryDoesNotWipeLocalDays() {
+        let cloud = FakeCloud()
+        let store = PracticeHistoryStore(key: "h", defaults: suite(), cloud: cloud)
+        store.recordHand(correct: true)
+        cloud.storage["h"] = Data("not json{".utf8)
+
+        store.adoptFromCloud()
+
+        #expect(store.handsToday() == 1)
+    }
+
     /// A device that still runs the full feature set leaves archived-feature
     /// keys (showdown, bet spread, …) in the shared cloud store. This build owns
     /// no store for them, so adoption walks its own stores and leaves the

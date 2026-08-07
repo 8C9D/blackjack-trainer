@@ -87,7 +87,11 @@ Ordered by priority. Each item states its own done-when so completion is checkab
 
 ### Quality passes
 
-- [ ] **A5. Re-run the security pass on the post-trim tree.**
+- [x] **A5. Re-run the security pass on the post-trim tree.**
+      _Done 2026-08-06: fresh report at `docs/security-pass-2026-08-06.md`, every claim executed on this tree (commands listed in the report).
+      Clean on secrets, network calls, sinks, `.gitignore`, CI, and production dependencies (`npm audit --omit=dev` = 0; full audit = 5 dev-only, now 4 moderate + 1 high `undici` under `@angular/build`).
+      One finding, fixed: `FlowPrefsStore`/`MissTallyStore`/`CountDriftStore` let an undecodable iCloud payload wipe valid local state to defaults/empty - reproduced with three failing tests, fixed to refuse-and-keep-local (matching the stats/history stores), four regression tests added, iOS suite green at 332.
+      D4 recommendation written into the report: accept the dev-only advisories for 1.0, schedule Angular 22 post-launch._
       `docs/security-sanity-check.md` is closed and predates the trim.
       Re-verify no tracked secrets, no network calls in either target, `.gitignore` publish safety, and the iCloud KVS trust boundary (data arriving from another device is untrusted input; the trim added a test for unknown keys, extend that thinking to malformed values).
       Re-run `npm audit`, and write the D4 recommendation without acting on it.

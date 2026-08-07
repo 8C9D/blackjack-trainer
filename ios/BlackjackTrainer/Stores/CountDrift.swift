@@ -82,8 +82,12 @@ final class CountDriftStore: CloudSyncable {
         guard let data,
               let stored = try? JSONDecoder().decode(StoredDrifts.self, from: data)
         else { return [] }
-        return Array(
-            stored.drifts
+        return sanitized(stored.drifts)
+    }
+
+    private static func sanitized(_ drifts: [Double]) -> [Double] {
+        Array(
+            drifts
                 .filter { $0.isFinite && abs($0) <= maxCountDrift }
                 .prefix(countDriftMemory)
         )
@@ -102,8 +106,12 @@ final class CountDriftStore: CloudSyncable {
     }
 
     func adoptFromCloud() {
-        guard let cloud, let data = cloud.data(forKey: key) else { return }
-        drifts = Self.loaded(data: data)
+        // Cloud bytes are another device's write and untrusted: a payload that
+        // does not decode leaves valid local state alone rather than wiping it.
+        guard let cloud, let data = cloud.data(forKey: key),
+              let stored = try? JSONDecoder().decode(StoredDrifts.self, from: data)
+        else { return }
+        drifts = Self.sanitized(stored.drifts)
         guard let encoded = try? JSONEncoder().encode(StoredDrifts(drifts: drifts)) else { return }
         defaults.set(encoded, forKey: key)
     }
