@@ -130,7 +130,12 @@ Ordered by priority. Each item states its own done-when so completion is checkab
       Capture from a Release build driven to each state, at 1320x2868 for iPhone and the 13-inch iPad size if D1 = universal.
       **Done when:** every shot shows only shipping surfaces, the old set is replaced, and the file names say what each shot demonstrates.
 
-- [ ] **A9. Rewrite the store metadata against the app that exists.**
+- [x] **A9. Rewrite the store metadata against the app that exists.**
+      _Done 2026-08-06: `docs/app-store-submission.md` rewritten for the trimmed app and the answered decisions.
+      The description ships in two variants - A without the iCloud claim (use for 1.0, per D2) and B with it, ready for the release after O2/O11 - so O5 is a copy-paste either way; the promo text dropped its sync claim; the identity table now says iPhone-only (D1) and Paid with the banking/tax gate called out (D5).
+      The review notes lead with the bolded no-wagering paragraph (no real or virtual currency, no chips, no bankroll, no bets, no payouts, no hand played to an outcome) before anything else.
+      The age-rating section still refuses to pre-answer Simulated Gambling and still forbids carrying the old answer forward; the stale human checklist now defers to the owner lane here instead of duplicating it.
+      No sentence describes an archived feature (checked against `TRIM-REPORT.md`'s cut list)._
       Update `docs/app-store-submission.md`: description, keywords, promotional text, and review notes.
       Supply the description in two variants, with and without the iCloud claim, so O5 becomes a copy-paste once D2 is answered.
       The review notes matter more than usual here - card-counting instruction gets read closely, so "no wagering, no real or virtual currency, no chips, no hand ever plays out to a win or lose outcome" must be impossible to miss.
