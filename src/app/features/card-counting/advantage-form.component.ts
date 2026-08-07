@@ -5,6 +5,7 @@ import {
   afterNextRender,
   output,
   viewChild,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 
 import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
@@ -29,6 +30,7 @@ import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
       <p class="advantage__note">Yes when the running count has reached this shoe's key count.</p>
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './advantage-form.component.scss',
 })
 export class AdvantageFormComponent {

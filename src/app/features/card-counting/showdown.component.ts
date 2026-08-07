@@ -7,6 +7,7 @@ import {
   input,
   output,
   signal,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 
 import {
@@ -458,6 +459,7 @@ interface PlayVerdict {
       }
     </section>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './showdown.component.scss',
 })
 export class ShowdownComponent implements OnInit {

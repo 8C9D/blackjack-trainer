@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
 
 import type { StreakDot } from '../core/services/practice-history.service';
 import { countOf } from '../core/text';
@@ -22,6 +22,7 @@ import { countOf } from '../core/text';
          visible caption from being announced twice. -->
     <p class="dots__label" aria-hidden="true">{{ streakLabel() }}</p>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './streak-dots.component.scss',
 })
 export class StreakDotsComponent {

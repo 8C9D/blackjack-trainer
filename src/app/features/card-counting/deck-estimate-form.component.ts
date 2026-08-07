@@ -7,6 +7,7 @@ import {
   output,
   signal,
   viewChild,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 
 import { CountingEngineService } from '../../core/services/counting-engine.service';
@@ -38,6 +39,7 @@ import { CountingEngineService } from '../../core/services/counting-engine.servi
       </button>
     </form>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './deck-estimate-form.component.scss',
 })
 export class DeckEstimateFormComponent {

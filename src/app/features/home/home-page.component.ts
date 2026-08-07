@@ -1,4 +1,4 @@
-import { Component, HostListener, computed, inject } from '@angular/core';
+import { Component, HostListener, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
@@ -88,6 +88,7 @@ interface TrainerCard {
       </div>
     </main>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './home-page.component.scss',
 })
 export class HomePageComponent {

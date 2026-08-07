@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
 
 import type { Card } from '../../core/models/card.model';
 import { CardImageComponent } from '../../shared/card-image.component';
@@ -22,6 +22,7 @@ import { CardImageComponent } from '../../shared/card-image.component';
       }
     </section>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './card-stream.component.scss',
 })
 export class CardStreamComponent {

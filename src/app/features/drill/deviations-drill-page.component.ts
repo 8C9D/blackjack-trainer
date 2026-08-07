@@ -1,4 +1,12 @@
-import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  HostListener,
+  computed,
+  inject,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { actionForKey, shouldIgnoreKeyboardEvent } from '../../core/keyboard';
@@ -150,6 +158,7 @@ type DrillPhase = 'question' | 'flash' | 'miss' | 'over' | 'done';
       }
     </main>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './drill-page.scss',
 })
 export class DeviationsDrillPageComponent {

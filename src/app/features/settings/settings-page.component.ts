@@ -6,6 +6,7 @@ import {
   inject,
   signal,
   viewChild,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { Router } from '@angular/router';
 
@@ -294,6 +295,7 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
       </section>
     </main>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './settings-page.component.scss',
 })
 export class SettingsPageComponent {

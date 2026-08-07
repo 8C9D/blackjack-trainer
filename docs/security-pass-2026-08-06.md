@@ -64,6 +64,10 @@ The trim added a test pinning that unknown (archived-feature) cloud keys are ign
 Reasoning: the production audit is clean, all five advisories sit in build/CLI tooling that never ships to users, the `undici` high applies to the dev server's own HTTP client, and a major framework upgrade days before a submission adds real risk for zero user-facing gain.
 Re-run `npm audit` before starting the 22 upgrade, since the advisory set moves.
 
+**Outcome (added later the same day):** the owner answered D4 the other way and the upgrade was done immediately - Angular 21.2.19 → 22.1.0 (CLI 22.1.3, TypeScript 6.0.3) via `ng update`, plus `npm audit fix` for `undici`.
+Validated after the upgrade: typecheck, lint, 1522 unit tests, production build, parity-fixture diff clean, and the full 111-test Playwright suite against the built bundle.
+`npm audit --omit=dev` remains **0**; the full audit is down to **3 moderate**, all in the `@angular/cli → @modelcontextprotocol/sdk → @hono/node-server` chain (a Windows path traversal in the CLI's optional MCP dev server), which has no fix on 22 either - accepted, dev-only.
+
 ## Commands run
 
 `git ls-files | wc -l`; `git grep -nIE` for the secret, network, and sink patterns above over `src`, `ios`, `tools`; `git check-ignore -v` on the five guard paths; `git status --porcelain --ignored=matching`; `npm audit`, `npm audit --json`, `npm audit --omit=dev`; `python3` over `package.json` for scripts and dependencies; `cat` of both workflow files and the entitlements; the iOS suite (`xcodebuild test`, 332 tests green) for the trust-boundary fix.

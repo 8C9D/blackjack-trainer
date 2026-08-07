@@ -1,4 +1,4 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, input, output, ChangeDetectionStrategy } from '@angular/core';
 
 import { ACTION_KEY_HINTS } from '../core/keyboard';
 import { ACTION_LABELS, type Action } from '../core/models/strategy.model';
@@ -40,6 +40,7 @@ export const FLOW_ACTION_ORDER: readonly Action[] = ['H', 'S', 'D', 'P', 'SUR', 
       }
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './flow-actions.component.scss',
 })
 export class FlowActionsComponent {

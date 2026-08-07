@@ -7,6 +7,7 @@ import {
   input,
   output,
   viewChild,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 
 import { shouldIgnoreKeyboardEvent } from '../core/keyboard';
@@ -57,6 +58,7 @@ const CLEARED_SHOWN = 3;
       </button>
     </section>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './flow-done.component.scss',
 })
 export class FlowDoneComponent {

@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
 
 // Daily-goal progress ring (home + done screens). Fill is a conic gradient in
 // the accent color; a met goal switches the whole ring to the success color.
@@ -21,6 +21,7 @@ import { Component, computed, input } from '@angular/core';
       </div>
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './goal-ring.component.scss',
 })
 export class GoalRingComponent {
