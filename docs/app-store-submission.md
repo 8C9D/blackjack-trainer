@@ -57,6 +57,19 @@ Identical to variant A, except the stats sentence reads:
 > correct play. A daily goal, streaks, and adaptive weak-spot review keep the
 > practice honest, and your stats sync across your devices with iCloud.
 
+## What's New (1.0 release notes)
+
+For the App Store Connect "What's New" field:
+
+> First release. Drill blackjack basic strategy, running and true counts across
+> 58 systems, and the Hi-Lo deviations — every answer graded instantly against
+> the chart, with a daily goal, streaks, and adaptive weak-spot review. No
+> wagering, no currency, no accounts; everything stays on your device.
+
+Versioning story, applied 2026-08-06 (A13): both platforms carry the marketing version **1.0.0** — the web `package.json` says `1.0.0`, the iOS build says `MARKETING_VERSION 1.0` with `CURRENT_PROJECT_VERSION 1` as the upload counter Apple requires.
+Future releases bump the marketing version together on both platforms; the iOS build number increments on every upload.
+The release commit is tagged `v1.0.0` locally once the final gate (A16) is green; pushing the tag stays with the owner.
+
 ## Keywords (≤100 chars)
 
 ```
