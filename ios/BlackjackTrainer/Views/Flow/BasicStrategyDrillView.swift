@@ -18,6 +18,13 @@ struct BasicStrategyDrillView: View {
         self.onExit = onExit
     }
 
+    /// Render seam: a caller-built model, so probes and screenshots can pose a
+    /// mid-round state (the pattern the showdown's screen used pre-trim).
+    init(model: BasicStrategyDrillModel, onExit: @escaping () -> Void) {
+        _model = State(initialValue: model)
+        self.onExit = onExit
+    }
+
     var body: some View {
         Group {
             if model.phase == .done {
