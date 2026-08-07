@@ -14,22 +14,22 @@ Status legend: `[ ]` not started, `[~]` in progress, `[x]` done, `[-]` cut or no
 
 ## Decisions (do these first, they change scope)
 
-- [ ] **D1. Universal or iPhone-only?**
+- [x] **D1. Universal or iPhone-only?** **Answered 2026-08-06: iPhone-only for 1.0.** A7 is cut, A8 needs no iPad set, and `TARGETED_DEVICE_FAMILY` drops to `'1'`.
       `ios/project.yml` sets `TARGETED_DEVICE_FAMILY: '1,2'` and enables all four iPad orientations.
       Staying universal means an iPad screenshot set is mandatory at submission and every screen has to hold up in iPad landscape.
       Dropping to `'1'` removes A7 and half of A8 and is a legitimate v1 scope cut.
-- [ ] **D2. Ship iCloud sync, or cut the claim?**
+- [x] **D2. Ship iCloud sync, or cut the claim?** **Answered 2026-08-06: cut the claim.** The store description omits sync; the entitlement stays declared and inert, O2/O11 leave the critical path, and provisioning later turns sync on without an app update.
       The `com.apple.developer.ubiquity-kvstore-identifier` entitlement is declared but the capability is not provisioned, so sync is inert today.
       Either do O2 and test it on two devices (O11), or strike "sync across your devices with iCloud" from the store description.
       Shipping the claim without the capability is a functional-defect rejection.
-- [ ] **D3. Deploy the web app publicly, or host only the two legal pages?**
+- [x] **D3. Deploy the web app publicly, or host only the two legal pages?** **Answered 2026-08-06: deploy the full web app.** A11 builds and publishes the app plus the legal pages, and A4 must be fixed properly (the shared `8C9D.github.io` origin makes the backup prefix sweep a real cross-app leak/wipe).
       App Store Connect requires a privacy policy URL and a support URL regardless.
       The repo is public, so GitHub Pages is free either way.
       Note: `8C9D.github.io` is a **shared origin** across all your Pages projects, which turns suspicion S2 (A4) from theoretical into real if the web app ships there.
-- [ ] **D4. Angular 22 now, or accept the dev-only advisories?**
+- [x] **D4. Angular 22 now, or accept the dev-only advisories?** **Answered 2026-08-06: upgrade now.** Overrides the accept-for-launch recommendation recorded in `docs/security-pass-2026-08-06.md`; the upgrade happens before the remaining launch work so everything after is validated against Angular 22.
       Production dependencies are clean; the 5 remaining advisories are dev-only (`undici` under `@angular/build`, a Windows path traversal under the CLI MCP server) and npm's only fix is a major upgrade.
       Accepting is defensible for launch; record the decision either way.
-- [ ] **D5. Price.** Free is suggested in `docs/app-store-submission.md`. Paid apps require banking and tax forms in App Store Connect, which take days to clear.
+- [x] **D5. Price.** **Answered 2026-08-06: Paid** (tier to be picked in App Store Connect). **This adds a submission gate:** the Agreements, Tax, and Banking section must be completed and cleared before you can submit, which can take days - start it now (it slots before O5). Free is suggested in `docs/app-store-submission.md`. Paid apps require banking and tax forms in App Store Connect, which take days to clear.
 
 ---
 
@@ -104,10 +104,11 @@ Ordered by priority. Each item states its own done-when so completion is checkab
       There is no iOS UI-test target, so render each screen to PNG from the test target with `ImageRenderer` at the largest text size and actually look at the output.
       **Done when:** every defect found is fixed, the renders are attached to the report, and the timed drill loop is usable end to end under VoiceOver.
 
-- [ ] **A7. iPad layout pass.** _(only if D1 = universal)_
-      Render or screenshot every shipping screen on iPad Pro 13-inch in portrait and landscape and fix what breaks.
-      Portrait-first phone layouts usually fail here in predictable ways: stretched single-column content, tap targets adrift, and the chart grid over-wide.
-      **Done when:** every screen holds up in both orientations at both iPad sizes available in the simulator.
+- [-] **A7. iPad layout pass.** _(only if D1 = universal)_
+  _Cut 2026-08-06: D1 answered iPhone-only, `TARGETED_DEVICE_FAMILY` is `'1'` and the iPad orientation list is gone from `project.yml`._
+  Render or screenshot every shipping screen on iPad Pro 13-inch in portrait and landscape and fix what breaks.
+  Portrait-first phone layouts usually fail here in predictable ways: stretched single-column content, tap targets adrift, and the chart grid over-wide.
+  **Done when:** every screen holds up in both orientations at both iPad sizes available in the simulator.
 
 - [ ] **A8. Re-take App Store screenshots.**
       The existing `ios/AppStore/screenshots-6.9/` set is from 2026-07-24, twelve days before the trim, and shows features the app no longer has - a Guideline 2.3.3 rejection.

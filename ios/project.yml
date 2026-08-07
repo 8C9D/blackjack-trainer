@@ -45,7 +45,9 @@ targets:
         # so declare it up front and skip the per-upload prompt. See
         # docs/app-store-submission.md.
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: 'NO'
-        TARGETED_DEVICE_FAMILY: '1,2'
+        # iPhone-only for 1.0 (launch decision D1); universal returns with a
+        # real iPad layout pass.
+        TARGETED_DEVICE_FAMILY: '1'
         INFOPLIST_KEY_UILaunchScreen_Generation: 'YES'
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: 'YES'
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon # app icon set added in 4.1
@@ -55,7 +57,6 @@ targets:
         # level and SwiftUI could never lighten it.
         INFOPLIST_KEY_CFBundleDisplayName: Blackjack Trainer
         INFOPLIST_KEY_UISupportedInterfaceOrientations: 'UIInterfaceOrientationPortrait'
-        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: 'UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight'
   BlackjackTrainerTests:
     type: bundle.unit-test
     platform: iOS
