@@ -1,5 +1,10 @@
 # iOS App — Native SwiftUI Mirror Roadmap
 
+> **Closed 2026-08-06.**
+> Every build slice was implemented and the plan is complete; the submission work it deferred to Phase 5 now lives in `LAUNCH-CHECKLIST.md` at the repo root.
+> The full mirror this roadmap describes is no longer the app that ships: the 2026-08-06 v1 trim archived the showdown, the widget, practice reminders and six more features - see `TRIM-REPORT.md` for what remains and `archived/RESTORE.md` for the way back.
+> Kept as the record of what was planned and built; new work does not belong here.
+
 A sequenced, vertical-slice plan to ship a **native iOS app** to the **App
 Store** that mirrors the existing Angular Blackjack Trainer — all four trainers
 (Basic Strategy, Running Count, True Count, Deviations), the live shoe, and the

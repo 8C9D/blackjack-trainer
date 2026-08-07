@@ -147,7 +147,13 @@ Ordered by priority. Each item states its own done-when so completion is checkab
       Pick a versioning story across the two platforms, apply it, and draft 1.0 release notes.
       **Done when:** versions agree with what is being submitted and the release commit is tagged locally (pushing stays with the owner).
 
-- [ ] **A14. Repo and doc hygiene.**
+- [x] **A14. Repo and doc hygiene.**
+      _Done 2026-08-06, with one part left to the owner question batch.
+      Closed with the house banner: `docs/ios-app-roadmap.md` and `ios-app-roadmap-progress.md` (complete; superseded by this checklist; describe pre-trim features), `docs/e2e-testing-plan.md` (executed; figures long stale), and `docs/repo-current-state.md` (the 2026-06-01 snapshot, closed as instructed rather than patched - note it is gitignored, so the banner is local-only).
+      `docs/manual-testing-guide.md` got a scope note (web-only; its iOS mirror claims predate the trim) rather than a close, since the web app it documents is unchanged.
+      `README.md` verified accurate post-trim (its showdown/backup mentions describe the web, and the iOS section states the trim); `docs/codebase-docs-sync.md` is a dated record asserting nothing current; `docs/app-store-submission.md` is A9's rewrite, not touched here.
+      Prettier clean across `docs/` and `README.md`.
+      Owner decision still open (asked in the batch): whether `FEATURE-AUDIT.md` and `docs/launch-agent-prompt.md` should be tracked; note `review/` and `LAUNCH-CHECKLIST.md` are now tracked because A3/A12 record their outcomes there - shout if you want them untracked instead._
       `FEATURE-AUDIT.md` and `review/` are untracked; decide with the owner whether they belong in the repo.
       `docs/repo-current-state.md` is from 2026-06-01 and describes a four-route app with 390 tests and no CI - close it the way the other stale reports were closed rather than patching it.
       `docs/manual-testing-guide.md` is web-scoped and predates the trim.
