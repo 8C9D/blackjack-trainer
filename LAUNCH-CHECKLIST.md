@@ -149,7 +149,11 @@ Ordered by priority. Each item states its own done-when so completion is checkab
       Bring both in line with the shipped app (no data collected, no accounts, no permissions of any kind, stats on-device and optionally in the user's own iCloud) and reduce the unknowns to exactly one clearly marked placeholder per page for the owner to fill.
       **Done when:** both pages are accurate, self-contained, readable on a phone, and each has at most one placeholder left.
 
-- [ ] **A11. Add the Pages deploy workflow.** _(shape depends on D3)_
+- [x] **A11. Add the Pages deploy workflow.** _(shape depends on D3)_
+      _Done 2026-08-06, full-app shape per D3: `.github/workflows/pages.yml` builds the Angular app with `--base-href /blackjack-trainer/`, lays the two legal pages and a `404.html` SPA fallback beside it, and deploys with the standard `upload-pages-artifact`/`deploy-pages` pair on every push to `main` (plus manual dispatch).
+      The build and assemble steps were run locally exactly as written and pass; the deploy step itself can only run on GitHub once O4 flips Settings > Pages > Source to "GitHub Actions".
+      **The URLs for App Store Connect (O4 hands these to O5):**
+      privacy policy `https://8c9d.github.io/blackjack-trainer/privacy.html` · support `https://8c9d.github.io/blackjack-trainer/support.html` · web app `https://8c9d.github.io/blackjack-trainer/`._
       A GitHub Actions workflow publishing at minimum the two legal pages, and the built web app too if D3 says so.
       The owner flips Settings > Pages > Source to GitHub Actions (O4); do not attempt that from the repo.
       **Done when:** the workflow is committed and its build step passes locally, with the exact URLs the owner will paste into App Store Connect written into this checklist.

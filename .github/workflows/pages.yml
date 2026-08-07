@@ -1,0 +1,56 @@
+# Publishes the web app plus the two App Store legal pages to GitHub Pages
+# (launch decision D3). The owner flips Settings > Pages > Source to
+# "GitHub Actions" once (O4); after that every push to main redeploys.
+#
+# Published layout, under https://8c9d.github.io/blackjack-trainer/:
+#   /               the Angular app (built with the matching base href)
+#   /privacy.html   the App Store privacy policy URL
+#   /support.html   the App Store support URL
+#   /404.html       a copy of the app shell, so deep links survive Pages routing
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a superseded push just stops waiting.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build -- --base-href /blackjack-trainer/
+      - name: Assemble the site (app + legal pages + SPA fallback)
+        run: |
+          mkdir -p site
+          cp -R dist/blackjack-trainer/browser/. site/
+          cp ios/AppStore/privacy.html ios/AppStore/support.html site/
+          cp site/index.html site/404.html
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
