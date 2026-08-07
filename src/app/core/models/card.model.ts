@@ -59,9 +59,10 @@ export function softNonAceValue(player: readonly [Card, Card]): number {
   return cardHighValue(nonAce);
 }
 
-// Initial two-card deal: the player's two cards plus the dealer's upcard.
-// Shared by the trainers' scenario generators.
+// Initial deal: the player's cards plus the dealer's upcard. Every generator
+// deals two; a pinned hard 20 deals three, the only non-pair form that total
+// has (two ten-values are the 10,10 pair — a different chart row).
 export interface Scenario {
-  readonly player: readonly [Card, Card];
+  readonly player: readonly Card[];
   readonly dealerUpcard: Card;
 }

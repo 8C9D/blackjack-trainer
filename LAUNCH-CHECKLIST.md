@@ -37,14 +37,14 @@ Status legend: `[ ]` not started, `[~]` in progress, `[x]` done, `[-]` cut or no
 
 These stop a submission or produce a rejection. Everything else is quality.
 
-| # | Item | Lane |
-| --- | --- | --- |
-| B1 | No `PrivacyInfo.xcprivacy` in a target that uses `UserDefaults` in 6 files | A1 |
-| B2 | Screenshots predate the trim and show archived features | A8 |
-| B3 | Store description promises unprovisioned iCloud sync | D2 / A9 |
-| B4 | `privacy.html` and `support.html` have unfilled placeholders and no host | A10 / O4 |
-| B5 | App name not reserved | O3 |
-| B6 | Hard-20 chart drill is wrong on **both** platforms | A2 |
+| #   | Item                                                                       | Lane     |
+| --- | -------------------------------------------------------------------------- | -------- |
+| B1  | No `PrivacyInfo.xcprivacy` in a target that uses `UserDefaults` in 6 files | A1       |
+| B2  | Screenshots predate the trim and show archived features                    | A8       |
+| B3  | Store description promises unprovisioned iCloud sync                       | D2 / A9  |
+| B4  | `privacy.html` and `support.html` have unfilled placeholders and no host   | A10 / O4 |
+| B5  | App name not reserved                                                      | O3       |
+| B6  | Hard-20 chart drill is wrong on **both** platforms                         | A2       |
 
 ---
 
@@ -62,7 +62,12 @@ Ordered by priority. Each item states its own done-when so completion is checkab
       Wire it into `ios/project.yml` as a bundle resource, regenerate the project, and sweep the target for the other required-reason categories (file timestamps, disk space, system boot time, active keyboard) before declaring only the one.
       **Done when:** the file is present at the root of the built `.app`, the sweep is recorded, and the iOS suite is still green.
 
-- [ ] **A2. Fix the hard-20 chart drill (finding F4), both platforms.**
+- [x] **A2. Fix the hard-20 chart drill (finding F4), both platforms.**
+      _Done 2026-08-06: reproduced first with a failing test on each platform (web `drill-hand.spec.ts` + `basic-strategy-drill-page.component.spec.ts`, iOS `DrillHandTests` + `PinnedHandTests` — all four showed the Q,Q pair, the offered Split, and the `pair-10-v-10` filing verbatim).
+      Fix: hard 20 has no two-card non-pair form (any two ten-values classify as the 10,10 pair, which must stay so — the 10,10 v 4/5/6 split deviations depend on it), so a hard-20 pin now deals a **three-card** hard 20; `Scenario.player` widened from a two-card tuple to a card list on both platforms, `scenarioRefFor` files N-card hands at their total, the web grades the three-card opening through the existing `evaluatePlay`, and iOS gained the mirror `decideMultiCard` (soft/hard total row narrowed to hit or stand).
+      Banner and question both read "Hard 20", only Hit/Stand offered, miss files under `hard-20-v-10` (asserted in the new tests).
+      Hard 4 confirmed still unreachable: web `parseScenarioKey('hard-4-v-6')` → null (existing test), iOS chart rows start at 5 and `scenarioRefFor` classifies 2,2 as a pair, so no hard-4 ref is ever recorded — its same-value fallback in `hardTotalCards` stays defensive-only.
+      Verified: web 1518 green, iOS 327 green, `export:fixtures` diff clean, prettier/eslint/swiftformat/swiftlint clean._
       `src/app/features/drill/drill-hand.ts:242` and `ios/BlackjackTrainer/Flow/DrillHand.swift:124` enumerate only `a < b` pairs, so hard 20 has no candidate and falls through to a same-value pair.
       Both charts render hard rows through 20 (`chart-page.component.ts:53`, `StrategyChart.swift:15`), so the cell drills `Q,Q`, asks "10,10 vs 10", offers Split, and files misses under `pair-10-v-10`.
       Reproduce first with a failing test on each platform, then fix.

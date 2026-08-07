@@ -366,7 +366,9 @@ export class DeviationsDrillPageComponent {
     atDeal: boolean,
   ): DeviationTrainerResult {
     const prefs = this.prefs.prefs();
-    if (atDeal) {
+    // Every deviation deal is two cards today; the length guard keeps a deeper
+    // deal graded at its N-card total rather than as its first two cards.
+    if (atDeal && cards.length === 2) {
       return this.evaluator.evaluate(this.scenario(), action, prefs.ruleSet, prefs.options);
     }
     const split = this.splitContext();

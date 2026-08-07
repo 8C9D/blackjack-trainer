@@ -17,6 +17,19 @@ struct PinnedHandTests {
         #expect(h.model.pinnedLabel == "8,8 vs 10")
     }
 
+    /// F4: the hard-20 cell used to deal Q,Q — a pair that asks "10,10 vs 10",
+    /// offers Split, and files its misses under pair-10-v-10, so the hard-20
+    /// cell could never light and the pinned round could never clear it.
+    @Test func drillsHard20AsAHard20NotTheTenPair() {
+        let hard20 = ScenarioRef(kind: "hard", hand: "20", dealer: "10")
+        let h = DrillFixture.makeHarness(pinned: hard20)
+        #expect(h.model.question == HandQuestion(prefix: "Hard", value: "20", dealer: "10"))
+        #expect(h.model.legalActions == [.hit, .stand])
+        h.model.answer(.hit)
+        #expect(h.model.result?.correct == false)
+        #expect(h.missTally.weakSpotFor(.basicStrategy)?.ref == hard20)
+    }
+
     @Test func dealsItAgainOnEveryHandOfTheRound() {
         let h = DrillFixture.makeHarness(pinned: sixteenVsTen)
         for _ in 0 ..< 3 {

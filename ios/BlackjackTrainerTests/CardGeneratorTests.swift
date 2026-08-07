@@ -38,8 +38,7 @@ struct CardGeneratorTests {
             frac(12, of: 13), frac(0, of: 4) // dealer upcard → A♠
         ]))
         let scenario = generator.generate()
-        #expect(scenario.player.first.rank == .two)
-        #expect(scenario.player.second.rank == .eight)
+        #expect(scenario.player.map(\.rank) == [.two, .eight])
         #expect(scenario.dealerUpcard.rank == .ace)
     }
 

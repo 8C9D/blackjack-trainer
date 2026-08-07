@@ -154,7 +154,7 @@ struct BasicStrategyDrillModelTests {
     @Test func offersInsuranceAgainstADealerAceAndGradesItViaTheEngine() {
         let h = DrillFixture.makeHarness()
         h.model.deal(Scenario(
-            player: TwoCardHand(card(.three), card(.four, .hearts)),
+            player: [card(.three), card(.four, .hearts)],
             dealerUpcard: card(.ace, .clubs)
         ))
         #expect(h.model.legalActions.contains(.insurance))

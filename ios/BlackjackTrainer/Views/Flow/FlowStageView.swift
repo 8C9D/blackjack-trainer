@@ -4,7 +4,7 @@ import SwiftUI
 /// player hand, with a caller-supplied line (question or miss rule) beneath.
 /// Mirrors the web `flow-stage` component. Purely presentational.
 struct FlowStageView<Line: View>: View {
-    let player: TwoCardHand
+    let player: [Card]
     let dealer: Card
     @ViewBuilder let line: () -> Line
 
@@ -22,7 +22,7 @@ struct FlowStageView<Line: View>: View {
             // Indexed rather than keyed by card: the trainers deal with
             // replacement, so the same card can appear twice in one hand.
             HStack(spacing: 12) {
-                ForEach(Array(player.cards.enumerated()), id: \.offset) { _, card in
+                ForEach(Array(player.enumerated()), id: \.offset) { _, card in
                     CardImage(card, width: 88)
                 }
             }
@@ -40,7 +40,7 @@ struct FlowStageView<Line: View>: View {
 
 #Preview {
     FlowStageView(
-        player: TwoCardHand(Card(rank: .king, suit: .spades), Card(rank: .six, suit: .hearts)),
+        player: [Card(rank: .king, suit: .spades), Card(rank: .six, suit: .hearts)],
         dealer: Card(rank: .ten, suit: .clubs)
     ) {
         Text("Hard 16 vs 10")

@@ -16,21 +16,30 @@ struct HandQuestion: Equatable {
     let dealer: String
 }
 
-func handQuestion(_ player: TwoCardHand, dealerUpcard: Card) -> HandQuestion {
+func handQuestion(_ player: [Card], dealerUpcard: Card) -> HandQuestion {
     let dealer = normalizeUpcardKey(dealerUpcard)
-    if let pairKey = HandClassification.pairKey(player) {
+    // Past two cards there is no pair to name and the ace may have softened, so
+    // the line is the N-card total the chart is about to be read at.
+    guard let opening = TwoCardHand(player) else {
+        return HandQuestion(
+            prefix: Hand.isSoft(player) ? "Soft" : "Hard",
+            value: String(Hand.total(player)),
+            dealer: dealer
+        )
+    }
+    if let pairKey = HandClassification.pairKey(opening) {
         return HandQuestion(prefix: "", value: "\(pairKey),\(pairKey)", dealer: dealer)
     }
-    if HandClassification.isSoftTwoCard(player) {
+    if HandClassification.isSoftTwoCard(opening) {
         return HandQuestion(
             prefix: "Soft",
-            value: String(11 + softNonAceValue(player)),
+            value: String(11 + softNonAceValue(opening)),
             dealer: dealer
         )
     }
     return HandQuestion(
         prefix: "Hard",
-        value: String(player.first.highValue + player.second.highValue),
+        value: String(opening.first.highValue + opening.second.highValue),
         dealer: dealer
     )
 }
@@ -41,12 +50,16 @@ func handQuestion(_ player: TwoCardHand, dealerUpcard: Card) -> HandQuestion {
 /// against the same table: a deviation index cannot call for a surrender the
 /// table does not deal. Mirrors `legalActionsFor`.
 func legalActionsFor(
-    _ player: TwoCardHand,
+    _ player: [Card],
     dealerUpcard: Card,
     options: EngineOptions
 ) -> [Action] {
+    // Past two cards, hit and stand are the whole of it: double, split and
+    // surrender are first-two-card actions, and insurance was decided on the
+    // deal. The pinned hard 20 is the one deal that starts here (F4).
+    guard let opening = TwoCardHand(player) else { return [.hit, .stand] }
     var legal: [Action] = [.hit, .stand, .double]
-    if HandClassification.pairKey(player) != nil { legal.append(.split) }
+    if HandClassification.pairKey(opening) != nil { legal.append(.split) }
     if options.lateSurrender { legal.append(.surrender) }
     if dealerUpcard.isAce { legal.append(.insurance) }
     return legal
@@ -99,29 +112,33 @@ func scenarioFromRef(_ ref: ScenarioRef, random: () -> Double) -> Scenario {
     )
 }
 
-private func playerCardsFromRef(_ ref: ScenarioRef, _ random: () -> Double) -> TwoCardHand {
+private func playerCardsFromRef(_ ref: ScenarioRef, _ random: () -> Double) -> [Card] {
     switch ref.kind {
     case "pair":
         if ref.hand == "10" {
-            return TwoCardHand(tenValueCard(random), tenValueCard(random))
+            return [tenValueCard(random), tenValueCard(random)]
         }
         let rank = Rank(rawValue: ref.hand) ?? .ace
-        return TwoCardHand(
+        return [
             Card(rank: rank, suit: randomSuit(random)),
             Card(rank: rank, suit: randomSuit(random))
-        )
+        ]
     case "soft":
         let ace = Card(rank: .ace, suit: randomSuit(random))
         let other = cardOfValue((Int(ref.hand) ?? 11) - 11, random)
-        return random() < 0.5 ? TwoCardHand(ace, other) : TwoCardHand(other, ace)
+        return random() < 0.5 ? [ace, other] : [other, ace]
     default: // hard
         return hardTotalCards(Int(ref.hand) ?? 0, random)
     }
 }
 
 /// Two distinct-value non-ace cards summing to the total, so the hand classifies
-/// as hard (a same-value pair is the defensive fallback).
-private func hardTotalCards(_ total: Int, _ random: () -> Double) -> TwoCardHand {
+/// as hard (recorded hard refs below 20 always have such a decomposition).
+/// Hard 20 is the one total whose only two-card form is the 10,10 pair — a
+/// different chart row asking a different question — so it takes a third card
+/// instead (F4). Hard 4 (2,2) keeps the same-value fallback; no recorded ref
+/// reaches it.
+private func hardTotalCards(_ total: Int, _ random: () -> Double) -> [Card] {
     var options: [(Int, Int)] = []
     for a in 2 ... 10 where a + 1 <= 10 {
         for b in (a + 1) ... 10 where a + b == total {
@@ -129,11 +146,16 @@ private func hardTotalCards(_ total: Int, _ random: () -> Double) -> TwoCardHand
         }
     }
     if options.isEmpty {
-        return TwoCardHand(cardOfValue(total / 2, random), cardOfValue(total / 2, random))
+        if total == 20 {
+            // 2..8: the remainder 12..18 always splits into distinct values.
+            let third = 2 + clampIndex(random(), 7)
+            return hardTotalCards(total - third, random) + [cardOfValue(third, random)]
+        }
+        return [cardOfValue(total / 2, random), cardOfValue(total / 2, random)]
     }
     let pick = options[clampIndex(random(), options.count)]
     let (v1, v2) = random() < 0.5 ? pick : (pick.1, pick.0)
-    return TwoCardHand(cardOfValue(v1, random), cardOfValue(v2, random))
+    return [cardOfValue(v1, random), cardOfValue(v2, random)]
 }
 
 private func dealerCardFor(_ upcard: String, _ random: () -> Double) -> Card {

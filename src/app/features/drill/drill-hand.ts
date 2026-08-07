@@ -216,7 +216,7 @@ export function scenarioFromRef(ref: ScenarioRef, random: () => number): Scenari
   };
 }
 
-function playerCardsFromRef(ref: ScenarioRef, random: () => number): readonly [Card, Card] {
+function playerCardsFromRef(ref: ScenarioRef, random: () => number): readonly Card[] {
   switch (ref.kind) {
     case 'pair': {
       if (ref.hand === '10') return [tenValueCard(random), tenValueCard(random)];
@@ -237,9 +237,12 @@ function playerCardsFromRef(ref: ScenarioRef, random: () => number): readonly [C
 }
 
 // Two distinct-value non-ace cards summing to the total, so the hand
-// classifies as hard (recorded hard refs always have such a decomposition;
-// a same-value pair is the defensive fallback).
-function hardTotalCards(total: number, random: () => number): readonly [Card, Card] {
+// classifies as hard (recorded hard refs below 20 always have such a
+// decomposition). Hard 20 is the one total whose only two-card form is the
+// 10,10 pair — a different chart row asking a different question — so it
+// takes a third card instead (F4). Hard 4 (2,2) keeps the same-value
+// fallback; no recorded ref reaches it.
+function hardTotalCards(total: number, random: () => number): readonly Card[] {
   const options: Array<[number, number]> = [];
   for (let a = 2; a <= 10; a++) {
     for (let b = a + 1; b <= 10; b++) {
@@ -247,6 +250,10 @@ function hardTotalCards(total: number, random: () => number): readonly [Card, Ca
     }
   }
   if (options.length === 0) {
+    if (total === 20) {
+      const third = 2 + Math.floor(random() * 7); // 2..8: the remainder 12..18 always splits a < b
+      return [...hardTotalCards(total - third, random), cardOfValue(third, random)];
+    }
     return [cardOfValue(total / 2, random), cardOfValue(total / 2, random)];
   }
   const pick = options[Math.floor(random() * options.length)];
