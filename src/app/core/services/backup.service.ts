@@ -3,7 +3,7 @@ import { inject, Injectable, InjectionToken } from '@angular/core';
 
 import {
   BACKUP_APP_ID,
-  BACKUP_KEY_PREFIX,
+  BACKUP_KEYS,
   BACKUP_SCHEMA_VERSION,
   backupFileName,
   parseBackup,
@@ -20,26 +20,24 @@ export const NOW_SOURCE = new InjectionToken<() => Date>('NOW_SOURCE', {
 
 export type RestoreResult = { readonly ok: true } | { readonly ok: false; readonly error: string };
 
-// Reads and writes the whole `blackjack-` localStorage namespace as one file.
+// Reads and writes this app's declared localStorage keys as one file.
 //
 // It works at the raw-string level on purpose: no store's shape is known here,
-// so a new store needs no change to back up, and a value that has since changed
-// shape is left for that store's own tolerant loader to reject on next load.
+// and a value that has since changed shape is left for that store's own
+// tolerant loader to reject on next load. The keys are the declared
+// `BACKUP_KEYS`, never a prefix scan: the app shares its origin with other
+// GitHub Pages projects, whose same-prefixed keys must survive an export and
+// a restore untouched (S2).
 @Injectable({ providedIn: 'root' })
 export class BackupService {
   private readonly document = inject(DOCUMENT);
   private readonly reloadPage = inject(PAGE_RELOAD);
   private readonly now = inject(NOW_SOURCE);
 
-  // Every stored key in this app's namespace, in stable (sorted) order so two
+  // Every declared key currently stored, in stable (sorted) order so two
   // exports of the same state produce the same file.
   private namespaceKeys(): string[] {
-    const keys: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith(BACKUP_KEY_PREFIX)) keys.push(key);
-    }
-    return keys.sort();
+    return BACKUP_KEYS.filter((key) => localStorage.getItem(key) !== null).sort();
   }
 
   build(): PracticeBackup {
@@ -127,8 +125,12 @@ export class BackupService {
     return { ok: true };
   }
 
+  // Writes only declared keys: a tampered or foreign file must not be able to
+  // plant keys this app never wrote, least of all another app's on this origin.
   private replaceNamespace(data: Readonly<Record<string, string>>): void {
-    for (const key of this.namespaceKeys()) localStorage.removeItem(key);
-    for (const [key, value] of Object.entries(data)) localStorage.setItem(key, value);
+    for (const key of BACKUP_KEYS) localStorage.removeItem(key);
+    for (const [key, value] of Object.entries(data)) {
+      if (BACKUP_KEYS.includes(key)) localStorage.setItem(key, value);
+    }
   }
 }

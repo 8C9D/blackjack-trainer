@@ -80,7 +80,11 @@ Ordered by priority. Each item states its own done-when so completion is checkab
       Exercise `streak()`, `last7()` and the miss-tally cutoff under `TZ=America/Santiago` and `TZ=Australia/Lord_Howe` across a DST transition with the clock pinned near midnight, and check the Swift `PracticeHistory` equivalent.
       **Done when:** the suspicion is confirmed and fixed, or killed - and either way a regression test pins the behaviour, and `review/findings.md` records the outcome.
 
-- [ ] **A4. Close suspicion S2 (backup key prefix).**
+- [x] **A4. Close suspicion S2 (backup key prefix).**
+      _Done 2026-08-06, after D3 chose to deploy the full web app on the shared origin (which made this real rather than theoretical).
+      Reproduced first with two failing specs (a foreign `blackjack-scoreboard` key swept into the export; a restore clearing it and planting a tampered file's foreign key), then fixed: the backup is defined by a declared `BACKUP_KEYS` list; export reads and restore clears/writes only declared keys.
+      The prefix's completeness guarantee moved into `backup-keys.spec.ts`, which drives every storage-backed service and fails on any undeclared stored key in either direction.
+      Recorded in `review/findings.md` (suspicion 3); web suite green at 1526._
       `BACKUP_KEY_PREFIX` is `'blackjack-'`, so a web export sweeps and a restore clears every same-prefixed key on the origin.
       If D3 puts the app on `8C9D.github.io`, that origin is shared with your other Pages projects and this stops being hypothetical.
       **Done when:** export and restore touch only keys the app declares, covered by a test, or the risk is explicitly accepted in writing with D3's answer as the justification.
