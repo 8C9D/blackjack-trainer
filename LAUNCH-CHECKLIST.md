@@ -169,7 +169,10 @@ Ordered by priority. Each item states its own done-when so completion is checkab
 
 ### Release engineering
 
-- [ ] **A13. Version and release hygiene.**
+- [x] **A13. Version and release hygiene.**
+      _Done 2026-08-06 (tag applied at A16): the versioning story is one marketing version across both platforms - web `package.json` 0.0.0 → 1.0.0 (lockfile regenerated), iOS already `MARKETING_VERSION 1.0` + build 1 as the upload counter; future releases bump the marketing version together and the iOS build number per upload.
+      1.0 release notes drafted in `docs/app-store-submission.md` ("What's New"), ready for O5.
+      The owner approved a local `v1.0.0` tag, created on the final commit once A16's gate is green; pushing it stays with the owner._
       `package.json` is still `0.0.0` while the iOS build is 1.0 (1).
       Pick a versioning story across the two platforms, apply it, and draft 1.0 release notes.
       **Done when:** versions agree with what is being submitted and the release commit is tagged locally (pushing stays with the owner).
