@@ -142,15 +142,7 @@ final class BasicStrategyDrillModel {
 
     func answer(_ action: Action) {
         guard phase == .question, legalActions.contains(action) else { return }
-        let evaluation = engine.evaluate(
-            EngineInput(
-                player: scenario.player,
-                dealerUpcard: scenario.dealerUpcard,
-                ruleSet: prefs.prefs.ruleSet,
-                options: prefs.prefs.options
-            ),
-            userAction: action
-        )
+        let evaluation = gradeAnswer(action)
         result = evaluation
         stats.recordAttempt(correct: evaluation.correct)
         let elapsedMs = plausibleDecisionMs(Int(now().timeIntervalSince(askedAt) * 1000))
@@ -168,6 +160,29 @@ final class BasicStrategyDrillModel {
         } else {
             phase = .miss
         }
+    }
+
+    /// The deal's question is `evaluate`: two cards, every action on the table.
+    /// A pinned hard 20 is the one three-card deal (F4); its opening question
+    /// is already a played hand's, read at the N-card total.
+    private func gradeAnswer(_ action: Action) -> EvaluationResult {
+        guard let opening = TwoCardHand(scenario.player) else {
+            return engine.evaluateMultiCard(
+                scenario.player,
+                dealerUpcard: scenario.dealerUpcard,
+                ruleSet: prefs.prefs.ruleSet,
+                userAction: action
+            )
+        }
+        return engine.evaluate(
+            EngineInput(
+                player: opening,
+                dealerUpcard: scenario.dealerUpcard,
+                ruleSet: prefs.prefs.ruleSet,
+                options: prefs.prefs.options
+            ),
+            userAction: action
+        )
     }
 
     func continueFromMiss() {

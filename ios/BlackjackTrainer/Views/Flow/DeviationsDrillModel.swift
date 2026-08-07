@@ -121,7 +121,7 @@ final class DeviationsDrillModel {
         // hand re-dealt at a fresh count is a different one.
         missTally.record(
             .deviations,
-            ref: scenarioRefFor(scenario.player, dealerUpcard: scenario.dealerUpcard),
+            ref: scenarioRefFor(scenario.player.cards, dealerUpcard: scenario.dealerUpcard),
             correct: evaluation.correct,
             trueCount: scenario.trueCount
         )
@@ -192,8 +192,11 @@ extension DeviationsDrillModel {
         let share = reviewing ? 1 : weakSpotShare
         if let weak = pickWeakSpot(weakSpots, random: source, share: share) {
             let base = scenarioFromRef(weak.ref, random: source)
+            // Every ref this trainer records is a two-card opening; a ref it
+            // cannot deal falls back to an ordinary deal, like the web's.
+            guard let player = TwoCardHand(base.player) else { return generateScenario() }
             return DeviationScenario(
-                player: base.player,
+                player: player,
                 dealerUpcard: base.dealerUpcard,
                 trueCount: trueCount(for: weak, random: source)
             )
@@ -216,8 +219,9 @@ extension DeviationsDrillModel {
         if let weak = missTally.weakSpotFor(.deviations) {
             let source = { Double.random(in: 0 ..< 1) }
             let base = scenarioFromRef(weak.ref, random: source)
+            guard let player = TwoCardHand(base.player) else { return generateScenario() }
             return DeviationScenario(
-                player: base.player,
+                player: player,
                 dealerUpcard: base.dealerUpcard,
                 trueCount: trueCount(for: weak, random: source)
             )
@@ -230,8 +234,11 @@ extension DeviationsDrillModel {
     /// trainee already knows.
     private func pinnedScenario(_ ref: ScenarioRef, random: () -> Double) -> DeviationScenario {
         let base = scenarioFromRef(ref, random: random)
+        // The chart's deviation rows all name two-card openings; a pin this
+        // trainer cannot deal falls back to an ordinary deal, like the web's.
+        guard let player = TwoCardHand(base.player) else { return generateScenario() }
         return DeviationScenario(
-            player: base.player,
+            player: player,
             dealerUpcard: base.dealerUpcard,
             trueCount: pickTrueCount()
         )
@@ -245,10 +252,11 @@ extension DeviationsDrillModel {
            let rule = scenarioGenerator.pickRule(for: prefs.ruleSet, options: prefs.options) {
             return scenarioGenerator.scenario(for: rule, trueCount: pickTrueCount(for: rule))
         }
-        let base = generator.generate()
+        // Drawn in the generator's order: two player cards, then the upcard.
+        let player = TwoCardHand(generator.generateCard(), generator.generateCard())
         return DeviationScenario(
-            player: base.player,
-            dealerUpcard: base.dealerUpcard,
+            player: player,
+            dealerUpcard: generator.generateCard(),
             trueCount: pickTrueCount()
         )
     }
@@ -307,7 +315,7 @@ extension DeviationsDrillModel {
     }
 
     var question: HandQuestion {
-        handQuestion(scenario.player, dealerUpcard: scenario.dealerUpcard)
+        handQuestion(scenario.player.cards, dealerUpcard: scenario.dealerUpcard)
     }
 
     /// A pinned round narrows the practice to one hand, which is worth saying:
@@ -337,7 +345,7 @@ extension DeviationsDrillModel {
     /// surrender overlay no longer asks for one.
     var legalActions: [Action] {
         legalActionsFor(
-            scenario.player,
+            scenario.player.cards,
             dealerUpcard: scenario.dealerUpcard,
             options: prefs.prefs.options
         )

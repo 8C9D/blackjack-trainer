@@ -1,9 +1,11 @@
 import Foundation
 
-/// A random initial-deal scenario: the player's two cards and the dealer upcard.
-/// Mirrors the web `Scenario`.
+/// A random initial-deal scenario: the player's cards and the dealer upcard.
+/// Every generator deals two; a pinned hard 20 deals three, the only non-pair
+/// form that total has (two ten-values are the 10,10 pair — a different chart
+/// row). Mirrors the web `Scenario`.
 struct Scenario: Equatable {
-    let player: TwoCardHand
+    let player: [Card]
     let dealerUpcard: Card
 }
 
@@ -19,7 +21,7 @@ struct CardGenerator {
     /// A player two-card hand plus a dealer upcard.
     func generate() -> Scenario {
         Scenario(
-            player: TwoCardHand(generateCard(), generateCard()),
+            player: [generateCard(), generateCard()],
             dealerUpcard: generateCard()
         )
     }

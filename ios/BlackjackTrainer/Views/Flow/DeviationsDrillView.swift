@@ -64,7 +64,7 @@ struct DeviationsDrillView: View {
                 .padding(.top, 10)
             }
             FlowStageView(
-                player: model.scenario.player,
+                player: model.scenario.player.cards,
                 dealer: model.scenario.dealerUpcard
             ) {
                 DrillLineView(line: stageLine)

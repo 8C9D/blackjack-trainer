@@ -30,7 +30,7 @@ enum DrillFixture {
     /// Hard 7 (3+4) vs 6 always hits under S17 — "hit" is correct, "stand" wrong.
     static var hitScenario: Scenario {
         Scenario(
-            player: TwoCardHand(card(.three), card(.four, .hearts)),
+            player: [card(.three), card(.four, .hearts)],
             dealerUpcard: card(.six, .clubs)
         )
     }
@@ -38,7 +38,7 @@ enum DrillFixture {
     /// Hard 19 (10+9) vs 6 always stands, which ends the hand in one decision.
     static var standScenario: Scenario {
         Scenario(
-            player: TwoCardHand(card(.ten), card(.nine, .hearts)),
+            player: [card(.ten), card(.nine, .hearts)],
             dealerUpcard: card(.six, .clubs)
         )
     }

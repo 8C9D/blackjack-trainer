@@ -92,10 +92,12 @@ export function pickTrueCountForDeviationRule(
   return clampTc(rule.index, minTc, maxTc);
 }
 
+// The return type spells out the two cards: every deviation rule names a
+// two-card opening, and the classifier callers feed take the tuple.
 export function generateScenarioForDeviationRule(args: {
   rule: DeviationRule;
   random: () => number;
-}): Scenario {
+}): Scenario & { readonly player: readonly [Card, Card] } {
   return {
     player: makePlayerCardsForDeviationRule(args.rule, args.random),
     dealerUpcard: makeDealerUpcardCard(args.rule.dealerUpcard, args.random),

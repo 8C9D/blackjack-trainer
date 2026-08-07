@@ -2,6 +2,7 @@ import { Injectable, signal, type Signal } from '@angular/core';
 
 import { formatSignedCount } from '../models/card-counting.model';
 import { cardHighValue, softNonAceValue, type Card } from '../models/card.model';
+import { handTotal, isSoftHand as isSoftNCardHand } from '../models/hand.model';
 import type { DealerUpcard } from '../models/strategy.model';
 import { classifyAsPair, isSoftHand, normalizeUpcardKey } from './basic-strategy-engine.service';
 import { isLocalDateKey, localDateKey } from './practice-history.service';
@@ -71,16 +72,28 @@ interface ScenarioTally {
 
 type TallyState = Partial<Record<TalliedTrainer, Record<string, ScenarioTally>>>;
 
-export function scenarioRefFor(player: readonly [Card, Card], dealerUpcard: Card): ScenarioRef {
+export function scenarioRefFor(player: readonly Card[], dealerUpcard: Card): ScenarioRef {
   const dealer = normalizeUpcardKey(dealerUpcard);
-  const pairKey = classifyAsPair(player);
+  // Past two cards there is no pair to name and the ace may have softened, so
+  // the ref is the N-card total — the row the chart reads the hand at. The one
+  // dealt opening this covers is the pinned hard 20, whose only two-card form
+  // is the 10,10 pair (F4).
+  if (player.length !== 2) {
+    return {
+      kind: isSoftNCardHand(player) ? 'soft' : 'hard',
+      hand: String(handTotal(player)),
+      dealer,
+    };
+  }
+  const opening: readonly [Card, Card] = [player[0], player[1]];
+  const pairKey = classifyAsPair(opening);
   if (pairKey !== null) return { kind: 'pair', hand: pairKey, dealer };
-  if (isSoftHand(player)) {
-    return { kind: 'soft', hand: String(11 + softNonAceValue(player)), dealer };
+  if (isSoftHand(opening)) {
+    return { kind: 'soft', hand: String(11 + softNonAceValue(opening)), dealer };
   }
   return {
     kind: 'hard',
-    hand: String(cardHighValue(player[0]) + cardHighValue(player[1])),
+    hand: String(cardHighValue(opening[0]) + cardHighValue(opening[1])),
     dealer,
   };
 }

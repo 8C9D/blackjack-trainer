@@ -101,6 +101,13 @@ struct TwoCardHand: Equatable {
         self.second = second
     }
 
+    /// The two-card form of a dealt hand, when it has one. The pinned hard 20
+    /// is the one three-card deal (F4), and it has no such form.
+    init?(_ cards: [Card]) {
+        guard cards.count == 2 else { return nil }
+        self.init(cards[0], cards[1])
+    }
+
     var cards: [Card] {
         [first, second]
     }

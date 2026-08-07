@@ -45,6 +45,78 @@ struct BasicStrategyEngine {
         grade(decide(input), userAction: userAction)
     }
 
+    /// Decide a hand deeper than two cards, where double, split and surrender
+    /// have lapsed as a matter of the rules: the soft/hard total row, narrowed
+    /// to hit or stand. Mirrors the web `decidePlay`'s total path. The one
+    /// dealt opening that reaches it is the pinned hard 20 (F4), whose only
+    /// two-card form is the 10,10 pair.
+    func decideMultiCard(_ cards: [Card], dealerUpcard: Card,
+                         ruleSet: RuleSet) -> StrategyDecision {
+        let chart = chart(for: ruleSet)
+        let dealerKey = normalizeUpcardKey(dealerUpcard)
+        let total = Hand.total(cards)
+
+        if Hand.isSoft(cards) {
+            let description = "Soft \(total)"
+            let prefix = "\(description) vs dealer \(dealerKey) under \(chart.ruleSet.rawValue)"
+            // Soft 21 is off the top of the chart, soft 12 off the bottom; a
+            // soft 12 cannot bust, so it hits.
+            if total >= 21 {
+                return StrategyDecision(action: .stand, source: .soft, handDescription: description,
+                                        reason: "\(prefix): stand.")
+            }
+            if total < 13 {
+                return StrategyDecision(action: .hit, source: .soft, handDescription: description,
+                                        reason: "\(prefix): hit.")
+            }
+            let cell = cell(chart.softCell(key: String(total - 11), upcard: dealerKey),
+                            "soft[\(total - 11)][\(dealerKey)]")
+            switch cell {
+            case "H", "D": // doubling has lapsed: D means double-else-hit
+                return StrategyDecision(action: .hit, source: .soft, handDescription: description,
+                                        reason: "\(prefix): hit (doubling is a first-two-card action).")
+            case "S", "Ds": // Ds means double-else-stand
+                return StrategyDecision(action: .stand, source: .soft, handDescription: description,
+                                        reason: "\(prefix): stand.")
+            default:
+                preconditionFailure("illegal soft cell '\(cell)'")
+            }
+        }
+
+        let description = "Hard \(total)"
+        let prefix = "\(description) vs dealer \(dealerKey) under \(chart.ruleSet.rawValue)"
+        // Hard 21 and above is off the chart; below 5 every row hits.
+        if total >= 21 {
+            return StrategyDecision(action: .stand, source: .hard, handDescription: description,
+                                    reason: "\(prefix): stand.")
+        }
+        let key = total < 5 ? 5 : total
+        let cell = cell(chart.hardCell(total: String(key), upcard: dealerKey),
+                        "hard[\(key)][\(dealerKey)]")
+        switch cell {
+        case "H", "D", "SUR_H": // doubling and surrender have lapsed
+            return StrategyDecision(action: .hit, source: .hard, handDescription: description,
+                                    reason: "\(prefix): hit.")
+        case "S", "SUR_S":
+            return StrategyDecision(action: .stand, source: .hard, handDescription: description,
+                                    reason: "\(prefix): stand.")
+        default:
+            preconditionFailure("illegal hard cell '\(cell)'")
+        }
+    }
+
+    func evaluateMultiCard(
+        _ cards: [Card],
+        dealerUpcard: Card,
+        ruleSet: RuleSet,
+        userAction: Action
+    ) -> EvaluationResult {
+        grade(
+            decideMultiCard(cards, dealerUpcard: dealerUpcard, ruleSet: ruleSet),
+            userAction: userAction
+        )
+    }
+
     private func grade(_ decision: StrategyDecision, userAction: Action) -> EvaluationResult {
         if userAction == .insurance {
             let reason = "Basic strategy never takes insurance (or even money) — the bet has a "

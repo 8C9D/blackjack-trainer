@@ -43,8 +43,10 @@ export class DeviationEvaluatorService {
     ruleSet: RuleSet,
     options: EngineOptions,
   ): DeviationTrainerResult {
+    // The deal's evaluation reads the opening two cards; callers route hands
+    // deeper than two cards through `evaluatePlay`, which reads N-card totals.
     const engineInput: EngineInput = {
-      player: scenario.player,
+      player: [scenario.player[0], scenario.player[1]],
       dealerUpcard: scenario.dealerUpcard,
       ruleSet,
       options,

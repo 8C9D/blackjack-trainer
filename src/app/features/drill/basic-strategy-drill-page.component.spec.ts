@@ -963,6 +963,26 @@ describe('BasicStrategyDrillPageComponent', () => {
       ).toContain('8,8 vs 10');
     });
 
+    // F4: the hard-20 cell used to deal Q,Q — a pair that asks "10,10 vs 10",
+    // offers Split, and files its misses under pair-10-v-10, so the hard-20
+    // cell could never light and the pinned round could never clear it.
+    it('drills hard 20 as a hard 20, not the 10,10 pair', () => {
+      const { c } = enterWith('hard-20-v-10');
+      expect(handQuestion(c.scenario().player, c.scenario().dealerUpcard)).toEqual({
+        prefix: 'Hard',
+        value: '20',
+        dealer: '10',
+      });
+      expect(c.legalActions()).toEqual(['H', 'S']);
+      c.answer('H');
+      expect(c.result()?.correct).toBe(false);
+      expect(TestBed.inject(MissTallyService).weakSpotFor('basic-strategy')?.ref).toEqual({
+        kind: 'hard',
+        hand: '20',
+        dealer: '10',
+      });
+    });
+
     it('deals it again on every hand of the round', () => {
       const { fixture, c } = enterWith('hard-16-v-10', () => {
         TestBed.inject(FlowPrefsService).setPlayHandsOut(false);

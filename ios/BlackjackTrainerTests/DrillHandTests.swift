@@ -23,23 +23,23 @@ struct DrillHandTests {
     // MARK: handQuestion
 
     @Test func labelsHardTotals() {
-        #expect(handQuestion(TwoCardHand(card(.two), card(.eight)), dealerUpcard: card(.six))
+        #expect(handQuestion([card(.two), card(.eight)], dealerUpcard: card(.six))
             == HandQuestion(prefix: "Hard", value: "10", dealer: "6"))
     }
 
     @Test func labelsSoftTotalsAndNormalizesTenValueDealers() {
-        #expect(handQuestion(TwoCardHand(card(.ace), card(.seven)), dealerUpcard: card(.queen))
+        #expect(handQuestion([card(.ace), card(.seven)], dealerUpcard: card(.queen))
             == HandQuestion(prefix: "Soft", value: "18", dealer: "10"))
     }
 
     @Test func labelsPairsWithoutAPrefix() {
         #expect(handQuestion(
-            TwoCardHand(card(.eight), card(.eight, .hearts)),
+            [card(.eight), card(.eight, .hearts)],
             dealerUpcard: card(.ace)
         )
             == HandQuestion(prefix: "", value: "8,8", dealer: "A"))
         #expect(handQuestion(
-            TwoCardHand(card(.king), card(.jack, .hearts)),
+            [card(.king), card(.jack, .hearts)],
             dealerUpcard: card(.five)
         )
             == HandQuestion(prefix: "", value: "10,10", dealer: "5"))
@@ -47,8 +47,8 @@ struct DrillHandTests {
 
     // MARK: legalActionsFor
 
-    private var nonPair: TwoCardHand {
-        TwoCardHand(card(.two), card(.eight))
+    private var nonPair: [Card] {
+        [card(.two), card(.eight)]
     }
 
     @Test func alwaysAllowsHitStandDoubleOnAnInitialHand() {
@@ -58,11 +58,11 @@ struct DrillHandTests {
 
     @Test func allowsSplitOnlyOnPairsIncludingMixedTenValues() {
         #expect(legalActionsFor(
-            TwoCardHand(card(.eight), card(.eight, .hearts)), dealerUpcard: card(.six),
+            [card(.eight), card(.eight, .hearts)], dealerUpcard: card(.six),
             options: .default
         ).contains(.split))
         #expect(legalActionsFor(
-            TwoCardHand(card(.king), card(.ten, .hearts)), dealerUpcard: card(.six),
+            [card(.king), card(.ten, .hearts)], dealerUpcard: card(.six),
             options: .default
         ).contains(.split))
         #expect(!legalActionsFor(nonPair, dealerUpcard: card(.six), options: .default)
@@ -104,23 +104,44 @@ struct DrillHandTests {
 
     // MARK: scenarioFromRef
 
-    @Test func rebuildsAHardTotalAsANonPairHandWithTheRightDealer() {
+    @Test func rebuildsAHardTotalAsANonPairHandWithTheRightDealer() throws {
         let ref = ScenarioRef(kind: "hard", hand: "16", dealer: "10")
         for _ in 0 ..< 10 {
             let s = scenarioFromRef(ref, random: { Double.random(in: 0 ..< 1) })
-            #expect(HandClassification.pairKey(s.player) == nil)
-            #expect(!HandClassification.isSoftTwoCard(s.player))
-            #expect(s.player.first.highValue + s.player.second.highValue == 16)
+            let opening = try #require(TwoCardHand(s.player))
+            #expect(HandClassification.pairKey(opening) == nil)
+            #expect(!HandClassification.isSoftTwoCard(opening))
+            #expect(opening.first.highValue + opening.second.highValue == 16)
             #expect(s.dealerUpcard.highValue == 10)
         }
     }
 
-    @Test func rebuildsASoftTotal() {
+    /// F4: hard 20 has no two-card non-pair form — two ten-values are the 10,10
+    /// pair — so the pin deals a third card rather than falling through to a
+    /// pair that asks a different question and files under a different key.
+    @Test func rebuildsHard20AsANonPairHandThatFilesBackUnderHard20() {
+        let ref = ScenarioRef(kind: "hard", hand: "20", dealer: "10")
+        for _ in 0 ..< 10 {
+            let s = scenarioFromRef(ref, random: { Double.random(in: 0 ..< 1) })
+            #expect(
+                handQuestion(s.player, dealerUpcard: s.dealerUpcard)
+                    == HandQuestion(prefix: "Hard", value: "20", dealer: "10")
+            )
+            #expect(
+                legalActionsFor(s.player, dealerUpcard: s.dealerUpcard, options: .default)
+                    == [.hit, .stand]
+            )
+            #expect(scenarioRefFor(s.player, dealerUpcard: s.dealerUpcard) == ref)
+        }
+    }
+
+    @Test func rebuildsASoftTotal() throws {
         let s = scenarioFromRef(
             ScenarioRef(kind: "soft", hand: "18", dealer: "9"), random: seededRandom()
         )
-        #expect(HandClassification.isSoftTwoCard(s.player))
-        let values = [s.player.first.highValue, s.player.second.highValue].sorted()
+        let opening = try #require(TwoCardHand(s.player))
+        #expect(HandClassification.isSoftTwoCard(opening))
+        let values = [opening.first.highValue, opening.second.highValue].sorted()
         #expect(values == [7, 11])
         #expect(s.dealerUpcard.rank == .nine)
     }
@@ -129,18 +150,18 @@ struct DrillHandTests {
         let eights = scenarioFromRef(
             ScenarioRef(kind: "pair", hand: "8", dealer: "6"), random: seededRandom()
         )
-        #expect(eights.player.cards.map(\.rank) == [.eight, .eight])
+        #expect(eights.player.map(\.rank) == [.eight, .eight])
 
         let tens = scenarioFromRef(
             ScenarioRef(kind: "pair", hand: "10", dealer: "A"), random: seededRandom()
         )
-        #expect(HandClassification.pairKey(tens.player) == "10")
+        #expect(TwoCardHand(tens.player).flatMap(HandClassification.pairKey) == "10")
         #expect(tens.dealerUpcard.rank == .ace)
 
         let aces = scenarioFromRef(
             ScenarioRef(kind: "pair", hand: "A", dealer: "5"), random: seededRandom()
         )
-        #expect(aces.player.cards.map(\.rank) == [.ace, .ace])
+        #expect(aces.player.map(\.rank) == [.ace, .ace])
     }
 
     // MARK: pickWeakSpot

@@ -105,17 +105,32 @@ func sanitizeMissedCounts(_ values: [Int]) -> [Int] {
 }
 
 /// The `ScenarioRef` for a graded hand. Mirrors the web `scenarioRefFor`.
-func scenarioRefFor(_ player: TwoCardHand, dealerUpcard: Card) -> ScenarioRef {
+func scenarioRefFor(_ player: [Card], dealerUpcard: Card) -> ScenarioRef {
     let dealer = normalizeUpcardKey(dealerUpcard)
-    if let pairKey = HandClassification.pairKey(player) {
+    // Past two cards there is no pair to name and the ace may have softened, so
+    // the ref is the N-card total — the row the chart reads the hand at. The
+    // one dealt opening this covers is the pinned hard 20, whose only two-card
+    // form is the 10,10 pair (F4).
+    guard let opening = TwoCardHand(player) else {
+        return ScenarioRef(
+            kind: Hand.isSoft(player) ? "soft" : "hard",
+            hand: String(Hand.total(player)),
+            dealer: dealer
+        )
+    }
+    if let pairKey = HandClassification.pairKey(opening) {
         return ScenarioRef(kind: "pair", hand: pairKey, dealer: dealer)
     }
-    if HandClassification.isSoftTwoCard(player) {
-        return ScenarioRef(kind: "soft", hand: String(11 + softNonAceValue(player)), dealer: dealer)
+    if HandClassification.isSoftTwoCard(opening) {
+        return ScenarioRef(
+            kind: "soft",
+            hand: String(11 + softNonAceValue(opening)),
+            dealer: dealer
+        )
     }
     return ScenarioRef(
         kind: "hard",
-        hand: String(player.first.highValue + player.second.highValue),
+        hand: String(opening.first.highValue + opening.second.highValue),
         dealer: dealer
     )
 }

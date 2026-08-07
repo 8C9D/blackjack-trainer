@@ -313,12 +313,14 @@ export class BasicStrategyDrillPageComponent {
   // The deal's question is `decide`: two cards, every action on the table.
   // Every question after it is `decidePlay`, told what the table still offers —
   // the engine narrows further on its own, since doubling, splitting and
-  // surrender are first-two-card actions whatever the caller passes.
+  // surrender are first-two-card actions whatever the caller passes. A pinned
+  // hard 20 is the one three-card deal (F4), and its opening question is
+  // already a played hand's: `decidePlay` reads it at its N-card total.
   private gradeDecision(cards: readonly Card[], action: Action, atDeal: boolean): EvaluationResult {
     const dealerUpcard = this.scenario().dealerUpcard;
     const ruleSet = this.prefs.prefs().ruleSet;
     const options = this.prefs.prefs().options;
-    if (atDeal) {
+    if (atDeal && cards.length === 2) {
       const player: readonly [Card, Card] = [cards[0], cards[1]];
       return this.engine.evaluate({ player, dealerUpcard, ruleSet, options }, action);
     }

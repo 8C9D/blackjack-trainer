@@ -2,7 +2,12 @@ import type { Card, Rank, Suit } from '../../core/models/card.model';
 import { DEFAULT_ENGINE_OPTIONS } from '../../core/models/strategy.model';
 import { classifyAsPair, isSoftHand } from '../../core/services/basic-strategy-engine.service';
 import { cardHighValue } from '../../core/models/card.model';
-import type { ScenarioRef, WeakSpot } from '../../core/services/miss-tally.service';
+import { handTotal } from '../../core/models/hand.model';
+import {
+  scenarioRefFor,
+  type ScenarioRef,
+  type WeakSpot,
+} from '../../core/services/miss-tally.service';
 import {
   MAX_SPLIT_HANDS,
   UNSPLIT,
@@ -230,23 +235,49 @@ describe('scenarioFromRef', () => {
     return () => seq[i++ % seq.length];
   }
 
+  // Narrow a deal the test knows is two cards to the tuple the classifiers take.
+  function asTwoCards(player: readonly Card[]): readonly [Card, Card] {
+    expect(player).toHaveLength(2);
+    return [player[0], player[1]];
+  }
+
   it('rebuilds a hard total as a non-pair hand with the right dealer', () => {
     const ref: ScenarioRef = { kind: 'hard', hand: '16', dealer: '10' };
     for (let run = 0; run < 10; run++) {
       const s = scenarioFromRef(ref, Math.random);
-      expect(classifyAsPair(s.player)).toBeNull();
-      expect(isSoftHand(s.player)).toBe(false);
-      expect(cardHighValue(s.player[0]) + cardHighValue(s.player[1])).toBe(16);
+      const player = asTwoCards(s.player);
+      expect(classifyAsPair(player)).toBeNull();
+      expect(isSoftHand(player)).toBe(false);
+      expect(cardHighValue(player[0]) + cardHighValue(player[1])).toBe(16);
       expect(cardHighValue(s.dealerUpcard)).toBe(10);
     }
   });
 
   it('rebuilds a soft total', () => {
     const s = scenarioFromRef({ kind: 'soft', hand: '18', dealer: '9' }, seededRandom());
-    expect(isSoftHand(s.player)).toBe(true);
-    const values = [cardHighValue(s.player[0]), cardHighValue(s.player[1])].sort((a, b) => a - b);
+    const player = asTwoCards(s.player);
+    expect(isSoftHand(player)).toBe(true);
+    const values = [cardHighValue(player[0]), cardHighValue(player[1])].sort((a, b) => a - b);
     expect(values).toEqual([7, 11]);
     expect(s.dealerUpcard.rank).toBe('9');
+  });
+
+  // F4: hard 20 has no two-card non-pair form — two ten-values are the 10,10
+  // pair — so the pin deals a third card rather than falling through to a pair
+  // that asks a different question and files under a different key.
+  it('rebuilds hard 20 as a non-pair hand that files back under hard 20', () => {
+    const ref: ScenarioRef = { kind: 'hard', hand: '20', dealer: '10' };
+    for (let run = 0; run < 10; run++) {
+      const s = scenarioFromRef(ref, Math.random);
+      expect(handTotal(s.player)).toBe(20);
+      expect(handQuestion(s.player, s.dealerUpcard)).toEqual({
+        prefix: 'Hard',
+        value: '20',
+        dealer: '10',
+      });
+      expect(legalActionsFor(s.player, s.dealerUpcard, DEFAULT_ENGINE_OPTIONS)).toEqual(['H', 'S']);
+      expect(scenarioRefFor(s.player, s.dealerUpcard)).toEqual(ref);
+    }
   });
 
   it('rebuilds pairs, including ten-value and ace pairs', () => {
@@ -254,7 +285,7 @@ describe('scenarioFromRef', () => {
     expect(eights.player.map((c) => c.rank)).toEqual(['8', '8']);
 
     const tens = scenarioFromRef({ kind: 'pair', hand: '10', dealer: 'A' }, seededRandom());
-    expect(classifyAsPair(tens.player)).toBe('10');
+    expect(classifyAsPair(asTwoCards(tens.player))).toBe('10');
     expect(tens.dealerUpcard.rank).toBe('A');
 
     const aces = scenarioFromRef({ kind: 'pair', hand: 'A', dealer: '5' }, seededRandom());

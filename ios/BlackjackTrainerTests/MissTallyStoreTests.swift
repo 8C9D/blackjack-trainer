@@ -37,24 +37,24 @@ struct MissTallyStoreTests {
     // MARK: scenarioRefFor
 
     @Test func classifiesHardTotalsWithANormalizedDealerKey() {
-        #expect(scenarioRefFor(TwoCardHand(card(.king), card(.six)), dealerUpcard: card(.queen))
+        #expect(scenarioRefFor([card(.king), card(.six)], dealerUpcard: card(.queen))
             == hard16v10)
     }
 
     @Test func classifiesSoftHandsByTotal() {
-        #expect(scenarioRefFor(TwoCardHand(card(.ace), card(.seven)), dealerUpcard: card(.nine))
+        #expect(scenarioRefFor([card(.ace), card(.seven)], dealerUpcard: card(.nine))
             == soft18v9)
     }
 
     @Test func classifiesPairsByRankKeyIncludingTenValuesAndAces() {
         #expect(scenarioRefFor(
-            TwoCardHand(card(.eight), card(.eight, .hearts)), dealerUpcard: card(.ten)
+            [card(.eight), card(.eight, .hearts)], dealerUpcard: card(.ten)
         ) == ScenarioRef(kind: "pair", hand: "8", dealer: "10"))
         #expect(scenarioRefFor(
-            TwoCardHand(card(.king), card(.ten, .hearts)), dealerUpcard: card(.ace)
+            [card(.king), card(.ten, .hearts)], dealerUpcard: card(.ace)
         ) == ScenarioRef(kind: "pair", hand: "10", dealer: "A"))
         #expect(scenarioRefFor(
-            TwoCardHand(card(.ace), card(.ace, .hearts)), dealerUpcard: card(.six)
+            [card(.ace), card(.ace, .hearts)], dealerUpcard: card(.six)
         ) == ScenarioRef(kind: "pair", hand: "A", dealer: "6"))
     }
 
