@@ -9,6 +9,7 @@ Decisions (`D*`) gate some of both and are listed first.
 Status legend: `[ ]` not started, `[~]` in progress, `[x]` done, `[-]` cut or not applicable.
 
 **Baseline verified 2026-08-06:** web 1516 tests green, iOS 330 tests green, production build clean, `npm audit --omit=dev` reports 0 vulnerabilities.
+**Final gate 2026-08-06 (A16), on Angular 22:** web 1526 unit tests green under the coverage thresholds (96.1% statements), production build clean, parity-fixture diff clean, Playwright 111 green against the built bundle (one earlier run retried a showdown spec once - watch it, it was green on re-run), `npm audit --omit=dev` 0; iOS 335 tests green, swiftformat and swiftlint clean.
 
 ---
 
@@ -37,14 +38,32 @@ Status legend: `[ ]` not started, `[~]` in progress, `[x]` done, `[-]` cut or no
 
 These stop a submission or produce a rejection. Everything else is quality.
 
-| #   | Item                                                                       | Lane     |
-| --- | -------------------------------------------------------------------------- | -------- |
-| B1  | No `PrivacyInfo.xcprivacy` in a target that uses `UserDefaults` in 6 files | A1       |
-| B2  | Screenshots predate the trim and show archived features                    | A8       |
-| B3  | Store description promises unprovisioned iCloud sync                       | D2 / A9  |
-| B4  | `privacy.html` and `support.html` have unfilled placeholders and no host   | A10 / O4 |
-| B5  | App name not reserved                                                      | O3       |
-| B6  | Hard-20 chart drill is wrong on **both** platforms                         | A2       |
+| #   | Item                                                                       | Lane                                                     |
+| --- | -------------------------------------------------------------------------- | -------------------------------------------------------- |
+| B1  | No `PrivacyInfo.xcprivacy` in a target that uses `UserDefaults` in 6 files | A1 — **resolved**                                        |
+| B2  | Screenshots predate the trim and show archived features                    | A8 — **resolved**                                        |
+| B3  | Store description promises unprovisioned iCloud sync                       | D2 / A9 — **resolved** (claim cut)                       |
+| B4  | `privacy.html` and `support.html` have unfilled placeholders and no host   | A10 done; **O4 hosts them** (one email placeholder each) |
+| B5  | App name not reserved                                                      | **open — O3**                                            |
+| B6  | Hard-20 chart drill is wrong on **both** platforms                         | A2 — **resolved**                                        |
+
+---
+
+## Handoff — what is left, all of it yours (written 2026-08-06, A16)
+
+The agent lane is complete: every A item above is ticked or cut, both suites are green on this commit, and the release commit carries a local `v1.0.0` tag (not pushed).
+What remains needs the Apple account, a device, or your signature:
+
+1. **Start the paid-app paperwork now (D5):** App Store Connect > Agreements, Tax, and Banking - it can take days to clear and blocks submission of a paid app.
+2. **O3 - reserve the name** and create the App Store Connect record (register the bundle ID via Xcode's automatic signing on your first device build, or manually at developer.apple.com, since O2 was cut).
+3. **O4 - turn on Pages:** repo Settings > Pages > Source = "GitHub Actions", push `main` (and the tag when ready), let the `Pages` workflow run, confirm `https://8c9d.github.io/blackjack-trainer/privacy.html` and `/support.html` load, and fill the one `CONTACT_EMAIL_HERE` placeholder in each page (or hand the address back to an agent).
+4. **O5 - paste the metadata** from `docs/app-store-submission.md`, using description **variant A** (no iCloud claim) and the "What's New" section; answer App Privacy = Data Not Collected.
+5. **O6 - answer the age rating fresh**; Simulated Gambling is your judgment call against Apple's current wording.
+6. **O7 - upload the six screenshots** from `ios/AppStore/screenshots-6.9/` (iPhone slot only; the app is iPhone-only per D1).
+7. **O8 - the real-device pass**, including the two checks no simulator run could make: backgrounding mid-drill (step 8) and a full drill under VoiceOver (step 11 - the new spoken verdicts are wired but only a device proves them).
+8. **O9/O10/O12 - archive, TestFlight, submit** (choose the price tier at submission; manual release recommended).
+9. **O2/O11 (optional, post-1.0):** provision iCloud KVS and verify on two devices, then switch the store description to variant B.
+10. **Push** the local commits and the `v1.0.0` tag when you are ready; nothing has been pushed for you.
 
 ---
 
@@ -200,7 +219,8 @@ Ordered by priority. Each item states its own done-when so completion is checkab
       Confirm leftover keys from archived features are ignored rather than surfacing.
       **Done when:** the walk is clean from a genuinely empty container, with screenshots of anything that looked wrong.
 
-- [ ] **A16. Final gate.**
+- [x] **A16. Final gate.**
+      _Done 2026-08-06: full local CI on both platforms on this commit (figures in the "Final gate" line at the top), this checklist updated to reality (blockers table annotated, handoff section above the agent lane), nothing in the agent lane silently skipped - every A item is ticked or cut with its verification note - and the release commit tagged `v1.0.0` locally with the owner's approval._
       Full local CI on both platforms, this checklist updated to reflect reality, and a written handoff of exactly what is left for the owner.
       **Done when:** web and iOS suites are green on the commit that will be archived, and nothing in the agent lane is silently skipped.
 
