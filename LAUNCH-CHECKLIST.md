@@ -159,7 +159,13 @@ Ordered by priority. Each item states its own done-when so completion is checkab
       `docs/manual-testing-guide.md` is web-scoped and predates the trim.
       **Done when:** no doc in `docs/` asserts something about the app that stopped being true.
 
-- [ ] **A15. Cold-install and first-run verification.**
+- [x] **A15. Cold-install and first-run verification.**
+      _Done 2026-08-06, on the erased iPhone 16 Pro simulator with a Release build, plus a rendered walk of every shipping screen; nothing looked wrong, so there are no defect screenshots to hand over.
+      Verified by executing: first launch lands on Home with clean empty states (0/20 ring, "No streak yet", empty dots); a container seeded with pre-trim data before first launch merges the valid prefs (goal ring reads 0/30), degrades the archived `bet-spread` mode, ignores `playHandsOut`/`betRamp`, and leaves the archived showdown keys byte-identical on disk; wrong-typed leftover values are also ignored without a crash; backgrounding (via launching Settings) and returning restores the app intact.
+      Screen renders from the test target (window + `layer.render`, since `ImageRenderer` cannot draw List-backed screens): Home, all three chart tabs, Progress empty / with data / after reset, Settings, Licenses, both hand drills (including the three-card hard-20 pin, which fits the 402 pt width), the counting flow, and the Done screen - all correct; reset visibly returns Progress to empty.
+      Two findings that are behavior, not defects: the iCloud KVS daemon container survives an app uninstall on device, so a reinstall re-adopts prior stats (last-writer-wins by design), and a fresh install shows "Continue - Basic Strategy" because the default last-trainer is Basic Strategy.
+      Not device-verifiable here: backgrounding mid-drill (no UI-test target to start a drill); the stream loop's suspend/resume semantics are argued in A12's review and the real-device check is O8 step 8.
+      Suite still green at 335 after removing the throwaway render probe._
       Erase the simulator, install a Release build, and walk a first launch: empty states, every drill end to end, the chart, Progress, Settings, reset practice data, and backgrounding mid-drill.
       Confirm leftover keys from archived features are ignored rather than surfacing.
       **Done when:** the walk is clean from a genuinely empty container, with screenshots of anything that looked wrong.
