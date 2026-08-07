@@ -1,4 +1,4 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, input, output, ChangeDetectionStrategy } from '@angular/core';
 
 import {
   BET_RAMP_BAND_LABELS,
@@ -255,6 +255,7 @@ import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.mo
       }
     </fieldset>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './counting-settings.component.scss',
 })
 export class CountingSettingsComponent {

@@ -1,4 +1,4 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, input, output, signal, ChangeDetectionStrategy } from '@angular/core';
 
 import {
   BET_RAMP_BAND_LABELS,
@@ -228,6 +228,7 @@ interface RampBand {
       </button>
     </section>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './count-feedback-panel.component.scss',
 })
 export class CountFeedbackPanelComponent {

@@ -1,5 +1,12 @@
 import { DOCUMENT } from '@angular/common';
-import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  HostListener,
+  computed,
+  inject,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
@@ -460,6 +467,7 @@ interface DeviationSectionView {
       }
     </main>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './chart-page.component.scss',
 })
 export class ChartPageComponent {

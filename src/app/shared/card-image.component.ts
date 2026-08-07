@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
 import type { Card } from '../core/models/card.model';
 
 // cardsJS filename convention: <RANK><SUIT>.svg where rank is 2..10/J/Q/K/A
@@ -28,6 +28,7 @@ const SUIT_GLYPH: Readonly<Record<Card['suit'], string>> = {
       draggable="false"
     />
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './card-image.component.scss',
 })
 export class CardImageComponent {

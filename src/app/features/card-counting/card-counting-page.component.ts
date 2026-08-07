@@ -1,4 +1,12 @@
-import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  HostListener,
+  computed,
+  inject,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
 import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
@@ -220,6 +228,7 @@ type DrillState =
       }
     </main>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './card-counting-page.component.scss',
 })
 export class CardCountingPageComponent {

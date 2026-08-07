@@ -1,4 +1,4 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, input, output, ChangeDetectionStrategy } from '@angular/core';
 
 // Thin session header for the drill screens: exit, progress toward the
 // session target, count, and the current correct-streak chip. This is the
@@ -36,6 +36,7 @@ import { Component, computed, input, output } from '@angular/core';
       <span class="kcap">esc</span>
     </header>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './flow-topbar.component.scss',
 })
 export class FlowTopbarComponent {

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 
 import { AppUpdateService } from './core/services/app-update.service';
@@ -55,6 +55,7 @@ import { ThemeService } from './core/services/theme.service';
       </aside>
     }
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './app.scss',
 })
 export class App {

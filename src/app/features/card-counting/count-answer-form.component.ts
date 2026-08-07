@@ -8,6 +8,7 @@ import {
   output,
   signal,
   viewChild,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 
 import { MAX_BET_UNITS, MIN_BET_UNITS } from '../../core/models/bet-ramp.model';
@@ -46,6 +47,7 @@ import { CountingEngineService } from '../../core/services/counting-engine.servi
       </button>
     </form>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './count-answer-form.component.scss',
 })
 export class CountAnswerFormComponent {
