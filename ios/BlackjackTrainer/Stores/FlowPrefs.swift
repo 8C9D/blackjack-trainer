@@ -215,11 +215,15 @@ final class FlowPrefsStore: CloudSyncable {
     }
 
     func adoptFromCloud() {
-        guard let cloud, let data = cloud.data(forKey: key) else { return }
-        prefs = FlowPrefs.merged(
-            from: try? JSONSerialization.jsonObject(with: data),
-            systems: systems
-        )
+        // Cloud bytes are another device's write and untrusted: a payload that
+        // is not a prefs object leaves valid local state alone rather than
+        // resetting it to defaults. A decodable object still merges
+        // field-by-field with the same tolerance as a local load.
+        guard let cloud, let data = cloud.data(forKey: key),
+              let object = try? JSONSerialization.jsonObject(with: data),
+              object is [String: Any]
+        else { return }
+        prefs = FlowPrefs.merged(from: object, systems: systems)
         Self.save(prefs, key: key, defaults: defaults)
     }
 
