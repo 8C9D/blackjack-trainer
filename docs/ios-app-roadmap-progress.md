@@ -1,5 +1,10 @@
 # iOS App Roadmap Progress
 
+> **Closed 2026-08-06.**
+> The build phases this cursor drove (0-4) are done, and the submission slice it paused on (5.1) is superseded by `LAUNCH-CHECKLIST.md` at the repo root, which is now the source of truth for the path to the App Store.
+> The app described below is also no longer the app that ships: nine features (the showdown, the widget, practice reminders, and six more) were archived on 2026-08-06 - see `TRIM-REPORT.md`.
+> The log is kept as the record of how each slice landed; do not run the autopilot from this cursor.
+
 _Maintained by the `ios-app-roadmap-autopilot` skill. The cursor below is the
 source of truth for what runs next. Manual edits are fine if you keep the
 format._

@@ -1,5 +1,9 @@
 # End-to-End (E2E) Testing Plan
 
+> **Closed 2026-08-06.**
+> The pass this document planned was executed: the Playwright suite lives under `e2e/` and runs in CI, and the app has since gained routes and features the body's read-off figures (three routes, 481 unit tests) long predate.
+> Kept as the record of the plan; the live E2E documentation is the suite itself and `README.md`.
+
 _Authored 2026-06-02. **Planning slice only** — no E2E tooling, config, CI
 changes, or dependencies are added by this document. It grounds a future E2E
 pass in the app as it actually exists today (Angular 21, routes
