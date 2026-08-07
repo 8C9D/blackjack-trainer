@@ -73,7 +73,9 @@ Ordered by priority. Each item states its own done-when so completion is checkab
       Reproduce first with a failing test on each platform, then fix.
       **Done when:** drilling hard 20 deals a non-pair hard 20, the banner and question agree, Split is not offered, the miss files under `hard-20-v-*`, the unreachable hard-4 path is confirmed still unreachable, and both suites are green.
 
-- [ ] **A3. Close suspicion S1 (timezone day keys).**
+- [x] **A3. Close suspicion S1 (timezone day keys).**
+      _Killed 2026-08-06, both platforms, by executing the exact probe the suspicion asked for: the real `streak()`/`last7()`/miss-tally window under `TZ=America/Santiago` (midnight transitions: a 25-hour Apr 4 and a Sep 6 with no 00:00–00:59) and `TZ=Australia/Lord_Howe` (30-minute shift) with the clock pinned to 00:15/23:45, plus a raw walk sweep vs pure calendar arithmetic — zero divergence; Foundation's `Calendar` day-adding probed identically for the Swift store.
+      Regression tests committed: `day-keys-dst.spec.ts` (web, sets `process.env.TZ` per test) and `PracticeHistoryStoreTests.dayWalkLandsOnConsecutiveCalendarDatesAcrossDSTTransitions` (iOS); outcome recorded in `review/findings.md`._
       `localDateKey` is local-time, `isLocalDateKey` validates by a UTC round trip, and `dateKeyDaysAgo` walks with `setDate`.
       Exercise `streak()`, `last7()` and the miss-tally cutoff under `TZ=America/Santiago` and `TZ=Australia/Lord_Howe` across a DST transition with the clock pinned near midnight, and check the Swift `PracticeHistory` equivalent.
       **Done when:** the suspicion is confirmed and fixed, or killed - and either way a regression test pins the behaviour, and `review/findings.md` records the outcome.

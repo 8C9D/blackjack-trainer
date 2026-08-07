@@ -53,6 +53,7 @@
 		5ACE6A73BE71B4664EF7B2BD /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CDF8C0414B1B8AF850B0DF5 /* SmokeTests.swift */; };
 		5AF9B9674E93ACAEF2C9D226 /* Deviation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0896F4168F59A3A9EBFF7CDE /* Deviation.swift */; };
 		5AFF5BA555AFAA622588A5DB /* ChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B05E37DDD485FFB7F97B52C /* ChartView.swift */; };
+		5BD958E10B65AC4E91355CA5 /* DayKeyDSTTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BFAB43B13FD6CCB99BE9718 /* DayKeyDSTTests.swift */; };
 		5DB30E135B7A136CDC249DC4 /* CountingSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12BE32AD13FB36B33BAA1B8A /* CountingSystem.swift */; };
 		6513222E1254F0172453951E /* DataLayerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA0B879E8B1D853622E0CC86 /* DataLayerTests.swift */; };
 		65D49FF023B11E415D09DEA6 /* StreakDotsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F7F71F87D6F8DE7DB2A52 /* StreakDotsView.swift */; };
@@ -175,6 +176,7 @@
 		3382B89542D294E8B47BEBB4 /* DeviationsDrillModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviationsDrillModelTests.swift; sourceTree = "<group>"; };
 		355840D6D85CBA4C7903ED7C /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		38181BAA4EC763FE68C1300C /* DrillSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillSessionTests.swift; sourceTree = "<group>"; };
+		3BFAB43B13FD6CCB99BE9718 /* DayKeyDSTTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayKeyDSTTests.swift; sourceTree = "<group>"; };
 		3D44944317BBDF4871E4996D /* ShoeFactoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoeFactoryTests.swift; sourceTree = "<group>"; };
 		3F0F142E7986FA01C30FBDC9 /* CountFeedbackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountFeedbackView.swift; sourceTree = "<group>"; };
 		40DA33CFF9EA9742E7504A05 /* StatsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsStoreTests.swift; sourceTree = "<group>"; };
@@ -365,6 +367,7 @@
 				424E0908F1E2CE3970524A47 /* CountingSystemMetricsTests.swift */,
 				17F3F4A1DEA5C26E8957C509 /* CountReferenceTests.swift */,
 				BA0B879E8B1D853622E0CC86 /* DataLayerTests.swift */,
+				3BFAB43B13FD6CCB99BE9718 /* DayKeyDSTTests.swift */,
 				80916791F08727E4F1F41C6E /* DeviationFeedbackTests.swift */,
 				8D515F12D5142DD5EB526BFE /* DeviationIndexSystemTests.swift */,
 				18C6C68585013F882B690DA5 /* DeviationParityTests.swift */,
@@ -720,6 +723,7 @@
 				CA4D608DD9DB115BD8BEDD6B /* CountingParityTests.swift in Sources */,
 				E1F54CF8BAB501264FAE6AB0 /* CountingSystemMetricsTests.swift in Sources */,
 				6513222E1254F0172453951E /* DataLayerTests.swift in Sources */,
+				5BD958E10B65AC4E91355CA5 /* DayKeyDSTTests.swift in Sources */,
 				039F744E1918FABE31519289 /* DeviationFeedbackTests.swift in Sources */,
 				8BD08F72E75B54564AEAFD90 /* DeviationIndexSystemTests.swift in Sources */,
 				AD5CA329F1BC4A32BF660060 /* DeviationParityTests.swift in Sources */,
