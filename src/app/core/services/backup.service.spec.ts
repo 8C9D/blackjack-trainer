@@ -58,16 +58,51 @@ describe('BackupService', () => {
     });
 
     it('orders keys so the same state exports byte-for-byte the same', () => {
-      localStorage.setItem('blackjack-zebra', '1');
-      localStorage.setItem('blackjack-alpha', '2');
+      localStorage.setItem('blackjack-true-count-stats', '1');
+      localStorage.setItem('blackjack-basic-strategy-stats', '2');
       const { service } = createService();
 
-      expect(Object.keys(service.build().data)).toEqual(['blackjack-alpha', 'blackjack-zebra']);
+      expect(Object.keys(service.build().data)).toEqual([
+        'blackjack-basic-strategy-stats',
+        'blackjack-true-count-stats',
+      ]);
     });
 
     it('exports an empty backup on a browser that has practised nothing', () => {
       const { service } = createService();
       expect(service.build().data).toEqual({});
+    });
+  });
+
+  // The app ships on a shared *.github.io origin (D3), where another app's
+  // keys can legitimately carry the same 'blackjack-' prefix. S2/A4: an export
+  // must not sweep them into a shareable file, and a restore must neither
+  // clear them nor write foreign keys a tampered file carries.
+  describe('a shared origin (S2)', () => {
+    it("keeps another app's blackjack-prefixed keys out of the export", () => {
+      localStorage.setItem('blackjack-flow-prefs', '{"dailyGoal":20}');
+      localStorage.setItem('blackjack-scoreboard', 'another app on this origin');
+      const { service } = createService();
+
+      expect(Object.keys(service.build().data)).toEqual(['blackjack-flow-prefs']);
+    });
+
+    it("a restore leaves another app's keys alone, even ones inside the file", () => {
+      localStorage.setItem('blackjack-scoreboard', 'another app on this origin');
+      const { service } = createService();
+      const file = JSON.stringify({
+        app: BACKUP_APP_ID,
+        schema: BACKUP_SCHEMA_VERSION,
+        exportedAt: EXPORTED_AT.toISOString(),
+        data: {
+          'blackjack-flow-prefs': '{"dailyGoal":25}',
+          'blackjack-scoreboard': 'overwritten by a tampered backup',
+        },
+      });
+
+      expect(service.restore(file)).toEqual({ ok: true });
+      expect(localStorage.getItem('blackjack-scoreboard')).toBe('another app on this origin');
+      expect(localStorage.getItem('blackjack-flow-prefs')).toBe('{"dailyGoal":25}');
     });
   });
 

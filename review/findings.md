@@ -422,13 +422,17 @@ Each needs something I could not do from here.
    `dayKey = today − 3`, then rendering the widget timeline with `.now` three
    days on, and comparing the strip against `PracticeHistoryStore.last7`.
 
-3. **The backup prefix captures more than this app's keys.**
-   `BACKUP_KEY_PREFIX` is `'blackjack-'` (`backup.model.ts:12`), so an export
-   sweeps — and a restore clears — every `localStorage` key on the origin with
-   that prefix, not just this app's. Harmless on a dedicated origin.
-   _Confirm or kill by:_ checking whether the deployment shares an origin with
-   any other `blackjack-*` app; if it does, the export leaks that app's data
-   into a file the user may share, and a restore wipes it.
+3. **The backup prefix captures more than this app's keys.** **Confirmed and
+   fixed 2026-08-06 (launch pass).** D3 put the web app on the shared
+   `8C9D.github.io` origin, which made this real: the prefix sweep would export
+   another Pages app's same-prefixed keys into a shareable file, and a restore
+   would clear them — and write foreign keys a tampered file carried.
+   Reproduced first with two failing specs, then fixed: the backup is now
+   defined by the declared `BACKUP_KEYS` list; export reads only declared keys,
+   restore clears and writes only declared keys. The prefix's old virtue — no
+   store silently left out of the backup — moved into `backup-keys.spec.ts`,
+   which drives a write through every storage-backed service and fails on any
+   stored key the list does not carry, in either direction.
 
 ---
 

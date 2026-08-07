@@ -6,10 +6,34 @@
 // settings included: restoring onto a fresh browser should give you the app you
 // left, not a scoreboard with the table rules reset.
 //
-// Every key this app writes is prefixed, so the backup is defined by the prefix
-// rather than by a list of stores. A list would silently omit whatever store is
-// added next; the prefix cannot.
+// Every key this app writes is prefixed. The backup used to be *defined* by
+// the prefix, but the app ships on a shared *.github.io origin where another
+// app's keys can carry the same prefix — an export must not sweep them into a
+// shareable file, and a restore must not clear or overwrite them (S2 in
+// review/findings.md). So the backup is defined by the declared list below,
+// and the property the prefix guaranteed — no store silently left behind — is
+// enforced by `backup-keys.spec.ts`, which drives every storage-writing
+// service and fails on any stored key this list does not carry.
 export const BACKUP_KEY_PREFIX = 'blackjack-';
+
+export const BACKUP_KEYS: readonly string[] = [
+  'blackjack-basic-strategy-stats',
+  'blackjack-bet-spread-stats',
+  'blackjack-card-counting-stats',
+  'blackjack-count-drift',
+  'blackjack-deck-estimation-stats',
+  'blackjack-deck-speed-best',
+  'blackjack-deck-speed-stats',
+  'blackjack-deviation-stats',
+  'blackjack-flow-prefs',
+  'blackjack-key-count-stats',
+  'blackjack-miss-tally',
+  'blackjack-practice-history',
+  'blackjack-showdown-bankroll',
+  'blackjack-showdown-play-stats',
+  'blackjack-showdown-stats',
+  'blackjack-true-count-stats',
+];
 
 export const BACKUP_APP_ID = 'blackjack-trainer';
 
