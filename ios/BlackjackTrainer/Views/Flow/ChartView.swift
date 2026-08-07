@@ -205,7 +205,7 @@ struct ChartGridView: View {
 
     private func note(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 12))
+            .font(.caption)
             .foregroundStyle(Theme.muted)
     }
 
@@ -213,7 +213,7 @@ struct ChartGridView: View {
         VStack(alignment: .leading, spacing: 8) {
             ForEach(ruleChips, id: \.self) { chip in
                 Text(chip)
-                    .font(.system(size: 12))
+                    .font(.caption)
                     .foregroundStyle(Theme.midInk)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
@@ -221,7 +221,7 @@ struct ChartGridView: View {
                     .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 1))
             }
             Button(mode == .count ? "Change system" : "Change rules", action: onChangeRules)
-                .font(.system(size: 12))
+                .font(.caption)
                 .tint(Theme.accentInk)
         }
     }
@@ -229,7 +229,7 @@ struct ChartGridView: View {
     private func card(_ section: ChartSection) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(section.title)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.caption2.weight(.semibold))
                 .tracking(1.4)
                 .textCase(.uppercase)
                 .foregroundStyle(Theme.muted)
@@ -237,12 +237,12 @@ struct ChartGridView: View {
             Grid(horizontalSpacing: 2, verticalSpacing: 2) {
                 GridRow {
                     Text(section.rowHeader)
-                        .font(.system(size: 11))
+                        .font(.caption2)
                         .foregroundStyle(Theme.muted)
                         .frame(width: rowHeaderWidth, alignment: .trailing)
                     ForEach(ChartKeys.dealerUpcards, id: \.self) { upcard in
                         Text(upcard)
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.caption2.weight(.semibold))
                             .foregroundStyle(Theme.muted)
                             .frame(maxWidth: .infinity)
                     }
@@ -252,7 +252,7 @@ struct ChartGridView: View {
                 ForEach(section.rows) { row in
                     GridRow {
                         Text(row.label)
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.caption2.weight(.semibold))
                             .foregroundStyle(Theme.midInk)
                             .lineLimit(1)
                             .frame(width: rowHeaderWidth, alignment: .trailing)
@@ -284,7 +284,7 @@ struct ChartGridView: View {
             onDrill(.basicStrategy, cell.ref)
         } label: {
             Text(cell.symbol)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.caption.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(Theme.ink)
                 .frame(maxWidth: .infinity, minHeight: 24)
@@ -323,14 +323,14 @@ struct ChartGridView: View {
             ForEach(Action.chartLegend, id: \.self) { action in
                 HStack(spacing: 6) {
                     Text(StrategyChartGrid.symbol(for: action))
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.ink)
                         .frame(width: 26)
                         .padding(.vertical, 3)
                         .background(Theme.chartCell(action))
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                     Text(action.label)
-                        .font(.system(size: 13))
+                        .font(.footnote)
                         .foregroundStyle(Theme.midInk)
                 }
                 .accessibilityElement(children: .combine)
@@ -340,12 +340,12 @@ struct ChartGridView: View {
             if ringedCells > 0 {
                 HStack(spacing: 6) {
                     Text(" ")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.caption.weight(.semibold))
                         .frame(width: 26)
                         .padding(.vertical, 3)
                         .overlay(missRing(true))
                     Text("Missed this week")
-                        .font(.system(size: 13))
+                        .font(.footnote)
                         .foregroundStyle(Theme.midInk)
                 }
                 .accessibilityElement(children: .combine)
@@ -372,7 +372,7 @@ extension ChartGridView {
             }
 
             Text(section.title)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.caption2.weight(.semibold))
                 .tracking(1.4)
                 .textCase(.uppercase)
                 .foregroundStyle(Theme.muted)
@@ -410,30 +410,30 @@ extension ChartGridView {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 1) {
                 Text(row.hand)
-                    .font(.system(size: 13))
+                    .font(.footnote)
                     .foregroundStyle(Theme.ink)
                 // The list is text, not a ten-column grid, so an outstanding
                 // rule can say so in words rather than wear the grid's ring.
                 if let missed = row.missed {
                     Text(missed)
-                        .font(.system(size: 10))
+                        .font(.caption2)
                         .foregroundStyle(Theme.muted)
                 }
             }
             Spacer(minLength: 4)
             Text(row.threshold)
-                .font(.system(size: 13))
+                .font(.footnote)
                 .monospacedDigit()
                 .foregroundStyle(Theme.midInk)
             Text(row.symbol)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(Theme.ink)
                 .frame(width: 24)
                 .padding(.vertical, 3)
                 .background(Theme.chartCell(row.action))
                 .clipShape(RoundedRectangle(cornerRadius: 4))
             Text(row.label)
-                .font(.system(size: 13))
+                .font(.footnote)
                 .foregroundStyle(Theme.midInk)
                 .frame(width: 74, alignment: .leading)
         }

@@ -80,13 +80,25 @@ struct FlowDoneView: View {
         return rest > 0 ? "\(joined) · +\(rest) more" : joined
     }
 
+    @Environment(\.dynamicTypeSize) private var typeSize
+
     var body: some View {
+        // At the accessibility sizes the ring plus the cards outgrow the
+        // viewport, so the screen scrolls rather than clipping its buttons.
+        if typeSize.isAccessibilitySize {
+            ScrollView { content }
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
         VStack(spacing: 14) {
             Spacer()
             GoalRingView(value: hands, goal: target, label: goalMet ? "goal met" : "hands today")
 
             peakText
-                .font(.system(size: 15))
+                .font(.subheadline)
                 .foregroundStyle(Theme.midInk)
                 .multilineTextAlignment(.center)
 
@@ -97,7 +109,7 @@ struct FlowDoneView: View {
 
             if let clearedLabel {
                 (Text("Cleared: ") + Text(clearedLabel).bold().foregroundStyle(Theme.good))
-                    .font(.system(size: 12.5))
+                    .font(.caption)
                     .foregroundStyle(Theme.muted)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 300)
@@ -105,7 +117,7 @@ struct FlowDoneView: View {
 
             Button(action: onAgain) {
                 Text("One more round")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.callout.weight(.semibold))
                     .foregroundStyle(buttonBrown)
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: 52)
@@ -118,7 +130,7 @@ struct FlowDoneView: View {
 
             Button(action: onExit) {
                 Text("Done for today")
-                    .font(.system(size: 15))
+                    .font(.subheadline)
                     .foregroundStyle(Theme.muted)
                     .padding(.vertical, 6)
             }
@@ -130,6 +142,13 @@ struct FlowDoneView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Session complete")
+        // The drill swaps to this screen on its own; VoiceOver focus does not
+        // follow, so the end of the session is spoken.
+        .onAppear {
+            AccessibilityNotification.Announcement(
+                "Session complete. \(hands) of \(target) hands today."
+            ).post()
+        }
     }
 
     /// The queued weakness is a control, not a caption: the round it promises can
@@ -138,10 +157,10 @@ struct FlowDoneView: View {
     private func weakCard(_ weak: WeakSpot) -> some View {
         VStack(spacing: 3) {
             (Text("Drill my misses: ") + Text(weak.label).bold().foregroundStyle(Theme.accentInk))
-                .font(.system(size: 14))
+                .font(.subheadline)
                 .foregroundStyle(Theme.midInk)
             Text(missLine(weak))
-                .font(.system(size: 11.5))
+                .font(.caption)
                 .foregroundStyle(Theme.muted)
         }
         .multilineTextAlignment(.center)

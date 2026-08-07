@@ -18,7 +18,7 @@ struct FlowTopBarView: View {
         HStack(spacing: 12) {
             Button(action: onExit) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(Theme.muted)
                     .contentShape(Rectangle())
             }
@@ -35,13 +35,13 @@ struct FlowTopBarView: View {
             .frame(height: 8)
 
             Text("\(count)/\(target)")
-                .font(.system(size: 13))
+                .font(.footnote)
                 .monospacedDigit()
                 .foregroundStyle(Theme.muted)
 
             if streak > 1 {
                 Text("streak \(streak)")
-                    .font(.system(size: 12))
+                    .font(.caption)
                     .monospacedDigit()
                     .foregroundStyle(Theme.good)
                     .padding(.horizontal, 10)

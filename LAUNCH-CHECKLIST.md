@@ -101,7 +101,12 @@ Ordered by priority. Each item states its own done-when so completion is checkab
       Re-run `npm audit`, and write the D4 recommendation without acting on it.
       **Done when:** a fresh dated report exists and every claim in it was executed, not inferred.
 
-- [ ] **A6. iOS accessibility pass.**
+- [x] **A6. iOS accessibility pass.**
+      _Done 2026-08-06: full report with renders at `review/a6-accessibility-pass.md` (+ `review/a6-renders/`).
+      Two systemic defects found and fixed: no spoken verdict anywhere (VoiceOver now hears every grade in all three drills, and the Done screen announces itself), and ~70 fixed-size fonts that ignored Dynamic Type (all moved to semantic styles).
+      The clipping that scaling then exposed was fixed screen by screen (scaled goal ring, wrapping texts, stacked trainer cards, and scroll-at-accessibility-sizes on Home/Done/both drills), re-rendered at `accessibility5` to confirm.
+      Labels/traits/focus order verified already-solid; Reduce Motion is honoured vacuously (zero animations in the target, verified by grep); contrast parity confirmed hex-for-hex against the web tokens the axe e2e proves.
+      Remaining device-only check is the O8 step 11 VoiceOver walk; suite green at 335, lint clean._
       Only 12 files in the target reference any accessibility API and there is no automated coverage, which makes this the largest untested gap in the shipping app.
       Cover VoiceOver labels, traits, and focus order on every shipping screen; Dynamic Type up to the largest accessibility size without clipping or truncation; Reduce Motion honoured by the auto-advance and the correct-answer flash; and colour contrast parity with the web tokens.
       The web's `e2e/smoke/accessibility.e2e.ts` is the standard to match.

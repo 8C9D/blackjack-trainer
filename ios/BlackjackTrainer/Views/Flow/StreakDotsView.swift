@@ -19,7 +19,7 @@ struct StreakDotsView: View {
                 }
             }
             Text(streakLabel)
-                .font(.system(size: 11.5))
+                .font(.caption)
                 .foregroundStyle(Theme.muted)
         }
         .accessibilityElement()

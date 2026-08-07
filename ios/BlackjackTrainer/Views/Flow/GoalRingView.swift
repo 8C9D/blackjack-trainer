@@ -8,8 +8,10 @@ struct GoalRingView: View {
     let goal: Int
     var label: String = "hands today"
 
-    private let ringWidth: CGFloat = 13
-    private let diameter: CGFloat = 128
+    // Scaled with the count's text style so the numbers still fit inside the
+    // ring at the accessibility sizes.
+    @ScaledMetric(relativeTo: .title2) private var ringWidth: CGFloat = 13
+    @ScaledMetric(relativeTo: .title2) private var diameter: CGFloat = 128
 
     private var met: Bool {
         value >= goal
@@ -35,13 +37,16 @@ struct GoalRingView: View {
                 .padding(ringWidth / 2)
             VStack(spacing: 2) {
                 Text("\(value)/\(goal)")
-                    .font(.system(size: 23, weight: .semibold))
+                    .font(.title2.weight(.semibold))
                     .monospacedDigit()
                     .foregroundStyle(Theme.inkStrong)
                 Text(label)
-                    .font(.system(size: 11))
+                    .font(.caption2)
                     .foregroundStyle(Theme.muted)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(.horizontal, ringWidth * 1.5)
         }
         .frame(width: diameter, height: diameter)
         .accessibilityElement()

@@ -24,7 +24,7 @@ struct CountReferenceView: View {
 
     private func note(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 12))
+            .font(.caption)
             .foregroundStyle(Theme.muted)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -45,7 +45,7 @@ struct CountReferenceView: View {
                     // color-dependent one, a named group each for red and black.
                     if reference.table.rowLabels.count > 1 {
                         Text(label)
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.caption2.weight(.semibold))
                             .foregroundStyle(Theme.midInk)
                             .accessibilityHidden(true)
                     }
@@ -72,10 +72,10 @@ struct CountReferenceView: View {
     private func tagChip(_ value: String, cards: String, row: String) -> some View {
         VStack(spacing: 1) {
             Text(cards)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.caption2.weight(.semibold))
                 .foregroundStyle(Theme.muted)
             Text(value)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.subheadline.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(Theme.ink)
         }
@@ -106,11 +106,11 @@ struct CountReferenceView: View {
                     }
                     HStack(spacing: 8) {
                         Text(row.label)
-                            .font(.system(size: 13))
+                            .font(.footnote)
                             .foregroundStyle(Theme.ink)
                         Spacer(minLength: 4)
                         Text(row.value)
-                            .font(.system(size: 13))
+                            .font(.footnote)
                             .monospacedDigit()
                             .foregroundStyle(Theme.midInk)
                     }
@@ -124,7 +124,7 @@ struct CountReferenceView: View {
     private func card(title: String, @ViewBuilder content: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.caption2.weight(.semibold))
                 .tracking(1.4)
                 .textCase(.uppercase)
                 .foregroundStyle(Theme.muted)

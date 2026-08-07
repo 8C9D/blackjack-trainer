@@ -88,13 +88,13 @@ private struct FlowActionButton: View {
         Button(action: onTap) {
             VStack(spacing: 3) {
                 Text(action.label)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.callout.weight(.semibold))
                 if isWrongPick {
-                    Text("your pick").font(.system(size: 10))
+                    Text("your pick").font(.caption2)
                 } else if showCorrectNote {
-                    Text("correct").font(.system(size: 10))
+                    Text("correct").font(.caption2)
                 } else if hasHardwareKeyboard, isLegal, !graded {
-                    Text("[\(action.keyHint)]").font(.system(size: 10)).opacity(0.7)
+                    Text("[\(action.keyHint)]").font(.caption2).opacity(0.7)
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 54)
