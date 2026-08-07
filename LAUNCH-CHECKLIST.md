@@ -136,7 +136,10 @@ Ordered by priority. Each item states its own done-when so completion is checkab
       The review notes matter more than usual here - card-counting instruction gets read closely, so "no wagering, no real or virtual currency, no chips, no hand ever plays out to a win or lose outcome" must be impossible to miss.
       **Done when:** no sentence in the metadata describes an archived feature, and the age-rating section still refuses to pre-answer Simulated Gambling on the owner's behalf.
 
-- [ ] **A10. Finish the privacy and support pages.**
+- [x] **A10. Finish the privacy and support pages.**
+      _Done 2026-08-06: both pages now match the shipped app - no-sync wording per D2 (the privacy page describes iCloud only as a possible future update through the user's own account; the support FAQ's sync answer became a reset-practice-data answer), a no-permissions line, an updated effective date, and the support page's privacy link filled with the real Pages URL (`https://8c9d.github.io/blackjack-trainer/privacy.html`, from the `8C9D/blackjack-trainer` remote + the A11 workflow layout).
+      Exactly one placeholder remains per page: `CONTACT_EMAIL_HERE` (the support email is O4's to choose).
+      Both pages are self-contained single files with responsive, dark-mode-aware styling._
       `ios/AppStore/privacy.html` and `support.html` still carry `CONTACT_EMAIL_HERE` and `PRIVACY_URL_HERE`.
       Bring both in line with the shipped app (no data collected, no accounts, no permissions of any kind, stats on-device and optionally in the user's own iCloud) and reduce the unknowns to exactly one clearly marked placeholder per page for the owner to fill.
       **Done when:** both pages are accurate, self-contained, readable on a phone, and each has at most one placeholder left.
