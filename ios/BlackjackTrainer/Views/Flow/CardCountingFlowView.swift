@@ -164,6 +164,25 @@ struct CardCountingFlowView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.ground.ignoresSafeArea())
         .onDisappear { model.exit() }
+        // The graded count lands as a silent panel swap; the spoken verdict is
+        // VoiceOver's whole feedback loop (the web's sr-only status region).
+        .onChange(of: model.counting.result) { _, result in
+            guard let result else { return }
+            let verdict: String = switch result {
+            case let .running(graded):
+                graded.isCorrect
+                    ? "Correct: running count \(CountFormat.count(graded.correctRunningCount))."
+                    : "Incorrect. The running count was "
+                    + "\(CountFormat.count(graded.correctRunningCount)), you answered "
+                    + "\(CountFormat.count(graded.userRunningCount))."
+            case let .trueCount(graded):
+                graded.isCorrect
+                    ? "Correct: true count \(graded.correctTrueCount)."
+                    : "Incorrect. The true count was \(graded.correctTrueCount), "
+                    + "you answered \(graded.userTrueCount)."
+            }
+            AccessibilityNotification.Announcement(verdict).post()
+        }
     }
 
     @ViewBuilder private var stage: some View {

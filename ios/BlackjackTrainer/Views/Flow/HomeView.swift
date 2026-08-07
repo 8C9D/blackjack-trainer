@@ -6,6 +6,7 @@ import SwiftUI
 struct HomeView: View {
     @Environment(AppModel.self) private var model
     @Environment(FlowRouter.self) private var router
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private let buttonBrown = Color(hex: 0x1A1408)
 
@@ -46,10 +47,24 @@ struct HomeView: View {
     }
 
     var body: some View {
+        // At the accessibility sizes the screen's content outgrows the
+        // viewport, so it scrolls; at standard sizes it keeps its fixed
+        // one-glance composition.
+        Group {
+            if typeSize.isAccessibilitySize {
+                ScrollView { content }
+            } else {
+                content
+            }
+        }
+        .background(Theme.ground.ignoresSafeArea())
+    }
+
+    private var content: some View {
         VStack(spacing: 14) {
             VStack(spacing: 10) {
                 Text(formatDayLabel(Date()))
-                    .font(.system(size: 12))
+                    .font(.caption)
                     .tracking(1.5)
                     .textCase(.uppercase)
                     .foregroundStyle(Theme.muted)
@@ -62,7 +77,9 @@ struct HomeView: View {
 
             VStack(spacing: 12) {
                 primaryButton
-                HStack(spacing: 12) {
+                // At the accessibility sizes the two cards stack, so the
+                // trainer names wrap instead of truncating.
+                trainerCardsLayout {
                     ForEach(otherTrainers) { trainer in
                         otherCard(trainer)
                     }
@@ -79,13 +96,19 @@ struct HomeView: View {
         .padding(.bottom, 24)
         .frame(maxWidth: 460)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.ground.ignoresSafeArea())
+    }
+
+    private func trainerCardsLayout(@ViewBuilder content: () -> some View) -> some View {
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 12))
+            : AnyLayout(HStackLayout(spacing: 12))
+        return layout { content() }
     }
 
     private func quietButton(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 14))
+                .font(.subheadline)
                 .foregroundStyle(Theme.muted)
                 .padding(.vertical, 6)
                 .padding(.horizontal, 6)
@@ -98,10 +121,12 @@ struct HomeView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Continue — \(lastTrainer.label)")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.callout.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(subtext)
-                        .font(.system(size: 12))
+                        .font(.caption)
                         .opacity(0.75)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
             }
@@ -119,10 +144,11 @@ struct HomeView: View {
         Button { router.go(.drill(trainer.id)) } label: {
             HStack(spacing: 8) {
                 Text(trainer.label)
-                    .font(.system(size: 14))
+                    .font(.subheadline)
                     .foregroundStyle(Theme.midInk)
-                    .lineLimit(1)
+                    .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
                     .minimumScaleFactor(0.8)
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 4)
                 AccuracyChip(accuracy: trainer.accuracy)
             }
@@ -173,7 +199,7 @@ private struct AccuracyChip: View {
 
     var body: some View {
         Text(accuracy.map { "\($0)%" } ?? "new")
-            .font(.system(size: 12))
+            .font(.caption)
             .monospacedDigit()
             .foregroundStyle(chipColor)
             .padding(.horizontal, 9)

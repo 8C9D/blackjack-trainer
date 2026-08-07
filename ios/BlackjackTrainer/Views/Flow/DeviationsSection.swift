@@ -24,7 +24,7 @@ struct DeviationsSection: View {
         Section("Deviations") {
             if let indexNote {
                 Text(indexNote)
-                    .font(.system(size: 12))
+                    .font(.caption)
                     .foregroundStyle(Theme.midInk)
             }
             Picker("Practice", selection: practiceModeBinding) {

@@ -11,7 +11,7 @@ struct AdvisoryNoteView: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 12))
+            .font(.caption)
             .foregroundStyle(Theme.midInk)
             .multilineTextAlignment(alignment)
             // Take the height the wrapped text actually needs. Without it the

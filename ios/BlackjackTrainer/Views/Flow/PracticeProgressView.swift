@@ -174,7 +174,7 @@ struct ProgressBodyView: View {
                                 )
                         )
                         Text(bar.weekday)
-                            .font(.system(size: 11))
+                            .font(.caption2)
                             .foregroundStyle(Theme.muted)
                     }
                     .accessibilityElement(children: .ignore)
@@ -191,11 +191,11 @@ struct ProgressBodyView: View {
                         + Text(" this week")
                     if let trend {
                         Text(trend.label)
-                            .font(.system(size: 12))
+                            .font(.caption)
                             .foregroundStyle(trendColor(trend.direction))
                     }
                 }
-                .font(.system(size: 14))
+                .font(.subheadline)
                 .foregroundStyle(Theme.midInk)
                 .accessibilityElement(children: .combine)
             }
@@ -207,11 +207,11 @@ struct ProgressBodyView: View {
                         + Text(" this week")
                     if let paceTrend {
                         Text(paceTrend.label)
-                            .font(.system(size: 12))
+                            .font(.caption)
                             .foregroundStyle(trendColor(paceTrend.direction))
                     }
                 }
-                .font(.system(size: 14))
+                .font(.subheadline)
                 .foregroundStyle(Theme.midInk)
                 .accessibilityElement(children: .combine)
             }
@@ -219,7 +219,7 @@ struct ProgressBodyView: View {
                 "\(streakLabel) · goal \(countOf(goal, "hand"))/day · "
                     + "\(countOf(totalHands, "hand")) all time"
             )
-            .font(.system(size: 12))
+            .font(.caption)
             .foregroundStyle(Theme.midInk)
         }
     }
@@ -249,7 +249,7 @@ struct ProgressBodyView: View {
                     Divider().overlay(Theme.hairline)
                     GridRow {
                         Text(row.label)
-                            .font(.system(size: 13))
+                            .font(.footnote)
                             .foregroundStyle(Theme.ink)
                             .lineLimit(1)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -273,17 +273,17 @@ struct ProgressBodyView: View {
         card("\(group.trainer) — this week") {
             if group.outstanding.isEmpty {
                 Text("Nothing outstanding.")
-                    .font(.system(size: 12))
+                    .font(.caption)
                     .foregroundStyle(Theme.muted)
             } else {
                 ForEach(group.shown, id: \.label) { spot in
                     HStack {
                         Text(spot.label)
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.footnote.weight(.semibold))
                             .foregroundStyle(Theme.ink)
                         Spacer(minLength: 8)
                         Text(ProgressSummary.spotDetail(spot))
-                            .font(.system(size: 12))
+                            .font(.caption)
                             .foregroundStyle(Theme.muted)
                     }
                     .accessibilityElement(children: .combine)
@@ -294,17 +294,17 @@ struct ProgressBodyView: View {
                 // never silent, because the round below still drills all of them.
                 if group.hidden > 0 {
                     Text("+\(group.hidden) more this week")
-                        .font(.system(size: 12))
+                        .font(.caption)
                         .foregroundStyle(Theme.muted)
                 }
                 Button("Drill these misses") { onDrillMisses(group.drill) }
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.caption.weight(.semibold))
                     .buttonStyle(.bordered)
                     .tint(Theme.accentInk)
             }
             if !group.cleared.isEmpty {
                 Text("Cleared: \(ProgressSummary.clearedLabel(group.cleared))")
-                    .font(.system(size: 12))
+                    .font(.caption)
                     .foregroundStyle(Theme.muted)
             }
         }
@@ -314,7 +314,7 @@ struct ProgressBodyView: View {
 
     private func columnHeader(_ title: String, width: CGFloat?) -> some View {
         Text(title)
-            .font(.system(size: 10, weight: .semibold))
+            .font(.caption2.weight(.semibold))
             .tracking(0.8)
             .textCase(.uppercase)
             .foregroundStyle(Theme.muted)
@@ -326,7 +326,7 @@ struct ProgressBodyView: View {
 
     private func value(_ text: String, width: CGFloat, color: Color = Theme.midInk) -> some View {
         Text(text)
-            .font(.system(size: 13))
+            .font(.footnote)
             .monospacedDigit()
             .foregroundStyle(color)
             .frame(width: width, alignment: .trailing)
@@ -338,7 +338,7 @@ struct ProgressBodyView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.caption2.weight(.semibold))
                 .tracking(1.4)
                 .textCase(.uppercase)
                 .foregroundStyle(Theme.muted)
@@ -367,7 +367,7 @@ extension ProgressBodyView {
     var driftNote: some View {
         if let driftShape {
             Text(ProgressSummary.driftNote(driftShape))
-                .font(.system(size: 12))
+                .font(.caption)
                 .foregroundStyle(Theme.muted)
                 .padding(.top, 8)
         }

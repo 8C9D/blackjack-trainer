@@ -13,9 +13,10 @@ struct FlowStageView<Line: View>: View {
             Spacer(minLength: 0)
             HStack(spacing: 10) {
                 Text("DEALER SHOWS")
-                    .font(.system(size: 11))
+                    .font(.caption2)
                     .tracking(2)
                     .foregroundStyle(Theme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
                 CardImage(dealer, width: 44)
             }
             .padding(.bottom, 20)

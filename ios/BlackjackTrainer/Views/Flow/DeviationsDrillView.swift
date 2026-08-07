@@ -42,9 +42,32 @@ struct DeviationsDrillView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.ground.ignoresSafeArea())
         .onDisappear { model.exit() }
+        // The spoken verdict is VoiceOver's whole feedback loop (the web's
+        // sr-only status region); the count context is in the explanation.
+        .onChange(of: model.result) { _, result in
+            guard let result else { return }
+            AccessibilityNotification.Announcement(
+                result.correct
+                    ? "Correct: \(result.expectedAction.label)."
+                    : "Incorrect. Correct: \(result.expectedAction.label). \(model.explanation)"
+            ).post()
+        }
     }
 
-    private var drillBody: some View {
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    /// At the accessibility sizes the question and the six actions outgrow the
+    /// viewport, so the drill scrolls rather than squeezing the stage until the
+    /// question clips.
+    @ViewBuilder private var drillBody: some View {
+        if typeSize.isAccessibilitySize {
+            ScrollView { drillColumn }
+        } else {
+            drillColumn
+        }
+    }
+
+    private var drillColumn: some View {
         VStack(spacing: 0) {
             FlowTopBarView(
                 count: model.handsToday,
@@ -76,7 +99,7 @@ struct DeviationsDrillView: View {
                 onAction: { model.answer($0) }
             )
             Text("tap anywhere to continue")
-                .font(.system(size: 11))
+                .font(.caption2)
                 .tracking(1)
                 .textCase(.uppercase)
                 .foregroundStyle(Theme.muted)
