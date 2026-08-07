@@ -80,10 +80,18 @@ private func paceOf(timed: Int, millis: Int) -> Double? {
     return (Double(millis) / Double(timed) / 100).rounded() / 10
 }
 
+/// The calendar every day key is computed in: the device's time zone, but a
+/// fixed gregorian identifier. The web's `getFullYear` is always gregorian, and
+/// a device set to the Buddhist or Japanese calendar must not write year-2569
+/// keys that scramble the stored history and the iCloud mirror.
+var dayKeyCalendar: Calendar {
+    Calendar(identifier: .gregorian)
+}
+
 /// Local (not UTC) calendar date key — a hand practiced at 23:30 belongs to the
 /// user's day. Mirrors the web `localDateKey`.
 func localDateKey(_ date: Date) -> String {
-    let c = Calendar.current.dateComponents([.year, .month, .day], from: date)
+    let c = dayKeyCalendar.dateComponents([.year, .month, .day], from: date)
     return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
 }
 
@@ -249,7 +257,7 @@ final class PracticeHistoryStore: CloudSyncable {
     }
 
     private func dateKeyDaysAgo(_ back: Int) -> String {
-        let date = Calendar.current.date(byAdding: .day, value: -back, to: now()) ?? now()
+        let date = dayKeyCalendar.date(byAdding: .day, value: -back, to: now()) ?? now()
         return localDateKey(date)
     }
 

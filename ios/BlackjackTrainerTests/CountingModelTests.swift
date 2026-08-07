@@ -56,6 +56,44 @@ struct CountingModelTests {
         #expect(!model.trueCountAvailable)
     }
 
+    /// A12: the answer field validates shape, not magnitude — the regex accepts
+    /// a digit string wider than `Int`, which `Double` parses to ~1e20. That
+    /// answer must grade (as wrong) and format, never trap an `Int` conversion;
+    /// and a stored pace value near `Int.max` must stall the stream rather than
+    /// overflow the nanosecond multiply.
+    @Test func aPreposterousTypedCountGradesWrongInsteadOfTrapping() async throws {
+        #expect(CountingEngine().isValidIntegerAnswer("99999999999999999999"))
+        let model = try make(random: { 0 })
+        model.settings.mode = .trueCount
+        model.settings.trueCountSource = .classic
+        model.settings.numberOfCards = 3
+        model.settings.millisecondsBetweenCards = 100
+        model.start()
+        try await waitForState(model, .answering)
+        model.answer(1e20)
+        #expect(model.state == .feedback)
+        #expect(model.result?.isCorrect == false)
+        model.cancel()
+    }
+
+    @Test func formatsACountWiderThanIntInsteadOfTrapping() {
+        #expect(CountFormat.count(1e20) == "1e+20")
+        #expect(CountFormat.decks(1e20) == "100000000000000000000")
+        #expect(CountFormat.signedCount(1e20) == "+1e+20")
+    }
+
+    @Test func anAbsurdStoredPaceStillStartsStreamingInsteadOfTrapping() async throws {
+        let model = try make(random: { 0 })
+        model.settings.numberOfCards = 3
+        model.settings.millisecondsBetweenCards = Int.max
+        model.start()
+        #expect(model.state == .streaming)
+        // Give the stream task a beat to compute its interval (the old trap site).
+        try await Task.sleep(nanoseconds: 100_000_000)
+        #expect(model.state == .streaming)
+        model.cancel()
+    }
+
     @Test func runningCountRoundStreamsGradesAndRecords() async throws {
         // random == 0 → every card is 2♠ (Hi-Lo +1), so 3 cards → running count 3.
         let model = try make(random: { 0 })

@@ -158,7 +158,9 @@ enum ProgressSummary {
     }
 
     /// "2026-08-02" → "S". Parsed as a local date so the letter matches the day
-    /// the hands were recorded on.
+    /// the hands were recorded on. Keys are gregorian by construction
+    /// (`dayKeyCalendar`), so they must be read back in the same calendar
+    /// whatever the device is set to.
     static func weekdayInitial(_ dateKey: String) -> String {
         let parts = dateKey.split(separator: "-").compactMap { Int($0) }
         guard parts.count == 3 else { return "" }
@@ -166,7 +168,7 @@ enum ProgressSummary {
         components.year = parts[0]
         components.month = parts[1]
         components.day = parts[2]
-        guard let date = Calendar.current.date(from: components) else { return "" }
+        guard let date = dayKeyCalendar.date(from: components) else { return "" }
         return String(date.formatted(.dateTime.weekday(.narrow)).prefix(1))
     }
 

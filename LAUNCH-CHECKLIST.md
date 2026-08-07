@@ -131,7 +131,11 @@ Ordered by priority. Each item states its own done-when so completion is checkab
       The owner flips Settings > Pages > Source to GitHub Actions (O4); do not attempt that from the repo.
       **Done when:** the workflow is committed and its build step passes locally, with the exact URLs the owner will paste into App Store Connect written into this checklist.
 
-- [ ] **A12. Adversarial re-review of the shipping iOS surface.**
+- [x] **A12. Adversarial re-review of the shipping iOS surface.**
+      _Done 2026-08-06: recorded in `review/findings.md` under "Launch re-review of the shipping iOS surface", same confirmed/killed structure, every confirmed entry reproduced by executing it.
+      Four confirmed, all fixed the same day: L1 undecodable iCloud payloads wiping prefs/tally/drift (fixed under A5), L2 a stored card pace near `Int.max` trapping the counting stream's nanosecond multiply (probe run crashed the test runner; now `Duration`-based), L3 a typed count wider than `Int` trapping in true-count grading and again in `CountFormat` (probe hit the fatal conversion error; now clamped/`Int(exactly:)`), L4 day keys following the device calendar identifier (executed: Buddhist device writes `2569-08-11`; now a pinned gregorian `dayKeyCalendar`).
+      Four candidates killed (reset-resurrection via cloud, phantom hotkeys, stream-vs-backgrounding, data-reachable preconditions), with the backgrounding kill flagged for the A15 device-condition walk.
+      iOS suite green at 335 after the fixes._
       `review/findings.md` was written against the pre-trim app, and most of what it examined is now archived.
       Review what actually ships, on the same standard: reproduce every candidate by executing it, and kill what does not survive.
       **Done when:** findings are recorded with the same confirmed / killed / suspicion structure, and each confirmed one is either fixed or explicitly deferred here.
