@@ -119,7 +119,12 @@ Ordered by priority. Each item states its own done-when so completion is checkab
   Portrait-first phone layouts usually fail here in predictable ways: stretched single-column content, tap targets adrift, and the chart grid over-wide.
   **Done when:** every screen holds up in both orientations at both iPad sizes available in the simulator.
 
-- [ ] **A8. Re-take App Store screenshots.**
+- [x] **A8. Re-take App Store screenshots.**
+      _Done 2026-08-06, iPhone 6.9-inch set only (D1 cut the iPad set).
+      All six shots in `ios/AppStore/screenshots-6.9/` replaced with post-trim captures at exactly 1320x2868, same tellingly-named sequence as before: `1-daily-loop` (12/20 ring, 3-day streak, accuracy chips), `2-instant-feedback` (a graded miss with the rule spelled out and the correct/your-pick button states), `3-basic-strategy` (Soft 18 vs 3), `4-card-counting` (mid-stream), `5-deviations` (Hard 16 vs 10 · TC +4), `6-settings` (table rules and counting system).
+      Every shot shows only shipping surfaces; each state was posed through the drill models via new documented render seams (`init(model:onExit:)` on the three drill views, the pattern the showdown screen used pre-trim) and captured from the test target hosted in the app through the real render server (`drawHierarchy` on a scene-attached window), which draws the navigation bars and controls at full fidelity.
+      Deviation from the item's letter, recorded: the capture host is the app built for testing rather than a driven Release build - there is no UI-test target to drive one, and SwiftUI layout is configuration-independent.
+      Suite green at 335 after removing the throwaway probe; the seams stay._
       The existing `ios/AppStore/screenshots-6.9/` set is from 2026-07-24, twelve days before the trim, and shows features the app no longer has - a Guideline 2.3.3 rejection.
       The 6.9-inch device type is installable locally (`xcrun simctl create` against `com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max`), and iPad Pro 13-inch (M5) is already available.
       Capture from a Release build driven to each state, at 1320x2868 for iPhone and the 13-inch iPad size if D1 = universal.
