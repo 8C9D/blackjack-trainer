@@ -6,6 +6,93 @@ quoted verbatim.
 
 ---
 
+# Launch re-review of the shipping iOS surface (A12, 2026-08-06)
+
+The original review below examined the pre-trim app; most of what it covered is
+now archived. This pass reviewed what actually ships — Home, the two hand
+drills, the counting flow, the chart, Progress, Settings, Licenses, the stores
+and the iCloud mirror — on the same standard: every Confirmed entry was
+reproduced by executing it, and each is fixed on `main`.
+
+## Confirmed (all fixed 2026-08-06)
+
+### L1. An undecodable iCloud payload wiped local prefs, tally and drift state
+
+Found and fixed under A5; recorded in `docs/security-pass-2026-08-06.md`.
+`FlowPrefsStore.adoptFromCloud` reset prefs to defaults, and `MissTallyStore` /
+`CountDriftStore` wiped local state to empty, when the cloud bytes for their
+key did not decode — while `SessionStatsStore` and `PracticeHistoryStore`
+already refused. Reproduced with three failing tests; all three stores now
+refuse-and-keep-local. Tests: the four `undecodableCloud*` cases in
+`CloudSyncTests`.
+
+### L2. A stored card pace near `Int.max` crashed the counting drill at start
+
+`CountingModel.runStream` computed `UInt64(ms) * 1_000_000`, and the stored
+`millisecondsBetweenCards` is only lower-bounded (parity with the web's
+`numberAtLeast` merge). A hand-edited or cloud-written value near `Int.max`
+trapped the multiply the moment the stream started. **Reproduced:** a probe
+test crashed the runner ("Restarting after unexpected exit"). Fixed with
+`Duration.milliseconds` arithmetic (the web analogue: an absurd pace stalls,
+never crashes). Test:
+`CountingModelTests.anAbsurdStoredPaceStillStartsStreamingInsteadOfTrapping`.
+
+### L3. A typed count wider than `Int` crashed the app twice over
+
+`isValidIntegerAnswer` is a shape regex, so "99999999999999999999" passes and
+parses to ~1e20. In true-count mode `answer()` ran `Int(value)` — trap; in
+running-count mode the value survived to feedback where
+`CountFormat.count`'s `String(Int(value))` trapped instead. **Reproduced:**
+`Fatal error: Double value cannot be converted to Int because the result would
+be greater than Int.max` in a probe run. Fixed: `answer()` clamps through
+`intAnswer` (an absurd count grades as wrong, as on the web) and `CountFormat`
+converts via `Int(exactly:)` with a plain-string fallback. Tests:
+`aPreposterousTypedCountGradesWrongInsteadOfTrapping`,
+`formatsACountWiderThanIntInsteadOfTrapping`.
+
+### L4. Day keys followed the device calendar, not the gregorian keys the app stores
+
+`localDateKey`, `dateKeyDaysAgo`, the miss-tally cutoff and
+`ProgressSummary.weekdayInitial` all used `Calendar.current`, which honours the
+user's calendar setting. **Executed:** a Buddhist-calendar device writes
+`2569-08-11`, a Japanese-calendar device `0008-08-11`, and a stored gregorian
+key read back in a Buddhist calendar lands in gregorian year 1483 — so a
+calendar-setting change (or two iCloud devices with different region
+calendars) scrambles the streak walk, the prune cutoffs and the week strip.
+The web always writes gregorian (`getFullYear`). Fixed: all four sites now go
+through a pinned `dayKeyCalendar` (gregorian identifier, device time zone); the
+Home greeting's hour read keeps `Calendar.current`, where the identifier is
+irrelevant.
+
+## Killed
+
+- **Reset resurrects practice data from iCloud at next launch.** Every store's
+  `reset()` runs through `persist()` → `pushToCloud()`, so the cleared state
+  overwrites the cloud copy before the coordinator could ever re-adopt it.
+  Verified by reading all five reset paths; the stats-store path is also
+  covered by `CloudSyncTests`.
+- **Phantom actions from hardware-keyboard shortcuts (F1's iOS mirror).**
+  Still safe post-trim: `.keyboardShortcut` attaches only to rendered buttons
+  (`FlowActionsView`), so an unoffered action has no key to reach it.
+- **The counting stream races the clock across backgrounding.** The stream is
+  one main-actor `Task.sleep` loop; suspension pauses it and it resumes where
+  it left off. Read, not executed (needs a device); the A15 walk backgrounds
+  mid-drill as its check.
+- **Engine `preconditionFailure`s reachable from stored data.** Every one is
+  keyed off the bundled `charts.json`, which `GameData.loadValidated` verifies
+  at launch and tests verify in CI; stored/cloud data never reaches those
+  switches. (The A5 pass covers the stored-data paths separately.)
+
+## Notes for later items
+
+- The three-card hard-20 deal (A2) renders 3 × 88 pt cards plus spacing inside
+  the drill stage; verify it fits the smallest supported widths during the A15
+  walk and the A6 renders.
+- `weekdayInitial` letters localize with the device locale; display-only,
+  intentional.
+
+---
+
 ## Confirmed
 
 ### F1. The showdown grades keystrokes for actions the table never offered

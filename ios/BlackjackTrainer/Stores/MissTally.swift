@@ -286,7 +286,7 @@ final class MissTallyStore: CloudSyncable {
     }
 
     private func cutoffDate() -> String {
-        let date = Calendar.current.date(
+        let date = dayKeyCalendar.date(
             byAdding: .day,
             value: -(missTallyWindowDays - 1),
             to: now()

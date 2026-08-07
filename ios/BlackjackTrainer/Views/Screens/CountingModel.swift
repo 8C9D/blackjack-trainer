@@ -74,9 +74,12 @@ final class CountingModel {
     }
 
     private func runStream() async {
-        let interval = UInt64(max(1, settings.millisecondsBetweenCards)) * 1_000_000
+        // Duration arithmetic, not a nanosecond multiply: the stored pace is
+        // only lower-bounded (parity with the web merge), and a huge value
+        // must stall the stream rather than trap the conversion.
+        let interval = Duration.milliseconds(max(1, settings.millisecondsBetweenCards))
         while !Task.isCancelled {
-            try? await Task.sleep(nanoseconds: interval)
+            try? await Task.sleep(for: interval)
             if Task.isCancelled { return }
             let next = currentIndex + 1
             if next >= cards.count {
@@ -95,16 +98,22 @@ final class CountingModel {
         state = .answering
     }
 
+    /// The answer field validates shape, not magnitude, so a typed count wider
+    /// than `Int` must grade as wrong rather than trap the conversion.
+    private static func intAnswer(_ value: Double) -> Int {
+        Int(min(max(value.rounded(), -1_000_000_000), 1_000_000_000))
+    }
+
     func answer(_ value: Double) {
         guard state == .answering else { return }
         switch settings.mode {
         case .trueCount:
             if liveShoeTrueCount {
-                answerLiveShoe(Int(value))
+                answerLiveShoe(Self.intAnswer(value))
             } else {
                 let evaluated = engine.evaluateTrueCount(
                     cards,
-                    userTrueCount: Int(value),
+                    userTrueCount: Self.intAnswer(value),
                     decksRemaining: settings.decksRemaining,
                     system: system
                 )

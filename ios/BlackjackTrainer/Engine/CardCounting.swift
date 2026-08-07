@@ -178,8 +178,13 @@ enum CountingConstants {
 /// component formatters.
 enum CountFormat {
     /// Whole values render without a decimal; halves keep one place (`+1`, `0.5`).
+    /// `Int(exactly:)` because the value can be a typed answer wider than `Int`,
+    /// which must render (in exponent form) rather than trap the conversion.
     static func count(_ value: Double) -> String {
-        value == value.rounded() ? String(Int(value)) : String(value)
+        guard let whole = Int(exactly: value.rounded()), value == value.rounded() else {
+            return String(value)
+        }
+        return String(whole)
     }
 
     /// Signed delta label for the breakdown (`+1`, `-2`, `+0.5`).
@@ -189,7 +194,9 @@ enum CountFormat {
 
     /// Decks: whole as "5"; fractional to ≤2 decimals, trailing zeros trimmed.
     static func decks(_ value: Double) -> String {
-        if value == value.rounded() { return String(Int(value)) }
+        if let whole = Int(exactly: value.rounded()), value == value.rounded() {
+            return String(whole)
+        }
         var text = String(format: "%.2f", value)
         while text.hasSuffix("0") {
             text.removeLast()
