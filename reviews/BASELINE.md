@@ -21,17 +21,17 @@ reviewer re-running these commands gets the same result rather than a spurious f
 
 ## Summary
 
-| Gate | Command | Exit | Result |
-| --- | --- | --- | --- |
-| Web build | `npm run build` | 0 | PASS (1 budget warning) |
-| Web unit tests | `npm test` | 0 | PASS - 65 files, 1526 tests |
-| Web coverage gate | `npm run test:coverage` | 0 | PASS - all four thresholds met |
-| Web lint | `npm run lint` (tsc + prettier) | 0 | PASS |
-| Web E2E | `E2E_SERVER=dist npm run e2e` | 0 | PASS - 111 tests |
-| Parity fixture anti-drift | `npm run export:fixtures` + `git diff --exit-code -- ios/Fixtures` | 0 / 0 | PASS - no drift |
-| iOS format lint | `swiftformat --lint .` | 0 | PASS - 0/105 files need formatting |
-| iOS lint | `swiftlint lint --quiet` | 0 | PASS - no output |
-| iOS build + test | `xcodebuild -scheme BlackjackTrainer -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build test` | - | PASS - `** TEST SUCCEEDED **`, 335 tests in 38 suites |
+| Gate                      | Command                                                                                                   | Exit  | Result                                                |
+| ------------------------- | --------------------------------------------------------------------------------------------------------- | ----- | ----------------------------------------------------- |
+| Web build                 | `npm run build`                                                                                           | 0     | PASS (1 budget warning)                               |
+| Web unit tests            | `npm test`                                                                                                | 0     | PASS - 65 files, 1526 tests                           |
+| Web coverage gate         | `npm run test:coverage`                                                                                   | 0     | PASS - all four thresholds met                        |
+| Web lint                  | `npm run lint` (tsc + prettier)                                                                           | 0     | PASS                                                  |
+| Web E2E                   | `E2E_SERVER=dist npm run e2e`                                                                             | 0     | PASS - 111 tests                                      |
+| Parity fixture anti-drift | `npm run export:fixtures` + `git diff --exit-code -- ios/Fixtures`                                        | 0 / 0 | PASS - no drift                                       |
+| iOS format lint           | `swiftformat --lint .`                                                                                    | 0     | PASS - 0/105 files need formatting                    |
+| iOS lint                  | `swiftlint lint --quiet`                                                                                  | 0     | PASS - no output                                      |
+| iOS build + test          | `xcodebuild -scheme BlackjackTrainer -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build test` | -     | PASS - `** TEST SUCCEEDED **`, 335 tests in 38 suites |
 
 There are **no pre-existing failures**. The only non-clean signal anywhere in the
 baseline is one Angular budget **warning** (not an error) on a component stylesheet,
