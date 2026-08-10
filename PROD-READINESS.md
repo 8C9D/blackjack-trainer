@@ -163,6 +163,7 @@ Findings discovered after the work list froze at Review 0. **Not fixed in this r
 | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **N1** | P2       | Added by Review 0 (R0-5). `.github/workflows/pages.yml:12-15` and `.github/workflows/ci.yml:3-7` both fire independently on push to `main`. `pages.yml` runs only `npm ci` and `npm run build` before deploying: never the lint gate, the unit tests, the coverage gate, the parity anti-drift gate, or E2E. Any failure that is not a build failure publishes to the live site anyway. | Fixing it means editing a CI/CD workflow file, which this run may only report. For a trainer whose value is being right about strategy charts, the parity and unit gates are exactly the ones that do not guard the deploy.        |
 | **N2** | P2       | Added by Review 0 (R0-3), verified independently here with `npm ls --omit=dev --all`: `@angular/forms@22.1.0` is a declared runtime dependency that no file under `src` imports (`grep -rn "@angular/forms" src` returns nothing). It pulls `zod@4.4.3` and `@standard-schema/spec@1.1.0` into the production tree.                                                                     | Removing a dependency is a dependency change, which this run's scope forbids except to patch a CVE on the work list. Neither package reaches the shipped bundle and neither is in the advisory chain, so nothing is at risk today. |
+| **N3** | P2       | Added by REVIEW-pass2. Nothing tests `tools/` at all: `tsconfig.spec.json:9` scopes specs to `src`, so neither `tools/serve-dist.mjs` nor `tools/export-parity-fixtures.ts` has a test - and the latter feeds the CI parity anti-drift gate that keeps the iOS app in lockstep with the web engines.                                                                                    | Pre-existing, discovered after the work list froze, not a regression from this run's own changes. Adding a test target for `tools/` is scaffolding beyond any frozen finding.                                                      |
 
 ---
 
@@ -189,11 +190,11 @@ Ordering within the P1 band is by blast radius, smallest first, which is also th
 
 Terminal states are RESOLVED (with artifact evidence), DEFERRED (with reason), or REJECTED TWICE (reverted, objection recorded).
 
-| id   | status               |
-| ---- | -------------------- |
-| B1   | pending              |
-| R0-4 | pending              |
-| W1   | pending              |
-| W2   | pending              |
-| D1   | DEFERRED (see above) |
-| I1   | DEFERRED (see above) |
+| id   | status                                                                                                                                                                                                       |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| B1   | RESOLVED - artifact in [`reviews/ARTIFACTS.md`](reviews/ARTIFACTS.md#b1---toolsserve-distmjs-exits-the-process-on-a-malformed-request-url) (before/after reproduction), verdict in `reviews/REVIEW-pass2.md` |
+| R0-4 | pending                                                                                                                                                                                                      |
+| W1   | pending                                                                                                                                                                                                      |
+| W2   | pending                                                                                                                                                                                                      |
+| D1   | DEFERRED (see above)                                                                                                                                                                                         |
+| I1   | DEFERRED (see above)                                                                                                                                                                                         |
