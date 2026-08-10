@@ -171,14 +171,18 @@ Findings discovered after the work list froze at Review 0. **Not fixed in this r
 
 The P0 and P1 findings surviving Review 0 are the work list, and it is frozen here.
 Six findings, under the 15 cap, so nothing was trimmed to NEXT ROUND for capacity.
-Ordering within the P1 band is by blast radius, smallest first, which is also the pass order below.
+All four are P1, so the blast-radius tie-break (smallest first) that decides what survives
+a trim decides nothing here - nothing was trimmed. Execution therefore follows the numbered
+pass order, which is the structure the run is defined by.
+An earlier draft of this table listed the blast-radius order as the execution order; that
+was a misreading of the rule, which governs trimming, and is corrected here.
 
 | order | id   | pass                      | terminal state target |
 | ----- | ---- | ------------------------- | --------------------- |
 | 1     | B1   | Pass 2 - correctness      | RESOLVED              |
-| 2     | R0-4 | Pass 7 - tests            | RESOLVED              |
+| 2     | W2   | Pass 4 - failure behavior | RESOLVED              |
 | 3     | W1   | Pass 6 - build and deploy | RESOLVED              |
-| 4     | W2   | Pass 4 - failure behavior | RESOLVED              |
+| 4     | R0-4 | Pass 7 - tests            | RESOLVED              |
 | -     | D1   | -                         | DEFERRED              |
 | -     | I1   | -                         | DEFERRED              |
 
@@ -190,11 +194,11 @@ Ordering within the P1 band is by blast radius, smallest first, which is also th
 
 Terminal states are RESOLVED (with artifact evidence), DEFERRED (with reason), or REJECTED TWICE (reverted, objection recorded).
 
-| id   | status                                                                                                                                                                                                       |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| B1   | RESOLVED - artifact in [`reviews/ARTIFACTS.md`](reviews/ARTIFACTS.md#b1---toolsserve-distmjs-exits-the-process-on-a-malformed-request-url) (before/after reproduction), verdict in `reviews/REVIEW-pass2.md` |
-| R0-4 | pending                                                                                                                                                                                                      |
-| W1   | pending                                                                                                                                                                                                      |
-| W2   | pending                                                                                                                                                                                                      |
-| D1   | DEFERRED (see above)                                                                                                                                                                                         |
-| I1   | DEFERRED (see above)                                                                                                                                                                                         |
+| id   | status                                                                                                                                                                                                                                                                                                                                                                    |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B1   | RESOLVED - artifact in [`reviews/ARTIFACTS.md`](reviews/ARTIFACTS.md#b1---toolsserve-distmjs-exits-the-process-on-a-malformed-request-url) (before/after reproduction), verdict in `reviews/REVIEW-pass2.md`                                                                                                                                                              |
+| R0-4 | pending                                                                                                                                                                                                                                                                                                                                                                   |
+| W1   | pending                                                                                                                                                                                                                                                                                                                                                                   |
+| W2   | RESOLVED - artifact in [`reviews/ARTIFACTS.md`](reviews/ARTIFACTS.md), including proof the three behavioural tests fail when only the subscription is removed. Partly UNVERIFIED: no tooling here can induce a genuinely damaged worker, so what is proven is that the event reaches the shell and what the shell renders, not the browser's behaviour in the real state. |
+| D1   | DEFERRED (see above)                                                                                                                                                                                                                                                                                                                                                      |
+| I1   | DEFERRED (see above)                                                                                                                                                                                                                                                                                                                                                      |

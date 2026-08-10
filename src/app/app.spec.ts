@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { SwUpdate, type VersionEvent } from '@angular/service-worker';
+import { SwUpdate, type UnrecoverableStateEvent, type VersionEvent } from '@angular/service-worker';
 import { Subject } from 'rxjs';
 
 import { App } from './app';
@@ -10,11 +10,13 @@ import { resetStorageWriteRefused, writeJson } from './core/services/storage';
 
 describe('App', () => {
   let versionUpdates: Subject<VersionEvent>;
+  let unrecoverable: Subject<UnrecoverableStateEvent>;
   let reloadPage: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     localStorage.clear();
     versionUpdates = new Subject<VersionEvent>();
+    unrecoverable = new Subject<UnrecoverableStateEvent>();
     reloadPage = vi.fn();
     await TestBed.configureTestingModule({
       imports: [App],
@@ -22,7 +24,7 @@ describe('App', () => {
         provideRouter(APP_ROUTES),
         {
           provide: SwUpdate,
-          useValue: { isEnabled: true, versionUpdates },
+          useValue: { isEnabled: true, versionUpdates, unrecoverable },
         },
         { provide: PAGE_RELOAD, useValue: reloadPage },
       ],
@@ -35,6 +37,10 @@ describe('App', () => {
       currentVersion: { hash: 'old' },
       latestVersion: { hash: 'new' },
     });
+  }
+
+  function announceUnrecoverable(): void {
+    unrecoverable.next({ type: 'UNRECOVERABLE_STATE', reason: 'cached response missing' });
   }
 
   it('is a bare shell: a router outlet and no navigation chrome', async () => {
@@ -59,6 +65,27 @@ describe('App', () => {
     (compiled.querySelector('.update__later') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(compiled.querySelector('.update')).toBeNull();
+  });
+
+  // A worker that has lost cached files serves an app that half-works, and the
+  // shell was the only place that could say so.
+  it('asks for a reload, with no way to dismiss it, when the worker breaks', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.update')).toBeNull();
+
+    announceUnrecoverable();
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const banner = compiled.querySelector('.update');
+    expect(banner?.textContent).toContain('Reload to repair this app');
+    expect(banner?.textContent).not.toContain('A newer version');
+    expect(banner?.getAttribute('aria-label')).toBe('App needs reloading');
+    // Dismissing a broken app would hide the only signal the trainee gets.
+    expect(compiled.querySelector('.update__later')).toBeNull();
+
+    (compiled.querySelector('.update__reload') as HTMLButtonElement).click();
+    expect(reloadPage).toHaveBeenCalledOnce();
   });
 
   // Nothing else in the app can tell: the drill goes on grading, the session bar
