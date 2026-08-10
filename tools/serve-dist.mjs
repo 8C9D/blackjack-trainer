@@ -28,9 +28,26 @@ const MIME = {
 
 const shell = await readFile(join(ROOT, 'index.html'));
 
+function notFound(res) {
+  res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+  res.end('not found');
+}
+
 createServer(async (req, res) => {
-  const path = normalize(decodeURIComponent(new URL(req.url, `http://${HOST}`).pathname));
-  // normalize() collapses any ../ so the join below cannot escape ROOT.
+  let path;
+  try {
+    path = normalize(decodeURIComponent(new URL(req.url, `http://${HOST}`).pathname));
+    // normalize() collapses any ../ so the join below cannot escape ROOT.
+  } catch {
+    // A malformed percent-escape ('/%.js') makes decodeURIComponent throw. This
+    // handler is async, so an escaping throw is an unhandled rejection, and Node
+    // ends the process on those: one such request took the whole E2E server down
+    // and every test after it failed as a connection error. Deliberately scoped
+    // to the parse alone — widening it to the whole handler would turn any other
+    // fault in here into a silent 404.
+    notFound(res);
+    return;
+  }
   const ext = extname(path);
   if (ext === '') {
     // Extensionless → an SPA route ('/', '/drill/…'); serve the cached shell.
@@ -43,8 +60,7 @@ createServer(async (req, res) => {
     res.writeHead(200, { 'content-type': MIME[ext] ?? 'application/octet-stream' });
     res.end(body);
   } catch {
-    res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-    res.end('not found');
+    notFound(res);
   }
 }).listen(PORT, HOST, () => {
   console.log(`serving ${ROOT} at http://${HOST}:${PORT}`);
