@@ -41,10 +41,11 @@ createServer(async (req, res) => {
   } catch {
     // A malformed percent-escape ('/%.js') makes decodeURIComponent throw. This
     // handler is async, so an escaping throw is an unhandled rejection, and Node
-    // ends the process on those: one such request took the whole E2E server down
-    // and every test after it failed as a connection error. Deliberately scoped
-    // to the parse alone — widening it to the whole handler would turn any other
-    // fault in here into a silent 404.
+    // ends the process on those — one curl to that path used to kill this server
+    // outright. Since the process is the Playwright `webServer`, that would
+    // surface as a mass of unrelated connection failures rather than as anything
+    // pointing here. Deliberately scoped to the parse alone — widening it to the
+    // whole handler would turn any other fault in here into a silent 404.
     notFound(res);
     return;
   }
