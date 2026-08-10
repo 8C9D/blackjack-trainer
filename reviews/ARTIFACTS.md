@@ -69,3 +69,65 @@ path. `E2E_SERVER=dist npm run e2e` reports `111 passed` against the crashing se
 against the fixed one alike, because no test in `e2e/` requests a malformed URL. The
 evidence above is a manual reproduction, and REVIEW-pass2 (F2-3) independently reproduced
 both sides before accepting it.
+
+---
+
+## W2 - an unrecoverable service worker was never surfaced
+
+An unrecoverable worker cannot be induced from a test browser, so the artifact is the
+changed path driven directly, plus proof that the new tests are not vacuous.
+
+### The new tests fail when only the subscription is removed
+
+The signal and the template branch were left in place and **only** the
+`swUpdate.unrecoverable.subscribe(...)` block was deleted, isolating the behavioural
+change from the compile-time one:
+
+```
+$ npm test
+     × asks for a reload, with no way to dismiss it, when the worker breaks 7ms
+     × reports a worker that can no longer serve its version 13ms
+     × will not let a broken worker be dismissed 2ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+ Test Files  2 failed | 63 passed (65)
+      Tests  3 failed | 1529 passed (1532)
+
+exit 1
+```
+
+Restoring the subscription returns the suite to `1532 passed`. Three of the six new tests
+fail on the behaviour alone, at both the service level and the rendered-shell level; the
+other three pin the states that must _not_ change (an available update must not report
+recovery, a disabled worker must report nothing, and reload still works).
+
+### With the fix
+
+```
+$ npm test
+ Test Files  65 passed (65)
+      Tests  1532 passed (1532)      <- 1526 at BASELINE, +6
+
+$ npm run test:coverage
+Statements   : 96.11% ( 5290/5504 )   floor 94
+Branches     : 93.23% ( 2358/2529 )   floor 92
+Functions    : 93.28% ( 917/983 )     floor 90
+Lines        : 97.97% ( 4064/4148 )   floor 96
+
+$ npm run build        exit 0, same single budget warning as BASELINE
+$ npm run lint         exit 0
+$ E2E_SERVER=dist npm run e2e   111 passed (port 4200 confirmed free first)
+```
+
+### Rendering
+
+The recovery state reuses the existing banner's DOM and classes exactly - `.update`,
+`.update__copy`, `.update__reload` - and the shell test asserts each of them. It differs
+in two ways only: the copy, and the absence of `.update__later`.
+`src/app/app.scss:81-84` styles `.update__actions` as a plain flex row with a gap and no
+child-count or `:nth-child` rule, and `src/app/app.scss:87` styles buttons by class, so a
+single button lays out under the existing rules with no style change. No new CSS was added.
+
+**Known limitation, recorded rather than papered over:** the state cannot be produced in a
+real browser by any tooling in this repository, so it is UNVERIFIED end-to-end against an
+actual damaged service worker. What is verified is that the event now reaches the shell and
+what the shell renders when it does.

@@ -25,11 +25,27 @@ import { ThemeService } from './core/services/theme.service';
       </div>
     }
     <router-outlet />
-    @if (updates.updateReady()) {
-      <aside class="update" aria-label="App update available">
+    <!-- One banner, two states. An available update is an offer and can wait;
+         a worker that has lost its cached files is a fault the app cannot get
+         out of on its own, so that state keeps the reload and drops "Later". -->
+    @if (updates.updateReady() || updates.recoveryNeeded()) {
+      <aside
+        class="update"
+        [attr.aria-label]="
+          updates.recoveryNeeded() ? 'App needs reloading' : 'App update available'
+        "
+      >
         <div class="update__copy" role="status" aria-live="polite">
-          <strong>Update ready</strong>
-          <span>A newer version of Blackjack Trainer is available.</span>
+          @if (updates.recoveryNeeded()) {
+            <strong>Reload to repair this app</strong>
+            <span>
+              Some of its stored files are missing, so parts of it will not work. Reloading fetches
+              a fresh copy. Your practice is saved separately and is not affected.
+            </span>
+          } @else {
+            <strong>Update ready</strong>
+            <span>A newer version of Blackjack Trainer is available.</span>
+          }
           @if (updates.updateFailed()) {
             <span class="update__error" role="alert">Could not reload. Please try again.</span>
           }
@@ -43,14 +59,16 @@ import { ThemeService } from './core/services/theme.service';
           >
             {{ updates.reloading() ? 'Reloading…' : 'Reload' }}
           </button>
-          <button
-            class="update__later"
-            type="button"
-            [disabled]="updates.reloading()"
-            (click)="updates.dismiss()"
-          >
-            Later
-          </button>
+          @if (!updates.recoveryNeeded()) {
+            <button
+              class="update__later"
+              type="button"
+              [disabled]="updates.reloading()"
+              (click)="updates.dismiss()"
+            >
+              Later
+            </button>
+          }
         </div>
       </aside>
     }
