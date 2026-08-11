@@ -20,9 +20,26 @@ npm run e2e:report    # open the last HTML report
 ```
 
 The config's `webServer` starts `npm start` (http://127.0.0.1:4200) and reuses a
-dev server you already have running locally. `E2E_SERVER=dist` instead serves the
-production bundle with `tools/serve-dist.mjs`, so run `npm run build` first in
-that mode; CI (`CI` set) defaults to it.
+dev server you already have running locally. `E2E_SERVER=dist` instead builds the
+production bundle and serves it with `tools/serve-dist.mjs`; CI (`CI` set)
+defaults to it.
+
+The dist lane runs `npm run build` itself rather than trusting whatever `dist/`
+holds. It used to serve the directory as found, so the suite could report green
+against a bundle built from another commit — with `src/app/app.routes.ts` edited
+and no rebuild it still reported `13 passed`, exit 0, because the served bundle
+carried the old title.
+
+`E2E_SERVER` takes exactly `dist` or `serve`. Anything else stops the run:
+
+```
+Error: E2E_SERVER must be one of 'dist' | 'serve', got 'dsit'.
+Unset it to take the default ('dist' under CI, otherwise 'serve').
+```
+
+It used to be read as `=== 'dist'`, so every other spelling quietly selected the
+`serve` lane — a typo in this variable, including in the CI workflow that sets
+it, silently swapped which server the whole suite tested.
 
 The `dist` lane never reuses a server already on the port. If something else is
 listening it stops with
