@@ -544,3 +544,46 @@ open-ended, and the P3 items stayed in this round rather than moving to NEXT ROU
 
 Three findings discovered while verifying other findings (K1, K2, K3) are in ROUND 3 NEXT ROUND,
 named with their fixes rather than taken quietly.
+
+## Gates at the end of round 3
+
+Every gate re-run at `d1eea82`, the last commit that touches code. Nothing else was running on the
+machine, and all nine ran with the tool sandbox disabled.
+
+| #   | gate              | exit | result                                                                 |
+| --- | ----------------- | ---- | ---------------------------------------------------------------------- |
+| 1   | lint              | 0    | `tsc` x3 projects (app, spec, e2e) + prettier: clean                   |
+| 2   | build             | 0    | the inherited chart-page budget warning (P2-2), unchanged              |
+| 3   | unit tests        | 0    | 67 files, 1551 passed (baseline 1547; four added for N4)               |
+| 4   | coverage gate     | 0    | 96.16 / 93.28 / 93.22 / 98.00 (baseline 96.11 / 93.23 / 93.28 / 97.97) |
+| 5   | E2E               | 0    | `111 passed`, and see the distribution below                           |
+| 6   | parity anti-drift | 0    | 7 fixtures written, `git diff --exit-code -- ios/Fixtures` clean       |
+| 7   | swiftformat       | 0    | 0/105 files require formatting                                         |
+| 8   | swiftlint         | 0    | 0 violations, 0 serious in 105 files                                   |
+| 9   | iOS build + test  | 0    | `** TEST SUCCEEDED **`, 335 tests in 38 suites                         |
+
+**Nine of nine green.** Round 2 ended eight of nine and said so; this round ends nine of nine, and the
+gate that was red then is the one this round spent most of its effort on.
+
+### Gate 5 as a distribution, before and after
+
+The brief asks for this as a distribution rather than a figure, because a single green run cannot
+distinguish a fixed gate from a lucky one.
+
+| when                        | commit          | runs | failures | what failed                                            |
+| --------------------------- | --------------- | ---- | -------- | ------------------------------------------------------ |
+| baseline, before any change | `d413a7b`       | 10   | **0**    | -                                                      |
+| after M2's fix only         | stage 1, pre-M4 | 30   | **1**    | `no hand is offered off a shoe past its cut card` (M4) |
+| after M2 + M4               | `406a32e`       | 30   | **0**    | -                                                      |
+| closing, all changes        | `d1eea82`       | 12   | **0**    | -                                                      |
+
+82 full-suite runs in this round, one failure, and that failure is a second defect this round then
+fixed. The full-suite instrument is one observation per test per run, so the per-test evidence is
+what the fixes are actually judged on: the M2 test was measured at **33 failures in 600 executions**
+before (5.5%, three independent samples, two of them a reviewer's) and **0 in 460** after, plus 62
+further repeats by two reviewers at the shipping commits. The M4 test's failure was made
+deterministic (5 of 5 with a 5.2 s stream against the old fixed budget) and then absent (5 of 5).
+
+A caveat this round earned the hard way: two E2E runs cannot share this machine. Both lanes bind
+`127.0.0.1:4200`, the dist lane refuses a port it did not start, and one of the 30-run blocks above
+was corrupted when a reviewer killed a live server it took for an orphan. That is finding K2.

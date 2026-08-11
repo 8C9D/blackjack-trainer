@@ -1460,3 +1460,22 @@ The coverage figures moved from the baseline's `96.11 / 93.23 / 93.28 / 97.97` b
 code and tests to `src/app/app.ts` and `src/app/app.spec.ts`; the file count is unchanged at 74 and
 still contains nothing under `tools/` (M3). Unit tests are 1551 rather than the baseline's 1547: four
 added for N4. The iOS gates are untouched by this round and reproduce the baseline exactly.
+
+## Closing gate 5, as a distribution
+
+Twelve consecutive full-suite runs at `d1eea82`, the round's last code commit, with nothing else on
+the machine:
+
+```console
+$ for i in $(seq 1 12); do E2E_SERVER=dist npm run e2e > run$i.txt 2>&1; echo "run$i exit=$?"; done
+run1 exit=0   111 passed (38.1s)     run7  exit=0   111 passed (30.3s)
+run2 exit=0   111 passed (37.3s)     run8  exit=0   111 passed (37.6s)
+run3 exit=0   111 passed (38.2s)     run9  exit=0   111 passed (38.2s)
+run4 exit=0   111 passed (35.9s)     run10 exit=0   111 passed (37.0s)
+run5 exit=0   111 passed (40.0s)     run11 exit=0   111 passed (38.1s)
+run6 exit=0   111 passed (36.2s)     run12 exit=0   111 passed (38.9s)
+```
+
+(Two columns for width; the loop ran them in order.) The round's full ledger of gate-5 runs -
+10 before, 30 with M2's fix alone, 30 with both, 12 at the close - is in `PROD-READINESS.md` under
+"Gates at the end of round 3".
