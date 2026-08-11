@@ -7,7 +7,11 @@
     "types": []
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.spec.ts"],
+  // `*.test.ts` is a unit-test name the runner collects (angular.json) and
+  // `tsconfig.spec.json` typechecks with the vitest globals. Without it here,
+  // the app project - which has `types: []` - would also compile it and report
+  // `describe`/`it`/`expect` as undefined names in a file that is correct.
+  "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"],
   "angularCompilerOptions": {
     "extendedDiagnostics": {
       "checks": {

@@ -7,7 +7,9 @@
     "types": ["vitest/globals"]
   },
   // `**/*.test.ts` is collected by the unit-test target (angular.json, resolved
-  // against sourceRoot), so it has to be typechecked here too: a file the runner
-  // executes and no tsconfig covers is the gap M1 names, with a second doorway.
+  // against sourceRoot). It has to be typechecked *here*, with the runner's
+  // globals, rather than by the app project, which would compile it under
+  // `types: []` and call `describe` an undefined name; `tsconfig.app.json`
+  // excludes it for that reason.
   "include": ["src/**/*.d.ts", "src/**/*.spec.ts", "src/**/*.test.ts"]
 }
