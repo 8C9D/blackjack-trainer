@@ -470,23 +470,35 @@ parity reported success.**
 
 > **Correction.** This section first continued "The Swift target would also pass, because it asserts
 > against the same weakened file." That is false, and it was the load-bearing half of an argument that
-> rated N3 P1. REVIEW-round2-stage3 (F3-2) found it; confirmed here by running the iOS gate against
-> the degraded fixtures:
+> rated N3 P1. REVIEW-round2-stage3 (F3-2) found it. N3 is re-triaged back to **P2**.
+>
+> **A second correction, to the first one.** The evidence originally quoted here was an `xcodebuild`
+> transcript reading `(file.vectors.count → 80) == 2720` and `(file.count → 1840) == 62560`. Those
+> numbers cannot come from the counting-systems cut described above - under that cut the
+> basic-strategy and deviation fixtures are byte-identical (`2720` and `62560`, re-measured). They came
+> from the **hand-axis** cut used for R2-7, and were filed under the wrong mutation. Found by
+> REVIEW-round2-final (FF-1). What the counting-systems cut actually does to the iOS gate, measured:
 >
 > ```console
 > $ xcodebuild -scheme BlackjackTrainer -destination '...iPhone 16 Pro' build test
-> ✘ Test everyBasicStrategyVectorMatches() recorded an issue at BasicStrategyParityTests.swift:15:9:
->   Expectation failed: (file.vectors.count → 80) == 2720
-> ✘ Test everyDeviationVectorMatches() recorded an issue at DeviationParityTests.swift:19:9:
->   Expectation failed: (file.count → 1840) == 62560
-> ** TEST FAILED **
+> BlackjackTrainer/AppModel.swift:95: Fatal error: bundled game data failed to load or validate
+>   BlackjackTrainer (35713) encountered an error (Early unexpected exit, operation never finished
+>   bootstrapping - no restart will be attempted...)
+> $ grep -c "TEST FAILED" ; grep -c "TEST SUCCEEDED"
+> 1 ; 0
 > ```
 >
-> `BasicStrategyParityTests.swift:15`, `DeviationParityTests.swift:19` and `CountingParityTests.swift:14`
-> hard-code 2720, 62560 and 58. Parity is not silently unprotected, and N3 is re-triaged back to **P2**.
-> What these checks add is real but narrower: they run in the **web** CI, which has no path filter,
-> whereas `.github/workflows/ios-ci.yml:6` runs only on changes under `ios/**`; and they cover
-> dimensions the three Swift totals do not pin.
+> The app crashes at launch and the test runner never connects, so **zero tests execute** - which means
+> `CountingParityTests.swift:14`'s hard-coded `58`, named here as the assertion that catches it, is
+> never reached. The iOS gate does catch this cut, but by the fail-loud `preconditionFailure` on
+> corrupt bundled data, not by a parity assertion.
+>
+> The hand-axis cut is the one the parity assertions catch:
+> `BasicStrategyParityTests.swift:15` and `DeviationParityTests.swift:19` hard-code 2720 and 62560 and
+> fail with the transcript quoted above. Either way parity is not silently unprotected, so the
+> re-triage to P2 stands on both mutations. What these checks add is real but narrower: they run in the
+> **web** CI, which has no path filter, whereas `.github/workflows/ios-ci.yml:6` runs only on changes
+> under `ios/**`; and they cover dimensions the Swift totals do not pin.
 
 ### Defect absent - and the non-vacuity proof
 
@@ -658,39 +670,50 @@ laid out in normal flow at `top: 700` - a measurement that proved nothing and is
 the attribute from a node the shell's own template rendered gives `position: fixed` and the real
 geometry:
 
+> **This measurement was wrong twice, and the second version was published. Both are corrected here.**
+> The first attempt omitted the `_ngcontent-*` attribute entirely; the second stamped it on the
+> `<aside>` **but not on its children**, so `.update__copy` and `.update__actions` still matched
+> nothing and the banner came out 42 px short - `top: 580.22, height: 103.78`. On that geometry Hit,
+> Stand and Double appeared to keep clickable centres, and this section published a "correction"
+> saying round 1's Hit-button claim did not reproduce. REVIEW-round2-final (FF-2) showed it does.
+> Emulated encapsulation stamps **every** styled element, so the probe now applies the attribute to
+> the subtree, which reproduces the reviewer's figures exactly.
+
 ```json
 {
-  "scopeAttr": "_ngcontent-ng-c1058975690",
-  "bannerPosition": "fixed",
-  "bannerRect": { "top": 580.21875, "bottom": 684, "height": 103.78125 },
+  "position": "fixed",
+  "flexDirection": "column",
+  "bannerRect": { "top": 538.03, "bottom": 684, "height": 145.97 },
   "scroll": { "scrollHeight": 700, "clientHeight": 700 }
 }
 ```
 
-The page does not scroll - `scrollHeight === clientHeight === 700`, matching round 1 - so nothing can
-be scrolled out from under the banner. All five action controls found intersect it:
+375 px is below the `@media (max-width: 34rem)` breakpoint at `app.scss:118`, so the banner stacks
+into a column and is 146 px tall, not 104. The page does not scroll -
+`scrollHeight === clientHeight === 700`, matching round 1 - so nothing can be scrolled out from under
+it. **All six action controls intersect the banner, and all six have their centre covered**
+(`elementFromPoint` at each centre returns a node inside `.update`):
 
-| control   | top | bottom | intersects banner | element at its centre |
-| --------- | --- | ------ | ----------------- | --------------------- |
-| Hit       | 543 | 597    | yes               | `SPAN.acts__label`    |
-| Stand     | 543 | 597    | yes               | `SPAN.acts__label`    |
-| Double    | 543 | 597    | yes               | `SPAN.acts__label`    |
-| Split     | 605 | 660    | yes               | **`ASIDE.update`**    |
-| Surrender | 605 | 660    | yes               | **`ASIDE.update`**    |
+| control   | top | bottom | intersects banner | centre covered by banner |
+| --------- | --- | ------ | ----------------- | ------------------------ |
+| Hit       | 543 | 597    | yes               | **yes**                  |
+| Stand     | 543 | 597    | yes               | **yes**                  |
+| Double    | 543 | 597    | yes               | **yes**                  |
+| Split     | 605 | 660    | yes               | **yes**                  |
+| Surrender | 605 | 660    | yes               | **yes**                  |
+| Insurance | 605 | 660    | yes               | **yes**                  |
 
-**The finding reproduces; round 1's cited example does not.** Split and Surrender are unreachable -
-`elementFromPoint` at their centres returns the banner itself. Hit, Stand and Double have their top
-~17 px covered but their centres remain clickable, so round 1's specific claim about the Hit button
-is wrong as written. The correction does not soften the finding: two controls are entirely
-unclickable while the banner is up, and the recovery state of that banner has no "Later" button to
-dismiss it with.
+**Round 1's finding reproduces in full, including the cited example**, and the "correction" this
+section briefly carried is withdrawn. The close button at the top of the screen (`top: 14`) is the
+only control left reachable.
 
-**Re-triaged P2 → P2 (unchanged), but for a different reason.** Round 1 deferred it as "pre-existing".
-On evidence it is a genuine user-facing defect, not a cosmetic one: in the recovery state a trainee
-cannot split or surrender and cannot dismiss the thing stopping them. It stays P2 rather than rising
-because the update-ready state - the common one - keeps its dismiss button, and because the fix is a
-layout rework of either the banner or the drill, which no finding on this work list scopes and which
-would need design judgement this run should not exercise alone.
+**Re-triaged P2 → P2 (unchanged), on better evidence than round 1 had.** It is a genuine user-facing
+defect rather than a cosmetic overlap: while the banner is up, the drill cannot be played at all at
+this viewport. It stays P2 because the update-ready state - the common one - carries a "Later" button
+that dismisses it, so a trainee is blocked only until they press it; the recovery state has no
+dismiss, but it only occurs when the service worker is already unrecoverable and the app is asking to
+be reloaded. It is not raised further because the fix is a layout rework of either the banner or the
+drill, which no finding on this work list scopes.
 
 ### N1 - a red CI does not stop the deploy
 
@@ -763,13 +786,33 @@ pages-bundle:
         # Every manifest URL must be relative, or an installed copy launches at
         # the origin root — which is a different project on this shared host.
         node -e '
-          const m = require("./'"$d"'/manifest.webmanifest");
+          const fs = require("node:fs");
+          const m = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
           for (const [k, v] of [["start_url", m.start_url], ["scope", m.scope]])
             if (!String(v).startsWith("./")) { console.error(k + " is " + v); process.exit(1); }
           for (const i of m.icons)
             if (String(i.src).startsWith("/")) { console.error("icon " + i.src); process.exit(1); }
-        '
+        ' "$d/manifest.webmanifest"
 ```
+
+> **This snippet was broken as first recorded and is corrected above.** It used
+> `require("…/manifest.webmanifest")`, which Node loads through its **JavaScript** loader because the
+> extension is not `.json`, so it threw `SyntaxError: Unexpected token ':'` on the manifest's first
+> key - failing the step against a bundle that satisfies every property it checks. Found by
+> REVIEW-round2-final (FF-3), re-confirmed here:
+>
+> ```console
+> $ node -e 'const m = require("./dist/blackjack-trainer/browser/manifest.webmanifest");'
+> SyntaxError: Unexpected token ':'
+> $ node -e 'const m=JSON.parse(require("node:fs").readFileSync("./dist/.../manifest.webmanifest","utf8")); console.log("ok", m.start_url, m.scope);'
+> ok ./ ./
+> ```
+>
+> A patch that is recorded but never run is exactly where this kind of defect survives, which is an
+> argument for applying it rather than filing it.
+
+Both patches are quoted at the indentation they need **inside their job's `steps:` list** (six spaces
+for `- run:`); pasting them at column 0 will not parse.
 
 This is a check beside the gate rather than a gate that fails, which the round's brief prefers against;
 it is offered because the alternative - running the whole E2E suite against a sub-path mount - means
@@ -829,9 +872,18 @@ carried into the next stage's review range, by a different fresh reviewer.**
 | `a3f5dee..7ac22db` | `REVIEW-round2-stage3.md` | **stage 2's remediation** + stage 3 |
 | `7ac22db..HEAD`    | `REVIEW-round2-final.md`  | **stage 3's remediation** + stage 4 |
 
-Every commit on the branch falls inside exactly one stage range, and no remediation commit is reviewed
-by the reviewer it answers. Whether that held is checkable with `git log --oneline 0856b7d..HEAD` and
-the four ranges above; the final review is asked to check it.
+Every commit up to the final review's range falls inside exactly one stage range, and no remediation
+commit is reviewed by the reviewer it answers. REVIEW-round2-final checked this and confirmed it:
+"8 commits, 4 ranges, 2 each, exact partition; each review file's declared range matches the artifact's
+table".
+
+**The limit of the scheme, stated rather than hidden.** The last remediation in any such chain is
+answered by no further reviewer - here, the commit responding to REVIEW-round2-final's own findings
+(FF-1 to FF-6). What makes that acceptable is a fact rather than an argument: that commit changes
+**no code**. It touches `PROD-READINESS.md` and this file only, so every source, test and
+configuration change on this branch was reviewed by a fresh reviewer who did not author it. A run that
+ended with a code change in its final remediation would not be able to say that, and would owe one
+more review.
 
 ### D1 - the support address is still a placeholder
 
@@ -889,3 +941,54 @@ stage 3's:
 | `xcodebuild build test`       | TEST SUCCEEDED, 335           | TEST SUCCEEDED, 335           |
 
 The `111 passed` figure is a single observation, not a claim of determinism - see M2.
+
+---
+
+## Closing gates - and the one that is not deterministic
+
+Run after the stage-4 remediation, which is the last change on the branch.
+
+| gate                          | round-2 BASELINE              | at the branch tip                                         |
+| ----------------------------- | ----------------------------- | --------------------------------------------------------- |
+| `npm run lint`                | 0                             | 0                                                         |
+| `npm run build`               | 0, 1 budget warning           | 0, same 1 budget warning                                  |
+| `npm test`                    | 1533 passed (65 files)        | 1547 passed (67 files)                                    |
+| `npm run test:coverage`       | 96.11 / 93.23 / 93.28 / 97.97 | 96.11 / 93.23 / 93.28 / 97.97                             |
+| `E2E_SERVER=dist npm run e2e` | 111 passed                    | **111 passed in 5 of 7 runs; 110 passed + 1 failed in 2** |
+| fixture anti-drift            | no drift                      | no drift                                                  |
+| `swiftformat --lint`          | 0                             | 0                                                         |
+| `swiftlint`                   | 0                             | 0                                                         |
+| `xcodebuild build test`       | TEST SUCCEEDED, 335           | TEST SUCCEEDED, 335                                       |
+
+**Gate 5 is not reported as green, because it is not reliably green.** The closing gate run failed:
+
+```console
+  ✘   90 [chromium] › e2e/smoke/showdown.e2e.ts:65:7 › post-count showdown › returning to counting keeps the drill going (6.5s)
+    Error: expect(locator).toBeHidden() failed
+    > 74 |     await expect(page.getByRole('region', { name: 'Showdown vs dealer' })).toBeHidden();
+  1 failed
+  110 passed (38.8s)
+exit=1
+```
+
+Three further full-suite runs immediately afterwards, at the same commit:
+
+```console
+run1 exit=0   111 passed (37.4s)
+run2 exit=0   111 passed (40.8s)
+run3 exit=1   1 failed / 110 passed (39.2s)
+```
+
+This is **M2**, pre-existing, in a spec this run never touched, and it is the fourth independent
+reproduction: the stage-2 reviewer saw it 2 times in 7 full-suite runs, the stage-3 reviewer 4 in 60
+repetitions, the final reviewer 1 in 30, and this run 2 in 7. An earlier version of the ledger recorded
+that I could not reproduce it. I can, and the row is corrected rather than left standing.
+
+Two things follow, and both are stated rather than smoothed over:
+
+1. **Every `111 passed` in this run's records is one observation.** None of them establishes that gate
+   5 is deterministic, and the stage tables above should be read that way.
+2. **The run does not end with all nine gates green**, and saying otherwise would be the exact defect
+   this round was convened to remove. Eight are green. The ninth is a coin at the margin: red about
+   one run in four here, and masked in CI by `retries: 1` (`playwright.config.ts:20`). M2 is raised to
+   **P1** and should be the first item of the next round.
