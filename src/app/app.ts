@@ -1,4 +1,13 @@
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  effect,
+  ElementRef,
+  HostListener,
+  inject,
+  signal,
+  viewChild,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 
 import { AppUpdateService } from './core/services/app-update.service';
@@ -30,6 +39,7 @@ import { ThemeService } from './core/services/theme.service';
          out of on its own, so that state keeps the reload and drops "Later". -->
     @if (updates.updateReady() || updates.recoveryNeeded()) {
       <aside
+        #updateBanner
         class="update"
         [attr.aria-label]="
           updates.recoveryNeeded() ? 'App needs reloading' : 'App update available'
@@ -80,6 +90,10 @@ import { ThemeService } from './core/services/theme.service';
       </aside>
     }
   `,
+  // The banner floats over the screen, so the screen has to know how much of
+  // itself is behind it. Published as a custom property the layouts read; 0 when
+  // there is no banner, which is every render but the two that raise one.
+  host: { '[style.--update-space]': 'bannerSpace() + "px"' },
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './app.scss',
 })
@@ -89,4 +103,41 @@ export class App {
   protected readonly theme = inject(ThemeService);
   protected readonly updates = inject(AppUpdateService);
   protected readonly storageRefused = storageWriteRefused;
+
+  private readonly banner = viewChild<ElementRef<HTMLElement>>('updateBanner');
+
+  /** Pixels at the bottom of the viewport the banner is sitting in front of. */
+  protected readonly bannerSpace = signal(0);
+
+  constructor() {
+    // Re-measure whenever the banner appears or disappears, and whenever its
+    // content changes height: the recovery copy is longer than the offer's, and
+    // a failed reload adds a line to both.
+    effect(() => {
+      this.updates.recoveryNeeded();
+      this.updates.updateFailed();
+      this.measureBanner();
+    });
+  }
+
+  // The banner is a row above the 34rem breakpoint and a column below it, so a
+  // rotation changes its height without changing any signal.
+  @HostListener('window:resize')
+  protected onViewportResize(): void {
+    this.measureBanner();
+  }
+
+  private measureBanner(): void {
+    const element = this.banner()?.nativeElement;
+    if (!element) {
+      this.bannerSpace.set(0);
+      return;
+    }
+    const rect = element.getBoundingClientRect();
+    // Its own height plus the gap it floats above, in one read. A zero height is
+    // a layout-less environment (jsdom), not a zero-height banner, and reserving
+    // the whole viewport there would be worse than reserving nothing.
+    const space = rect.height === 0 ? 0 : window.innerHeight - rect.top;
+    this.bannerSpace.set(Math.max(0, Math.ceil(space)));
+  }
 }

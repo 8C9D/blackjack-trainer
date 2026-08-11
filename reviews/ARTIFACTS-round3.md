@@ -911,3 +911,269 @@ existing gate fail when the thing it names is broken, rather than add a check be
 | 4 coverage          | exit 0, 96.11 / 93.23 / 93.28 / 97.97 - unchanged |
 | 5 E2E (`CI=true`)   | exit 0, `111 passed`, 1 worker                    |
 | 6 parity anti-drift | exit 0, no drift                                  |
+
+## N4 - the update banner covers the whole drill
+
+**Severity: P2** (round 2's, re-derived and left there: while the banner is up the drill cannot be
+played at all at this viewport, but the common state carries a "Later" that dismisses it).
+
+### The state was induced, not injected - and that is the whole method
+
+Round 2 measured this by injecting the shell's markup into a live page, got it wrong twice, published
+a "correction" of round 1 that was itself wrong, and had to withdraw it. The failure was that
+Angular's emulated encapsulation stamps `_ngcontent-*` on **every** styled element and the probe
+stamped only the root, so the banner's children matched none of their rules.
+
+No markup is injected here. A **development** build keeps Angular's global debug API, so the probe
+reaches the live `App` component and sets the same signal `AppUpdateService` sets on a
+`VERSION_READY` event:
+
+```js
+const cmp = window.ng.getComponent(document.querySelector('app-root'));
+cmp.updates.updateReady.set(true);
+window.ng.applyChanges(cmp);
+```
+
+The banner that appears is the component's own template, with the component's own stylesheet, laid
+out by Chromium. Only the trigger is simulated. The probe asserts the API is really there
+(`typeof window.ng?.getComponent === 'function'`) and refuses to measure anything if it is not, and
+it counts `.update` nodes before and after (0 → 1) so a probe that measured nothing could not report
+a geometry. It serves its own bundle on its own port, so it cannot disturb the E2E suite.
+
+### Defect present - at `b09470d`, 375x700, `/drill/basic-strategy`
+
+```json
+{
+  "position": "fixed",
+  "flexDirection": "column",
+  "bannerRect": { "top": 538.03, "bottom": 684, "height": 145.97 },
+  "updateSpaceVar": "",
+  "scroll": { "scrollHeight": 700, "clientHeight": 700 },
+  "innerHeight": 700
+}
+```
+
+| control   | top | bottom | intersects banner | centre covered | `elementFromPoint` at its centre |
+| --------- | --- | ------ | ----------------- | -------------- | -------------------------------- |
+| Hit       | 543 | 597    | yes               | **yes**        | `STRONG` (inside `.update`)      |
+| Stand     | 543 | 597    | yes               | **yes**        | `STRONG`                         |
+| Double    | 543 | 597    | yes               | **yes**        | `STRONG`                         |
+| Split     | 605 | 660    | yes               | **yes**        | `DIV.update__actions`            |
+| Surrender | 605 | 660    | yes               | **yes**        | `BUTTON.update__reload`          |
+| Insurance | 605 | 660    | yes               | **yes**        | `BUTTON.update__later`           |
+
+`covered centres: 6 of 6`. Round 2's figures reproduce **exactly** - `top: 538.03`, `height: 145.97`,
+column layout below the 34rem breakpoint, `scrollHeight === clientHeight === 700` so nothing can be
+scrolled out from under it - this time from a banner the app raised rather than one a probe built.
+
+A second instance of the same defect, which no round had recorded, on a screen that **does** scroll.
+Settings at maximum scroll, banner up (the last control that belongs to the page, not to the banner):
+
+```console
+BEFORE settings@maxscroll: {"maxScrollTop":1289,"scrollTop":1289,
+  "lastOwnControl":"Reset practice data","bottom":651,"bannerTop":538.03,
+  "centreCoveredByBanner":true}
+```
+
+Scrolling to the end does not help: the page ends exactly at the viewport floor, and the banner is
+in front of the last 146 px of it.
+
+### Fix
+
+The shell measures what the banner stands in front of and publishes it; the layouts subtract it.
+
+- `src/app/app.ts` - a `viewChild` on the banner, an `effect` that re-measures when it appears or its
+  content changes (the recovery copy is longer, and a failed reload adds a line), a
+  `@HostListener('window:resize')` for the row/column breakpoint, and a host binding
+  `[style.--update-space]`. The measurement is `window.innerHeight - rect.top`: its own height plus
+  the gap it floats above, in one read.
+- `src/app/app.scss` - `:host { padding-bottom: var(--update-space, 0px) }`, which is what lets a
+  **scrolling** screen scroll its last control clear.
+- the three viewport-sized screens (`drill-page.scss`, `home-page.component.scss`,
+  `card-counting-page.component.scss`) - `min-height: calc(100dvh - var(--update-space, 0px))`, so
+  they shrink instead of needing to be scrolled at all.
+
+With no banner the property is `0px` and every computed value is what it was: `calc(100dvh - 0px)` is
+`100dvh`, `padding-bottom: 0px` is nothing. That is the ordinary case, i.e. every render but the two
+that raise a banner.
+
+### Defect absent - same probe, same viewport, same screen
+
+```json
+{
+  "position": "fixed",
+  "flexDirection": "column",
+  "bannerRect": { "top": 538.03, "bottom": 684, "height": 145.97 },
+  "updateSpaceVar": "162px",
+  "scroll": { "scrollHeight": 700, "clientHeight": 700 }
+}
+```
+
+| control   | top (was) | bottom (was) | intersects banner | centre covered |
+| --------- | --------- | ------------ | ----------------- | -------------- |
+| Hit       | 381 (543) | 435 (597)    | no                | **no**         |
+| Stand     | 381 (543) | 435 (597)    | no                | **no**         |
+| Double    | 381 (543) | 435 (597)    | no                | **no**         |
+| Split     | 443 (605) | 498 (660)    | no                | **no**         |
+| Surrender | 443 (605) | 498 (660)    | no                | **no**         |
+| Insurance | 443 (605) | 498 (660)    | no                | **no**         |
+
+`covered centres: 0 of 6`, and the banner has not moved: it is still at `top: 538.03` with
+`height: 145.97`. The drill moved up by exactly the 162 px the shell published. The page still does
+not scroll (`700 === 700`), so nothing was traded for it.
+
+The **recovery** state - the one with no "Later", which a trainee cannot dismiss - is taller, and the
+reserve follows it rather than being a constant tuned to the offer:
+
+```console
+after-drill-recovery: {"updateSpace":"196px","bannerTop":504.03,"bannerHeight":179.97,
+  "scrollHeight":700,"clientHeight":700}
+```
+
+And the scrolling screen:
+
+```console
+AFTER  settings@maxscroll: {"maxScrollTop":1451,"scrollTop":1451,
+  "lastOwnControl":"Reset practice data","bottom":489,"bannerTop":538.03,
+  "centreCoveredByBanner":false}
+```
+
+`maxScrollTop` grew by exactly 162, and the last control clears the banner by 49 px.
+
+**It still renders correctly.** Screenshots at 375x700 with each banner state up were read, not just
+measured: the drill keeps its progress bar, dealer card, hand, the "Hard 10 vs 7" question and all
+six action buttons, with the banner below them and nothing clipped or overlapping. The 196 px
+recovery reserve is the tightest case and it also holds.
+
+### Non-vacuity
+
+The behavioural half is guarded by three new unit tests in `src/app/app.spec.ts` (the geometry is
+stubbed because jsdom has no layout engine; what they assert is the wiring). Mutating only the
+measurement:
+
+```diff
+-    const space = rect.height === 0 ? 0 : window.innerHeight - rect.top;
++    const space = 0; // MUTANT: publish no reserve
+```
+
+```console
+$ npm test
+AssertionError: expected '0px' to be '162px'
+AssertionError: expected '0px' to be '162px'
+ Test Files  1 failed | 66 passed (67)
+```
+
+**What no gate guards, stated rather than implied.** The CSS half - that the three screens subtract
+the property and the shell pads by it - is asserted by nothing automatic. jsdom cannot lay out a
+`calc()`, and the banner cannot be raised in the E2E suite because the production bundle strips the
+debug API and a real `VERSION_READY` needs a second deployed build. The evidence that the layout
+changes is the browser measurement above, taken by hand. If someone deletes
+`min-height: calc(100dvh - var(--update-space, 0px))` tomorrow, the unit tests stay green.
+
+## N6 - the manifest declares no `id`
+
+**Severity: P3** (round 2's re-triage, unchanged).
+
+**Recorded as a deliberate exception to the no-new-config rule**, which the round's brief allows for
+this one key on condition that what it pins is shown. `public/manifest.webmanifest` gains one line:
+
+```diff
++  "id": "./",
+   "start_url": "./",
+```
+
+What it pins, against the origin this is deployed to:
+
+```console
+$ node -e 'const base="https://8c9d.github.io/blackjack-trainer/"; ...'
+id      -> https://8c9d.github.io/blackjack-trainer/
+start_url -> https://8c9d.github.io/blackjack-trainer/
+identical: true
+```
+
+The application identity already falls back to `start_url`, so this changes nothing today and pins
+what is already true - which is the point: once a copy is installed its identity is fixed, and a
+later change to `start_url` would silently orphan it. Round 1 objected that an explicit `id` "would
+pin identity to the broken value"; that objection died with W1, which made `start_url` relative.
+
+**The gate added for N5 was extended to cover it in the same commit**, because a `/`-rooted `id` is
+the same defect the check exists to catch and it would otherwise have been the one manifest URL
+nothing looked at:
+
+```diff
+-            for (const [k, v] of [["start_url", m.start_url], ["scope", m.scope]])
++            for (const [k, v] of [["id", m.id], ["start_url", m.start_url], ["scope", m.scope]])
+```
+
+Non-vacuity, same method as N5's other three properties - mutate the deployed bundle, rebuild, run the
+check verbatim from the YAML:
+
+```console
+$ # "id": "/blackjack-trainer/"  (absolute, the form the check refuses)
+$ npm run build -- --base-href /blackjack-trainer/ && bash -e step05.sh
+id is /blackjack-trainer/
+CHECK_EXIT=1
+$ # restored
+RESTORED_CHECK_EXIT=0
+```
+
+## N2 - `@angular/forms` is a runtime dependency nothing imports
+
+**Severity: P3** (round 2's re-triage, unchanged: not in the bundle, not in any advisory chain, it is
+dependency hygiene).
+
+Round 2 left this **UNVERIFIED** because removal needs `npm install` and it could not reach the
+registry. `npm uninstall` resolves from the lockfile and the local cache, so with `--offline` it is a
+local operation and the question can be answered.
+
+Re-verified before removing:
+
+```console
+$ npm ls @angular/forms --all
+blackjack-trainer@1.0.0
+└── @angular/forms@22.1.0          # nothing else depends on it
+$ grep -rn "@angular/forms" src e2e tools | wc -l
+       0
+$ grep -c "ReactiveFormsModule\|FormsModule\|NgModel" dist/blackjack-trainer/browser/main-*.js
+0
+```
+
+```console
+$ npm uninstall @angular/forms --offline
+found 0 vulnerabilities
+UNINSTALL_EXIT=0
+$ git diff --stat package.json package-lock.json
+ package-lock.json | 23 ++---------------------
+ package.json      |  1 -
+$ ls -d node_modules/@angular/forms
+node_modules/@angular/forms is gone
+```
+
+The lockfile and the manifest are regenerated together, which is what round 2 said it could not do
+safely by hand.
+
+## M3 - the coverage gate is blind to `tools/`
+
+**Severity: P3** (round 2's, unchanged). **DEFERRED**, with the blind spot measured rather than
+argued and recorded where the number is defined.
+
+```console
+$ npx ng test --coverage --coverage-reporters=json-summary
+$ node -e '...Object.keys(coverage-summary.json)...'
+files in report: 74 | under tools/: 0
+```
+
+Zero of the 74 files in the report are under `tools/`, so `96.11 / 93.23 / 93.28 / 97.97` describes
+`src/**` and nothing else.
+
+**Not closed, and the reason is not effort.** Adding `tools/**` to the coverage `include` would
+report both files at 0% - `serve-dist.mjs` because v8 coverage in the test process cannot see a child
+process, `export-parity-fixtures.ts` because no test imports it (importing it would run it, rewriting
+tracked files under `ios/Fixtures` as a side effect of `npm test`). That would take the reported
+figures below their thresholds and turn the gate red over two files that **are** tested, by their
+output and their process behaviour, in the two `tools/*.spec.mjs` specs round 2 added. A coverage
+number that says 0% for a tested file is not more honest than one that says nothing about it.
+
+What this round does instead is make the number impossible to misread, in the file that owns it
+(`vitest.config.ts`): a comment naming what the percentages cover, what they do not, why, and the
+finding id. That is a record, not a gate, and M3 stays open on that basis.

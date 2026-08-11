@@ -2,6 +2,7 @@
   "name": "Blackjack Trainer",
   "short_name": "Blackjack",
   "description": "Practice blackjack basic strategy, Hi-Lo card counting, true count, and deviations.",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
