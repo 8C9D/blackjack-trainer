@@ -60,11 +60,13 @@ export async function runCountingRound(page: Page, seed?: number, cards = 3): Pr
   // Nothing is asked until every card has streamed, and the stream is as long as
   // the caller made it: `cards` at the 100 ms minimum interval the configure
   // helpers set. Playwright's fixed 5 s default does not know that. Measured
-  // under the full parallel suite, the 26-card caller spends 2.80-3.08 s of it
-  // just streaming — a 1.8x margin, and one full-suite run in 30 exceeded the
-  // whole budget and failed here. This is not the same thing as raising a
-  // timeout to hide a race: the form is not racing anything, it arrives on a
-  // schedule the test itself set, and the budget now says so.
+  // under the full parallel suite on two machines-worth of runs, the 26-card
+  // caller spends 2.68-3.08 s of it just streaming — so the old fixed budget was
+  // 1.6-1.9x the stream, and one full-suite run in 30 exceeded the whole budget
+  // and failed here. This raises the ceiling rather than removing it: the same
+  // caller now has 2.5-2.8x. It is still not the same move as raising a timeout
+  // to hide a race — the form is not racing anything, it arrives on a schedule
+  // the test itself set, and the budget now scales with that schedule.
   const estimate = page.getByLabel('How many decks remain?');
   await expect(estimate).toBeVisible({ timeout: 5_000 + cards * 100 });
   await estimate.fill('6');

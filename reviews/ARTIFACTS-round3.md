@@ -9,7 +9,7 @@ and the superseded version is kept and marked, not deleted.
 
 All commands ran with the tool sandbox disabled.
 
-## M2 - the E2E gate is red about one run in thirty-three, and it is the test that is wrong
+## M2 - the E2E gate is red about one run in twenty, and it is the test that is wrong
 
 **Severity: P1** (carried from round 2's NEXT ROUND table, re-triaged from scratch below).
 
@@ -92,7 +92,7 @@ EXIT=1
   10 failed
 ```
 
-Ten of ten, where the same test unseeded fails about one time in thirty-three. The failure text is
+Ten of ten, where the same test unseeded fails about one time in twenty. The failure text is
 M2's, verbatim:
 
 ```
@@ -144,10 +144,12 @@ $ node seed-probe.mjs 56 56
 
 Two instruments, because the brief's ten full-suite runs turned out not to be able to measure this.
 
-| instrument                                      | tree state           | failures    | rate                   |
-| ----------------------------------------------- | -------------------- | ----------- | ---------------------- |
-| `E2E_SERVER=dist npm run e2e` x10 (whole suite) | `d413a7b`, unpatched | **0 / 10**  | 0% observed            |
-| the one test, `--repeat-each=200`               | `d413a7b`, unpatched | **6 / 200** | **3.0%** per execution |
+| instrument                                      | tree state              | failures     | rate                   |
+| ----------------------------------------------- | ----------------------- | ------------ | ---------------------- |
+| `E2E_SERVER=dist npm run e2e` x10 (whole suite) | `d413a7b`, unpatched    | **0 / 10**   | 0% observed            |
+| the one test, `--repeat-each=200`               | `d413a7b`, unpatched    | **6 / 200**  | 3.0% per execution     |
+| the one test, `--repeat-each=200`, independent  | `406a32e`, fix reverted | **14 / 200** | 7.0% per execution     |
+| **pooled**                                      | both samples            | **20 / 400** | **5.0%** per execution |
 
 The full-suite instrument came back 0 of 10 - see `reviews/BASELINE-round3.md`. That is not evidence
 the test is sound: the suite runs this test exactly once per run, so ten runs is ten observations of a
@@ -161,9 +163,23 @@ $ E2E_SERVER=dist npx playwright test \
   194 passed (1.6m)
 ```
 
-6/200 = 3.0%, exact (Clopper-Pearson) 95% CI [1.1%, 6.4%]. The theoretical rate for "a two-box opening deal settles every box"
-is about 5%; the measured 3% is inside the interval and the difference is not load-bearing for
-anything here.
+**This section's first published figure was 3.0%, from the first sample alone, and it did not
+reproduce.** REVIEW-round3-stage1 (F1) reverted exactly the one argument this fix adds and re-ran the
+same instrument, getting 14 of 200 - 7.0%. Both are samples of one rate, so they are pooled rather
+than one being preferred:
+
+| sample                    | failures | rate  | exact (Clopper-Pearson) 95% CI |
+| ------------------------- | -------- | ----- | ------------------------------ |
+| this run                  | 6 / 200  | 3.00% | [1.11%, 6.42%]                 |
+| REVIEW-round3-stage1 (F1) | 14 / 200 | 7.00% | [3.88%, 11.47%]                |
+| **pooled**                | 20 / 400 | 5.00% | **[3.08%, 7.62%]**             |
+
+Neither point estimate lies inside the other's interval, which is what a 200-trial sample of a ~5%
+event does about one time in twenty; the pooled 5.0% is where they meet, and it lands exactly on the
+independently derived theoretical rate for "a two-box opening deal settles every box" (a dealer
+natural at about 4.8%, plus a natural in every box). The rate used everywhere in this round is
+therefore **5.0%, about one run in twenty** - the earlier 3.0% is kept in the table above as the
+sample it was, not deleted.
 
 ### Fix
 
@@ -219,9 +235,12 @@ The first block of 30 full-suite runs was **29 green and 1 red**, and the red on
 run 26 reported `110 passed`, exit 1, on `no hand is offered off a shoe past its cut card`. That is a
 second, unrelated intermittent, measured and fixed as **M4** below. This test itself passed in all 30.
 
-**The arithmetic.** 400 + 30 = 430 executions of the M2 test after the fix, 0 failures. At the
-measured before-rate of 3.0%, the chance of that is `0.97^430 = 2.0e-6`. At the low end of the
-before-rate's exact confidence interval (1.1%) it is `0.989^430 = 8.6e-3`, about 1 in 116.
+**The arithmetic.** The four instruments in the table are 200 + 30 + 200 + 30 = **460** executions of
+the M2 test after the fix, 0 failures. (An earlier version of this line said 430, silently dropping
+one of the two 30-run blocks - REVIEW-round3-stage1, F3.) At the pooled before-rate of 5.0% the
+chance of 460 consecutive passes is `0.95^460 = 5.7e-11`; at the low end of the pooled interval
+(3.08%) it is `0.9692^460 = 5.6e-7`, about 1 in 1.8 million. The stage-1 reviewer's own 50 further
+repeats at the shipping commit are not counted in that 460.
 
 The rates are the weaker half of the argument. The stronger half: the test no longer has a random
 input. The failure needed an opening deal that settles every box, and the shoe is now pinned to one
@@ -261,18 +280,23 @@ Five of five. The mutation was reverted with `cp` from a copy taken before it, a
 release gate that is red roughly one run in four". The rate is 3% per execution, not 25% per run, and
 the gate is not wrong about the app - the app is fine. It stays P1 because of what it does to
 everything else: a gate that fails for a reason unrelated to what it tests trains its readers to
-re-run it, and item 2 of this round puts this exact suite in front of the Pages deploy, where a
-3%-per-execution flake becomes a deploy that fails for no reason about one time in thirty-three.
+re-run it, and item 2 of this round is about to put this exact suite in front of the Pages deploy,
+where a 5%-per-execution flake would become a deploy that fails for no reason about one run in
+twenty. That last sentence is a statement about what item 2 does once it lands, not about this
+commit: at the commit this section ships with, `pages.yml` still consults nothing, and whether a
+failing step blocks the deploy is a property of GitHub's runner that this run cannot execute
+(ROUND 3 ASSUMPTION 2, and REVIEW-round3-stage1 F5, which caught the original present tense).
 
 ### What this does not fix
 
 Five other specs in this file still call `runCountingRound(page)` unseeded (lines 13, 28, 92, 124 and
-189 after this change). Each was read against this mechanism and none asserts a phase-dependent
+191 after this change - the last of them now passing its own card count). Each was read against
+this mechanism and none asserts a phase-dependent
 transition: lines 13 and 28 assert regions and headings that an already-resolved round still renders;
 92 and 124 run the betting flow, whose `standEveryBox` helper exits on the round's own terminal
 control and whose coach line is rendered by `@if (lastPlay())` inside the template branch that covers
 `player-turn` **and** `resolved` alike (`showdown.component.ts:386`), so settling early does not
-remove it; 189 is pinned by Settings rather than by the shoe. That is an argument from reading, not a
+remove it; 191 is pinned by Settings rather than by the shoe. That is an argument from reading, not a
 measurement, and it is recorded as such - the 30 full-suite runs above are the measurement that
 covers them, at one observation each.
 
@@ -340,8 +364,12 @@ n=130 min=276 median=793 max=3080
 ```
 
 130 waits across five full-suite runs. The 26-card caller is the tail: 2802-3080 ms, against a 5000 ms
-budget - a margin of **1.8x**, where every other caller sits at 276-800 ms with a margin of 6x or
-better. One run in 30 spent the whole budget.
+budget - a margin of **1.6-1.8x**, where every other caller sits at 276-800 ms with a margin of 6x or
+better. One run in 30 spent the whole budget. (The band is 2.68-3.08 s once
+REVIEW-round3-stage1's independent instrumented runs are pooled in: it reproduced the structure
+exactly - 26 deck-estimate waits per full-suite run - and the 26-card caller at 2678-2920 ms, below
+the floor this section first published. The band is what two machines-worth of runs measured, not a
+property of the code.)
 
 Two things this measurement settles, both of which a reviewer should check rather than take:
 
@@ -405,7 +433,9 @@ the form is not racing anything, it arrives on a schedule the test itself set in
 5 s default is simply ignorant of that schedule. The budget is now that schedule plus the same 5 s
 every other wait in the suite gets. A wait that is under-specified for its own configuration is a
 test defect in its own right: on a machine 1.8x slower than this one it fails **every** time, not
-intermittently.
+intermittently. The same sentence bounds the fix, and is stated here rather than left for a reader
+to derive: a machine 2.5x slower than this one will fail every time **with** the fix. This raises
+the ceiling; it does not remove it.
 
 `grep -rn "Number of cards" e2e/` confirms this is the only caller that streams more than 3: every
 other one takes the default, whose budget moves from 5000 ms to 5300 ms.
@@ -422,16 +452,28 @@ ABSENT_EXIT=0
 ```
 
 The temporary 200 ms mutation was then removed; the committed test streams at the 100 ms the
-configure helper sets, with a 7600 ms budget against a measured 2.80-3.08 s - a margin of 2.5x
-instead of 1.8x, and one that grows with whatever the caller asks for rather than staying fixed.
+configure helper sets, with a 7600 ms budget against a measured 2.68-3.08 s - a margin of 2.5-2.8x
+where it was 1.6-1.8x, and one that grows with whatever the caller asks for rather than staying
+fixed. Both pairs are quoted against the same ends of the same band, which an earlier version of
+this section did not do (it compared 5000/2802 with 7600/3080 - REVIEW-round3-stage1, F6).
 
 ### Non-vacuity
 
 The fix widens a budget, so reverting it turns nothing red on this machine - that is what made the
 defect invisible for two rounds. The proof is the pair above: with the budget fixed at 5 s the test
 fails 5 of 5 against a stream it was configured to produce, and with the budget scaled it passes 5 of
-5 against the same stream. The property the gate now has, and did not have, is that a slower machine
-does not turn a deterministic wait into a failure.
+5 against the same stream. The property the gate now has, and did not have, is that the budget is a
+function of what the caller streams rather than a constant that is wrong for anything but the
+default.
+
+**What this fix does not establish, stated because the closing summary first overclaimed it.** Run
+26's wait exceeded 5000 ms; how far it exceeded it was never measured, because the assertion that
+would have measured it is the one that failed. The largest wait ever recorded for this caller is
+3080 ms, across 8 instrumented full-suite runs on two occasions. So nothing here proves run 26's tail
+lands under 7600 ms rather than over it - only that the tolerance moved from 1.6-1.8x the measured
+stream to 2.5-2.8x. A readiness signal from the app would remove the ceiling instead of raising it;
+none exists, and adding one would be a product change this round's scope rule forbids. Recorded as a
+bounded improvement, not a removal (REVIEW-round3-stage1, F2).
 
 ## Gate 5 at the end of stage 1
 
@@ -464,4 +506,7 @@ it is strong evidence about the suite as a whole and weak evidence about any sin
 the same limitation that made round 2's and this run's earlier full-suite numbers unable to see M2.
 The per-test evidence is the `--repeat-each` measurements recorded against M2 and M4. Gate 5 was red
 1 run in 30 before this stage (M4) and 1 run in 33 before that (M2, per-execution 3.0%); it is now
-0 in 30 with both mechanisms removed rather than made less likely.
+0 in 30. The two fixes are not the same kind of fix, and the distinction matters: M2's random input
+is **removed** - the shoe is pinned and the failing state is unreachable - while M4's is
+**rescaled**, from a fixed budget to one that follows the caller's own stream. An earlier version of
+this paragraph called both of them removals (REVIEW-round3-stage1, F2).

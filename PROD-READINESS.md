@@ -413,12 +413,12 @@ reasons unrelated to what it tests (M2).
 1. **The four owner decisions arrived answered**, unlike round 2's, and are taken as authoritative
    without re-derivation:
 
-   | decision                | taken as               | consequence                                                                     |
-   | ----------------------- | ---------------------- | ------------------------------------------------------------------------------- |
-   | support email           | **still unknown**      | D1 stays DEFERRED with the placeholder left visible. No address is invented.    |
-   | iCloud KVS on iOS       | **will not provision** | I1 stays DEFERRED at P1; the provisioner warning is re-verified line by line.   |
-   | CI/CD workflow files    | **you may edit them**  | N1 and N5 are applied rather than filed. Every shell step is run locally.       |
-   | the flaky E2E test (M2) | **fix it**             | Item 1, ahead of everything, because item 2 puts that suite in the deploy path. |
+   | decision                | taken as               | consequence                                                                       |
+   | ----------------------- | ---------------------- | --------------------------------------------------------------------------------- |
+   | support email           | **still unknown**      | D1 stays DEFERRED with the placeholder left visible. No address is invented.      |
+   | iCloud KVS on iOS       | **will not provision** | I1 stays DEFERRED at P1; the provisioner warning is re-verified line by line.     |
+   | CI/CD workflow files    | **you may edit them**  | N1 and N5 are applied rather than filed. Every shell step is run locally.         |
+   | the flaky E2E test (M2) | **fix it**             | Item 1, ahead of everything, because item 2 puts that suite into the deploy path. |
 
 2. **GitHub Actions cannot be executed here.** Whether a failing step actually blocks the deploy is a
    property of GitHub's runner, not of any file in this repository. Every claim of that kind in this
@@ -444,16 +444,35 @@ runs turned up a second intermittent in a different test - `no hand is offered o
 cut card`, which fails inside `runCountingRound` because the deck-estimate wait carries a fixed 5 s
 budget while that one caller configures a 2.8-3.1 s card stream. It is taken in this round rather
 than filed to NEXT ROUND because it is the same gate item 1 exists to make trustworthy, and because
-item 2 puts that gate in front of the deploy: shipping N1 over a gate with a known 1-in-30 flake is
-the defect this round is about. Its fix is a wait budget derived from what the caller streams, which
-is not the same move as raising a timeout over a race - the artifact argues that line explicitly,
-because it is the obvious thing to attack.
+item 2 will put that gate in front of the deploy: shipping N1 over a gate with a known 1-in-30 flake
+is the defect this round is about. Its fix is a wait budget derived from what the caller streams,
+which is not the same move as raising a timeout over a race - the artifact argues that line
+explicitly, because it is the obvious thing to attack. What the fix does **not** do is remove the
+mechanism: it raises the budget's tolerance from 1.6-1.8x the measured stream to 2.5-2.8x, and the
+one failure it answers is a tail whose magnitude was never measured. Recorded that way after
+REVIEW-round3-stage1 (F2) caught the closing summary calling it a removal.
 
 **M2 is not what round 2 said it was.** Round 2 filed it as "an intermittent lost click" at "roughly
-one run in four". Measured here: 6 failures in 200 executions of the test (3.0%), and the page at the
-moment of every one of those six failures is the **count check**, which is the component doing exactly
+one run in four". Measured here and by the stage-1 reviewer independently: 20 failures in 400
+executions of the test (5.0%, exact 95% CI [3.08%, 7.62%]), and the page at the
+moment of every one of those failures is the **count check**, which is the component doing exactly
 what `showdown.component.ts:1319-1326` says it does when the round being left is already over. The
 click was never lost. The test asserted the mid-hand exit without pinning a shoe that guarantees a
 mid-hand state, and an opening deal that settles every box - a dealer natural, or a natural in every
 box - takes the other, documented path. There is **no defect in `src/`**; the fix is one argument in
 the test, and the assertion is unchanged.
+
+## ROUND 3 regressions introduced and fixed inside this run
+
+Defects this run put into its own output. Per the run's rules these are regressions rather than
+findings: they are fixed in the stage after the one that caused them, by a different reviewer's
+range, and every one is listed here as well as in the artifact where it was corrected.
+
+| id            | stage | what                                                                                                                                                                                                                                                                                                            | resolution                                                                                                                                                                                                                                                      |
+| ------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **R3-1** (F1) | 1     | The published M2 before-rate, 6/200 = 3.0%, did not reproduce. The stage-1 reviewer reverted exactly the one argument the fix adds and measured 14/200 = 7.0%. Neither point estimate sits inside the other's interval, and "one run in thirty-three" had reached a section title and a shipped source comment. | Both samples pooled: 20/400 = **5.0%**, exact 95% CI [3.08%, 7.62%], which lands on the independently derived theoretical rate. The 3.0% sample is kept in the table, not deleted, and the rate is corrected in the artifact, the ledger and `showdown.e2e.ts`. |
+| **R3-2** (F2) | 1     | The stage-1 closing summary said gate 5 was green "with both mechanisms removed". True of M2, false of M4: that fix rescales a fixed budget, it does not remove the ceiling, and run 26's actual wait was never measured.                                                                                       | Corrected everywhere it appeared, with the bound stated explicitly: tolerance moved from 1.6-1.8x the measured stream to 2.5-2.8x, and a machine 2.5x slower still fails every time. Recorded as a bounded improvement.                                         |
+| **R3-3** (F3) | 1     | The after-evidence arithmetic said "400 + 30 = 430 executions", silently dropping one of the two 30-run blocks listed in the table directly above it.                                                                                                                                                           | 460, with the power recomputed against the pooled before-rate: `0.95^460 = 5.7e-11`.                                                                                                                                                                            |
+| **R3-4** (F4) | 1     | The artifact cited the fifth unseeded call site as line 189 calling `runCountingRound(page)`. At the committed tree 189 is a comment the same commit added, and the site is line 191 calling `runCountingRound(page, undefined, 26)`.                                                                           | Both corrected.                                                                                                                                                                                                                                                 |
+| **R3-5** (F5) | 1     | Three sentences asserted in the present tense that the E2E suite is in front of the Pages deploy. At the commit shipping them, `pages.yml` consults nothing - item 2 had not landed - and this round's own ASSUMPTION 2 says exactly that claim must be marked UNVERIFIED.                                      | Reworded to name it as what item 2 does once it lands, with the GitHub-runner half marked UNVERIFIED.                                                                                                                                                           |
+| **R3-6** (F6) | 1     | The timing band `2.80-3.08 s` shipped in a source comment as if it were a property; the reviewer's independent instrumented runs measured 2678-2920 ms. The two margin figures (1.8x, 2.5x) were also computed against opposite ends of the same band.                                                          | Band widened to the pooled 2.68-3.08 s and described as what two machines-worth of runs measured; both margins now quoted on a consistent basis (1.6-1.8x -> 2.5-2.8x).                                                                                         |
