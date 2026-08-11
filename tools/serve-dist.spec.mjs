@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { copyFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { get } from 'node:http';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -25,10 +25,15 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
  * at `<tmp>/tools/` serves `<tmp>/dist/...`. That keeps this spec independent of
  * whether a build has run — CI runs the unit gate before the build.
  *
- * Plain JavaScript, not TypeScript, because `@types/node` is not a dependency
- * and adding one needs the network. A `.spec.ts` here fails to compile on
- * `Cannot find name 'process'` before it runs a line. `tools/` is plain Node
- * anyway; see the ledger's M1.
+ * Plain JavaScript, not TypeScript, and the honest reason is narrower than "it
+ * would not compile". A `.spec.ts` here does run — `tsconfig.spec.json` includes
+ * only `src/**`, so a spec under `tools/` is never typechecked and the compiler
+ * never sees it. TypeScript would buy the look of type safety and none of it.
+ * Putting `tools/**` into `tsconfig.spec.json` is what makes it real, and that
+ * fails on `TS2591: Cannot find name 'process'` because `@types/node` is not a
+ * dependency and installing one needs the network. So: `.mjs`, which states the
+ * absence rather than dressing it up, and matches `serve-dist.mjs` itself.
+ * See the ledger's M1.
  */
 
 const SHELL = '<!doctype html><title>shell</title><app-root></app-root>';
@@ -68,9 +73,11 @@ function request(port, path) {
 describe('tools/serve-dist.mjs', () => {
   let server;
   let port;
+  let tree;
 
   beforeAll(async () => {
     const root = mkdtempSync(join(tmpdir(), 'serve-dist-spec-'));
+    tree = root;
     const browser = join(root, 'dist', 'blackjack-trainer', 'browser');
     mkdirSync(join(root, 'tools'), { recursive: true });
     mkdirSync(join(browser, 'cards'), { recursive: true });
@@ -105,6 +112,9 @@ describe('tools/serve-dist.mjs', () => {
 
   afterAll(() => {
     server?.kill();
+    // `mkdtempSync` does not clean up after itself, and this spec runs on every
+    // `npm test`.
+    if (tree) rmSync(tree, { recursive: true, force: true });
   });
 
   it('404s a malformed percent-escape instead of dying on it (B1)', async () => {
@@ -118,11 +128,24 @@ describe('tools/serve-dist.mjs', () => {
     expect(after.status, 'the server stopped answering after a malformed request').toBe(200);
   });
 
-  it('404s an encoded path traversal rather than serving outside the root', async () => {
-    for (const path of ['/%2e%2e/secret.txt', '/%2e%2e/%2e%2e/secret.txt', '/../secret.txt']) {
+  it('404s a path traversal rather than serving outside the root', async () => {
+    // The last case is the one that needs `normalize()`. In the others the URL
+    // parser has already collapsed the `..` before the handler sees it, so they
+    // pass even with the guard deleted; encoding the separator as %2f hides the
+    // segment boundary from the parser and leaves the `..` for `normalize()` to
+    // collapse. Without it that request returns 200 and the file's contents.
+    const paths = [
+      '/%2e%2e/secret.txt',
+      '/%2e%2e/%2e%2e/secret.txt',
+      '/../secret.txt',
+      '/cards%2f..%2f..%2f..%2f..%2fsecret.txt',
+    ];
+    for (const path of paths) {
       const response = await request(port, path);
       expect(response.status, `${path} escaped the served root`).toBe(404);
-      expect(response.body).not.toContain('do not serve me');
+      expect(response.body, `${path} leaked a file outside the root`).not.toContain(
+        'do not serve me',
+      );
     }
   });
 
