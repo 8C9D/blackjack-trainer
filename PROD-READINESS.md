@@ -315,6 +315,7 @@ to touch this", which is not a severity.
 | --- | ---------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | N7  | P1               | **P1**     | RESOLVED - artifact in [`reviews/ARTIFACTS-round2.md`](reviews/ARTIFACTS-round2.md#n7---the-offline-gate-skips-itself-on-the-evidence-it-exists-to-report)                                           |
 | N8  | P2               | **P1**     | RESOLVED (gaps b and c; gap a kept on purpose) - artifact in [`reviews/ARTIFACTS-round2.md`](reviews/ARTIFACTS-round2.md#n8---the-e2e-lane-selection-accepts-a-typo-and-never-builds-what-it-serves) |
+| N3  | P2               | **P1**     | RESOLVED - artifact in [`reviews/ARTIFACTS-round2.md`](reviews/ARTIFACTS-round2.md#n3---nothing-tested-the-tools-that-back-two-release-gates)                                                        |
 
 **Why N8 was re-triaged P2 → P1.** Round 1 rated it P2 while recording that it could not act on it.
 On its own evidence it is the same defect class as R0-4, which round 1 rated P1: a release gate
@@ -323,6 +324,16 @@ dev-server lane and reported `13 passed`, exit 0; and with `src/app/app.routes.t
 rebuild, the lane named after the production bundle reported `13 passed`, exit 0, against a bundle
 built from different source. Both are silent-green, which round 1 itself called "worse than B1 in
 kind".
+
+**Why N3 was re-triaged P2 → P1.** Round 1 called it "scaffolding beyond any frozen finding", which is
+a scope statement, not a severity. On its own evidence: the parity anti-drift gate compares the
+exporter against itself, so a degraded exporter whose output is committed leaves the gate green
+forever. Measured: with the exporter cut to the first 5 of 58 counting systems and the result staged,
+`npm run export:fixtures && git diff --exit-code -- ios/Fixtures` exited **0** while 53 systems went
+unchecked on both platforms. This is a trainer whose entire value is being right about strategy and
+counting, and parity between the two implementations is the only thing holding the iOS engines to the
+web ones. A gate that can silently stop checking 91% of that is P1. The second half of N3 is that
+round 1's own B1 fix had no test, so it could be reverted with all nine gates green.
 
 ## ROUND 2 regressions introduced and fixed inside this run
 
@@ -336,6 +347,7 @@ recording these only in the artifact file where they were fixed, so every one is
 | **R2-2** (F2/F3) | 1     | Two completed-tense claims in this ledger about work that did not exist yet: that an exact N1 patch "is recorded", and that the I1 provisioner note "is written where a provisioner will look". Neither was a code defect; both were the run asserting a deliverable it had not produced.                                                                                                                                    | Both struck from the ASSUMPTIONS table in the same commit. The deliverables land in stage 4, and the ledger says so only where it is true at the commit that says it.                                                                                                                                                   |
 | **R2-3** (F2-1)  | 2     | Stage 2 made the dist lane rebuild before serving, which silently invalidated stage 1's committed non-vacuity proof for N7: that proof deleted `ngsw-worker.js` from `dist/`, and the rebuild now restores it, so the same commands give `2 passed`, exit 0 instead of `2 failed`, exit 1. `a3f5dee` re-committed the file carrying that transcript without noticing what it had invalidated. Found by REVIEW-round2-stage2. | The N7 proof is re-derived against a mutation the rebuild cannot undo - deleting `configurations.production.serviceWorker` from `angular.json`, giving `MUTANT_EXIT=1`, `2 failed`. The superseded transcript is kept, marked valid only at `e3f8cba`, and the coverage the rebuild narrowed is stated in the artifact. |
 | **R2-4** (F2-2)  | 2     | The N8 artifact said "N5 is re-triaged ... see the ledger" while the ledger had no N5 row - the same defect as R2-2, committed in the very stage that recorded R2-2.                                                                                                                                                                                                                                                         | Reworded to state only what is true at that commit: that stage 2 does not close N5 and records no verdict on it.                                                                                                                                                                                                        |
+| **R2-5**         | 3     | The first version of `tools/export-parity-fixtures.spec.mjs` called `expect` once per fixture row - 62,560 times for `deviation-vectors.rows` alone. It passed in 1774 ms when the tools specs ran alone and **timed out at 5000 ms** under the full parallel `npm test`, taking the unit gate to exit 1. A test that fails on machine load is the same defect as M2, introduced by the stage that had just recorded M2.     | Rewritten to count offenders with `filter` and assert once: 205 ms, and `npm test` green three runs out of three at 1546 passed. Still non-vacuous - truncating one row of 62,560 gives `deviation-vectors.rows: 1 rows are not 12 columns wide`, and the fixture was restored with no drift.                           |
 
 ## ROUND 2 NEXT ROUND
 
