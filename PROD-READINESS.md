@@ -286,13 +286,13 @@ over fixes that add a new check beside it.
    | decision             | taken as                 | consequence                                                                                          |
    | -------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------- |
    | support email        | **still unknown**        | D1 stays DEFERRED with the placeholder left visible. No address was invented for a published policy. |
-   | iCloud KVS on iOS    | **undecided**            | I1 stays DEFERRED at P1; the provisioner note is written where a provisioner will look.              |
-   | CI/CD workflow files | **report findings only** | N1 is reported with an exact patch, not applied. Round 1's prohibition is inherited unchanged.       |
+   | iCloud KVS on iOS    | **undecided**            | I1 stays DEFERRED at P1, and is not treated as inert.                                                |
+   | CI/CD workflow files | **report findings only** | N1 and N5 are reported, not applied. Round 1's prohibition is inherited unchanged.                   |
 
    The CI/CD reading is the one with real cost: it is what keeps N1 unfixed. It was taken that way
    because editing a deploy workflow is the least reversible thing on the work list, because round 1's
    standing prohibition is the state to inherit absent an answer, and because the brief itself frames
-   the question as the owner's to answer. The full patch is recorded so applying it is one paste.
+   the question as the owner's to answer.
 
 2. **The working tree counted as clean** on the same reading as round 1 assumption 1: zero modified
    tracked files, `.agents/` and `.codex/` untracked and untouched. No commit uses `git add -A`.
@@ -314,3 +314,22 @@ to touch this", which is not a severity.
 | id  | round-1 severity | re-triaged | status                                                                                                                                                     |
 | --- | ---------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | N7  | P1               | **P1**     | RESOLVED - artifact in [`reviews/ARTIFACTS-round2.md`](reviews/ARTIFACTS-round2.md#n7---the-offline-gate-skips-itself-on-the-evidence-it-exists-to-report) |
+
+## ROUND 2 regressions introduced and fixed inside this run
+
+Defects round 2 injected into its own output. Per the run's rules these are regressions, not findings:
+they are fixed in the stage that caused them and never carried forward. Round 1 was criticised for
+recording these only in the artifact file where they were fixed, so every one is listed here too.
+
+| id               | stage | what                                                                                                                                                                                                                                                                                                                                                                    | resolution                                                                                                                                                                                 |
+| ---------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **R2-1** (F1)    | 1     | The N7 fix as first committed (`7010e8c`) skipped the offline suite on the **lane** alone. The `serve` lane reuses whatever already holds port 4200, so a `serve`-lane run pointed at a built bundle had been running the offline suite for real; the lane-only skip turned that from `2 passed` into `2 skipped`. A coverage narrowing, found by REVIEW-round2-stage1. | The skip is conditional on the worker in the serve lane and absent in the dist lane, where the same condition asserts instead. All four lane/worker combinations are now run and recorded. |
+| **R2-2** (F2/F3) | 1     | Two completed-tense claims in this ledger about work that did not exist yet: that an exact N1 patch "is recorded", and that the I1 provisioner note "is written where a provisioner will look". Neither was a code defect; both were the run asserting a deliverable it had not produced.                                                                               | Both struck from the ASSUMPTIONS table in the same commit. The deliverables land in stage 4, and the ledger says so only where it is true at the commit that says it.                      |
+
+## ROUND 2 NEXT ROUND
+
+Findings discovered after round 2's work list froze. Not fixed in this run.
+
+| id     | severity | evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | why it is not in this run                                                                                                         |
+| ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **M1** | P2       | Added by REVIEW-round2-stage1 (F5), reproduced independently. No gate typechecks `e2e/**` or `playwright.config.ts`: `npm run lint` runs `tsc --noEmit -p tsconfig.app.json`, whose `include` is `src/**/*.ts`. The config that would cover them cannot even run - `npx tsc -p tsconfig.e2e.json --noEmit` exits 2 with `error TS2688: Cannot find type definition file for 'node'`, because `@types/node` is in neither `dependencies` nor `devDependencies`. Playwright compiles specs with esbuild, which strips types without checking them, so a type error in a spec surfaces only as a runtime failure. `e2e/fixtures/lane.ts` is now the single source of truth for lane selection and is covered by none of this. | Closing it requires adding `@types/node`, and this run's scope forbids dependency changes except to patch a CVE on the work list. |

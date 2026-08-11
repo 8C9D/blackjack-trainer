@@ -516,8 +516,9 @@ no-ops at runtime but document the chart cell.
   The manifest carries 192/512 maskable icons derived from the iOS app icon, plus an `apple-touch-icon`; the page shells pad both safe-area insets so the top bars stay clear of the status bar in iOS standalone mode.
   **The card art is prefetched at install, not cached as it happens to be dealt.** It sat in the `lazy` asset group with the rest of the images, which meant a fresh install cached none of it: install the app, board a plane, open a drill, and the shell loaded and the drill ran while every card was a blank rectangle with its alt text spilling over it — the hand unreadable, which is the whole of what a trainer shows.
   A deck is 53 files and ~1.9 MB (~650 KB over the wire), and that is simply the price of the offline claim; the worker registers only once the app is stable, so the fetch never competes with first paint.
-  `e2e/smoke/offline.e2e.ts` holds the line, and is the one spec that needs the real worker: it skips on the **lane**, not on whether a worker turned up.
-  Under `E2E_SERVER=dist` a worker that never takes control fails the run, because a bundle shipped without its worker is the defect this spec exists to report rather than a reason to stand down; the dev-server lane registers none by design and is the only case that skips.
+  `e2e/smoke/offline.e2e.ts` holds the line, and is the one spec that needs the real worker.
+  Under `E2E_SERVER=dist` a worker that never takes control **fails** the run, because a bundle shipped without its worker is the defect this spec exists to report rather than a reason to stand down.
+  On the other lane a missing worker still skips, because there it usually means `ng serve`, which registers none by design.
 
 ## iOS app
 
