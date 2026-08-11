@@ -74,8 +74,13 @@ section below.
 Same mutation, same command, after the fix. Only the behavioural change was mutated: the bundle is
 byte-identical to the one that reported green above.
 
-This transcript is from the **final** code, after the F1 remediation below - not from the first
-version of the fix, which this file previously quoted here:
+> **This transcript stopped reproducing two commits later, and is kept only as the record of what was
+> true at `e3f8cba`.** Stage 2 made the dist lane rebuild before serving, so deleting a file from
+> `dist/` is undone before the suite runs: the same commands now give `2 passed`, exit 0. Found by
+> REVIEW-round2-stage2 (F2-1). The proof that holds at the current tip is in
+> "[Re-derived non-vacuity proof](#re-derived-non-vacuity-proof-valid-at-the-current-tip)" below;
+> this one is left in place rather than quietly deleted, because a record that was accurate when
+> written and later invalidated by a different change is worth being able to see.
 
 ```console
 $ rm dist/blackjack-trainer/browser/ngsw-worker.js
@@ -104,6 +109,45 @@ EXIT=1
 ```
 
 Exit **1**, and the message names the cause rather than leaving a 15-second timeout to be interpreted.
+
+### Re-derived non-vacuity proof, valid at the current tip
+
+Because the dist lane now rebuilds, the mutation has to be one the rebuild cannot undo - so it is made
+in the thing that decides whether a worker is emitted at all, `angular.json`'s production
+`serviceWorker` key, rather than in the build output:
+
+```console
+$ python3 -c "...delete configurations.production.serviceWorker from angular.json..."
+before: ngsw-config.json
+serviceWorker key removed
+
+$ E2E_SERVER=dist npx playwright test e2e/smoke/offline.e2e.ts > "$TMPDIR/n7-mut.log" 2>&1; echo "MUTANT_EXIT=$?"
+MUTANT_EXIT=1
+  2 failed
+    Error: no service worker took control of the page: the built bundle must ship and register ngsw-worker.js
+
+$ ls dist/blackjack-trainer/browser/ngsw-worker.js
+ls: dist/blackjack-trainer/browser/ngsw-worker.js: No such file or directory
+```
+
+and green again once `angular.json` is restored and rebuilt:
+
+```console
+$ cp "$TMPDIR/angular.json.orig" angular.json && git status --porcelain --untracked-files=no
+(no output)
+$ npm run build ; echo "build exit=$?"
+build exit=0
+$ E2E_SERVER=dist npx playwright test e2e/smoke/offline.e2e.ts ; echo "GREEN_EXIT=$?"
+GREEN_EXIT=0
+  2 passed (4.7s)
+```
+
+**What stage 2 narrowed, stated plainly.** Gate 5 can now only catch a worker the _build declines to
+emit_. A worker present at build time and lost afterwards - say by the `cp -R` in
+`.github/workflows/pages.yml:41` - is no longer reachable by this gate, because the lane rebuilds
+before it looks. In CI that case never existed anyway (`ci.yml` builds immediately before the E2E
+step, so the bundle was always fresh there); the change makes local runs behave the way CI already
+did. It is still a narrowing and is recorded as one rather than left for a reader to discover.
 
 ### Every branch exercised by hand - not by a gate
 
@@ -332,8 +376,26 @@ refuse to borrow a port (R0-4), which is the case where borrowing is wrong.
 
 N5 is the separate finding that no gate builds or serves the `--base-href /blackjack-trainer/` bundle
 that `.github/workflows/pages.yml:37` actually deploys. This stage makes the dist lane build **the
-root-href bundle** it serves; it does not make any gate build the deployed one. N5 is re-triaged and
-reported rather than fixed - see the ledger.
+root-href bundle** it serves; it does not make any gate build the deployed one. N5 is not closed by
+this stage and this stage records no verdict on it; its re-triage and terminal state are stage 4's
+work.
+
+### What a revert of this stage would cost - nothing that any gate reports
+
+Reverting all three changed files leaves `npm run lint` at exit 0 and `E2E_SERVER=dist npm run e2e` at
+`111 passed`, with `E2E_SERVER=dsit` silently green again (REVIEW-round2-stage2, F2-3, reproduced by
+the reviewer). Both changes here are gate-hardening: they alter the conditions under which a gate
+refuses, and no gate asserts those conditions. That is the same disclosure the N7 section makes, and
+it applies to this stage too.
+
+### The trade stage 1's remediation made, named
+
+Restoring the serve lane's opportunistic behaviour re-admits N7's own symptom **on that lane**: point
+the serve lane at a built bundle whose worker is missing and the suite reports `2 skipped`, exit 0
+(REVIEW-round2-stage2, F2-6). The trade is deliberate and rests on one fact - the serve lane is not a
+release gate. CI sets `E2E_SERVER: dist` (`.github/workflows/ci.yml:50`) and never runs the serve
+lane, so the lane that can still skip is the one whose result nothing depends on, and the lane whose
+result CI reads cannot skip at all. The serve lane is opportunistic, never authoritative.
 
 ### Cost this adds
 
