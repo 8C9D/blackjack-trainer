@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { SwUpdate, type UnrecoverableStateEvent, type VersionEvent } from '@angular/service-worker';
 import { Subject } from 'rxjs';
@@ -144,6 +144,16 @@ describe('App', () => {
       Object.defineProperty(window, 'innerHeight', { value: height, configurable: true });
     }
 
+    // Drive the real failure path rather than poking the signal: the banner's
+    // own Reload button, with the injected page reload throwing.
+    function failAReload(fixture: ComponentFixture<App>, host: HTMLElement): void {
+      reloadPage.mockImplementationOnce(() => {
+        throw new Error('reload refused');
+      });
+      (host.querySelector('.update__reload') as HTMLButtonElement).click();
+      fixture.detectChanges();
+    }
+
     function stubRect(element: HTMLElement, top: number, height: number): void {
       const rect = {
         top,
@@ -183,6 +193,39 @@ describe('App', () => {
 
       // 700 - 538.03, rounded up: the whole band from its top edge to the floor.
       expect(host.style.getPropertyValue('--update-space')).toBe('162px');
+    });
+
+    // A copy change has to re-measure: the element is the same element, so
+    // nothing about the view tells the shell its height moved. What this pins is
+    // the dependency — delete `updateFailed()`/`recoveryNeeded()` from the
+    // afterRenderEffect and it fails with 162px where 183px is wanted.
+    //
+    // What it cannot pin, stated so nobody reads more into it: that the
+    // measurement is taken *after* the DOM refreshes. jsdom has no render
+    // timing, so this test passes against a plain `effect` too — which the app
+    // shipped for one commit, leaving the reserve 21px short of a grown banner
+    // in a real browser (REVIEW-round3-stage3 F2, and the measurement in
+    // reviews/ARTIFACTS-round3.md that answers it).
+    it('follows the banner when only its copy grows', () => {
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+      const host = fixture.nativeElement as HTMLElement;
+
+      pinViewportHeight(700);
+      announceUpdate();
+      fixture.detectChanges();
+      const banner = host.querySelector('.update') as HTMLElement;
+      stubRect(banner, 538.03, 145.97);
+      window.dispatchEvent(new Event('resize'));
+      fixture.detectChanges();
+      expect(host.style.getPropertyValue('--update-space')).toBe('162px');
+
+      // A failed reload adds a line to the same banner: 145.97 -> 166.16, the
+      // geometry a real Chromium measures for that state at this viewport.
+      stubRect(banner, 517.84, 166.16);
+      failAReload(fixture, host);
+      fixture.detectChanges();
+      expect(host.style.getPropertyValue('--update-space')).toBe('183px');
     });
 
     it('goes back to zero when the offer is dismissed', () => {

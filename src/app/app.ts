@@ -1,6 +1,6 @@
 import {
+  afterRenderEffect,
   Component,
-  effect,
   ElementRef,
   HostListener,
   inject,
@@ -112,8 +112,12 @@ export class App {
   constructor() {
     // Re-measure whenever the banner appears or disappears, and whenever its
     // content changes height: the recovery copy is longer than the offer's, and
-    // a failed reload adds a line to both.
-    effect(() => {
+    // a failed reload adds a line to both. This has to run *after* the DOM is
+    // refreshed, which is what separates it from a plain `effect`: when only the
+    // copy changes, the element is the same element, so an effect would measure
+    // the height the banner had before the change and leave the reserve short by
+    // however much the new copy added.
+    afterRenderEffect(() => {
       this.updates.recoveryNeeded();
       this.updates.updateFailed();
       this.measureBanner();

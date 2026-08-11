@@ -9,7 +9,7 @@ and the superseded version is kept and marked, not deleted.
 
 All commands ran with the tool sandbox disabled.
 
-## M2 - the E2E gate is red about one run in twenty, and it is the test that is wrong
+## M2 - the E2E gate fails on one test about one run in eighteen, and it is the test that is wrong
 
 **Severity: P1** (carried from round 2's NEXT ROUND table, re-triaged from scratch below).
 
@@ -92,7 +92,7 @@ EXIT=1
   10 failed
 ```
 
-Ten of ten, where the same test unseeded fails about one time in twenty. The failure text is
+Ten of ten, where the same test unseeded fails about one time in eighteen. The failure text is
 M2's, verbatim:
 
 ```
@@ -149,11 +149,12 @@ Two instruments, because the brief's ten full-suite runs turned out not to be ab
 | `E2E_SERVER=dist npm run e2e` x10 (whole suite) | `d413a7b`, unpatched    | **0 / 10**   | 0% observed            |
 | the one test, `--repeat-each=200`               | `d413a7b`, unpatched    | **6 / 200**  | 3.0% per execution     |
 | the one test, `--repeat-each=200`, independent  | `406a32e`, fix reverted | **14 / 200** | 7.0% per execution     |
-| **pooled**                                      | both samples            | **20 / 400** | **5.0%** per execution |
+| the one test, `--repeat-each=200`, independent  | `d502bfb`, fix reverted | **13 / 200** | 6.5% per execution     |
+| **pooled**                                      | all three samples       | **33 / 600** | **5.5%** per execution |
 
 The full-suite instrument came back 0 of 10 - see `reviews/BASELINE-round3.md`. That is not evidence
 the test is sound: the suite runs this test exactly once per run, so ten runs is ten observations of a
-3% event, and `0.97^10 = 0.74`. Round 2's 2-of-7 and this run's 0-of-10 are the same rate seen twice
+5.5% event, and `0.945^10 = 0.57`. Round 2's 2-of-7 and this run's 0-of-10 are the same rate seen twice
 through too small a window. The per-execution measurement is the one the fix is judged against:
 
 ```console
@@ -177,10 +178,10 @@ than one being preferred:
 
 Neither point estimate lies inside the other's interval, which two 200-trial samples of a ~5% event
 do about one time in nine (enumerated exactly over all pairs of `Binomial(200, 0.05)` outcomes by
-REVIEW-round3-stage2, F6, which corrected this line's original "one time in twenty"); the pooled 5.0% is where they meet, and it lands exactly on the
+REVIEW-round3-stage2, F6, which corrected this line's original "one time in twenty"); the pooled figure is where they meet, and it lands on the
 independently derived theoretical rate for "a two-box opening deal settles every box" (a dealer
 natural at about 4.8%, plus a natural in every box). The rate used everywhere in this round is
-therefore **5.5%, about one run in eighteen** - every sample is kept in the table above as the sample
+therefore **5.5%, about one run in eighteen** (`1 / 0.055 = 18.2`) - every sample is kept in the table above as the sample
 it was, not deleted. (The third row arrived with REVIEW-round3-stage2, which reverted the fix and
 measured again; the pooled figure moved from 5.0% to 5.5% and its interval tightened.)
 
@@ -195,8 +196,8 @@ measured again; the pooled figure moved from 5.0% to 5.5% and its interval tight
 +  // had not pinned: an opening deal that settles every box before any player
 +  // action — a dealer natural (seed 56), or a natural in every box (seed 35) —
 +  // ends the round, and the assertion below then times out on a count check that
-+  // is working correctly. Measured at 2 of 60 seeds, and at 20 of 400 unseeded
-+  // runs across two independent samples (6/200 and 14/200).
++  // is working correctly. Measured at 2 of 60 seeds, and at 33 of 600 unseeded
++  // runs across three independent samples (6/200, 14/200, 13/200).
    test('returning to counting keeps the drill going', async ({ page }) => {
      await configure(page, '2');
 -    await runCountingRound(page);
@@ -514,7 +515,7 @@ run15 exit=0   111 passed (40.1s)    run30 exit=0   111 passed (39.7s)
 it is strong evidence about the suite as a whole and weak evidence about any single test - which is
 the same limitation that made round 2's and this run's earlier full-suite numbers unable to see M2.
 The per-test evidence is the `--repeat-each` measurements recorded against M2 and M4. Gate 5 was red
-1 run in 30 before this stage (M4) and about 1 run in 20 before that (M2, per-execution 5.5% pooled); it is now
+1 run in 30 before this stage (M4) and about 1 run in 18 before that (M2, per-execution 5.5% pooled); it is now
 0 in 30. The two fixes are not the same kind of fix, and the distinction matters: M2's random input
 is **removed** - the shoe is pinned and the failing state is unreachable - while M4's is
 **rescaled**, from a fixed budget to one that follows the caller's own stream. An earlier version of
@@ -1021,16 +1022,18 @@ in front of the last 146 px of it.
 
 The shell measures what the banner stands in front of and publishes it; the layouts subtract it.
 
-- `src/app/app.ts` - a `viewChild` on the banner, an `effect` that re-measures when it appears or its
-  content changes (the recovery copy is longer, and a failed reload adds a line), a
+- `src/app/app.ts` - a `viewChild` on the banner, an **`afterRenderEffect`** that re-measures when it
+  appears or its content changes (the recovery copy is longer, and a failed reload adds a line), a
   `@HostListener('window:resize')` for the row/column breakpoint, and a host binding
-  `[style.--update-space]`. The measurement is `window.innerHeight - rect.top`: its own height plus
+  `[style.--update-space]`. It shipped for one commit as a plain `effect`, which is wrong for the
+  content-change half and is corrected below. The measurement is `window.innerHeight - rect.top`: its own height plus
   the gap it floats above, in one read.
 - `src/app/app.scss` - `:host { padding-bottom: var(--update-space, 0px) }`, which is what lets a
   **scrolling** screen scroll its last control clear.
 - the three viewport-sized screens (`drill-page.scss`, `home-page.component.scss`,
   `card-counting-page.component.scss`) - `min-height: calc(100dvh - var(--update-space, 0px))`, so
-  they shrink instead of needing to be scrolled at all.
+  they shrink instead of needing to be scrolled - wherever there is room to shrink into. The
+  viewports where there is not are measured and published below.
 
 With no banner the property is `0px` and every computed value is what it was: `calc(100dvh - 0px)` is
 `100dvh`, `padding-bottom: 0px` is nothing. That is the ordinary case, i.e. every render but the two
@@ -1079,14 +1082,81 @@ AFTER  settings@maxscroll: {"maxScrollTop":1451,"scrollTop":1451,
 
 `maxScrollTop` grew by exactly 162, and the last control clears the banner by 49 px.
 
+### The limit of this fix, found by attacking it rather than by a reviewer
+
+375x700 is the viewport the finding cites, and at that viewport the fix is complete. It is not
+complete everywhere, and the difference is worth publishing rather than leaving for someone to trip
+over. Same probe, both banner states, `covered` = action controls whose centre `elementFromPoint`
+resolves inside `.update`:
+
+| viewport | before: covered | before: scrollable | after: covered at rest | after: scrollable | after: covered at max scroll |
+| -------- | --------------- | ------------------ | ---------------------- | ----------------- | ---------------------------- |
+| 375x700  | 6 / 6           | 0 px               | **0 / 6**              | 0 px              | 0 / 6                        |
+| 1280x800 | 6 / 6           | 0 px               | **0 / 6**              | 0 px              | 0 / 6                        |
+| 700x375  | 0 / 6           | already scrolled   | 0 / 6                  | yes               | 0 / 6                        |
+| 320x568  | 6 / 6           | **0 px**           | 3 / 6                  | 93 px             | **0 / 6**                    |
+| 375x500  | 6 / 6           | **0 px**           | 6 / 6                  | 161 px            | **0 / 6**                    |
+
+The drill's content has a natural minimum of about 499 px (cards, question, two rows of controls). On
+a viewport tall enough to hold that plus the banner, subtracting the reserve moves the controls out
+from under it and the page still does not scroll - the 375x700 and 1280x800 rows. On a shorter one
+the subtraction cannot compress content that is already at its minimum, so the page becomes
+scrollable by exactly the reserve instead:
+
+```console
+BEFORE 375x500: scrollable=0px    covered@top=6/6  ->  scrolled to 0:   covered=6/6
+BEFORE 320x568: scrollable=0px    covered@top=6/6  ->  scrolled to 0:   covered=6/6
+AFTER  375x500: scrollable=161px  covered@top=6/6  ->  scrolled to 161: covered=0/6
+AFTER  320x568: scrollable=93px   covered@top=3/6  ->  scrolled to 93:  covered=0/6
+```
+
+So the honest claim is not "the banner never covers a control". It is: **before, the controls were
+unreachable at every scroll position on every viewport that could not already scroll; after, they are
+reachable on all of them** - without scrolling where the layout has room, and by scrolling where it
+does not. That is the difference between a drill that cannot be played and one that can. A fix that
+held the stronger claim at every viewport would have to shrink the drill's own minimum, which is a
+redesign of the drill rather than a fix to the banner.
+
 **It still renders correctly.** Screenshots at 375x700 with each banner state up were read, not just
 measured: the drill keeps its progress bar, dealer card, hand, the "Hard 10 vs 7" question and all
 six action buttons, with the banner below them and nothing clipped or overlapping. The 196 px
 recovery reserve is the tightest case and it also holds.
 
+### The measurement was taken at the wrong moment, for one commit
+
+Published first as an `effect`, with the claim that it "re-measures when it appears **or its content
+changes**". The appear/disappear half worked; the content half did not, and
+REVIEW-round3-stage3 (F2) proved it by driving the real path - a DOM click on the banner's own Reload
+button with the injected page reload throwing (`app-update.service.ts:60-69`). When only the copy
+changes the element is the same element, so an `effect` runs against the DOM as it was before the
+refresh and measures the old height.
+
+Re-measured here, with **no** `applyChanges` anywhere - the app's own scheduler runs change detection,
+which is the whole point:
+
+```console
+EFFECT offer then a failed reload   after updateFailed    reserve=162px banner={top:517.84,height:166.16}  short by 20px
+EFFECT offer then the worker breaks after recoveryNeeded  reserve=162px banner={top:504.03,height:179.97}  short by 34px
+
+FIXED  offer then a failed reload   after updateFailed    reserve=183px banner={top:517.84,height:166.16}  short by 0
+FIXED  offer then the worker breaks after recoveryNeeded  reserve=196px banner={top:504.03,height:179.97}  short by 0
+```
+
+The fix is the primitive: `effect` → **`afterRenderEffect`**, which runs after the DOM is refreshed
+and re-runs on the same signal dependencies.
+
+**This also indicts the earlier measurement, and the artifact says so rather than quietly restating
+it.** The published 196 px recovery figure was correct only because the probe called
+`window.ng.applyChanges(cmp)`, forcing an extra change-detection pass the running app never performs.
+The probe was faithful about markup and stylesheet - the reviewer diffed the compiled `.update` rules
+between the dev and production bundles and found them identical modulo trailing semicolons - and
+unfaithful about **timing**. That is the failure mode the brief warned about for simulated states,
+found in the one place the method could still hide it, and it is why the re-measurement above drives
+the signal and then waits rather than forcing a render.
+
 ### Non-vacuity
 
-The behavioural half is guarded by three new unit tests in `src/app/app.spec.ts` (the geometry is
+The behavioural half is guarded by four unit tests in `src/app/app.spec.ts` (the geometry is
 stubbed because jsdom has no layout engine; what they assert is the wiring). Mutating only the
 measurement:
 
@@ -1101,6 +1171,28 @@ AssertionError: expected '0px' to be '162px'
 AssertionError: expected '0px' to be '162px'
  Test Files  1 failed | 66 passed (67)
 ```
+
+And dropping the signal dependencies the `afterRenderEffect` re-runs on:
+
+```diff
+     afterRenderEffect(() => {
+-      this.updates.recoveryNeeded();
+-      this.updates.updateFailed();
+       this.measureBanner();
+     });
+```
+
+```console
+$ npm test
+AssertionError: expected '162px' to be '183px'
+ Test Files  1 failed | 66 passed (67)
+```
+
+**What the fourth test does not do, stated because it would be easy to assume it does.** It passes
+against a plain `effect` as well - measured, by reverting `afterRenderEffect` to `effect` and running
+it: `1551 passed`. jsdom has no render timing to distinguish them. So the ordering property that F2
+was about is guarded by no local gate at all; the only evidence for it is the browser measurement
+above. That is the same gap K3 records for the CSS half.
 
 **What no gate guards, stated rather than implied.** The CSS half - that the three screens subtract
 the property and the shell pads by it - is asserted by nothing automatic. jsdom cannot lay out a
@@ -1148,7 +1240,9 @@ Non-vacuity, same method as N5's other three properties - mutate the deployed bu
 check verbatim from the YAML:
 
 ```console
-$ # "id": "/blackjack-trainer/"  (absolute, the form the check refuses)
+$ python3 -c 'p="public/manifest.webmanifest"; s=open(p).read();
+    open(p,"w").write(s.replace(chr(34)+"id"+chr(34)+": "+chr(34)+"./"+chr(34),
+                                chr(34)+"id"+chr(34)+": "+chr(34)+"/blackjack-trainer/"+chr(34)))'
 $ npm run build -- --base-href /blackjack-trainer/ && bash -e step05.sh
 id is /blackjack-trainer/
 CHECK_EXIT=1
@@ -1168,9 +1262,8 @@ local operation and the question can be answered.
 Re-verified before removing:
 
 ```console
-$ npm ls @angular/forms --all
-blackjack-trainer@1.0.0
-└── @angular/forms@22.1.0          # nothing else depends on it
+$ git show b09470d:package-lock.json | grep -n '"@angular/forms"'
+14:        "@angular/forms": "^22.1.0",     # one occurrence: the root dependency
 $ grep -rn "@angular/forms" src e2e tools | wc -l
        0
 $ grep -c "ReactiveFormsModule\|FormsModule\|NgModel" dist/blackjack-trainer/browser/main-*.js
@@ -1184,12 +1277,23 @@ UNINSTALL_EXIT=0
 $ git diff --stat package.json package-lock.json
  package-lock.json | 23 ++---------------------
  package.json      |  1 -
+$ git show 9aaac6b -- package-lock.json | grep -B3 '^+      "dev": true,' \
+    | grep -E '"resolved"|"dev": true'
+       "resolved": "https://registry.npmjs.org/@standard-schema/spec/-/spec-1.1.0.tgz",
++      "dev": true,
+       "resolved": "https://registry.npmjs.org/zod/-/zod-4.4.3.tgz",
++      "dev": true,
 $ ls -d node_modules/@angular/forms
 node_modules/@angular/forms is gone
 ```
 
 The lockfile and the manifest are regenerated together, which is what round 2 said it could not do
-safely by hand.
+safely by hand. Those 23 lines are not all `@angular/forms`: two other packages, `zod@4.4.3` and
+`@standard-schema/spec@1.1.0`, are re-marked `dev` because `@angular/forms` was their only
+non-dev path. Nothing here runs `npm ci --omit=dev` (`grep -rn "omit=dev\|--production" .github/
+package.json` returns nothing) and both remain installed via `@angular/cli`, so nothing changes -
+but a dependency change whose evidence was a line count should say which lines
+(REVIEW-round3-stage3, F10).
 
 ## M3 - the coverage gate is blind to `tools/`
 
@@ -1202,8 +1306,12 @@ $ node -e '...Object.keys(coverage-summary.json)...'
 files in report: 74 | under tools/: 0
 ```
 
-Zero of the 74 files in the report are under `tools/`, so `96.11 / 93.23 / 93.28 / 97.97` describes
-`src/**` and nothing else.
+Zero of the 74 files in the report are under `tools/`, so the reported percentages describe `src/**`
+and nothing else. (An earlier version of this sentence quoted `96.11 / 93.23 / 93.28 / 97.97`, which
+were the _parent_ commit's figures - the same commit that published the sentence moved all four by
+adding `src/app/app.ts` code and three tests. REVIEW-round3-stage3, F4. The current figures are in
+this stage's gate table below, and the point does not depend on them: it is the file list that is
+missing `tools/`, not the arithmetic.)
 
 **Not closed, and the reason is not effort.** Adding `tools/**` to the coverage `include` would
 report both files at 0% - `serve-dist.mjs` because v8 coverage in the test process cannot see a child
@@ -1229,11 +1337,14 @@ $ awk 'NR==65' ios/AppStore/privacy.html
 $ awk 'NR==55' ios/AppStore/support.html
     <a href="mailto:CONTACT_EMAIL_HERE">CONTACT_EMAIL_HERE</a> and I'll get back to you.
 $ grep -rn CONTACT_EMAIL_HERE ios/ .github/ docs/
-ios/AppStore/support.html:55: ...
-ios/AppStore/privacy.html:65: ...
-$ awk 'NR==42' .github/workflows/pages.yml
+ios/AppStore/support.html:55:    <a href="mailto:CONTACT_EMAIL_HERE">CONTACT_EMAIL_HERE</a> and I'll get back to you.
+ios/AppStore/privacy.html:65:  <a href="mailto:CONTACT_EMAIL_HERE">CONTACT_EMAIL_HERE</a>.</p>
+$ awk 'NR==53' .github/workflows/pages.yml
           cp ios/AppStore/privacy.html ios/AppStore/support.html site/
 ```
+
+(The `cp` is at line 53, not the 42 an earlier version of this block published: N1 inserted four
+steps above it earlier in this same round and pushed it down eleven lines - REVIEW-round3-stage3, F6.)
 
 Both cited lines are exactly where round 2 left them, both files are still copied into the published
 site, and the placeholder appears nowhere else.
@@ -1327,3 +1438,25 @@ and this account's credentials. Neither is reachable here, and the simulator bui
 about it because it signs with no entitlements at all. What would settle it, for whoever has the
 account: `xcodebuild -scheme BlackjackTrainer -destination 'generic/platform=iOS' archive` with and
 without the entitlement, and compare.
+
+## Gates after stage 3 and its remediation
+
+Every gate, at the commit that ships N4's `afterRenderEffect` correction and the record fixes
+REVIEW-round3-stage3 asked for. Run with the sandbox disabled, nothing else on the machine.
+
+| #   | gate              | command                                                                                                   | exit | result                                         |
+| --- | ----------------- | --------------------------------------------------------------------------------------------------------- | ---- | ---------------------------------------------- |
+| 1   | lint              | `npm run lint`                                                                                            | 0    | three tsc projects + prettier, all clean       |
+| 2   | build             | `npm run build`                                                                                           | 0    | the inherited chart-page budget warning        |
+| 3   | unit tests        | `npm test`                                                                                                | 0    | 67 files, **1551 passed**                      |
+| 4   | coverage gate     | `npm run test:coverage`                                                                                   | 0    | **96.16 / 93.28 / 93.22 / 98.00**              |
+| 5   | E2E               | `E2E_SERVER=dist npm run e2e`                                                                             | 0    | `111 passed (37.2s)`                           |
+| 6   | parity anti-drift | `npm run export:fixtures` + `git diff --exit-code -- ios/Fixtures`                                        | 0    | 7 fixtures written, no drift                   |
+| 7   | swiftformat       | `swiftformat --lint .`                                                                                    | 0    | 0/105 files require formatting                 |
+| 8   | swiftlint         | `swiftlint lint`                                                                                          | 0    | 0 violations, 0 serious in 105 files           |
+| 9   | iOS build + test  | `xcodebuild -scheme BlackjackTrainer -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build test` | 0    | `** TEST SUCCEEDED **`, 335 tests in 38 suites |
+
+The coverage figures moved from the baseline's `96.11 / 93.23 / 93.28 / 97.97` because this round adds
+code and tests to `src/app/app.ts` and `src/app/app.spec.ts`; the file count is unchanged at 74 and
+still contains nothing under `tools/` (M3). Unit tests are 1551 rather than the baseline's 1547: four
+added for N4. The iOS gates are untouched by this round and reproduce the baseline exactly.
