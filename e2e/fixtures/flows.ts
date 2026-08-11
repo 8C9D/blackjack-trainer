@@ -64,7 +64,8 @@ export async function runCountingRound(page: Page, seed?: number, cards = 3): Pr
   // caller spends 2.68-3.08 s of it just streaming — so the old fixed budget was
   // 1.6-1.9x the stream, and one full-suite run in 30 exceeded the whole budget
   // and failed here. This raises the ceiling rather than removing it: the same
-  // caller now has 2.5-2.8x. It is still not the same move as raising a timeout
+  // caller now has 2.5-2.8x, i.e. a machine more than ~2.8x slower than this one
+  // fails every time, where before it took ~1.9x. It is not the same move as raising a timeout
   // to hide a race — the form is not racing anything, it arrives on a schedule
   // the test itself set, and the budget now scales with that schedule.
   const estimate = page.getByLabel('How many decks remain?');

@@ -172,14 +172,17 @@ than one being preferred:
 | ------------------------- | -------- | ----- | ------------------------------ |
 | this run                  | 6 / 200  | 3.00% | [1.11%, 6.42%]                 |
 | REVIEW-round3-stage1 (F1) | 14 / 200 | 7.00% | [3.88%, 11.47%]                |
-| **pooled**                | 20 / 400 | 5.00% | **[3.08%, 7.62%]**             |
+| REVIEW-round3-stage2      | 13 / 200 | 6.50% | [3.51%, 10.86%]                |
+| **pooled**                | 33 / 600 | 5.50% | **[3.82%, 7.64%]**             |
 
-Neither point estimate lies inside the other's interval, which is what a 200-trial sample of a ~5%
-event does about one time in twenty; the pooled 5.0% is where they meet, and it lands exactly on the
+Neither point estimate lies inside the other's interval, which two 200-trial samples of a ~5% event
+do about one time in nine (enumerated exactly over all pairs of `Binomial(200, 0.05)` outcomes by
+REVIEW-round3-stage2, F6, which corrected this line's original "one time in twenty"); the pooled 5.0% is where they meet, and it lands exactly on the
 independently derived theoretical rate for "a two-box opening deal settles every box" (a dealer
 natural at about 4.8%, plus a natural in every box). The rate used everywhere in this round is
-therefore **5.0%, about one run in twenty** - the earlier 3.0% is kept in the table above as the
-sample it was, not deleted.
+therefore **5.5%, about one run in eighteen** - every sample is kept in the table above as the sample
+it was, not deleted. (The third row arrived with REVIEW-round3-stage2, which reverted the fix and
+measured again; the pooled figure moved from 5.0% to 5.5% and its interval tightened.)
 
 ### Fix
 
@@ -192,7 +195,8 @@ sample it was, not deleted.
 +  // had not pinned: an opening deal that settles every box before any player
 +  // action — a dealer natural (seed 56), or a natural in every box (seed 35) —
 +  // ends the round, and the assertion below then times out on a count check that
-+  // is working correctly. Measured at 2 of 60 seeds and 6 of 200 unseeded runs.
++  // is working correctly. Measured at 2 of 60 seeds, and at 20 of 400 unseeded
++  // runs across two independent samples (6/200 and 14/200).
    test('returning to counting keeps the drill going', async ({ page }) => {
      await configure(page, '2');
 -    await runCountingRound(page);
@@ -237,10 +241,10 @@ second, unrelated intermittent, measured and fixed as **M4** below. This test it
 
 **The arithmetic.** The four instruments in the table are 200 + 30 + 200 + 30 = **460** executions of
 the M2 test after the fix, 0 failures. (An earlier version of this line said 430, silently dropping
-one of the two 30-run blocks - REVIEW-round3-stage1, F3.) At the pooled before-rate of 5.0% the
-chance of 460 consecutive passes is `0.95^460 = 5.7e-11`; at the low end of the pooled interval
-(3.08%) it is `0.9692^460 = 5.6e-7`, about 1 in 1.8 million. The stage-1 reviewer's own 50 further
-repeats at the shipping commit are not counted in that 460.
+one of the two 30-run blocks - REVIEW-round3-stage1, F3.) At the pooled before-rate of 5.5% the
+chance of 460 consecutive passes is `0.945^460 = 5.0e-12`; at the low end of the pooled interval
+(3.82%) it is `0.9618^460 = 1.7e-8`, about 1 in 60 million. Neither reviewer's own repeats at the
+shipping commit (50 and 12 full-suite runs) are counted in that 460.
 
 The rates are the weaker half of the argument. The stronger half: the test no longer has a random
 input. The failure needed an opening deal that settles every box, and the shoe is now pinned to one
@@ -277,7 +281,7 @@ Five of five. The mutation was reverted with `cp` from a copy taken before it, a
 ### Re-triage
 
 **P1 → P1, unchanged, but for a different reason than round 2 gave.** Round 2 rated it P1 as "a
-release gate that is red roughly one run in four". The rate is 3% per execution, not 25% per run, and
+release gate that is red roughly one run in four". The rate is 5% per execution, not 25% per run, and
 the gate is not wrong about the app - the app is fine. It stays P1 because of what it does to
 everything else: a gate that fails for a reason unrelated to what it tests trains its readers to
 re-run it, and item 2 of this round is about to put this exact suite in front of the Pages deploy,
@@ -364,7 +368,7 @@ n=130 min=276 median=793 max=3080
 ```
 
 130 waits across five full-suite runs. The 26-card caller is the tail: 2802-3080 ms, against a 5000 ms
-budget - a margin of **1.6-1.8x**, where every other caller sits at 276-800 ms with a margin of 6x or
+budget - a margin of **1.6-1.9x**, where every other caller sits at 276-800 ms with a margin of 6x or
 better. One run in 30 spent the whole budget. (The band is 2.68-3.08 s once
 REVIEW-round3-stage1's independent instrumented runs are pooled in: it reproduced the structure
 exactly - 26 deck-estimate waits per full-suite run - and the 26-card caller at 2678-2920 ms, below
@@ -432,10 +436,13 @@ to: M2's region was never going to hide, so any budget would have failed. Here t
 the form is not racing anything, it arrives on a schedule the test itself set in Settings, and the
 5 s default is simply ignorant of that schedule. The budget is now that schedule plus the same 5 s
 every other wait in the suite gets. A wait that is under-specified for its own configuration is a
-test defect in its own right: on a machine 1.8x slower than this one it fails **every** time, not
-intermittently. The same sentence bounds the fix, and is stated here rather than left for a reader
-to derive: a machine 2.5x slower than this one will fail every time **with** the fix. This raises
-the ceiling; it does not remove it.
+test defect in its own right: a machine more than about **1.9x** slower than this one fails **every**
+time, not intermittently - the threshold is `5000 / 2678`, the budget over the fastest stream ever
+measured, because "every time" has to hold at the quick end of the band. The same sentence bounds the
+fix and is stated here rather than left for a reader to derive: with the fix the threshold is
+`7600 / 2678`, so a machine more than about **2.8x** slower fails every time. This raises the ceiling;
+it does not remove it. (Both figures were first published against the wrong end of the band - 1.8x and
+"2.5x fails every time" - and corrected after REVIEW-round3-stage2, F2 and F5.)
 
 `grep -rn "Number of cards" e2e/` confirms this is the only caller that streams more than 3: every
 other one takes the default, whose budget moves from 5000 ms to 5300 ms.
@@ -453,9 +460,11 @@ ABSENT_EXIT=0
 
 The temporary 200 ms mutation was then removed; the committed test streams at the 100 ms the
 configure helper sets, with a 7600 ms budget against a measured 2.68-3.08 s - a margin of 2.5-2.8x
-where it was 1.6-1.8x, and one that grows with whatever the caller asks for rather than staying
-fixed. Both pairs are quoted against the same ends of the same band, which an earlier version of
-this section did not do (it compared 5000/2802 with 7600/3080 - REVIEW-round3-stage1, F6).
+where it was 1.6-1.9x, and one that grows with whatever the caller asks for rather than staying
+fixed. Both pairs are quoted against the same ends of the same band: `5000/3080 = 1.62`,
+`5000/2678 = 1.87`, `7600/3080 = 2.47`, `7600/2678 = 2.84`. Earlier versions did not do that twice -
+first comparing 5000/2802 with 7600/3080 (REVIEW-round3-stage1, F6), then rounding one end down and
+the other up (REVIEW-round3-stage2, F5).
 
 ### Non-vacuity
 
@@ -470,7 +479,7 @@ default.
 26's wait exceeded 5000 ms; how far it exceeded it was never measured, because the assertion that
 would have measured it is the one that failed. The largest wait ever recorded for this caller is
 3080 ms, across 8 instrumented full-suite runs on two occasions. So nothing here proves run 26's tail
-lands under 7600 ms rather than over it - only that the tolerance moved from 1.6-1.8x the measured
+lands under 7600 ms rather than over it - only that the tolerance moved from 1.6-1.9x the measured
 stream to 2.5-2.8x. A readiness signal from the app would remove the ceiling instead of raising it;
 none exists, and adding one would be a product change this round's scope rule forbids. Recorded as a
 bounded improvement, not a removal (REVIEW-round3-stage1, F2).
@@ -505,7 +514,7 @@ run15 exit=0   111 passed (40.1s)    run30 exit=0   111 passed (39.7s)
 it is strong evidence about the suite as a whole and weak evidence about any single test - which is
 the same limitation that made round 2's and this run's earlier full-suite numbers unable to see M2.
 The per-test evidence is the `--repeat-each` measurements recorded against M2 and M4. Gate 5 was red
-1 run in 30 before this stage (M4) and 1 run in 33 before that (M2, per-execution 3.0%); it is now
+1 run in 30 before this stage (M4) and about 1 run in 20 before that (M2, per-execution 5.5% pooled); it is now
 0 in 30. The two fixes are not the same kind of fix, and the distinction matters: M2's random input
 is **removed** - the shoe is pinned and the failing state is unreachable - while M4's is
 **rescaled**, from a fixed budget to one that follows the caller's own stream. An earlier version of
@@ -601,12 +610,20 @@ killing a `serve-dist` on port 4200 that it took for its own orphan; it was this
 Re-run alone, with nothing else on the machine:
 
 ```console
-$ CI=true E2E_SERVER=dist bash -e out/step09.sh
+$ echo "load before: $(uptime | sed 's/.*load averages: //')"
 load before: 9.22 44.20 97.85
+$ CI=true E2E_SERVER=dist bash -e out/step09.sh   # out/step09.sh is one line: npm run e2e
 Running 111 tests using 1 worker
   111 passed (2.7m)
 STEP9_EXIT=0
 ```
+
+(Those were two commands in one shell invocation; an earlier version of this block showed the load
+line inside the step's own output, which the one-line script cannot print - REVIEW-round3-stage2, F7.
+The reviewer re-ran the same extracted script independently and got `111 passed (2.8m)`, 1 worker.
+`run-workflow-steps.rb` is a scratch script, not committed: it is quoted in full above, and the
+property that matters - that what ran is the YAML's own `run:` text - is checkable by extracting the
+steps with any YAML parser, which is what the reviewer did.)
 
 `workers: 1` and `retries: 1` are what `playwright.config.ts:18-19` select under `CI`, so that run is
 the shape the deploy job will use, not the local parallel one. **Operational fact for anyone running
@@ -846,13 +863,21 @@ This is the one dependency change in the round, and it is the one the brief's it
 +    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.spec.json && tsc --noEmit -p tsconfig.e2e.json",
 ```
 
-and `tsconfig.spec.json` picks up the second doorway REVIEW-round2-final (FF-6) named - the
-`**/*.test.ts` glob that `angular.json`'s test target collects (resolved against `sourceRoot`) and no
-tsconfig covered:
+and `*.test.ts` moves to the project that has the runner's globals. **This half was published wrong
+first**: it claimed `**/*.test.ts` was covered by "no tsconfig", and REVIEW-round3-stage2 (F1) showed
+it was already in the app project, whose `include` is `src/**/*.ts` and whose `exclude` was only
+`src/**/*.spec.ts`. It was not a gap - it was a file class compiled by the wrong project, one with
+`types: []`, so the first real `*.test.ts` would have failed `npm run lint` with
+`Cannot find name 'describe'` about a correct file. The corrected patch is two lines, not one:
 
 ```diff
+# tsconfig.spec.json — typecheck it here, where the vitest globals are declared
 -  "include": ["src/**/*.d.ts", "src/**/*.spec.ts"]
 +  "include": ["src/**/*.d.ts", "src/**/*.spec.ts", "src/**/*.test.ts"]
+
+# tsconfig.app.json — and stop the app project compiling it under `types: []`
+-  "exclude": ["src/**/*.spec.ts"],
++  "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"],
 ```
 
 Both projects were green before being wired in, so this widens the gate without moving the goalposts:
@@ -878,21 +903,35 @@ $ npx tsc --noEmit -p tsconfig.app.json   # what the gate used to be, same mutat
 OLD_GATE_EXIT=0
 ```
 
-And the second doorway, with a temporary `src/app/doorway.test.ts` (deleted immediately after):
+And for `*.test.ts`, the proof that matters is not "is it typechecked" - it was - but "is it
+typechecked by a project that knows what a unit test looks like". A realistic temporary
+`src/app/doorway.test.ts` (deleted immediately after):
 
 ```ts
-const collectedButNeverTypechecked: number = 'not a number';
+describe('doorway', () => {
+  it('is collected by the unit runner', () => {
+    expect(1).toBe(1);
+  });
+});
 ```
 
 ```console
-$ npx tsc --noEmit -p tsconfig.spec.json                       # new include
-src/app/doorway.test.ts(2,7): error TS2322: Type 'string' is not assignable to type 'number'.
-NEW_EXIT=2
-$ npx tsc --noEmit -p tsconfig.spec.json                       # old include, same file
-OLD_EXIT=0
+$ npm run lint                       # with both halves of the patch
+(no TS errors; the only failure in this run is an unrelated unformatted review file)
+$ npx tsc --noEmit -p tsconfig.app.json
+APP=0
+$ npx tsc --noEmit -p tsconfig.spec.json
+SPEC=0
 ```
 
-A file the unit runner executes and no tsconfig covered is now covered.
+Before the `exclude` half, the same file gave `APP_EXIT=2` with three errors
+(`Cannot find name 'describe' / 'it' / 'expect'`) - measured by REVIEW-round3-stage2 (F1) and the
+reason that half exists. `find src -name '*.test.ts'` returns 0 files today, so nothing in the tree
+was broken; what was broken was the first person to use the name.
+
+**Still uncovered, and named rather than implied:** `tools/*.spec.mjs`, the two specs round 2 added,
+which the unit runner does execute (2 of the 67 test files) and which no tsconfig typechecks before
+or after this change. They are JavaScript on purpose, with round 2's reasoning recorded in them.
 
 ### Where this lands in CI, now that CI is editable
 
@@ -1177,3 +1216,114 @@ number that says 0% for a tested file is not more honest than one that says noth
 What this round does instead is make the number impossible to misread, in the file that owns it
 (`vitest.config.ts`): a comment naming what the percentages cover, what they do not, why, and the
 finding id. That is a record, not a gate, and M3 stays open on that basis.
+
+## D1 - the support address is still a placeholder, and it now blocks a gated deploy
+
+**Severity: P1, DEFERRED.** The owner decision arrived as "still unknown".
+
+Re-verified at this commit:
+
+```console
+$ awk 'NR==65' ios/AppStore/privacy.html
+  <a href="mailto:CONTACT_EMAIL_HERE">CONTACT_EMAIL_HERE</a>.</p>
+$ awk 'NR==55' ios/AppStore/support.html
+    <a href="mailto:CONTACT_EMAIL_HERE">CONTACT_EMAIL_HERE</a> and I'll get back to you.
+$ grep -rn CONTACT_EMAIL_HERE ios/ .github/ docs/
+ios/AppStore/support.html:55: ...
+ios/AppStore/privacy.html:65: ...
+$ awk 'NR==42' .github/workflows/pages.yml
+          cp ios/AppStore/privacy.html ios/AppStore/support.html site/
+```
+
+Both cited lines are exactly where round 2 left them, both files are still copied into the published
+site, and the placeholder appears nowhere else.
+
+**The placeholder is left visible, and no address was invented.** A privacy policy that names a
+mailbox nobody reads is worse than one that visibly has not been filled in, and App Store review
+opens both of these URLs.
+
+**What changed this round is what it blocks.** Before item 2, a push to `main` deployed whatever it
+was given. After it, the deploy runs behind every gate this repository has - and not one of them
+looks at these two files, so the placeholder would still ship. That is deliberate: a gate that fails
+on `CONTACT_EMAIL_HERE` would block the deploy of an app whose only defect is one string the owner
+already has. It stays a launch blocker (`LAUNCH-CHECKLIST.md` O5/O6), not a code finding.
+
+## I1 - the iCloud data-loss path, and the entitlement question
+
+**Severity: P1, DEFERRED.** The owner has decided **not to provision** iCloud KVS, so the path is not
+reachable; the defect is real and fixing it properly changes user-visible sync behaviour.
+
+### The provisioner warning still matches the code at every line it cites
+
+`LAUNCH-CHECKLIST.md` O2 carries a warning added in round 2, above the provisioning steps. Every
+citation was re-read at this commit:
+
+| citation                         | what is at those lines                                                              |
+| -------------------------------- | ----------------------------------------------------------------------------------- |
+| `CloudKeyValueStore.swift:63-72` | `cloud.synchronize()`, then the seed loop: `data(forKey:) != nil ? adopt : push`    |
+| `StatsStore.swift:63-65`         | `private func persist()` → `StatsPersistence.save(...)` → `pushToCloud()`           |
+| `StatsStore.swift:78`            | `stats = value`, the wholesale replace that makes adoption last-writer-wins         |
+| `AppModel.swift:49-78`           | `let cloud = UbiquitousKeyValueStore()` … `StatsCloudSync(cloud:stores:)`, 9 stores |
+| `PracticeDataSection.swift:16`   | `Button("Reset practice data", role: .destructive) { confirmingReset = true }`      |
+
+All five resolve exactly. The warning does not overstate the code, and it is still above the steps
+the person who could flip the switch would follow.
+
+### The entitlement: evaluated, not performed
+
+The question is whether to remove `com.apple.developer.ubiquity-kvstore-identifier` from
+`ios/BlackjackTrainer/BlackjackTrainer.entitlements` and `CODE_SIGN_ENTITLEMENTS` from
+`ios/project.yml:40`.
+
+**What is measurable here.** The entitlement is declared and expands correctly, but it does not reach
+the signature of anything this repository can build:
+
+```console
+$ codesign -d --entitlements - .../Build/Products/Debug-iphonesimulator/BlackjackTrainer.app
+<?xml version="1.0" ...><plist version="1.0"><dict></dict></plist>     # empty
+
+$ plutil -p .../BlackjackTrainer.build/BlackjackTrainer.app.xcent
+{ }                                                                     # signed entitlements: none
+
+$ plutil -p .../BlackjackTrainer.build/BlackjackTrainer.app-Simulated.xcent
+{
+  "application-identifier" => "C3W798H8U8.com.arthurzhang.blackjacktrainer.app"
+  "com.apple.developer.ubiquity-kvstore-identifier" => "C3W798H8U8.com.arthurzhang.blackjacktrainer.app"
+}
+```
+
+So `$(TeamIdentifierPrefix)$(CFBundleIdentifier)` resolves, the simulator's _simulated_ entitlements
+carry the key, and the code signature carries nothing. Gate 9 is green with the entitlement declared,
+and it would be green without it: **no local build can distinguish the two states.**
+
+**The argument for removal.** With the entitlement declared, turning the capability on is a **portal
+switch** - no app update, no release, no review. The day it is flipped, every copy already on a phone
+starts running `CloudKeyValueStore.swift:63-72`, whose failure mode is that a device with an
+unpopulated KVS cache writes its empty state over the shared key and the wipe propagates
+(`StatsStore.swift:78` replaces local state wholesale). Removing it makes that path unreachable by
+configuration alone: activating sync would then require shipping a build, which is the same moment
+the race would have to be fixed.
+
+**The argument against.** `LAUNCH-CHECKLIST.md:22` (decision D2, answered 2026-08-06) records
+"the entitlement stays declared and inert, O2/O11 leave the critical path, and provisioning later
+turns sync on without an app update" as a deliberate choice. Removing the entitlement deletes exactly
+the property that decision was made to keep. Silently reversing a recorded design decision is what
+these runs are not for, and the entitlement causes **no concrete defect today**: it is unprovisioned,
+inert, and absent from every artifact this repository produces.
+
+**Recommendation: keep it declared, and leave the decision with the owner** - the conservative option,
+and the one that respects D2. The control is the O2 warning, which sits above the provisioning steps
+and has now been verified line by line for the second round running. The recommendation flips if, and
+only if, the owner intends to provision before the launch-seed race is fixed: at that moment the
+entitlement stops being inert, and removing it is cheaper and more certain than remembering to read a
+checklist.
+
+**Archive/export signing: still CANNOT ASSESS, and now precisely bounded.** `ios/project.yml:17-20`
+sets `CODE_SIGN_STYLE: Automatic`, `CODE_SIGNING_REQUIRED: YES` and `DEVELOPMENT_TEAM: C3W798H8U8`,
+so a device archive signs against a real team and needs a provisioning profile carrying every
+declared entitlement. Whether one exists - and whether Xcode would mint it with
+`-allowProvisioningUpdates`, which is a per-account permission - is a question for Apple's servers
+and this account's credentials. Neither is reachable here, and the simulator build proves nothing
+about it because it signs with no entitlements at all. What would settle it, for whoever has the
+account: `xcodebuild -scheme BlackjackTrainer -destination 'generic/platform=iOS' archive` with and
+without the entitlement, and compare.
