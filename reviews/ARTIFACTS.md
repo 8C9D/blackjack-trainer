@@ -185,3 +185,68 @@ its own files is broken, and a dismiss button would buy back the six controls by
 only explanation the trainee gets. The reload is verified above to actually repair the app,
 and no practice is lost by taking it - `localStorage` is untouched by the worker's caches.
 The pre-existing half of the overlap is recorded for the next run as N4.
+
+---
+
+## W1 - the PWA manifest sent every installed copy to the wrong site
+
+The claim is about what a browser resolves, so the artifact is a browser resolving it.
+Chrome was asked directly, via CDP `Page.getAppManifest`, which returns the manifest the
+browser would use to install and launch the app. Both runs use a build made exactly as
+`.github/workflows/pages.yml:37` makes it (`npm run build -- --base-href /blackjack-trainer/`)
+served under that same path prefix.
+
+### Before
+
+```
+manifest URL       : http://127.0.0.1:4340/blackjack-trainer/manifest.webmanifest
+raw start_url      : "/"
+raw scope          : "/"
+browser start_url  : http://127.0.0.1:4340/            <- the site root, not the app
+browser scope      : http://127.0.0.1:4340/
+```
+
+### After
+
+```
+manifest URL       : http://127.0.0.1:4341/blackjack-trainer/manifest.webmanifest
+raw start_url      : "./"
+raw scope          : "./"
+browser start_url  : http://127.0.0.1:4341/blackjack-trainer/     <- the app
+browser scope      : http://127.0.0.1:4341/blackjack-trainer/
+```
+
+On the live host that "site root" is `https://8c9d.github.io/`, a different project on the
+shared origin - so before this change, launching the installed app opened someone else's
+site.
+
+### The root deploy is unaffected
+
+The same check against a default `npm run build` served at the origin root:
+
+```
+ROOT DEPLOY manifest URL     : http://127.0.0.1:4342/manifest.webmanifest
+ROOT DEPLOY browser start_url: http://127.0.0.1:4342/
+ROOT DEPLOY browser scope    : http://127.0.0.1:4342/
+```
+
+Identical to the old behaviour, which is why the change is safe for local dev, the
+`serve-dist` E2E server, and any future root-hosted deploy.
+
+### The new gate is not vacuous
+
+Review 0 required the E2E assertion to be on the **raw** strings, because this suite serves
+at the origin root where `/` and `./` resolve alike - a resolved assertion would pass either
+way. With the old manifest restored and everything else unchanged:
+
+```
+✘ 12 [chromium] › e2e/smoke/navigation.e2e.ts:114:7 › the PWA manifest is linked and carries installable icons
+    Expected: "./"
+    Received: "/"
+    > 126 |     expect(manifest.start_url).toBe('./');
+  1 failed
+  12 passed
+```
+
+Gates with the fix: lint 0, build 0 (same single budget warning), 1533 unit tests,
+E2E 111 passed with port 4200 confirmed free first.
