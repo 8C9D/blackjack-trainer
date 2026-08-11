@@ -37,10 +37,11 @@ export class AppUpdateService {
         this.updateReady.set(true);
       });
 
-    this.swUpdate.unrecoverable.subscribe(() => {
-      this.updateFailed.set(false);
-      this.recoveryNeeded.set(true);
-    });
+    // `updateFailed` is deliberately left alone. It means "your last reload
+    // attempt failed", and this is the one state whose only offered action is a
+    // reload — clearing it here would wipe that warning off a banner whose only
+    // button had just refused to work.
+    this.swUpdate.unrecoverable.subscribe(() => this.recoveryNeeded.set(true));
   }
 
   // Only the update offer is dismissible. A broken worker is a condition, not a

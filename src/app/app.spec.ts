@@ -81,6 +81,9 @@ describe('App', () => {
     expect(banner?.textContent).toContain('Reload to repair this app');
     expect(banner?.textContent).not.toContain('A newer version');
     expect(banner?.getAttribute('aria-label')).toBe('App needs reloading');
+    // A fault interrupts; an offer waits its turn.
+    expect(compiled.querySelector('.update__copy')?.getAttribute('role')).toBe('alert');
+    expect(compiled.querySelector('.update__copy')?.getAttribute('aria-live')).toBe('assertive');
     // Dismissing a broken app would hide the only signal the trainee gets.
     expect(compiled.querySelector('.update__later')).toBeNull();
 

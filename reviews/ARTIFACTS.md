@@ -74,10 +74,53 @@ both sides before accepting it.
 
 ## W2 - an unrecoverable service worker was never surfaced
 
-An unrecoverable worker cannot be induced from a test browser, so the artifact is the
-changed path driven directly, plus proof that the new tests are not vacuous.
+**Correction.** The first version of this entry claimed the unrecoverable state "cannot be
+produced in a real browser by any tooling in this repository" and marked W2 partly
+UNVERIFIED on that basis. That was wrong, and REVIEW-pass4 (F4-1) was right to strike it:
+the claim was inferred from the unit-test harness and generalised without being tested.
+The state is inducible with nothing but Node and this repository's own Playwright, entirely
+on 127.0.0.1, and the section below now records that run instead. W2 is verified end to end.
 
-### The new tests fail when only the subscription is removed
+### Inducing the real state (the primary artifact)
+
+`ngsw-worker.js` raises `SwUnrecoverableStateError` on exactly one condition: a hashed asset
+that is missing from its cache **and** answered 404 by the origin. That is an ordinary
+redeploy - the old chunk is gone from the server and evicted from the cache. Reproduced
+against the production bundle from `npm run build`, served by a throwaway copy of
+`serve-dist` that can be told to 404 one path:
+
+```
+controlled: true
+cache victim: {"cacheName":"ngsw:/:acd03d05...:assets:app:cache","entries":25,
+               "target":"/chunk--v5M_Gm0.js","deleted":true}
+page fetch of victim: 404
+BANNER: {
+ "aria": "App needs reloading",
+ "copyRole": "alert",
+ "copyLive": "assertive",
+ "text": "Reload to repair this app Some of its stored files are missing, so parts of it
+          will not work. Reloading fetches a fresh copy. Your practice is saved separately
+          and is not affected. Reload",
+ "buttons": ["Reload"]
+}
+```
+
+Before this change the same run produced no banner at all: the event had no subscriber.
+
+The copy makes one promise, so the promise was tested. After clicking the single Reload
+button:
+
+```
+AFTER RELOAD:          {"hasBanner":false,"body":"Blackjack TrainerMonday evening0/20hands today..."}
+LAZY ROUTE AFTER RELOAD: {"hasBanner":false,"body":"✕ Basic Strategy0/20escDealer shows Hard 17 vs A..."}
+```
+
+The app is repaired, the banner is gone, and a lazy-loaded drill route - the class of file
+that broke - loads again. No reload loop, no blank page. The screen-reader semantics the
+remediation added (`role="alert"`, `aria-live="assertive"`) are confirmed on the real
+rendered element, not only in the test bed.
+
+### The unit tests are not vacuous
 
 The signal and the template branch were left in place and **only** the
 `swUpdate.unrecoverable.subscribe(...)` block was deleted, isolating the behavioural
@@ -95,23 +138,25 @@ $ npm test
 exit 1
 ```
 
-Restoring the subscription returns the suite to `1532 passed`. Three of the six new tests
-fail on the behaviour alone, at both the service level and the rendered-shell level; the
-other three pin the states that must _not_ change (an available update must not report
-recovery, a disabled worker must report nothing, and reload still works).
+Restoring the subscription returns the suite to green. Three of the seven new tests fail on
+the behaviour alone, at both the service level and the rendered-shell level; the other four
+pin the states that must _not_ change (an available update must not report recovery, a
+disabled worker must report nothing, reload still works, and a reload that has already been
+refused keeps saying so when the worker then breaks).
+
+That last one was added in remediation: REVIEW-pass4 (F4-3) showed that
+`updateFailed.set(false)` inside the new handler could be deleted with the whole suite still
+green, so nothing pinned it - and on inspection the line was wrong anyway. It cleared "Could
+not reload. Please try again." off a banner whose only button had just failed. The line is
+gone and the behaviour is now asserted. The counts above predate that change, which is why
+the totals there read 1532 rather than the current 1533.
 
 ### With the fix
 
 ```
 $ npm test
  Test Files  65 passed (65)
-      Tests  1532 passed (1532)      <- 1526 at BASELINE, +6
-
-$ npm run test:coverage
-Statements   : 96.11% ( 5290/5504 )   floor 94
-Branches     : 93.23% ( 2358/2529 )   floor 92
-Functions    : 93.28% ( 917/983 )     floor 90
-Lines        : 97.97% ( 4064/4148 )   floor 96
+      Tests  1533 passed (1533)      <- 1526 at BASELINE, +7
 
 $ npm run build        exit 0, same single budget warning as BASELINE
 $ npm run lint         exit 0
@@ -121,13 +166,22 @@ $ E2E_SERVER=dist npm run e2e   111 passed (port 4200 confirmed free first)
 ### Rendering
 
 The recovery state reuses the existing banner's DOM and classes exactly - `.update`,
-`.update__copy`, `.update__reload` - and the shell test asserts each of them. It differs
-in two ways only: the copy, and the absence of `.update__later`.
-`src/app/app.scss:81-84` styles `.update__actions` as a plain flex row with a gap and no
-child-count or `:nth-child` rule, and `src/app/app.scss:87` styles buttons by class, so a
-single button lays out under the existing rules with no style change. No new CSS was added.
+`.update__copy`, `.update__reload` - and the new shell test now asserts each of them,
+including `.update__copy`, which the first version of this entry claimed and did not do
+(REVIEW-pass4 F4-4). `src/app/app.scss:81-84` styles `.update__actions` as a plain flex row
+with a gap and no child-count or `:nth-child` rule, and `src/app/app.scss:87` styles buttons
+via the descendant selector `.update button`, so a single button lays out under the existing
+rules. No new CSS was added, and the induced-state run above confirms the rendered result.
 
-**Known limitation, recorded rather than papered over:** the state cannot be produced in a
-real browser by any tooling in this repository, so it is UNVERIFIED end-to-end against an
-actual damaged service worker. What is verified is that the event now reaches the shell and
-what the shell renders when it does.
+### The cost of dropping "Later", recorded as a trade rather than a free win
+
+REVIEW-pass4 (F4-2) measured that on a 375x700 phone the banner covers the drill's six
+action controls and the page does not scroll. That overlap is pre-existing - the
+update-ready banner covers the same controls - but in the recovery state there is now no
+"Later" to press, so the only exit is the reload.
+
+That is the intended trade and it is worth stating plainly: an app whose worker cannot serve
+its own files is broken, and a dismiss button would buy back the six controls by hiding the
+only explanation the trainee gets. The reload is verified above to actually repair the app,
+and no practice is lost by taking it - `localStorage` is untouched by the worker's caches.
+The pre-existing half of the overlap is recorded for the next run as N4.
