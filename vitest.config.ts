@@ -10,6 +10,16 @@ import { defineConfig } from 'vitest/config';
 // previous set was written against the 2026-07-23 baseline and had drifted four
 // points below, which is a whole feature's worth of coverage a regression could
 // have shed unnoticed.
+// What these percentages cover, stated because they are quoted as if they
+// covered the repository: they cover the files the test process loads, which is
+// `src/**` and nothing else. Measured — 74 files in the report, 0 of them under
+// `tools/`. `tools/serve-dist.mjs` runs as a child process, which v8 coverage in
+// this process cannot see, and `tools/export-parity-fixtures.ts` is never
+// imported by a test (importing it would run it, rewriting tracked files under
+// `ios/Fixtures` as a side effect of `npm test`). Both are tested — by their
+// output and their process behaviour, in `tools/*.spec.mjs` — but no figure here
+// includes them. Closing that needs a coverage-forwarding harness for the child
+// process; finding M3.
 export default defineConfig({
   test: {
     coverage: {

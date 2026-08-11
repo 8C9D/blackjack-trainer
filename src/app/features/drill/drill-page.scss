@@ -2,8 +2,11 @@
 .drill {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  min-height: 100dvh;
+  // Minus whatever the fixed update banner is standing in front of (0px with no
+  // banner, so this is 100dvh in the ordinary case). Without it this screen is
+  // exactly viewport-tall, cannot scroll, and the banner covers its controls.
+  min-height: calc(100vh - var(--update-space, 0px));
+  min-height: calc(100dvh - var(--update-space, 0px));
   max-width: 720px;
   margin: 0 auto;
   // Keep the top bar clear of the status bar in iOS standalone; zero

@@ -131,6 +131,80 @@ describe('App', () => {
     });
   });
 
+  // The banner is `position: fixed` over the bottom of the viewport, and the
+  // drill screens are exactly viewport-tall and cannot scroll, so anything the
+  // banner covers is unreachable. The shell publishes what it covers; the
+  // layouts subtract it. jsdom has no layout engine, so the element's rect is
+  // stubbed — the wiring is what is under test, and the geometry it produces is
+  // measured in a real browser (reviews/ARTIFACTS-round3.md, N4).
+  describe('the space the update banner stands in front of', () => {
+    // jsdom's window is 768 tall by default; the geometry below was measured at
+    // 375x700, so the viewport is pinned to match it.
+    function pinViewportHeight(height: number): void {
+      Object.defineProperty(window, 'innerHeight', { value: height, configurable: true });
+    }
+
+    function stubRect(element: HTMLElement, top: number, height: number): void {
+      const rect = {
+        top,
+        height,
+        bottom: top + height,
+        left: 0,
+        right: 375,
+        width: 375,
+        x: 0,
+        y: top,
+      } as DOMRect;
+      element.getBoundingClientRect = () => rect;
+    }
+
+    it('is zero while no banner is up', () => {
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+      const host = fixture.nativeElement as HTMLElement;
+      expect(host.querySelector('.update')).toBeNull();
+      expect(host.style.getPropertyValue('--update-space')).toBe('0px');
+    });
+
+    it('is the banner height plus the gap it floats above, once one is up', () => {
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+      const host = fixture.nativeElement as HTMLElement;
+
+      pinViewportHeight(700);
+      announceUpdate();
+      fixture.detectChanges();
+      const banner = host.querySelector('.update') as HTMLElement;
+      // The geometry a real Chromium measures at 375x700: the banner stacks into
+      // a column below the 34rem breakpoint and floats 16px off the bottom.
+      stubRect(banner, 538.03, 145.97);
+      window.dispatchEvent(new Event('resize'));
+      fixture.detectChanges();
+
+      // 700 - 538.03, rounded up: the whole band from its top edge to the floor.
+      expect(host.style.getPropertyValue('--update-space')).toBe('162px');
+    });
+
+    it('goes back to zero when the offer is dismissed', () => {
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+      const host = fixture.nativeElement as HTMLElement;
+
+      pinViewportHeight(700);
+      announceUpdate();
+      fixture.detectChanges();
+      stubRect(host.querySelector('.update') as HTMLElement, 538.03, 145.97);
+      window.dispatchEvent(new Event('resize'));
+      fixture.detectChanges();
+      expect(host.style.getPropertyValue('--update-space')).toBe('162px');
+
+      (host.querySelector('.update__later') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(host.querySelector('.update')).toBeNull();
+      expect(host.style.getPropertyValue('--update-space')).toBe('0px');
+    });
+  });
+
   it('reloads into an available update from the prompt', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
