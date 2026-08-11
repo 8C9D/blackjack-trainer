@@ -11,9 +11,10 @@
   // three viewport-sized screens subtract it from their own height instead, so
   // no scrolling is needed wherever the layout has room to give — measured, that
   // is 375x700 and up. Below that the drill's own content (~499px) is already at
-  // its minimum, `min-height` cannot shrink past it, and this reserve makes the
-  // page scrollable by exactly the banner's height instead: reachable by
-  // scrolling rather than not reachable at all.
+  // its minimum, `min-height` cannot shrink past it, and the page becomes
+  // scrollable by however much of the reserve the content forces past the
+  // viewport instead — 161px of 162 at 375x500, 93 of 162 at 320x568 — which
+  // makes the controls reachable by scrolling rather than not reachable at all.
   padding-bottom: var(--update-space, 0px);
   min-height: 100vh;
   // Dynamic viewport unit avoids the mobile-browser "100vh is too tall under
