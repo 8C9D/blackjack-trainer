@@ -345,4 +345,28 @@ moot for the lane that mattered. With reuse disabled, the dist lane cannot attac
 foreign server at all: if a dist run succeeded, Playwright started `serve-dist` itself.
 That is a structural guarantee rather than a log line to read afterwards.
 
-Gates: lint 0, build 0 (same single inherited budget warning), 1533 unit tests, E2E 111.
+### Where the refusal is documented
+
+The new hard failure needed a home outside a code comment, because Playwright's canned
+message ends with "or set `reuseExistingServer:true` in config.webServer" - advice that, if
+taken, restores exactly the defect R0-4 named. `e2e/README.md` now documents the `dist`
+lane, the `E2E_SERVER` switch it never mentioned, the error text, and why not to take that
+suggestion. Raised as F7-3 by REVIEW-pass7.
+
+### Gates
+
+All nine BASELINE gates, re-run at this stage rather than the four the first version of this
+entry listed - the same lapse REVIEW-pass6 raised as F6-2 and REVIEW-pass7 caught again as
+F7-2:
+
+```
+1 lint            = 0
+2 build           = 0 (1 warning: the inherited chart-page.component.scss budget)
+3 unit            = 0 (1533 passed (1533))
+4 coverage        = 0  Statements 96.11%  Branches 93.23%  Functions 93.28%  Lines 97.97%
+5 e2e             = 0 (111 passed), port 4200 confirmed free first
+6 fixture drift   = 0
+7 swiftformat     = 0
+8 swiftlint       = 0
+9 xcodebuild      = ** TEST SUCCEEDED **, 335 tests in 38 suites
+```
