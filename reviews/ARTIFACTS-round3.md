@@ -9,7 +9,7 @@ and the superseded version is kept and marked, not deleted.
 
 All commands ran with the tool sandbox disabled.
 
-## M2 - the E2E gate fails on one test about one run in eighteen, and it is the test that is wrong
+## M2 - the E2E gate fails on one test, and it is the test that is wrong
 
 **Severity: P1** (carried from round 2's NEXT ROUND table, re-triaged from scratch below).
 
@@ -282,12 +282,12 @@ Five of five. The mutation was reverted with `cp` from a copy taken before it, a
 ### Re-triage
 
 **P1 → P1, unchanged, but for a different reason than round 2 gave.** Round 2 rated it P1 as "a
-release gate that is red roughly one run in four". The rate is 5% per execution, not 25% per run, and
+release gate that is red roughly one run in four". The rate is 5.5% per execution, not 25% per run, and
 the gate is not wrong about the app - the app is fine. It stays P1 because of what it does to
 everything else: a gate that fails for a reason unrelated to what it tests trains its readers to
 re-run it, and item 2 of this round is about to put this exact suite in front of the Pages deploy,
-where a 5%-per-execution flake would become a deploy that fails for no reason about one run in
-twenty. That last sentence is a statement about what item 2 does once it lands, not about this
+where a 5.5%-per-execution flake would become a deploy that fails for no reason about one run in
+eighteen. That last sentence is a statement about what item 2 does once it lands, not about this
 commit: at the commit this section ships with, `pages.yml` still consults nothing, and whether a
 failing step blocks the deploy is a property of GitHub's runner that this run cannot execute
 (ROUND 3 ASSUMPTION 2, and REVIEW-round3-stage1 F5, which caught the original present tense).
@@ -1135,7 +1135,7 @@ Re-measured here, with **no** `applyChanges` anywhere - the app's own scheduler 
 which is the whole point:
 
 ```console
-EFFECT offer then a failed reload   after updateFailed    reserve=162px banner={top:517.84,height:166.16}  short by 20px
+EFFECT offer then a failed reload   after updateFailed    reserve=162px banner={top:517.84,height:166.16}  short by 21px
 EFFECT offer then the worker breaks after recoveryNeeded  reserve=162px banner={top:504.03,height:179.97}  short by 34px
 
 FIXED  offer then a failed reload   after updateFailed    reserve=183px banner={top:517.84,height:166.16}  short by 0
@@ -1240,14 +1240,15 @@ Non-vacuity, same method as N5's other three properties - mutate the deployed bu
 check verbatim from the YAML:
 
 ```console
-$ python3 -c 'p="public/manifest.webmanifest"; s=open(p).read();
-    open(p,"w").write(s.replace(chr(34)+"id"+chr(34)+": "+chr(34)+"./"+chr(34),
-                                chr(34)+"id"+chr(34)+": "+chr(34)+"/blackjack-trainer/"+chr(34)))'
-$ npm run build -- --base-href /blackjack-trainer/ && bash -e step05.sh
+$ sed -i '' 's|"id": "./"|"id": "/blackjack-trainer/"|' public/manifest.webmanifest
+$ grep -n '"id"' public/manifest.webmanifest
+5:  "id": "/blackjack-trainer/",
+$ npm run build -- --base-href /blackjack-trainer/ > /dev/null && bash -e step05.sh
 id is /blackjack-trainer/
 CHECK_EXIT=1
-$ # restored
-RESTORED_CHECK_EXIT=0
+$ # manifest restored from the copy taken before the edit, rebuilt
+$ bash -e step05.sh
+RESTORED_EXIT=0
 ```
 
 ## N2 - `@angular/forms` is a runtime dependency nothing imports
@@ -1263,7 +1264,7 @@ Re-verified before removing:
 
 ```console
 $ git show b09470d:package-lock.json | grep -n '"@angular/forms"'
-14:        "@angular/forms": "^22.1.0",     # one occurrence: the root dependency
+14:        "@angular/forms": "^22.1.0",
 $ grep -rn "@angular/forms" src e2e tools | wc -l
        0
 $ grep -c "ReactiveFormsModule\|FormsModule\|NgModel" dist/blackjack-trainer/browser/main-*.js
