@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { SERVES_DIST } from '../fixtures/lane';
+
 // 52 faces plus the face-down back.
 const CARD_COUNT = 53;
 
@@ -24,8 +26,17 @@ async function cachedCards(page: Page): Promise<number> {
 // ran, and every card was a blank rectangle with its alt text spilling out. The
 // hand could not be read, which is the whole of what the app shows.
 test.describe('offline', () => {
-  // The dev server serves an unregistered worker, so the suite's default local
-  // run has nothing to test. Skipped, never silently passed.
+  // Skipped on the lane, never on whether a worker actually turned up. The dev
+  // server registers none at all (`provideServiceWorker({ enabled: !isDevMode() })`),
+  // so there is genuinely nothing to test there.
+  //
+  // In the dist lane the absence of a worker is not a reason to stand down — it
+  // is the defect this suite exists to report. Deciding that from runtime state
+  // made the two cases indistinguishable: delete `ngsw-worker.js` from the built
+  // bundle and the whole offline claim skipped itself, green, at `109 passed,
+  // 2 skipped` with nothing comparing that count to 111.
+  test.skip(!SERVES_DIST, 'Offline behaviour needs the built app: run with E2E_SERVER=dist.');
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     const registered = await page
@@ -34,7 +45,10 @@ test.describe('offline', () => {
       })
       .then(() => true)
       .catch(() => false);
-    test.skip(!registered, 'No service worker: run with E2E_SERVER=dist against a built app.');
+    expect(
+      registered,
+      'no service worker took control of the page: the built bundle must ship and register ngsw-worker.js',
+    ).toBe(true);
     // Controlling the page is not the same as having finished installing: the
     // Angular worker activates first and goes on prefetching afterwards. Cut
     // the network at that moment and a lazy route chunk is simply missing, so
