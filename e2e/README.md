@@ -46,6 +46,8 @@ there the server you have running _is_ the thing under test.
 e2e/
 ├── fixtures/
 │   ├── app.fixture.ts   # base test: lands each spec on a clean home
+│   ├── flows.ts         # shared multi-step drill flows
+│   ├── lane.ts          # which server backs the run (dist vs serve), defined once
 │   └── viewports.ts     # DESKTOP (1024×768), PHONE (390×844)
 └── smoke/
     ├── navigation.e2e.ts     # routes, titles, redirects, keyboard nav
