@@ -390,3 +390,70 @@ Findings discovered after round 2's work list froze. Not fixed in this run.
 | **M1** | P2       | Added by REVIEW-round2-stage1 (F5), reproduced independently. No gate typechecks `e2e/**` or `playwright.config.ts`: `npm run lint` runs `tsc --noEmit -p tsconfig.app.json`, whose `include` is `src/**/*.ts`. The config that would cover them cannot even run - `npx tsc -p tsconfig.e2e.json --noEmit` exits 2 with `error TS2688: Cannot find type definition file for 'node'`, because `@types/node` is in neither `dependencies` nor `devDependencies`. Playwright compiles specs with esbuild, which strips types without checking them, so a type error in a spec surfaces only as a runtime failure. `e2e/fixtures/lane.ts` is now the single source of truth for lane selection and is covered by none of this. REVIEW-round2-final (FF-6) adds that the `**/*.test.ts` glob restored to the test target collects files `tsconfig.spec.json` does not typecheck either, so the same gap now has a second doorway.                                                                                                                                                                                                                                                                                                                                              | Closing it requires adding `@types/node`, and this run's scope forbids dependency changes except to patch a CVE on the work list.                                                                                                                                                                                                                                                                                                                              |
 | **M2** | **P1**   | Added by REVIEW-round2-stage2 (F2-4). `e2e/smoke/showdown.e2e.ts:65` (`post-count showdown > returning to counting keeps the drill going`) fails intermittently: `await expect(page.getByRole('region', { name: 'Showdown vs dealer' })).toBeHidden()` times out at 5000 ms after "Back to counting" is clicked, with the region still visible. **Four independent reproductions**, always the same assertion and element: the stage-2 reviewer (2 of 7 full-suite runs, 1 of 24 isolated repeats), the stage-3 reviewer (4 of 60 repetitions), the final reviewer (1 of 30), and finally this run's own closing gate run - which is how it was caught here, `110 passed`, exit 1. Characterised at HEAD after that: **2 failures in 7 full-suite runs** on this machine. An earlier version of this row said "I could not reproduce it", which was true of the first 3 full-suite runs and 25 isolated repeats and is no longer true; the row is corrected rather than left standing. Consequences worth stating: every `111 passed` in this run's records is a single observation, not evidence that gate 5 is deterministic; and `playwright.config.ts:20` sets `retries: 1` under CI, so CI usually papers over a single occurrence while a local run fails outright. | Pre-existing and not a regression from this run - the stage-2 reviewer reproduced it with the whole range reverted, and nothing in this run touches `showdown.e2e.ts`. Diagnosing an intermittent lost click is open-ended work no frozen finding carries, and it should be the first item of the next round: a release gate that is red roughly one run in four, for a reason unrelated to anything it tests, is the exact defect class this round was about. |
 | **M3** | P3       | Added by REVIEW-round2-stage3 (F3-10). The coverage gate does not see `tools/`: `serve-dist.mjs` runs as a subprocess and so is never instrumented, and `export-parity-fixtures.ts` is never imported by a test at all. The two specs added in round 2 assert over these tools' _outputs_ and their _process behaviour_, which is the right shape for what they do, but no coverage figure covers either file and the reported 96.11/93.23/93.28/97.97 should not be read as including them.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Instrumenting a subprocess needs a coverage-forwarding harness, and importing the exporter into a test would run it, rewriting tracked files under `ios/Fixtures` as a side effect of `npm test`. Both are larger than any frozen finding.                                                                                                                                                                                                                     |
+
+# ROUND 3
+
+A third bounded sweep, continuing the branch above.
+Work list: the round-2 NEXT ROUND table (M1-M3), the round-2 findings left DEFERRED (N1, N2, N4, N5,
+N6), and the two non-code items (D1, I1).
+Baseline for every round-3 "green" claim: [`reviews/BASELINE-round3.md`](reviews/BASELINE-round3.md).
+Artifacts: [`reviews/ARTIFACTS-round3.md`](reviews/ARTIFACTS-round3.md).
+
+- Branch: `prod-readiness/round3-2026-08-11`
+- Base commit: `fff96bca7d34ed07960dae829a9c667c333fb10b` (tip of round 2, unmerged)
+- Date: 2026-08-11
+
+The connecting theme, taken from the round-3 brief: **make the deploy actually gated, and stop the
+gate from being a coin flip first.** Round 2's subject was gates that do not gate what they name;
+this round's is a gate nothing consults (the deploy ignores CI) and a gate that is unreliable for
+reasons unrelated to what it tests (M2).
+
+## ROUND 3 ASSUMPTIONS
+
+1. **The four owner decisions arrived answered**, unlike round 2's, and are taken as authoritative
+   without re-derivation:
+
+   | decision                | taken as               | consequence                                                                     |
+   | ----------------------- | ---------------------- | ------------------------------------------------------------------------------- |
+   | support email           | **still unknown**      | D1 stays DEFERRED with the placeholder left visible. No address is invented.    |
+   | iCloud KVS on iOS       | **will not provision** | I1 stays DEFERRED at P1; the provisioner warning is re-verified line by line.   |
+   | CI/CD workflow files    | **you may edit them**  | N1 and N5 are applied rather than filed. Every shell step is run locally.       |
+   | the flaky E2E test (M2) | **fix it**             | Item 1, ahead of everything, because item 2 puts that suite in the deploy path. |
+
+2. **GitHub Actions cannot be executed here.** Whether a failing step actually blocks the deploy is a
+   property of GitHub's runner, not of any file in this repository. Every claim of that kind in this
+   round is marked UNVERIFIED and named precisely rather than being asserted from a YAML parse.
+
+3. **The npm registry is a non-local resource this run may not contact**, so a finding whose fix
+   needs `npm install` is bounded by what is already in `node_modules` or the local npm cache. Where
+   that bites, it is recorded against the finding rather than worked around.
+
+## ROUND 3 status
+
+Terminal states are RESOLVED (artifact evidence), DEFERRED (reason), REJECTED TWICE (reverted,
+objection recorded), or PATCH-READY (finished and verified, blocked only on an owner permission or an
+unreachable resource). Severity is re-triaged from scratch.
+
+| id  | round-2 severity | re-triaged | status                                                                                                                                                                      |
+| --- | ---------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M2  | P1               | **P1**     | RESOLVED - artifact in [`reviews/ARTIFACTS-round3.md`](reviews/ARTIFACTS-round3.md#m2---the-e2e-gate-is-red-about-one-run-in-thirty-three-and-it-is-the-test-that-is-wrong) |
+| M4  | new              | **P2**     | RESOLVED - artifact in [`reviews/ARTIFACTS-round3.md`](reviews/ARTIFACTS-round3.md#m4---a-second-different-intermittent-in-the-same-gate-found-by-measuring-m2)             |
+
+**M4 is new, and it is why M2's after-evidence is not "30 green".** Measuring M2 over 30 full-suite
+runs turned up a second intermittent in a different test - `no hand is offered off a shoe past its
+cut card`, which fails inside `runCountingRound` because the deck-estimate wait carries a fixed 5 s
+budget while that one caller configures a 2.8-3.1 s card stream. It is taken in this round rather
+than filed to NEXT ROUND because it is the same gate item 1 exists to make trustworthy, and because
+item 2 puts that gate in front of the deploy: shipping N1 over a gate with a known 1-in-30 flake is
+the defect this round is about. Its fix is a wait budget derived from what the caller streams, which
+is not the same move as raising a timeout over a race - the artifact argues that line explicitly,
+because it is the obvious thing to attack.
+
+**M2 is not what round 2 said it was.** Round 2 filed it as "an intermittent lost click" at "roughly
+one run in four". Measured here: 6 failures in 200 executions of the test (3.0%), and the page at the
+moment of every one of those six failures is the **count check**, which is the component doing exactly
+what `showdown.component.ts:1319-1326` says it does when the round being left is already over. The
+click was never lost. The test asserted the mid-hand exit without pinning a shoe that guarantees a
+mid-hand state, and an opening deal that settles every box - a dealer natural, or a natural in every
+box - takes the other, documented path. There is **no defect in `src/`**; the fix is one argument in
+the test, and the assertion is unchanged.
