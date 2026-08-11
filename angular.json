@@ -72,7 +72,7 @@
           "builder": "@angular/build:unit-test",
           "options": {
             "runnerConfig": "vitest.config.ts",
-            "include": ["**/*.spec.ts", "../tools/**/*.spec.mjs"]
+            "include": ["**/*.spec.ts", "**/*.test.ts", "../tools/**/*.spec.mjs"]
           }
         }
       }

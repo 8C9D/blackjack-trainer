@@ -465,9 +465,28 @@ $ python3 -c "import json;print('systems in fixture:', json.load(open('ios/Fixtu
 systems in fixture: 5
 ```
 
-**53 of the app's 58 counting systems silently stopped being checked for parity, and the gate named
-after parity reported success.** The Swift target would also pass, because it asserts against the same
-weakened file.
+**53 of the app's 58 counting systems stopped being checked by that gate, and the gate named after
+parity reported success.**
+
+> **Correction.** This section first continued "The Swift target would also pass, because it asserts
+> against the same weakened file." That is false, and it was the load-bearing half of an argument that
+> rated N3 P1. REVIEW-round2-stage3 (F3-2) found it; confirmed here by running the iOS gate against
+> the degraded fixtures:
+>
+> ```console
+> $ xcodebuild -scheme BlackjackTrainer -destination '...iPhone 16 Pro' build test
+> ✘ Test everyBasicStrategyVectorMatches() recorded an issue at BasicStrategyParityTests.swift:15:9:
+>   Expectation failed: (file.vectors.count → 80) == 2720
+> ✘ Test everyDeviationVectorMatches() recorded an issue at DeviationParityTests.swift:19:9:
+>   Expectation failed: (file.count → 1840) == 62560
+> ** TEST FAILED **
+> ```
+>
+> `BasicStrategyParityTests.swift:15`, `DeviationParityTests.swift:19` and `CountingParityTests.swift:14`
+> hard-code 2720, 62560 and 58. Parity is not silently unprotected, and N3 is re-triaged back to **P2**.
+> What these checks add is real but narrower: they run in the **web** CI, which has no path filter,
+> whereas `.github/workflows/ios-ci.yml:6` runs only on changes under `ios/**`; and they cover
+> dimensions the three Swift totals do not pin.
 
 ### Defect absent - and the non-vacuity proof
 
@@ -531,17 +550,41 @@ missing chunk into a blank page), and real assets come back with their content t
 
 ### Why these two specs are JavaScript, not TypeScript
 
-`@types/node` is in neither `dependencies` nor `devDependencies`, and installing it needs the network,
-which this run may not use. A `.spec.ts` in `tools/` therefore fails to compile before it runs a line:
+The first version of this section said a `.spec.ts` in `tools/` "fails to compile before it runs a
+line", quoting real `TS2591` errors. REVIEW-round2-stage3 (F3-5) showed that does not reproduce, and
+it is right. Re-checked here:
 
-```
-✘ [ERROR] TS2591: Cannot find name 'node:child_process'. Do you need to install type definitions for node?
-✘ [ERROR] TS2591: Cannot find name 'process'.
-✘ [ERROR] TS2591: Cannot find name 'Buffer'.
+```console
+$ cat > tools/typeprobe.spec.ts   # imports node:child_process, uses process.cwd()
+$ npx ng test --include="../tools/typeprobe.spec.ts"
+      Tests  1 passed (1)
 ```
 
-`.spec.mjs` runs with no such barrier, and matches `tools/serve-dist.mjs`, which is plain Node already.
-The cost is that these two files are not typechecked - the same gap as M1, recorded rather than hidden.
+The errors were real, but they came from a `tsconfig.spec.json` edit that widened `include` to
+`tools/**/*.spec.ts` - and that edit was reverted before commit. Without it, `tsconfig.spec.json`
+covers only `src/**`, so a spec under `tools/` is never typechecked and simply runs.
+
+So the accurate reason is narrower and worse: a `.spec.ts` there would buy the **look** of type safety
+and none of it. Making it real means putting `tools/**` into `tsconfig.spec.json`, which then fails on
+`TS2591: Cannot find name 'process'` because `@types/node` is in neither `dependencies` nor
+`devDependencies` and installing it needs the network, which this run may not use. `.mjs` states the
+absence instead of dressing it up, and matches `tools/serve-dist.mjs`, which is plain Node already.
+The cost - these two files are not typechecked - is the same gap as M1, recorded rather than hidden.
+
+### Remediation after REVIEW-round2-stage3
+
+| id    | severity           | disposition                                                                                                                                                                                                                                                                    |
+| ----- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| F3-1  | P2, introduced     | **Fixed.** `**/*.test.ts` restored to the test target's `include`, which had silently replaced the builder default.                                                                                                                                                            |
+| F3-2  | P1, introduced     | **Regression R2-6, fixed.** The false Swift claim struck from three places and N3 re-triaged to P2. See the correction box above.                                                                                                                                              |
+| F3-3  | P1, introduced     | **Regression R2-7, fixed.** The hand axis is now pinned on both fixtures; the 97% cut that used to pass now fails with `only 1 canonical hands appear: expected 1 to be 34`.                                                                                                   |
+| F3-4  | P2, introduced     | **Regression R2-8, fixed.** A `%2f`-encoded traversal case was added; with `normalize()` deleted it fails at `expected 200 to be 404`, where the three original cases all passed.                                                                                              |
+| F3-5  | P2, introduced     | **Regression R2-9, fixed.** Both spec headers rewritten to the reason that reproduces.                                                                                                                                                                                         |
+| F3-6  | P2, pre-existing   | **Accepted; M2 updated.** The reviewer reproduced the gate-5 flake 4 times in 60 repetitions. M2 now records two independent reproductions and my own failure to reproduce, rather than leaving the reader to weigh one transcript against three green runs.                   |
+| F3-7  | P3, introduced     | **Regression R2-11, fixed.** The temp tree is removed in `afterAll`; 0 remain after a full run.                                                                                                                                                                                |
+| F3-8  | P3, introduced     | **Fixed.** The "7 fixtures" check reads `ios/Fixtures` and compares the filenames, instead of measuring the literal list beside it.                                                                                                                                            |
+| F3-9  | P3, introduced     | **Accepted, not fixed.** `freePort()` closes its probe before the child binds, so another process could take the port in between. Not observed in any run here, and the alternative is a retry loop around process spawn; recorded as a known race rather than claimed absent. |
+| F3-10 | info, pre-existing | **Recorded as M3.** The coverage gate does not see `tools/`.                                                                                                                                                                                                                   |
 
 ### A regression this stage introduced and caught in the same stage
 
@@ -582,7 +625,7 @@ All nine, re-run after the artifacts above were written:
 | ----------------------------- | ----------------------------- | ----------------------------- |
 | `npm run lint`                | 0                             | 0                             |
 | `npm run build`               | 0, 1 budget warning           | 0, same 1 budget warning      |
-| `npm test`                    | 1533 passed (65 files)        | **1546 passed (67 files)**    |
+| `npm test`                    | 1533 passed (65 files)        | **1547 passed (67 files)**    |
 | `npm run test:coverage`       | 96.11 / 93.23 / 93.28 / 97.97 | 96.11 / 93.23 / 93.28 / 97.97 |
 | `E2E_SERVER=dist npm run e2e` | 111 passed                    | 111 passed                    |
 | fixture anti-drift            | no drift                      | no drift                      |
@@ -592,5 +635,5 @@ All nine, re-run after the artifacts above were written:
 
 Coverage is unchanged to two decimals, which is expected rather than suspicious: `serve-dist.mjs` runs
 as a subprocess and so is not instrumented, and the fixture spec reads JSON and re-uses
-`COUNTING_SYSTEMS`, which the existing suite already covers. The 13 new tests add assertions over
+`COUNTING_SYSTEMS`, which the existing suite already covers. The 14 new tests add assertions over
 already-covered source, not new covered lines.
