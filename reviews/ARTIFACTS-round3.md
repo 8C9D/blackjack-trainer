@@ -244,8 +244,9 @@ second, unrelated intermittent, measured and fixed as **M4** below. This test it
 the M2 test after the fix, 0 failures. (An earlier version of this line said 430, silently dropping
 one of the two 30-run blocks - REVIEW-round3-stage1, F3.) At the pooled before-rate of 5.5% the
 chance of 460 consecutive passes is `0.945^460 = 5.0e-12`; at the low end of the pooled interval
-(3.82%) it is `0.9618^460 = 1.7e-8`, about 1 in 60 million. Neither reviewer's own repeats at the
-shipping commit (50 and 12 full-suite runs) are counted in that 460.
+(3.82%) it is `0.9618^460 = 1.7e-8`, about 1 in 60 million. The stage-1 reviewer's own repeats at the
+shipping commit - 50 executions of this one test via `--repeat-each`, and 12 full-suite runs - are not
+counted in that 460.
 
 The rates are the weaker half of the argument. The stronger half: the test no longer has a random
 input. The failure needed an opening deal that settles every box, and the shoe is now pinned to one
@@ -1243,11 +1244,12 @@ check verbatim from the YAML:
 $ sed -i '' 's|"id": "./"|"id": "/blackjack-trainer/"|' public/manifest.webmanifest
 $ grep -n '"id"' public/manifest.webmanifest
 5:  "id": "/blackjack-trainer/",
-$ npm run build -- --base-href /blackjack-trainer/ > /dev/null && bash -e step05.sh
+$ npm run build -- --base-href /blackjack-trainer/ > /dev/null
+$ bash -e out/step05.sh; echo "CHECK_EXIT=$?"
 id is /blackjack-trainer/
 CHECK_EXIT=1
 $ # manifest restored from the copy taken before the edit, rebuilt
-$ bash -e step05.sh
+$ bash -e out/step05.sh; echo "RESTORED_EXIT=$?"
 RESTORED_EXIT=0
 ```
 
