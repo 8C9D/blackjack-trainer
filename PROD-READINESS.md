@@ -214,3 +214,38 @@ Terminal states are RESOLVED (with artifact evidence), DEFERRED (with reason), o
 | W2   | RESOLVED - artifact in [`reviews/ARTIFACTS.md`](reviews/ARTIFACTS.md). Verified end to end against a genuinely damaged service worker, induced locally, plus proof the behavioural tests fail when only the subscription is removed. An earlier version of this row claimed the state could not be induced here; REVIEW-pass4 (F4-1) struck that claim and it was reproduced independently before the row was corrected. |
 | D1   | DEFERRED (see above)                                                                                                                                                                                                                                                                                                                                                                                                     |
 | I1   | DEFERRED (see above)                                                                                                                                                                                                                                                                                                                                                                                                     |
+
+Every frozen finding has reached a terminal state: four RESOLVED with artifact evidence, two DEFERRED with reasons. No finding was REJECTED TWICE; no stage needed a second remediation cycle.
+
+## What this run actually changed
+
+Four source files, plus one documentation file:
+
+| file                                          | change                                                                                                  |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `tools/serve-dist.mjs`                        | catch the URL parse/decode so a malformed request 404s instead of exiting the process (B1)              |
+| `src/app/core/services/app-update.service.ts` | subscribe to `SwUpdate.unrecoverable` and expose it as a signal (W2)                                    |
+| `src/app/app.ts`                              | a second state on the existing update banner for that signal, with `role="alert"` and no dismiss (W2)   |
+| `public/manifest.webmanifest`                 | `start_url` and `scope` from `/` to `./` (W1)                                                           |
+| `playwright.config.ts`                        | the `dist` E2E lane no longer reuses a server already on the port (R0-4)                                |
+| `e2e/README.md`                               | document the `E2E_SERVER` switch and why not to take Playwright's "set reuseExistingServer:true" advice |
+
+Plus tests: seven unit tests on the update service and shell, and two E2E assertions on the manifest. 1526 unit tests at BASELINE, 1533 now; E2E unchanged at 111.
+
+Nothing else in `src` was touched. No dependency changed, no workflow changed, no framework moved, nothing was reformatted or reorganised.
+
+## Gates at the end of the run
+
+All nine, matching or exceeding `reviews/BASELINE.md`, none worse:
+
+| gate                          | BASELINE                      | now                           |
+| ----------------------------- | ----------------------------- | ----------------------------- |
+| `npm run lint`                | 0                             | 0                             |
+| `npm run build`               | 0, 1 budget warning           | 0, same 1 budget warning      |
+| `npm test`                    | 1526 passed                   | 1533 passed                   |
+| `npm run test:coverage`       | 96.10 / 93.22 / 93.27 / 97.96 | 96.11 / 93.23 / 93.28 / 97.97 |
+| `E2E_SERVER=dist npm run e2e` | 111 passed                    | 111 passed                    |
+| fixture anti-drift            | no drift                      | no drift                      |
+| `swiftformat --lint`          | 0                             | 0                             |
+| `swiftlint`                   | 0                             | 0                             |
+| `xcodebuild build test`       | TEST SUCCEEDED, 335           | TEST SUCCEEDED, 335           |
