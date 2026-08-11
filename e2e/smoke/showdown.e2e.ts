@@ -70,7 +70,8 @@ test.describe('post-count showdown', () => {
   // had not pinned: an opening deal that settles every box before any player
   // action — a dealer natural (seed 56), or a natural in every box (seed 35) —
   // ends the round, and the assertion below then times out on a count check that
-  // is working correctly. Measured at 2 of 60 seeds and 6 of 200 unseeded runs.
+  // is working correctly. Measured at 2 of 60 seeds, and at 20 of 400 unseeded
+  // runs across two independent samples (6/200 and 14/200).
   test('returning to counting keeps the drill going', async ({ page }) => {
     await configure(page, '2');
     await runCountingRound(page, 1);
