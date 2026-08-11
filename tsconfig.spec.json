@@ -6,5 +6,8 @@
     "outDir": "./out-tsc/spec",
     "types": ["vitest/globals"]
   },
-  "include": ["src/**/*.d.ts", "src/**/*.spec.ts"]
+  // `**/*.test.ts` is collected by the unit-test target (angular.json, resolved
+  // against sourceRoot), so it has to be typechecked here too: a file the runner
+  // executes and no tsconfig covers is the gap M1 names, with a second doorway.
+  "include": ["src/**/*.d.ts", "src/**/*.spec.ts", "src/**/*.test.ts"]
 }
