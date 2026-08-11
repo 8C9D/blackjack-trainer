@@ -149,6 +149,22 @@ describe('AppUpdateService', () => {
     expect(service.recoveryNeeded()).toBe(false);
   });
 
+  // The recovery banner's only action is the reload, so a reload that has
+  // already been refused is exactly the thing it must not stop saying.
+  it('keeps a failed reload visible when the worker then breaks', () => {
+    const service = configure();
+    announceReady();
+    reloadPage.mockImplementation(() => {
+      throw new Error('reload refused');
+    });
+    service.reload();
+
+    announceUnrecoverable();
+
+    expect(service.updateFailed()).toBe(true);
+    expect(service.recoveryNeeded()).toBe(true);
+  });
+
   it('will not let a broken worker be dismissed', () => {
     const service = configure();
     announceUnrecoverable();

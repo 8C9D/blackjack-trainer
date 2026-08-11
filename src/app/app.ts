@@ -35,7 +35,14 @@ import { ThemeService } from './core/services/theme.service';
           updates.recoveryNeeded() ? 'App needs reloading' : 'App update available'
         "
       >
-        <div class="update__copy" role="status" aria-live="polite">
+        <!-- An offer can wait its turn behind whatever the screen reader is
+             saying; a broken app cannot, and the storage banner above already
+             sets that precedent for a fault. -->
+        <div
+          class="update__copy"
+          [attr.role]="updates.recoveryNeeded() ? 'alert' : 'status'"
+          [attr.aria-live]="updates.recoveryNeeded() ? 'assertive' : 'polite'"
+        >
           @if (updates.recoveryNeeded()) {
             <strong>Reload to repair this app</strong>
             <span>
