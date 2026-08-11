@@ -61,6 +61,13 @@ describe('App', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.update')?.textContent).toContain('Update ready');
     expect(compiled.querySelector('.update__copy')?.getAttribute('role')).toBe('status');
+    // These three were static attributes until the banner grew a second state.
+    // Pinned on this side too, so the recovery branch cannot quietly take the
+    // accessible name or the announcement politeness away from this one.
+    expect(compiled.querySelector('.update__copy')?.getAttribute('aria-live')).toBe('polite');
+    expect(compiled.querySelector('.update')?.getAttribute('aria-label')).toBe(
+      'App update available',
+    );
 
     (compiled.querySelector('.update__later') as HTMLButtonElement).click();
     fixture.detectChanges();
