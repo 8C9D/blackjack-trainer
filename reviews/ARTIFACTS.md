@@ -216,9 +216,13 @@ browser start_url  : http://127.0.0.1:4341/blackjack-trainer/     <- the app
 browser scope      : http://127.0.0.1:4341/blackjack-trainer/
 ```
 
-On the live host that "site root" is `https://8c9d.github.io/`, a different project on the
-shared origin - so before this change, launching the installed app opened someone else's
-site.
+On the live host that "site root" is `https://8c9d.github.io/`, which is a **different
+origin path from the app** and is not under this repository's control. Whether anything is
+published there is not established by anything in this tree - `backup.model.ts:10-13`
+establishes only that the origin is shared - so the accurate statement is that the installed
+app launched somewhere other than itself: another project's page if one is published at the
+root, a 404 if not. Either way it was not the trainer. (An earlier version of this paragraph
+asserted "someone else's site" as fact; REVIEW-pass6 F6-3 was right to strike it.)
 
 ### The root deploy is unaffected
 
@@ -248,5 +252,33 @@ way. With the old manifest restored and everything else unchanged:
   12 passed
 ```
 
-Gates with the fix: lint 0, build 0 (same single budget warning), 1533 unit tests,
-E2E 111 passed with port 4200 confirmed free first.
+### The consequence this change has, stated rather than left to be found
+
+The manifest declares no `id`, so a PWA's application identity falls back to its
+`start_url`. Changing `start_url` therefore changes the app's computed identity on the Pages
+deploy. Confirmed with the same CDP call, reading `id` on both builds:
+
+```
+BEFORE:  raw id: undefined   computed id: http://127.0.0.1:4350/
+AFTER:   raw id: undefined   computed id: http://127.0.0.1:4351/blackjack-trainer/
+```
+
+A browser that had already installed the app under the old manifest would treat the new one
+as a **different app** - a second install beside the first, not an update to it.
+
+The practical cost today is nil, which is why this is recorded rather than mitigated: Pages
+has not been switched on (owner action O4 is still open, `LAUNCH-CHECKLIST.md:59`), so no
+installed copy carrying the old identity exists. Pinning the identity would mean adding an
+`id` key to the manifest - a new config key, which this run's scope forbids - and it would
+pin it to the broken value. Raised by REVIEW-pass6 (F6-1) and reproduced here before being
+written down. If the app is ever published _before_ this fix ships, the next run needs to
+weigh an explicit `id` against a one-off duplicate install.
+
+### Gates
+
+All nine BASELINE gates were re-run with the fix in place, not only the four the first
+version of this entry listed (REVIEW-pass6 F6-2): lint 0; build 0 with the same single
+inherited budget warning; 1533 unit tests; coverage 96.11 / 93.23 / 93.28 / 97.97, every
+floor met; E2E 111 passed with port 4200 confirmed free first; `export:fixtures` +
+`git diff --exit-code -- ios/Fixtures` both 0; `swiftformat --lint` 0/105; `swiftlint`
+clean; `xcodebuild build test` `** TEST SUCCEEDED **`, 335 tests.
