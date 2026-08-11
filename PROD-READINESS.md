@@ -311,9 +311,18 @@ Terminal states are RESOLVED (artifact evidence), DEFERRED (reason), or REJECTED
 objection recorded). Severity is re-triaged from scratch: round 1 rated these under "I am not allowed
 to touch this", which is not a severity.
 
-| id  | round-1 severity | re-triaged | status                                                                                                                                                     |
-| --- | ---------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| N7  | P1               | **P1**     | RESOLVED - artifact in [`reviews/ARTIFACTS-round2.md`](reviews/ARTIFACTS-round2.md#n7---the-offline-gate-skips-itself-on-the-evidence-it-exists-to-report) |
+| id  | round-1 severity | re-triaged | status                                                                                                                                                                                               |
+| --- | ---------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| N7  | P1               | **P1**     | RESOLVED - artifact in [`reviews/ARTIFACTS-round2.md`](reviews/ARTIFACTS-round2.md#n7---the-offline-gate-skips-itself-on-the-evidence-it-exists-to-report)                                           |
+| N8  | P2               | **P1**     | RESOLVED (gaps b and c; gap a kept on purpose) - artifact in [`reviews/ARTIFACTS-round2.md`](reviews/ARTIFACTS-round2.md#n8---the-e2e-lane-selection-accepts-a-typo-and-never-builds-what-it-serves) |
+
+**Why N8 was re-triaged P2 → P1.** Round 1 rated it P2 while recording that it could not act on it.
+On its own evidence it is the same defect class as R0-4, which round 1 rated P1: a release gate
+reporting green without exercising what it names. Measured here, not argued: `E2E_SERVER=dsit` ran the
+dev-server lane and reported `13 passed`, exit 0; and with `src/app/app.routes.ts` edited and no
+rebuild, the lane named after the production bundle reported `13 passed`, exit 0, against a bundle
+built from different source. Both are silent-green, which round 1 itself called "worse than B1 in
+kind".
 
 ## ROUND 2 regressions introduced and fixed inside this run
 
