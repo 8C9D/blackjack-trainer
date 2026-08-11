@@ -282,3 +282,67 @@ inherited budget warning; 1533 unit tests; coverage 96.11 / 93.23 / 93.28 / 97.9
 floor met; E2E 111 passed with port 4200 confirmed free first; `export:fixtures` +
 `git diff --exit-code -- ios/Fixtures` both 0; `swiftformat --lint` 0/105; `swiftlint`
 clean; `xcodebuild build test` `** TEST SUCCEEDED **`, 335 tests.
+
+---
+
+## R0-4 - the `dist` E2E lane could pass green without running the production bundle
+
+The failure mode is a gate reporting on an artifact it never loaded, so the artifact is that
+exact scenario, staged deliberately: `ng serve` (the Vite dev server) holding 127.0.0.1:4200
+before the `dist` lane is invoked.
+
+The two servers are distinguishable, which is what makes the run readable at all: the dev
+server's HTML contains `/@vite/client` (1 occurrence, measured) and the production bundle's
+`index.html` contains it 0 times.
+
+### Before
+
+```
+ng serve up; is it the dev server? 1 vite marker(s)
+
+$ E2E_SERVER=dist npx playwright test e2e/smoke/navigation.e2e.ts
+  13 passed (3.8s)
+EXIT=0
+```
+
+Green, and wrong. Every `page.goto` resolves against `baseURL = http://127.0.0.1:4200`,
+which for the whole run was the dev server - so the lane named `dist` tested the dev server
+and never loaded a built file. Nothing in the output says so.
+
+### After
+
+```
+$ E2E_SERVER=dist npx playwright test e2e/smoke/navigation.e2e.ts
+Error: http://127.0.0.1:4200 is already used, make sure that nothing is running on the
+port/url or set reuseExistingServer:true in config.webServer.
+EXIT=1
+```
+
+The lane refuses to run rather than run against the wrong thing, and the message names the
+port.
+
+### The two paths that had to keep working
+
+```
+# serve lane still attaches to a running ng serve (the developer convenience)
+$ E2E_SERVER=serve npx playwright test e2e/smoke/navigation.e2e.ts
+  13 passed (3.1s)                     EXIT=0
+
+# dist lane with the port free: the full suite, unchanged
+$ lsof -nP -iTCP:4200 -sTCP:LISTEN  ->  4200 FREE
+$ E2E_SERVER=dist npm run e2e
+  111 passed (33.5s)                   EXIT=0
+```
+
+CI is unaffected: `CI=true` already disabled reuse for both lanes.
+
+### On auditability
+
+R0-4 also observed that a past run cannot be audited, because Playwright does not pipe the
+`webServer` stdout, so no log distinguishes the two servers. That is still true and was
+deliberately not fixed by adding `stdout: 'pipe'` - it is a second change, and it is now
+moot for the lane that mattered. With reuse disabled, the dist lane cannot attach to a
+foreign server at all: if a dist run succeeded, Playwright started `serve-dist` itself.
+That is a structural guarantee rather than a log line to read afterwards.
+
+Gates: lint 0, build 0 (same single inherited budget warning), 1533 unit tests, E2E 111.
