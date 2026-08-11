@@ -49,14 +49,24 @@ export async function configureBetSpread(page: Page): Promise<void> {
 // showdown is offered. The answers need not be correct — this is flow, not math.
 // A `seed` pins the app's randomness (the shoe's shuffle included) via the
 // `?seed=` hook, so a spec can rely on the exact cards the showdown will deal.
-export async function runCountingRound(page: Page, seed?: number): Promise<void> {
+// `cards` is how many the drill will stream before it asks anything, which the
+// caller sets in Settings and this helper otherwise has no way to know.
+export async function runCountingRound(page: Page, seed?: number, cards = 3): Promise<void> {
   await page.goto(
     seed === undefined ? '/drill/card-counting' : `/drill/card-counting?seed=${seed}`,
   );
   await page.getByRole('button', { name: /Start counting/ }).click();
 
+  // Nothing is asked until every card has streamed, and the stream is as long as
+  // the caller made it: `cards` at the 100 ms minimum interval the configure
+  // helpers set. Playwright's fixed 5 s default does not know that. Measured
+  // under the full parallel suite, the 26-card caller spends 2.80-3.08 s of it
+  // just streaming — a 1.8x margin, and one full-suite run in 30 exceeded the
+  // whole budget and failed here. This is not the same thing as raising a
+  // timeout to hide a race: the form is not racing anything, it arrives on a
+  // schedule the test itself set, and the budget now says so.
   const estimate = page.getByLabel('How many decks remain?');
-  await expect(estimate).toBeVisible();
+  await expect(estimate).toBeVisible({ timeout: 5_000 + cards * 100 });
   await estimate.fill('6');
   await page.getByRole('button', { name: /Submit estimate/ }).click();
 

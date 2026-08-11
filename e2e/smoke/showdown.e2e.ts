@@ -62,9 +62,18 @@ test.describe('post-count showdown', () => {
     await expect(page.getByRole('button', { name: /Deal another round/ })).toBeVisible();
   });
 
+  // The exit this test names is the one taken mid-hand, which is the only phase
+  // that leaves the table directly: once a round is over the same button opens
+  // the count check first and the region stays up by design (the walk-away spec
+  // below covers that path). So the shoe is pinned to a guaranteed player turn —
+  // seed 1 opens Q+8, 9+A vs dealer 3+8. Unseeded, this test asserted a phase it
+  // had not pinned: an opening deal that settles every box before any player
+  // action — a dealer natural (seed 56), or a natural in every box (seed 35) —
+  // ends the round, and the assertion below then times out on a count check that
+  // is working correctly. Measured at 2 of 60 seeds and 6 of 200 unseeded runs.
   test('returning to counting keeps the drill going', async ({ page }) => {
     await configure(page, '2');
-    await runCountingRound(page);
+    await runCountingRound(page, 1);
     await page.getByRole('button', { name: 'Play 2 hands vs the dealer' }).click();
 
     await expect(page.getByRole('region', { name: 'Showdown vs dealer' })).toBeVisible();
@@ -177,7 +186,9 @@ test.describe('post-count showdown', () => {
     await page.getByLabel('Number of decks').selectOption('1');
     await page.getByLabel('Penetration').selectOption('0.5');
     await page.getByLabel('Number of cards').fill('26');
-    await runCountingRound(page);
+    // 26 is also how long this drill streams for, which is the walk's wait
+    // budget — see runCountingRound.
+    await runCountingRound(page, undefined, 26);
 
     await expect(page.getByRole('button', { name: 'Play a hand vs the dealer' })).toBeHidden();
     await expect(page.locator('.count__shoe-spent')).toContainText('cut card is out');
