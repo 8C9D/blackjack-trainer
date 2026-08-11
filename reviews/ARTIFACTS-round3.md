@@ -1244,7 +1244,7 @@ check verbatim from the YAML:
 $ sed -i '' 's|"id": "./"|"id": "/blackjack-trainer/"|' public/manifest.webmanifest
 $ grep -n '"id"' public/manifest.webmanifest
 5:  "id": "/blackjack-trainer/",
-$ npm run build -- --base-href /blackjack-trainer/ > /dev/null
+$ npm run build -- --base-href /blackjack-trainer/ > /dev/null   # stderr keeps the budget warning
 $ bash -e out/step05.sh; echo "CHECK_EXIT=$?"
 id is /blackjack-trainer/
 CHECK_EXIT=1
