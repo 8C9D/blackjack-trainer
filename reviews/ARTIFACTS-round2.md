@@ -637,3 +637,255 @@ Coverage is unchanged to two decimals, which is expected rather than suspicious:
 as a subprocess and so is not instrumented, and the fixture spec reads JSON and re-uses
 `COUNTING_SYSTEMS`, which the existing suite already covers. The 14 new tests add assertions over
 already-covered source, not new covered lines.
+
+---
+
+## Stage 4 - the findings this run reports rather than fixes
+
+Each was re-verified at its cited line before being accepted, and re-triaged from scratch.
+
+### N4 - the update banner covers drill controls: reproduces, with one correction
+
+Round 1 recorded this as measured on `/drill/basic-strategy` at 375x700, with
+"all six action controls intersect the banner box" and "`elementFromPoint` at the centre of the Hit
+button returns a `SPAN` inside `.update`".
+
+**Method, stated because it matters.** The banner is driven by service-worker signals that cannot be
+raised on demand, so the markup `src/app/app.ts` renders for the update-ready state was injected into
+the live page and the **real stylesheet** positioned it. Angular scopes component styles with an
+`_ngcontent-*` attribute; a first attempt omitted it, the node got none of `.update`'s rules, and it
+laid out in normal flow at `top: 700` - a measurement that proved nothing and is discarded. Copying
+the attribute from a node the shell's own template rendered gives `position: fixed` and the real
+geometry:
+
+```json
+{
+  "scopeAttr": "_ngcontent-ng-c1058975690",
+  "bannerPosition": "fixed",
+  "bannerRect": { "top": 580.21875, "bottom": 684, "height": 103.78125 },
+  "scroll": { "scrollHeight": 700, "clientHeight": 700 }
+}
+```
+
+The page does not scroll - `scrollHeight === clientHeight === 700`, matching round 1 - so nothing can
+be scrolled out from under the banner. All five action controls found intersect it:
+
+| control   | top | bottom | intersects banner | element at its centre |
+| --------- | --- | ------ | ----------------- | --------------------- |
+| Hit       | 543 | 597    | yes               | `SPAN.acts__label`    |
+| Stand     | 543 | 597    | yes               | `SPAN.acts__label`    |
+| Double    | 543 | 597    | yes               | `SPAN.acts__label`    |
+| Split     | 605 | 660    | yes               | **`ASIDE.update`**    |
+| Surrender | 605 | 660    | yes               | **`ASIDE.update`**    |
+
+**The finding reproduces; round 1's cited example does not.** Split and Surrender are unreachable -
+`elementFromPoint` at their centres returns the banner itself. Hit, Stand and Double have their top
+~17 px covered but their centres remain clickable, so round 1's specific claim about the Hit button
+is wrong as written. The correction does not soften the finding: two controls are entirely
+unclickable while the banner is up, and the recovery state of that banner has no "Later" button to
+dismiss it with.
+
+**Re-triaged P2 → P2 (unchanged), but for a different reason.** Round 1 deferred it as "pre-existing".
+On evidence it is a genuine user-facing defect, not a cosmetic one: in the recovery state a trainee
+cannot split or surrender and cannot dismiss the thing stopping them. It stays P2 rather than rising
+because the update-ready state - the common one - keeps its dismiss button, and because the fix is a
+layout rework of either the banner or the drill, which no finding on this work list scopes and which
+would need design judgement this run should not exercise alone.
+
+### N1 - a red CI does not stop the deploy
+
+Re-verified: `.github/workflows/pages.yml:12-15` fires on push to `main`, and its `build` job
+(`pages.yml:28-46`) runs `npm ci` and `npm run build --base-href /blackjack-trainer/` and nothing
+else before `actions/deploy-pages@v4`. `.github/workflows/ci.yml:3-7` fires independently on the same
+event. Neither references the other. Lint, unit tests, the coverage gate, the parity anti-drift gate
+and E2E therefore do not guard the deploy: any failure that is not a build failure publishes.
+
+**Re-triaged P2 → P1.** Round 1's P2 was assigned under "this run may only report it", which is a
+permission, not a severity. This is a trainer whose entire value is being right about strategy charts,
+and the gates that check that are exactly the ones the deploy does not run.
+
+**Not applied.** The owner decision on editing CI/CD workflow files reached this run unsubstituted, so
+it was taken at its conservative option (see ROUND 2 ASSUMPTIONS 1). The patch, ready to paste into
+`.github/workflows/pages.yml`, replacing the `build` job's `- run: npm ci` / `- run: npm run build ...`
+pair:
+
+```yaml
+- run: npm ci
+- run: npm run lint
+- run: CI=true npm run test:coverage
+- name: Verify parity fixtures are up to date (anti-drift gate)
+  run: |
+    npm run export:fixtures
+    git diff --exit-code -- ios/Fixtures
+- run: npx playwright install --with-deps chromium
+- run: npm run build
+- run: npm run e2e
+  env:
+    E2E_SERVER: dist
+- run: npm run build -- --base-href /blackjack-trainer/
+```
+
+This makes the deploy job run every gate CI runs, in CI's order, before the base-href build it
+actually publishes. It duplicates the `validate` and `e2e` jobs' work rather than sharing it; the
+alternative is `on: workflow_run` chained to CI's completion, which is DRYer but adds a second
+failure mode (a `workflow_run` deploy runs against the default branch's workflow file and needs an
+explicit `conclusion == 'success'` check, and a skipped CI run leaves it never firing). The
+duplicated form is recommended because it cannot silently not-run.
+
+### N5 - no gate builds the bundle that is actually deployed
+
+Re-verified: no workflow and no test builds or serves `--base-href /blackjack-trainer/` except
+`pages.yml:37`, which deploys it without testing it. Stage 2 made the dist E2E lane build what it
+serves, but that is the **root-href** bundle; the deployed one is still never exercised.
+
+**Re-triaged P2 → P1**, on the same reasoning as N1 and because this is what let W1 - an installed PWA
+launching at another project's site - exist unnoticed through round 1's entire baseline.
+
+**Not applied**, same reason as N1. The smallest patch that makes a gate look at the deployed
+configuration, as a job in `.github/workflows/ci.yml`:
+
+```yaml
+pages-bundle:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v5
+    - uses: actions/setup-node@v5
+      with:
+        node-version: 22
+        cache: npm
+    - run: npm ci
+    - run: npm run build -- --base-href /blackjack-trainer/
+    - name: The deployed bundle must be relocatable under a sub-path
+      run: |
+        set -e
+        d=dist/blackjack-trainer/browser
+        grep -q '<base href="/blackjack-trainer/">' "$d/index.html"
+        # Every manifest URL must be relative, or an installed copy launches at
+        # the origin root — which is a different project on this shared host.
+        node -e '
+          const m = require("./'"$d"'/manifest.webmanifest");
+          for (const [k, v] of [["start_url", m.start_url], ["scope", m.scope]])
+            if (!String(v).startsWith("./")) { console.error(k + " is " + v); process.exit(1); }
+          for (const i of m.icons)
+            if (String(i.src).startsWith("/")) { console.error("icon " + i.src); process.exit(1); }
+        '
+```
+
+This is a check beside the gate rather than a gate that fails, which the round's brief prefers against;
+it is offered because the alternative - running the whole E2E suite against a sub-path mount - means
+rewriting every `page.goto('/...')` in the suite, which is scope no finding here carries. Recorded as
+the honest smaller option, not as an equal one.
+
+### N2 - `@angular/forms` is a runtime dependency nothing imports
+
+Re-verified at this commit: `grep -rn "@angular/forms" src e2e tools` returns **0** matches, and
+`npm ls @angular/forms --omit=dev` shows it in the production tree.
+
+Round 1's claim that it does not reach the bundle also reproduces, and the one apparent
+counter-example is a false positive worth recording so the next run does not re-chase it:
+`grep -c NgControl dist/blackjack-trainer/browser/main-*.js` returns 1, but the match is
+`NgControlFlow` - `@angular/core`'s `@if`/`@for` runtime, not `@angular/forms`. `ReactiveFormsModule`,
+`FormsModule`, `NgModel`, `FormControlDirective` and `ɵNgNoValidate` are all 0, and `zod`,
+`standard-schema` and `ZodError` are 0 across every emitted chunk.
+
+**Re-triaged P2 → P3.** Nothing is at risk: not in the bundle, not in the `npm audit` advisory chain.
+It is dependency hygiene.
+
+**Not applied, and the reason is a tooling limit rather than a judgement.** Removing it means editing
+`package.json` and regenerating `package-lock.json`, which requires `npm install` reaching the
+registry - a non-local resource this run may not contact. Deleting the line without regenerating the
+lockfile would leave the two disagreeing, which is worse than the finding. Whether removal is safe is
+therefore **UNVERIFIED**: with the package still present in `node_modules`, a local build would pass
+whether or not the manifest still declared it, so no local run can answer the question.
+
+### N6 - the manifest declares no `id`
+
+Re-verified by reading `public/manifest.webmanifest`: keys are `name`, `short_name`, `description`,
+`start_url`, `scope`, `display`, `orientation`, `background_color`, `theme_color`, `icons`. No `id`,
+so the PWA's application identity falls back to `start_url`.
+
+**Re-triaged P2 → P3**, and the reason changed. Round 1 warned that an explicit `id` "would pin
+identity to the broken value". That is no longer true: W1 shipped on this branch, `start_url` is now
+`./`, and the computed identity resolves to the app's own path. Adding an `id` today would pin the
+**correct** value.
+
+**Not applied.** It is a new config key in a shipped asset, which the no-features rule forbids, and it
+is inert until the site is published (owner action O4). The next run should take it: the moment a copy
+is installed, its identity is fixed, and changing `start_url` afterwards silently orphans it.
+
+### N9 - the review protocol defect, and what this run did instead
+
+Round 1's structural defect: each pass reviewer was given the range containing that pass's fix, so
+every remediation commit answering a reviewer was authored after its range closed - twelve of eighteen
+commits unreviewed until the final pass.
+
+Round 2's arrangement, stated so it can be checked rather than believed: **each stage's remediation is
+carried into the next stage's review range, by a different fresh reviewer.**
+
+| range              | reviewer                  | covers                              |
+| ------------------ | ------------------------- | ----------------------------------- |
+| `0856b7d..7010e8c` | `REVIEW-round2-stage1.md` | baseline commit + stage 1           |
+| `7010e8c..a3f5dee` | `REVIEW-round2-stage2.md` | **stage 1's remediation** + stage 2 |
+| `a3f5dee..7ac22db` | `REVIEW-round2-stage3.md` | **stage 2's remediation** + stage 3 |
+| `7ac22db..HEAD`    | `REVIEW-round2-final.md`  | **stage 3's remediation** + stage 4 |
+
+Every commit on the branch falls inside exactly one stage range, and no remediation commit is reviewed
+by the reviewer it answers. Whether that held is checkable with `git log --oneline 0856b7d..HEAD` and
+the four ranges above; the final review is asked to check it.
+
+### D1 - the support address is still a placeholder
+
+Re-verified at both cited lines: `ios/AppStore/privacy.html:65` and `ios/AppStore/support.html:55`
+both publish `mailto:CONTACT_EMAIL_HERE`, and `pages.yml:42` copies both into the deployed site.
+
+**DEFERRED, unchanged, and deliberately visible.** The owner decision arrived unsubstituted, so it was
+taken as "still unknown" (ROUND 2 ASSUMPTIONS 1). Inventing a plausible address for a published
+privacy policy would silently swallow user mail and is strictly worse than a placeholder that is
+obviously a placeholder. The App Store submission needs a working support URL regardless, so this
+blocks the owner either way and is already tracked as O4.
+
+### I1 - the iCloud data-loss path
+
+Re-verified at every cited line. `Stores/CloudKeyValueStore.swift:63` calls `cloud.synchronize()`,
+which does not wait for a download; `:66-72` adopts when `cloud.data(forKey:)` is non-nil and
+otherwise calls `pushToCloud()`, writing this device's state over the shared key; `StatsStore.swift:78`
+replaces local state wholesale with `stats = value`; `App/AppModel.swift:49-78` wires all nine stores.
+`LAUNCH-CHECKLIST.md:22` confirms provisioning turns sync on **without an app update**.
+
+**DEFERRED at P1, and explicitly not treated as inert.** The owner decision arrived unsubstituted and
+was taken as "undecided", so this run neither rewrote sync semantics on a guess nor filed the path as
+harmless.
+
+Two facts were established here that the next attempt needs, and neither was in round 1's record:
+
+1. **The narrow fix is still wrong, for a reason now located precisely.** `StatsStore.swift:63-65`
+   calls `pushToCloud()` from `persist()`, i.e. on every recorded rep - so skipping only the launch
+   seed relocates the race to the first hand played.
+2. **"Ignore an empty cloud value" is also wrong**, which nothing previously recorded. The app has a
+   user-facing **Reset practice data** action (`Views/Flow/PracticeDataSection.swift:16` →
+   `App/AppModel.swift:113`), so an empty record is a state a user can legitimately ask to propagate.
+   A fix that discards empty values to protect against this race would break that feature instead.
+
+Both are now written into `LAUNCH-CHECKLIST.md` at O2, immediately above the provisioning steps, which
+is where the person who flips the switch will be reading. The ledger alone was not enough: a
+provisioner has no reason to open `PROD-READINESS.md`.
+
+### Gates after stage 4
+
+All nine, re-run after the artifacts above were written. Stage 4 changed only records
+(`LAUNCH-CHECKLIST.md`, the ledger, this file), so every figure should be - and is - identical to
+stage 3's:
+
+| gate                          | round-2 BASELINE              | after stage 4                 |
+| ----------------------------- | ----------------------------- | ----------------------------- |
+| `npm run lint`                | 0                             | 0                             |
+| `npm run build`               | 0, 1 budget warning           | 0, same 1 budget warning      |
+| `npm test`                    | 1533 passed (65 files)        | 1547 passed (67 files)        |
+| `npm run test:coverage`       | 96.11 / 93.23 / 93.28 / 97.97 | 96.11 / 93.23 / 93.28 / 97.97 |
+| `E2E_SERVER=dist npm run e2e` | 111 passed                    | 111 passed                    |
+| fixture anti-drift            | no drift                      | no drift                      |
+| `swiftformat --lint`          | 0                             | 0                             |
+| `swiftlint`                   | 0                             | 0                             |
+| `xcodebuild build test`       | TEST SUCCEEDED, 335           | TEST SUCCEEDED, 335           |
+
+The `111 passed` figure is a single observation, not a claim of determinism - see M2.
