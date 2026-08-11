@@ -510,3 +510,404 @@ The per-test evidence is the `--repeat-each` measurements recorded against M2 an
 is **removed** - the shoe is pinned and the failing state is unreachable - while M4's is
 **rescaled**, from a fixed budget to one that follows the caller's own stream. An earlier version of
 this paragraph called both of them removals (REVIEW-round3-stage1, F2).
+
+## N1 - a red CI does not stop the deploy, and now it is asked to
+
+**Severity: P1** (round 2 re-triaged P2 → P1; re-derived from scratch below and left at P1).
+
+### Defect present, at the parent commit
+
+```console
+$ git show 772e4a7:.github/workflows/pages.yml | grep -n "on:\|branches\|run:\|needs:\|uses:"
+12:on:
+14:    branches: [main]
+29:    runs-on: ubuntu-latest
+31:      - uses: actions/checkout@v5
+32:      - uses: actions/setup-node@v5
+34:          node-version: 22
+36:      - run: npm ci
+37:      - run: npm run build -- --base-href /blackjack-trainer/
+39:        run: |
+44:      - uses: actions/upload-pages-artifact@v4
+49:    needs: build
+50:    runs-on: ubuntu-latest
+56:        uses: actions/deploy-pages@v4
+```
+
+Two shell steps before the artifact upload, neither of them a gate, and no reference to `ci.yml`,
+which fires independently on the same event. Lint, unit tests, coverage, the parity anti-drift gate
+and E2E therefore do not guard the deploy: any failure that is not a build failure publishes.
+
+### Applied, not re-filed
+
+The patch recorded at `reviews/ARTIFACTS-round2.md` under N1 was applied verbatim into the `build`
+job of `.github/workflows/pages.yml`, at the six-space indentation that file's `steps:` list needs.
+The job now runs, in order: `npm ci`, `npm run lint`, `CI=true npm run test:coverage`, the anti-drift
+gate, `npx playwright install --with-deps chromium`, `npm run build`, `npm run e2e` with
+`E2E_SERVER: dist`, and only then the base-href build it actually publishes.
+
+Both files parse. Checked with a real YAML parser rather than by eye, and the `env:` block is
+attached to the step it is written under rather than to the job:
+
+```console
+$ ruby -ryaml -e 'd = YAML.load_file(".github/workflows/pages.yml")
+  d["jobs"]["build"]["steps"].each_with_index { |s, i| puts "#{i+1}. #{(s["name"] || s["run"] || s["uses"]).to_s.lines.first.strip}"; puts "     env: #{s["env"].inspect}" if s["env"] }
+  puts "deploy needs: #{d["jobs"]["deploy"]["needs"].inspect}"'
+1. actions/checkout@v5
+2. actions/setup-node@v5
+3. npm ci
+4. npm run lint
+5. CI=true npm run test:coverage
+6. Verify parity fixtures are up to date (anti-drift gate)
+7. npx playwright install --with-deps chromium
+8. npm run build
+9. npm run e2e
+     env: {"E2E_SERVER" => "dist"}
+10. npm run build -- --base-href /blackjack-trainer/
+11. Assemble the site (app + legal pages + SPA fallback)
+12. actions/upload-pages-artifact@v4
+deploy needs: "build"
+```
+
+### Every shell step run locally, verbatim from the YAML
+
+Not transcribed by hand: a runner reads the workflow with a YAML parser, writes each step's `run:`
+script to a file, and executes it with `bash -e`, which is the documented default shell for `run:` on
+`ubuntu-latest`, with the step's own `env` merged. `CI=true` was exported for the whole job, as
+GitHub does.
+
+```console
+$ CI=true ruby run-workflow-steps.rb .github/workflows/pages.yml build out/ "npm ci" "playwright install"
+=== summary ===
+ 1  not-a-run-step               actions/checkout@v5
+ 2  not-a-run-step               actions/setup-node@v5
+ 3  SKIPPED (non-local resource) npm ci
+ 4  PASS                         npm run lint
+ 5  PASS                         CI=true npm run test:coverage
+ 6  PASS                         Verify parity fixtures are up to date (anti-drift gate)
+ 7  SKIPPED (non-local resource) npx playwright install --with-deps chromium
+ 8  PASS                         npm run build
+ 9  FAIL(1)                      npm run e2e
+10  PASS                         npm run build -- --base-href /blackjack-trainer/
+11  PASS                         Assemble the site (app + legal pages + SPA fallback)
+12  not-a-run-step               actions/upload-pages-artifact@v4
+failed steps: 1
+```
+
+**Step 9's failure in that run is not a result and is recorded so nobody reads it as one.** It is
+`net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4200/` from test 85 onward - the web server
+disappeared mid-run. The stage-1 reviewer was working in the same checkout at the time and reports
+killing a `serve-dist` on port 4200 that it took for its own orphan; it was this run's live server.
+Re-run alone, with nothing else on the machine:
+
+```console
+$ CI=true E2E_SERVER=dist bash -e out/step09.sh
+load before: 9.22 44.20 97.85
+Running 111 tests using 1 worker
+  111 passed (2.7m)
+STEP9_EXIT=0
+```
+
+`workers: 1` and `retries: 1` are what `playwright.config.ts:18-19` select under `CI`, so that run is
+the shape the deploy job will use, not the local parallel one. **Operational fact for anyone running
+these gates: two E2E runs cannot share this machine.** Both lanes bind `127.0.0.1:4200`, and the dist
+lane refuses to reuse a port it did not start, so a concurrent run does not queue - it corrupts
+whichever run loses the port.
+
+Two steps could not be run and are named rather than glossed:
+
+- **`npm ci`** needs the npm registry, a non-local resource this run may not contact.
+- **`npx playwright install --with-deps chromium`** needs the network and `sudo` for OS packages.
+  What it would do here, without contacting anything:
+
+```console
+$ npx playwright install --dry-run chromium
+Chrome for Testing 151.0.7922.34 (playwright chromium v1234)
+  Install location:    /Users/arthurzhang/Library/Caches/ms-playwright/chromium-1234
+  Download url:        https://cdn.playwright.dev/builds/cft/151.0.7922.34/mac-arm64/chrome-mac-arm64.zip
+
+FFmpeg (playwright ffmpeg v1011)
+  Install location:    /Users/arthurzhang/Library/Caches/ms-playwright/ffmpeg-1011
+  ...
+Chrome Headless Shell 151.0.7922.34 (playwright chromium-headless-shell v1234)
+  Install location:    /Users/arthurzhang/Library/Caches/ms-playwright/chromium_headless_shell-1234
+DRYRUN_EXIT=0
+```
+
+(That is this machine's cache layout, not the runner's - `--with-deps` additionally installs OS
+packages through `sudo apt-get`, which is the part that cannot run here at all.)
+
+### Non-vacuity: the deploy job now refuses what it used to publish
+
+Reverting the patch turns nothing red - no gate asserts a gate's own preconditions - so the proof is
+to break **the thing the new steps guard** and show the step that now stands in front of the deploy
+exits non-zero. Target: the parity anti-drift gate, because it is the one that protects the claim
+this app exists to make (that its charts match the iOS app's).
+
+Mutation, and nothing else - `tools/export-parity-fixtures.ts:174`, exporting 5 of the 58 counting
+systems:
+
+```diff
+-  const systems = COUNTING_SYSTEMS.map((s) => ({
++  const systems = COUNTING_SYSTEMS.slice(0, 5).map((s) => ({
+```
+
+```console
+$ bash -e out/step06.sh       # the anti-drift step, verbatim from pages.yml
+Wrote 7 parity fixtures to .../ios/Fixtures
+diff --git a/ios/Fixtures/counting-systems.json b/ios/Fixtures/counting-systems.json
+-  "description": "All 58 counting systems with per-rank and per-color values.",
+-  "count": 58,
++  "description": "All 5 counting systems with per-rank and per-color values.",
++  "count": 5,
+STEP6_EXIT_DEGRADED=1
+
+$ # exporter restored, ios/Fixtures restored with git checkout
+$ bash -e out/step06.sh
+STEP6_EXIT_RESTORED=0
+```
+
+Exit 1 from a step in the `build` job, where before this patch there was no such step at all: the
+same mutation pushed to `main` would have deployed, because `pages.yml` ran `npm ci` and a build and
+nothing else.
+
+### What is UNVERIFIED, precisely
+
+Local execution proves each step runs and that each one exits non-zero when its subject is broken. It
+does not prove the deploy is blocked. **These claims cannot be tested from here and are UNVERIFIED:**
+
+1. that a non-zero step actually fails the `build` job (GitHub's documented `run:` semantics, not
+   something in this repository);
+2. that `deploy`'s `needs: build` prevents `actions/deploy-pages@v4` from running when `build` fails;
+3. that the `concurrency: pages` group and `cancel-in-progress: true` behave as intended when a gated
+   build takes ~10 minutes longer than the ungated one did;
+4. that `npm ci` and `npx playwright install --with-deps chromium` succeed on `ubuntu-latest`;
+5. that the two workflows' independent triggers do not race in some way this reading missed.
+
+Every one of those needs GitHub Actions, which this run may not execute. **N1 is therefore not
+RESOLVED. It is PATCH-READY**: the patch is applied and every locally-runnable part of it is proven,
+and the orchestration - the half that gives the finding its name - is the half no local evidence can
+reach. Round 2's whole subject was gates that do not gate what they name, and writing "RESOLVED" on a
+YAML parse would be that defect committed by the run that named it.
+
+## N5 - no gate builds the bundle that is actually deployed
+
+**Severity: P1** (round 2's re-triage; re-derived and left at P1: this is what let W1 - an installed
+PWA launching at another project's site on the shared `8C9D.github.io` origin - survive round 1's
+entire baseline green).
+
+### Defect present, at the parent commit
+
+```console
+$ git show 772e4a7:.github/workflows/ci.yml | grep -c "base-href"
+0
+$ grep -rn "base-href" e2e/ tools/ playwright.config.ts package.json
+(no matches)
+```
+
+Only `pages.yml:37` builds `--base-href /blackjack-trainer/`, and it deploys it without testing it.
+
+### Applied
+
+The `pages-bundle` job recorded at `reviews/ARTIFACTS-round2.md` under N5 was added to
+`.github/workflows/ci.yml`, including round 2's correction of its own broken snippet (the
+`require("….webmanifest")` that threw `SyntaxError` because Node routes a non-`.json` extension
+through the JavaScript loader). Run verbatim from the YAML:
+
+```console
+$ ruby run-workflow-steps.rb .github/workflows/ci.yml pages-bundle out/ "npm ci"
+=== summary ===
+ 1  not-a-run-step               actions/checkout@v5
+ 2  not-a-run-step               actions/setup-node@v5
+ 3  SKIPPED (non-local resource) npm ci
+ 4  PASS                         npm run build -- --base-href /blackjack-trainer/
+ 5  PASS                         The deployed bundle must be relocatable under a sub-path
+failed steps: 0
+```
+
+### Non-vacuity: three mutations, one per property the check asserts
+
+Each mutates the deployed bundle - the thing the gate guards - rebuilds it, and runs the check
+verbatim.
+
+**A. `start_url` back to the origin root** (this is W1, the defect that shipped):
+
+```diff
+-  "start_url": "./",
++  "start_url": "/",
+```
+
+```console
+$ npm run build -- --base-href /blackjack-trainer/   # exit 0, the bundle builds fine
+$ bash -e out/step05.sh
+start_url is /
+CHECK_EXIT=1
+```
+
+**B. an icon with an origin-absolute `src`:**
+
+```diff
+-      "src": "icons/icon-192.png",
++      "src": "/icons/icon-192.png",
+```
+
+```console
+$ bash -e out/step05.sh
+icon /icons/icon-192.png
+CHECK_EXIT=1
+```
+
+**C. the deploy built without its base href** - what would ship if `pages.yml:37` lost the flag:
+
+```console
+$ npm run build                                      # no --base-href
+$ grep -o '<base href="[^"]*">' dist/blackjack-trainer/browser/index.html
+<base href="/">
+$ bash -e out/step05.sh
+CHECK_EXIT=1
+
+$ npm run build -- --base-href /blackjack-trainer/   # restored
+$ bash -e out/step05.sh
+CHECK_EXIT=0
+```
+
+Three properties, three mutations, three refusals, and a passing restore. `public/manifest.webmanifest`
+was restored from a copy taken before the mutations; `git diff --stat public/` prints nothing.
+
+### What is UNVERIFIED
+
+That the `pages-bundle` job runs at all is GitHub's business: it has no `needs:`, so it is a third
+independent job in `ci.yml`, and whether a failing `ci.yml` job blocks anything depends on branch
+protection this repository's settings may or may not have. **N5 is PATCH-READY, not RESOLVED**, for
+the same reason as N1 - and with one more limit worth stating plainly: this is a check **beside** the
+deployed bundle, not a suite that exercises it. It asserts the base href and that every manifest URL
+is relative. It does not click a single link in the sub-path bundle. Running the E2E suite against a
+sub-path mount would mean rewriting every `page.goto('/...')` in the suite, which no finding here
+scopes. Recorded as the honest smaller option, as round 2 recorded it.
+
+## M1 - nothing typechecks `e2e/**`, and the config that would could not run
+
+**Severity: P2** (round 2's), re-derived and left there: it is a gate that does not exist rather than
+a defect users can reach.
+
+### Defect present
+
+```console
+$ npx tsc -p tsconfig.e2e.json --noEmit
+error TS2688: Cannot find type definition file for 'node'.
+  The file is in the program because:
+    Entry point of type library 'node' specified in compilerOptions
+TSC_E2E_EXIT=2
+$ ls -d node_modules/@types/*        # before the install below; no `node` entry
+node_modules/@types/chai
+node_modules/@types/deep-eql
+node_modules/@types/estree
+node_modules/@types/gensync
+node_modules/@types/jsesc
+```
+
+(Both blocks are from before this stage's install; `ls` cannot reproduce them at the shipping
+commit, which is the point of the fix.)
+
+`npm run lint` ran `tsc --noEmit -p tsconfig.app.json` alone, whose `include` is `src/**/*.ts`, so
+`e2e/**`, `playwright.config.ts` and `src/**/*.spec.ts` were typechecked by nothing. Playwright and
+Vitest both compile with esbuild, which strips types without checking them.
+
+### The dependency was reachable without the network
+
+`@types/node` is in neither dependency list, and this run may not contact the registry. It is,
+however, already in the local npm cache, so the install is a local operation:
+
+```console
+$ npm view @types/node version --offline
+26.1.2
+$ npm install --save-dev @types/node --offline --dry-run
+add undici-types 8.3.0
+add @types/node 26.1.2
+added 2 packages in 417ms
+```
+
+Run for real, `--offline` throughout, so nothing was fetched:
+
+```console
+$ npm install --save-dev @types/node --offline
+found 0 vulnerabilities
+$ git diff --stat package.json package-lock.json
+ package-lock.json | 18 ++++++++++++++++++
+ package.json      |  1 +
+```
+
+This is the one dependency change in the round, and it is the one the brief's item 3 authorises.
+
+### Fix: the gate now runs all three projects
+
+```diff
+-    "typecheck": "tsc --noEmit -p tsconfig.app.json",
++    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.spec.json && tsc --noEmit -p tsconfig.e2e.json",
+```
+
+and `tsconfig.spec.json` picks up the second doorway REVIEW-round2-final (FF-6) named - the
+`**/*.test.ts` glob that `angular.json`'s test target collects (resolved against `sourceRoot`) and no
+tsconfig covered:
+
+```diff
+-  "include": ["src/**/*.d.ts", "src/**/*.spec.ts"]
++  "include": ["src/**/*.d.ts", "src/**/*.spec.ts", "src/**/*.test.ts"]
+```
+
+Both projects were green before being wired in, so this widens the gate without moving the goalposts:
+`tsc -p tsconfig.spec.json --noEmit` exits 0 at this tree, and `tsc -p tsconfig.e2e.json --noEmit`
+exits 0 once `@types/node` exists.
+
+### Non-vacuity: the same mutation, old gate and new
+
+Target: `e2e/fixtures/lane.ts`, which M1 names as "the single source of truth for E2E lane selection
+that nothing typechecks".
+
+```diff
+-export const SERVES_DIST = requested === 'dist';
++export const SERVES_DIST: number = requested === 'dist';
+```
+
+```console
+$ npm run lint                       # the widened gate
+e2e/fixtures/lane.ts(30,14): error TS2322: Type 'boolean' is not assignable to type 'number'.
+LINT_MUTANT_EXIT=2
+
+$ npx tsc --noEmit -p tsconfig.app.json   # what the gate used to be, same mutation
+OLD_GATE_EXIT=0
+```
+
+And the second doorway, with a temporary `src/app/doorway.test.ts` (deleted immediately after):
+
+```ts
+const collectedButNeverTypechecked: number = 'not a number';
+```
+
+```console
+$ npx tsc --noEmit -p tsconfig.spec.json                       # new include
+src/app/doorway.test.ts(2,7): error TS2322: Type 'string' is not assignable to type 'number'.
+NEW_EXIT=2
+$ npx tsc --noEmit -p tsconfig.spec.json                       # old include, same file
+OLD_EXIT=0
+```
+
+A file the unit runner executes and no tsconfig covered is now covered.
+
+### Where this lands in CI, now that CI is editable
+
+Nowhere new, and that is the point: `npm run lint` is already a step in `ci.yml`'s `validate` job,
+and N1 has just added it to `pages.yml`'s `build` job. Widening what `typecheck` means propagates to
+both without touching either workflow again - which is the shape this round's brief prefers (make an
+existing gate fail when the thing it names is broken, rather than add a check beside it).
+
+### Gates after this stage
+
+| gate                | result                                            |
+| ------------------- | ------------------------------------------------- |
+| 1 lint              | exit 0 - now three tsc projects, not one          |
+| 2 build             | exit 0, the inherited budget warning              |
+| 3 unit              | exit 0, 67 files / 1547 passed                    |
+| 4 coverage          | exit 0, 96.11 / 93.23 / 93.28 / 97.97 - unchanged |
+| 5 E2E (`CI=true`)   | exit 0, `111 passed`, 1 worker                    |
+| 6 parity anti-drift | exit 0, no drift                                  |

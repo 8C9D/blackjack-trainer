@@ -24,6 +24,37 @@ jobs:
           npm run export:fixtures
           git diff --exit-code -- ios/Fixtures
 
+  # The bundle that is actually deployed is the one built with a sub-path base
+  # href (pages.yml), and until this job existed no gate had ever looked at it:
+  # W1 — an installed PWA launching at another project's site on this shared
+  # Pages origin — reached round 1's closing table green because every gate
+  # built the root-href bundle instead.
+  pages-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build -- --base-href /blackjack-trainer/
+      - name: The deployed bundle must be relocatable under a sub-path
+        run: |
+          set -e
+          d=dist/blackjack-trainer/browser
+          grep -q '<base href="/blackjack-trainer/">' "$d/index.html"
+          # Every manifest URL must be relative, or an installed copy launches at
+          # the origin root — which is a different project on this shared host.
+          node -e '
+            const fs = require("node:fs");
+            const m = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            for (const [k, v] of [["start_url", m.start_url], ["scope", m.scope]])
+              if (!String(v).startsWith("./")) { console.error(k + " is " + v); process.exit(1); }
+            for (const i of m.icons)
+              if (String(i.src).startsWith("/")) { console.error("icon " + i.src); process.exit(1); }
+          ' "$d/manifest.webmanifest"
+
   e2e:
     runs-on: ubuntu-latest
     steps:
