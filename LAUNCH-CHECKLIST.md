@@ -236,6 +236,35 @@ Take five minutes on the decisions above before the agent starts; two of them ch
 
 ### O2. Provision the iCloud capability _(only if D2 = ship iCloud)_
 
+> **Fix the launch-seed race before you do this. Provisioning turns sync on for the already-shipped
+> binary with no app update (D2 above), so the day you flip this switch, every copy already on a phone
+> starts running the path below.** Tracked as finding I1 in `PROD-READINESS.md`.
+>
+> `ios/BlackjackTrainer/Stores/CloudKeyValueStore.swift:63-72`: `synchronize()` does not wait for an
+> iCloud download. On a device whose KVS cache has not populated yet, `cloud.data(forKey:)` returns
+> `nil`, the `else` branch calls `pushToCloud()`, and this device's empty state is written over the
+> shared key. Adoption is last-writer-wins - `StatsStore.swift:78` replaces local state wholesale with
+> `stats = value` - so the wipe then propagates to every other device. Wiring is live for all nine
+> stores (`App/AppModel.swift:49-78`).
+>
+> Three things to know before choosing a fix, each verified against this tree:
+>
+> 1. **Narrowing the launch seed alone is not enough.** `StatsStore.swift:63-65` calls `pushToCloud()`
+>    from `persist()`, i.e. on every recorded rep. Skipping the seed when local state is empty just
+>    moves the race to the first hand the trainee plays.
+> 2. **"Ignore an empty cloud value" is not a safe fix either.** The app has a user-facing **Reset
+>    practice data** action (`Views/Flow/PracticeDataSection.swift:16` → `App/AppModel.swift:113`), so
+>    an empty record is a legitimate state a user asked to propagate. Suppressing it would break that
+>    feature to paper over this one.
+> 3. What is left is the real work: merge semantics on adoption, or gating every push until the store
+>    is known to have completed its initial sync (`NSUbiquitousKeyValueStoreInitialSyncChange` on the
+>    external-change notification). Either changes user-visible sync behaviour, which is why two
+>    successive production-readiness runs deferred it rather than guessing.
+>
+> None of this is testable in this repository: it needs two provisioned devices and Apple's servers
+> (recorded under CANNOT ASSESS). Do O11 on two real devices, with practice data already on one of
+> them, before you trust it.
+
 Easiest path is through Xcode, which registers the App ID for you.
 
 1. Open `ios/BlackjackTrainer.xcodeproj` in Xcode.
