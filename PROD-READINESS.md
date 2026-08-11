@@ -255,3 +255,62 @@ All nine, matching or exceeding `reviews/BASELINE.md`, none worse:
 | `swiftformat --lint`          | 0                             | 0                             |
 | `swiftlint`                   | 0                             | 0                             |
 | `xcodebuild build test`       | TEST SUCCEEDED, 335           | TEST SUCCEEDED, 335           |
+
+---
+
+---
+
+# ROUND 2
+
+A second bounded sweep, continuing the branch above.
+Work list: the NEXT ROUND table (N1-N9) plus the two DEFERRED findings (D1, I1).
+Baseline for every round-2 "green" claim: [`reviews/BASELINE-round2.md`](reviews/BASELINE-round2.md).
+Artifacts: [`reviews/ARTIFACTS-round2.md`](reviews/ARTIFACTS-round2.md).
+
+- Branch: `prod-readiness/round2-2026-08-10`
+- Base commit: `0856b7df98d2b3f87788fe7d28ec6a5823878c4c` (tip of round 1, unmerged)
+- Date: 2026-08-10
+
+The connecting theme, taken from the round-2 brief: **this repository's release gates do not gate what
+they name.** Fixes are preferred that make an existing gate fail when the thing it names is broken,
+over fixes that add a new check beside it.
+
+## ROUND 2 ASSUMPTIONS
+
+1. **The three owner decisions arrived unsubstituted.** The brief supplies them "so you never have to
+   stop for them", but the values reached this run as the literal placeholder text
+   `<<< real address, or "still unknown" >>>`, `<<< will provision / will not provision / undecided >>>`
+   and `<<< you may edit them / report findings only >>>`. No answer is recoverable from them, so each
+   was taken at its conservative option and is recorded here rather than guessed:
+
+   | decision             | taken as                 | consequence                                                                                          |
+   | -------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------- |
+   | support email        | **still unknown**        | D1 stays DEFERRED with the placeholder left visible. No address was invented for a published policy. |
+   | iCloud KVS on iOS    | **undecided**            | I1 stays DEFERRED at P1; the provisioner note is written where a provisioner will look.              |
+   | CI/CD workflow files | **report findings only** | N1 is reported with an exact patch, not applied. Round 1's prohibition is inherited unchanged.       |
+
+   The CI/CD reading is the one with real cost: it is what keeps N1 unfixed. It was taken that way
+   because editing a deploy workflow is the least reversible thing on the work list, because round 1's
+   standing prohibition is the state to inherit absent an answer, and because the brief itself frames
+   the question as the owner's to answer. The full patch is recorded so applying it is one paste.
+
+2. **The working tree counted as clean** on the same reading as round 1 assumption 1: zero modified
+   tracked files, `.agents/` and `.codex/` untracked and untouched. No commit uses `git add -A`.
+
+3. **The tool sandbox was disabled for every build/test/lint command** (round 1 assumption 2
+   reproduces).
+
+4. **`playwright.config.ts`, `e2e/**`, `tsconfig.spec.json` and `vitest.config.ts` are test
+   configuration, not CI/CD or deploy configuration**, so they are editable. This is round 1's own
+   ruling on `playwright.config.ts` (finding R0-4), applied consistently. `.github/workflows/*` is
+   the CI/CD configuration and was not edited.
+
+## ROUND 2 status
+
+Terminal states are RESOLVED (artifact evidence), DEFERRED (reason), or REJECTED TWICE (reverted,
+objection recorded). Severity is re-triaged from scratch: round 1 rated these under "I am not allowed
+to touch this", which is not a severity.
+
+| id  | round-1 severity | re-triaged | status                                                                                                                                                     |
+| --- | ---------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| N7  | P1               | **P1**     | RESOLVED - artifact in [`reviews/ARTIFACTS-round2.md`](reviews/ARTIFACTS-round2.md#n7---the-offline-gate-skips-itself-on-the-evidence-it-exists-to-report) |

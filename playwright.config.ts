@@ -1,12 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
+import { SERVES_DIST } from './e2e/fixtures/lane';
+
 // The dev server the E2E suite drives. `npm start` (ng serve) binds here.
 const PORT = 4200;
 const baseURL = `http://127.0.0.1:${PORT}`;
-
-// Which server backs the suite. CI defaults to the production bundle; locally
-// the default is ng serve.
-const SERVES_DIST = (process.env.E2E_SERVER ?? (process.env.CI ? 'dist' : 'serve')) === 'dist';
 
 // Chromium-only in v1: one browser is enough to catch wiring / routing /
 // responsive regressions. Add Firefox/WebKit only if a real cross-browser bug
