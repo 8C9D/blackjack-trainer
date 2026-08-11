@@ -423,3 +423,174 @@ All nine, re-run after the artifacts above were written:
 
 The E2E gate now builds before it serves, and still reports 111 - the added build changed what the
 lane is looking at, not what it asserts.
+
+---
+
+## N3 - nothing tested the tools that back two release gates
+
+`tools/` held two scripts and no tests. Both back gates:
+
+- `tools/export-parity-fixtures.ts` generates the fixtures the **iOS parity anti-drift gate** compares
+  against, and that the Swift test target asserts its engines reproduce.
+- `tools/serve-dist.mjs` is the server the **E2E gate** runs the production bundle on.
+
+`tsconfig.spec.json:9` scoped specs to `src/**/*.spec.ts`, and the unit-test builder's `include`
+resolves relative to `sourceRoot` (`src`), so a spec anywhere else was not merely unwritten - it could
+not be discovered. Measured before the change: `npx ng test --list-tests` returned 65 files, all under
+`src/`, and a probe spec at `tools/probe.spec.ts` did not appear even after `tsconfig.spec.json` was
+widened. `--include="tools/**/*.spec.ts"` discovered nothing; `--include="../tools/**/*.spec.mjs"`
+discovered it, which is what fixed the wiring.
+
+### Defect present, part 1: the parity gate is blind to its own generator degrading
+
+The gate is `npm run export:fixtures` then `git diff --exit-code -- ios/Fixtures`. It compares the
+exporter against **itself**: regenerate, and if the bytes match what is checked out, pass. So it
+catches an engine changing without its fixtures being regenerated - and cannot see the exporter
+emitting less, once the degraded output has been committed.
+
+Reproduced by degrading the exporter and staging the result, which is what "committed" means to
+`git diff` (it compares the working tree against the index):
+
+```console
+$ perl -0pi -e "s/const systems = COUNTING_SYSTEMS\.map\(/const systems = COUNTING_SYSTEMS.slice(0, 5).map(/" tools/export-parity-fixtures.ts
+174:  const systems = COUNTING_SYSTEMS.slice(0, 5).map((s) => ({
+
+$ npm run export:fixtures && git add ios/Fixtures     # i.e. someone committed this
+Wrote 7 parity fixtures to /Users/arthurzhang/dev/blackjack-trainer/ios/Fixtures
+
+$ npm run export:fixtures >/dev/null && git diff --exit-code -- ios/Fixtures
+ANTI_DRIFT_EXIT=0   (0 = the gate is green on degraded fixtures)
+
+$ python3 -c "import json;print('systems in fixture:', json.load(open('ios/Fixtures/counting-systems.json'))['count'])"
+systems in fixture: 5
+```
+
+**53 of the app's 58 counting systems silently stopped being checked for parity, and the gate named
+after parity reported success.** The Swift target would also pass, because it asserts against the same
+weakened file.
+
+### Defect absent - and the non-vacuity proof
+
+Same degraded tree, same staged fixtures, one command later:
+
+```console
+$ npx ng test --include="../tools/**/*.spec.mjs"
+TOOLS_SPEC_EXIT=1
+     × exports every counting system the web app defines, in the same order
+      Tests  1 failed | 12 passed (13)
+```
+
+Exit **1**, and the failing test names the property. This is the check regenerating cannot satisfy: it
+compares the fixtures against `COUNTING_SYSTEMS` in `src/`, the actual source of truth, rather than
+against a previous export.
+
+Restored afterwards, with the gate green again on the real fixtures:
+
+```console
+$ cp "$TMPDIR/exporter.orig" tools/export-parity-fixtures.ts
+$ git reset -q ios/Fixtures && git checkout -- ios/Fixtures
+$ npm run export:fixtures >/dev/null && git diff --exit-code -- ios/Fixtures
+restored anti-drift exit=0
+```
+
+### Defect present, part 2: round 1's own B1 fix was unpinned
+
+Round 1 fixed B1 (a malformed percent-escape killing the E2E server) and verified it by hand once.
+Nothing has held the line since, so a revert would ship green. `tools/serve-dist.spec.mjs` runs the
+real script as a **subprocess**, because "the process is still alive afterwards" is the property, and
+an in-process import cannot observe it.
+
+Mutating only the behavioural change - deleting the `try`/`catch` round 1 added, leaving the bare
+`decodeURIComponent` call:
+
+```console
+$ python3 -c "...replace the guarded parse with the unguarded one..."
+  let path;
+  path = normalize(decodeURIComponent(new URL(req.url, `http://${HOST}`).pathname));
+
+$ npx ng test --include="../tools/**/*.spec.mjs"
+     × 404s a malformed percent-escape instead of dying on it (B1)
+     × 404s an encoded path traversal rather than serving outside the root
+     × serves the shell for an extensionless route so client-side routing works
+     × 404s a missing asset rather than falling back to the shell
+     × serves a real asset with its content type
+Error: connect ECONNREFUSED 127.0.0.1:49877
+      Tests  5 failed (5)
+MUTANT_EXIT=1
+```
+
+All five fail, and the reason is `ECONNREFUSED` - which is the finding reproducing exactly: one bad
+request ends the process and everything afterwards fails as a connection error, pointing nowhere near
+the cause. That blast radius is why B1 was rated P1 rather than P2, and it is now visible in a test
+run rather than only in a ledger entry.
+
+The same spec also pins the claims round 1 recorded under NOT DEFECTS but left unguarded: encoded and
+literal `..` traversal 404s rather than escaping the served root, an extensionless path gets the SPA
+shell, a missing asset 404s instead of falling back to the shell (the failure mode that turns a
+missing chunk into a blank page), and real assets come back with their content types.
+
+### Why these two specs are JavaScript, not TypeScript
+
+`@types/node` is in neither `dependencies` nor `devDependencies`, and installing it needs the network,
+which this run may not use. A `.spec.ts` in `tools/` therefore fails to compile before it runs a line:
+
+```
+✘ [ERROR] TS2591: Cannot find name 'node:child_process'. Do you need to install type definitions for node?
+✘ [ERROR] TS2591: Cannot find name 'process'.
+✘ [ERROR] TS2591: Cannot find name 'Buffer'.
+```
+
+`.spec.mjs` runs with no such barrier, and matches `tools/serve-dist.mjs`, which is plain Node already.
+The cost is that these two files are not typechecked - the same gap as M1, recorded rather than hidden.
+
+### A regression this stage introduced and caught in the same stage
+
+The first version of the fixture spec asserted per row - `expect(row).toHaveLength(width)` across
+62,560 deviation rows. It passed in 1774 ms with the tools specs running alone, and **timed out at
+5000 ms** under the full parallel `npm test`, taking the unit gate to `exit 1`. That is M2's defect
+class, introduced by the stage that recorded M2.
+
+Rewritten to count offenders and assert once:
+
+```console
+$ npx ng test --include="../tools/**/*.spec.mjs"
+      Tests  13 passed (13)
+   Duration  820ms (... tests 205ms ...)
+
+$ for i in 1 2 3; do npm test; done
+run1 exit=0   Tests  1546 passed
+run2 exit=0   Tests  1546 passed
+run3 exit=0   Tests  1546 passed
+```
+
+and still non-vacuous - truncating a single row out of 62,560:
+
+```console
+$ python3 -c "...drop one element from rows[0]..."
+row 0 truncated to 11 of 12
+     × keeps every deviation row the shape its own columns declare
+AssertionError: deviation-vectors.rows: 1 rows are not 12 columns wide: expected 1 to be +0
+$ git diff --exit-code -- ios/Fixtures && echo "fixture restored, no drift"
+fixture restored, no drift
+```
+
+### Gates after stage 3
+
+All nine, re-run after the artifacts above were written:
+
+| gate                          | round-2 BASELINE              | after stage 3                 |
+| ----------------------------- | ----------------------------- | ----------------------------- |
+| `npm run lint`                | 0                             | 0                             |
+| `npm run build`               | 0, 1 budget warning           | 0, same 1 budget warning      |
+| `npm test`                    | 1533 passed (65 files)        | **1546 passed (67 files)**    |
+| `npm run test:coverage`       | 96.11 / 93.23 / 93.28 / 97.97 | 96.11 / 93.23 / 93.28 / 97.97 |
+| `E2E_SERVER=dist npm run e2e` | 111 passed                    | 111 passed                    |
+| fixture anti-drift            | no drift                      | no drift                      |
+| `swiftformat --lint`          | 0                             | 0                             |
+| `swiftlint`                   | 0                             | 0                             |
+| `xcodebuild build test`       | TEST SUCCEEDED, 335           | TEST SUCCEEDED, 335           |
+
+Coverage is unchanged to two decimals, which is expected rather than suspicious: `serve-dist.mjs` runs
+as a subprocess and so is not instrumented, and the fixture spec reads JSON and re-uses
+`COUNTING_SYSTEMS`, which the existing suite already covers. The 13 new tests add assertions over
+already-covered source, not new covered lines.
