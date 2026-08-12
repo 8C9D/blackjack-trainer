@@ -234,3 +234,121 @@ TEST_EXIT=0
 
 The unit gate moves from 67 files / 1551 tests to 68 / 1585: one file, 34 tests, all of them the
 checker's. <!-- figure-historical -->
+
+## K3 (P2) - nothing asserted N4's fix
+
+Round 3 shipped N4 - the update banner covers the drill's controls, so the shell measures the banner
+and the three viewport-sized screens subtract it - and recorded that **nothing tested any of it**.
+Both halves are closed here, by two different instruments, because they are two different properties.
+
+### The finding reproduces first
+
+K3's claim is that the reserve can be deleted outright and every gate stays green. Deleting
+`min-height: calc(100dvh - var(--update-space, 0px))` (and its `100vh` fallback) from all three
+screens and `padding-bottom: var(--update-space, 0px)` from `app.scss`:
+
+```console
+$ npm run lint > $S/k3-lint-mutant.txt 2>&1; echo "K3_LINT_MUTANT_EXIT=$?"; npm test > $S/k3-test-mutant.txt 2>&1; echo "K3_TEST_MUTANT_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/k3-test-mutant.txt | grep -E 'Tests '; npm run build > $S/k3-build-mutant.txt 2>&1; echo "K3_BUILD_MUTANT_EXIT=$?"
+K3_LINT_MUTANT_EXIT=0
+K3_TEST_MUTANT_EXIT=0
+      Tests  1586 passed (1586)
+K3_BUILD_MUTANT_EXIT=0
+```
+
+Three gates, all green, with the entire fix removed. That is the finding, reproduced at this commit
+rather than taken from round 3's word.
+
+### The CSS half: `e2e/smoke/responsive.e2e.ts`, four tests, real Chromium
+
+The banner cannot be raised against a production bundle - the debug API is stripped and a real
+`VERSION_READY` needs a second deployed build - and that is what round 3 concluded blocked this. But
+the CSS half does not need the banner. `--update-space` is a plain custom property the shell
+publishes; a test can publish it instead and ask the layout whether it is listening. Each test sets
+it to 200px and reads `getComputedStyle().minHeight` before and after.
+
+Present, then absent:
+
+```console
+$ E2E_SERVER=dist npx playwright test --grep "the space the update banner stands in front of" > $S/k3-css-pass.txt 2>&1; echo "CSS_PASS_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/k3-css-pass.txt | tail -3
+CSS_PASS_EXIT=0
+  ✓  4 [chromium] › e2e/smoke/responsive.e2e.ts:137:9 › the space the update banner stands in front of › the card-counting drill screen gives back the space it is told about (318ms)
+
+  4 passed (5.9s)
+$ E2E_SERVER=dist npx playwright test --grep "the space the update banner stands in front of" > $S/k3-css-mutant.txt 2>&1; echo "CSS_MUTANT_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/k3-css-mutant.txt | grep -E '✘|failed'
+CSS_MUTANT_EXIT=1
+  ✘  2 [chromium] › e2e/smoke/responsive.e2e.ts:137:9 › the space the update banner stands in front of › the card-counting drill screen gives back the space it is told about (494ms)
+  ✘  3 [chromium] › e2e/smoke/responsive.e2e.ts:156:7 › the space the update banner stands in front of › the shell reserves the same space at the bottom of the page (494ms)
+  ✘  4 [chromium] › e2e/smoke/responsive.e2e.ts:137:9 › the space the update banner stands in front of › the basic-strategy drill screen gives back the space it is told about (1.3s)
+  ✘  1 [chromium] › e2e/smoke/responsive.e2e.ts:137:9 › the space the update banner stands in front of › the home screen gives back the space it is told about (1.3s)
+$ git checkout -- src/app/app.scss src/app/features/home/home-page.component.scss src/app/features/drill/drill-page.scss src/app/features/card-counting/card-counting-page.component.scss; E2E_SERVER=dist npx playwright test --grep "the space the update banner stands in front of" > $S/k3-css-restored.txt 2>&1; echo "CSS_RESTORED_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/k3-css-restored.txt | tail -2
+CSS_RESTORED_EXIT=0
+
+  4 passed (9.0s)
+```
+
+Four for four: one per screen, plus the shell's own `padding-bottom`. Deleting the reserve from all
+four files turns all four red, and restoring turns all four green.
+
+**What this half does not cover**, stated so nobody reads more into it: it proves the layout answers
+a reserve it is told about. It does not prove the number it is told is right, and it does not raise a
+real banner. The first is the ordering half below; the second still needs a second deployed build,
+and is still open.
+
+### The ordering half: `src/app/app.spec.ts`, one test, in jsdom
+
+Round 3 shipped a plain `effect` for one commit, which measures the banner _before_ the DOM refreshes
+and therefore returns the height the banner had before its copy grew - 21px short of a grown banner in
+a real browser. The unit tests could not tell the two apart, and said so in a comment.
+
+What makes it observable without layout is not measuring harder; it is making the stub behave the way
+a real element does. The existing tests install a fixed rect before triggering the change, so the stub
+answers the same whichever moment it is read at. The new test installs a stub that reports a height
+**derived from what is inside the element when it is asked**:
+
+```ts
+banner.getBoundingClientRect = () => (banner.querySelector('.update__error') ? withError : offer);
+```
+
+A measurement taken before the DOM refreshes does not see the failed-reload line yet, and gets the
+old height back. Present, then absent:
+
+```console
+$ npx ng test --include="**/app.spec.ts" > $S/k3-order-pass.txt 2>&1; echo "ORDER_TEST_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/k3-order-pass.txt | grep -E 'Test Files|Tests '
+ORDER_TEST_EXIT=0
+ Test Files  1 passed (1)
+      Tests  18 passed (18)
+$ python3 -c "
+p='src/app/app.ts'; s=open(p).read()
+s=s.replace('  afterRenderEffect,\n','  effect,\n',1)
+assert s.count('    afterRenderEffect(() => {')==1
+s=s.replace('    afterRenderEffect(() => {','    effect(() => {',1)
+open(p,'w').write(s)
+"; echo "MUTATE_EXIT=$?"; npx ng test --include="**/app.spec.ts" > $S/k3-order-mutant.txt 2>&1; echo "ORDER_MUTANT_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/k3-order-mutant.txt | grep -E 'Test Files|Tests |×|expected'
+MUTATE_EXIT=0
+ORDER_MUTANT_EXIT=1
+       × measures the banner after the DOM refreshes, not before 9ms
+AssertionError: expected '162px' to be '183px' // Object.is equality
+ Test Files  1 failed (1)
+      Tests  1 failed | 17 passed (18)
+$ git checkout -- src/app/app.ts; npx ng test --include="**/app.spec.ts" > $S/k3-order-restored.txt 2>&1; echo "ORDER_RESTORED_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/k3-order-restored.txt | grep -E 'Test Files|Tests '
+ORDER_RESTORED_EXIT=0
+ Test Files  1 passed (1)
+      Tests  18 passed (18)
+```
+
+`162px` where `183px` is wanted is exactly the 21px round 3 measured in a real Chromium, arrived at
+independently here by a different instrument. **One test failed and seventeen passed**, which is the
+part worth reading twice: the seventeen include all three of round 3's own banner tests, so this is
+also the measurement that round 3's comment was right - they genuinely could not see the ordering.
+
+### Both halves, stated plainly
+
+| half     | what fails when it breaks                                                                  | where                                                  | closed                    |
+| -------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------ | ------------------------- |
+| CSS      | the reserve stops being subtracted from any of the three screens, or reserved by the shell | `e2e/smoke/responsive.e2e.ts` (4 tests, real Chromium) | yes                       |
+| ordering | the measurement moves back before the render                                               | `src/app/app.spec.ts` (1 test, jsdom)                  | yes                       |
+| neither  | the banner is never raised against a production bundle at all                              | -                                                      | **no, and it stays open** |
+
+The third row is what is left of K3, and it is smaller than what K3 described: raising a real banner
+needs a service-worker `VERSION_READY` against a second deployed build. It is carried to NEXT ROUND as
+**K5** rather than claimed.

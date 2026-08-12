@@ -108,3 +108,62 @@ test.describe('settings checkbox rows', () => {
     expect(new Set(boxes.map((b) => `${b.w}x${b.h}`)).size).toBe(1);
   });
 });
+
+// The update banner is `position: fixed` over the bottom of the viewport, so
+// three screens subtract its measured height from their own and the shell
+// reserves that much at the bottom of the page (N4). Nothing asserted any of
+// that until now, which is finding K3: the unit tests pin the *measurement*, and
+// jsdom cannot lay out a `calc()` to check what the measurement is spent on.
+//
+// The banner itself cannot be raised here - a production bundle strips the debug
+// API and a real `VERSION_READY` needs a second deployed build - but the half
+// this covers does not need it. `--update-space` is a plain custom property the
+// shell publishes; setting it is enough to ask the layout whether it is listening.
+// Delete the `calc()` from a screen, or the `padding-bottom` from `app.scss`, and
+// the reserve stops being subtracted and these go red.
+test.describe('the space the update banner stands in front of', () => {
+  const RESERVE = 200;
+
+  // Sub-pixel: both readings resolve the same `100dvh` and differ only by the
+  // reserve, but a computed length can carry a fraction, so the delta is checked
+  // to within half a pixel rather than exactly.
+  const TOLERANCE = 0.5;
+
+  for (const screen of [
+    { name: 'home', path: '/', selector: '.home' },
+    { name: 'basic-strategy drill', path: '/drill/basic-strategy', selector: '.drill' },
+    { name: 'card-counting drill', path: '/drill/card-counting', selector: '.count' },
+  ]) {
+    test(`the ${screen.name} screen gives back the space it is told about`, async ({ page }) => {
+      await page.goto(screen.path);
+      const screenEl = page.locator(screen.selector);
+      await expect(screenEl).toBeVisible();
+
+      const before = await screenEl.evaluate((n) => parseFloat(getComputedStyle(n).minHeight));
+      expect(before).toBeGreaterThan(0);
+
+      await page.evaluate((px) => {
+        document
+          .querySelector<HTMLElement>('app-root')!
+          .style.setProperty('--update-space', `${px}px`);
+      }, RESERVE);
+
+      const after = await screenEl.evaluate((n) => parseFloat(getComputedStyle(n).minHeight));
+      expect(Math.abs(before - after - RESERVE)).toBeLessThan(TOLERANCE);
+    });
+  }
+
+  test('the shell reserves the same space at the bottom of the page', async ({ page }) => {
+    const root = page.locator('app-root');
+    await expect(root).toBeVisible();
+    expect(await root.evaluate((n) => getComputedStyle(n).paddingBottom)).toBe('0px');
+
+    await page.evaluate((px) => {
+      document
+        .querySelector<HTMLElement>('app-root')!
+        .style.setProperty('--update-space', `${px}px`);
+    }, RESERVE);
+
+    expect(await root.evaluate((n) => getComputedStyle(n).paddingBottom)).toBe(`${RESERVE}px`);
+  });
+});
