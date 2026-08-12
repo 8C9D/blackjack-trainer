@@ -154,8 +154,8 @@ describe('App', () => {
       fixture.detectChanges();
     }
 
-    function stubRect(element: HTMLElement, top: number, height: number): void {
-      const rect = {
+    function makeRect(top: number, height: number): DOMRect {
+      return {
         top,
         height,
         bottom: top + height,
@@ -165,6 +165,10 @@ describe('App', () => {
         x: 0,
         y: top,
       } as DOMRect;
+    }
+
+    function stubRect(element: HTMLElement, top: number, height: number): void {
+      const rect = makeRect(top, height);
       element.getBoundingClientRect = () => rect;
     }
 
@@ -200,12 +204,10 @@ describe('App', () => {
     // the dependency — delete `updateFailed()`/`recoveryNeeded()` from the
     // afterRenderEffect and it fails with 162px where 183px is wanted.
     //
-    // What it cannot pin, stated so nobody reads more into it: that the
-    // measurement is taken *after* the DOM refreshes. jsdom has no render
-    // timing, so this test passes against a plain `effect` too — which the app
-    // shipped for one commit, leaving the reserve 21px short of a grown banner
-    // in a real browser (REVIEW-round3-stage3 F2, and the measurement in
-    // reviews/ARTIFACTS-round3.md that answers it).
+    // It does not pin *when* the measurement is taken: the stub below returns the
+    // grown height from the moment it is installed, so it answers the same
+    // whether it is read before or after the DOM refreshes. The test after this
+    // one is the one that pins the ordering.
     it('follows the banner when only its copy grows', () => {
       const fixture = TestBed.createComponent(App);
       fixture.detectChanges();
@@ -225,6 +227,44 @@ describe('App', () => {
       stubRect(banner, 517.84, 166.16);
       failAReload(fixture, host);
       fixture.detectChanges();
+      expect(host.style.getPropertyValue('--update-space')).toBe('183px');
+    });
+
+    // The ordering property itself, which K3 recorded as guarded by nothing.
+    //
+    // jsdom has no layout, so it cannot be caught by measuring. It can be caught
+    // by making the stub behave the way a real element does: report a height that
+    // depends on what is inside the element *at the moment it is asked*, rather
+    // than a constant fixed in advance. A measurement taken before the DOM
+    // refreshes does not see the failed-reload line yet, and gets the old height
+    // back — which is exactly what a real Chromium did.
+    //
+    // Mutate `afterRenderEffect` to `effect` in `App` and this fails with 162px
+    // where 183px is wanted: the 21px the app shipped short for one commit
+    // (REVIEW-round3-stage3 F2).
+    it('measures the banner after the DOM refreshes, not before', () => {
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+      const host = fixture.nativeElement as HTMLElement;
+
+      pinViewportHeight(700);
+      announceUpdate();
+      fixture.detectChanges();
+      const banner = host.querySelector('.update') as HTMLElement;
+
+      // Both geometries are the ones a real Chromium measures at 375x700; which
+      // one comes back is decided by the element's own content, not by the test.
+      const offer = makeRect(538.03, 145.97);
+      const withError = makeRect(517.84, 166.16);
+      banner.getBoundingClientRect = () =>
+        banner.querySelector('.update__error') ? withError : offer;
+
+      window.dispatchEvent(new Event('resize'));
+      fixture.detectChanges();
+      expect(host.style.getPropertyValue('--update-space')).toBe('162px');
+
+      failAReload(fixture, host);
+      expect(host.querySelector('.update__error')).not.toBeNull();
       expect(host.style.getPropertyValue('--update-space')).toBe('183px');
     });
 
