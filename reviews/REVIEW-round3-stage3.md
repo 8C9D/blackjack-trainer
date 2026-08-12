@@ -1,5 +1,7 @@
 # REVIEW - round 3, stage 3
 
+<!-- records: historical-file - a closed round's record. Its figures and transcripts were true at the commits that produced them; this round does not rewrite them, so the figures and transcript rules do not bind here. Citations are still resolved and bounds-checked. -->
+
 **Verdict: PASS-WITH-FINDINGS**
 
 Range reviewed: `b09470d..d502bfb` (two commits - `9aaac6b` N4/N6/N2/M3, `d502bfb` the M1 remediation

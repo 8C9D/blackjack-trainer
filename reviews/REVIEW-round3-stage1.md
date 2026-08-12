@@ -1,5 +1,7 @@
 # REVIEW - round 3, stage 1
 
+<!-- records: historical-file - a closed round's record. Its figures and transcripts were true at the commits that produced them; this round does not rewrite them, so the figures and transcript rules do not bind here. Citations are still resolved and bounds-checked. -->
+
 **Verdict: PASS-WITH-FINDINGS**
 
 Range: `d413a7b..406a32e`, one commit (`406a32e`, "pin the shoe the flaky showdown spec asserted and

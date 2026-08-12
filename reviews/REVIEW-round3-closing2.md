@@ -1,5 +1,7 @@
 # REVIEW - round 3, closing, remediation cycle 1
 
+<!-- records: historical-file - a closed round's record. Its figures and transcripts were true at the commits that produced them; this round does not rewrite them, so the figures and transcript rules do not bind here. Citations are still resolved and bounds-checked. -->
+
 **Verdict: PASS-WITH-FINDINGS**
 
 Range reviewed: `4f39478..fb9392c`, one commit - "unbreak the gate the last commit reddened and answer the twelve record defects the closing review found".

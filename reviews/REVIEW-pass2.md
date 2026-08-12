@@ -1,5 +1,7 @@
 # REVIEW-pass2 - Pass 2 (correctness), finding B1
 
+<!-- records: historical-file - a closed round's record. Its figures and transcripts were true at the commits that produced them; this round does not rewrite them, so the figures and transcript rules do not bind here. Citations are still resolved and bounds-checked. -->
+
 Independent adversarial review of `1413989fc9f13beb326cdd47dce74e150fa26355..7377dca17f65cd95088e782a54ce51d424b4637f`.
 Subject: the single commit `7377dca`, "stop a malformed request URL from killing the dist server", which the frozen work list assigns to B1 with a terminal state target of RESOLVED (`PROD-READINESS.md:177`).
 

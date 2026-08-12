@@ -8,8 +8,8 @@ Decisions (`D*`) gate some of both and are listed first.
 
 Status legend: `[ ]` not started, `[~]` in progress, `[x]` done, `[-]` cut or not applicable.
 
-**Baseline verified 2026-08-06:** web 1516 tests green, iOS 330 tests green, production build clean, `npm audit --omit=dev` reports 0 vulnerabilities.
-**Final gate 2026-08-06 (A16), on Angular 22:** web 1526 unit tests green under the coverage thresholds (96.1% statements), production build clean, parity-fixture diff clean, Playwright 111 green against the built bundle (one earlier run retried a showdown spec once - watch it, it was green on re-run), `npm audit --omit=dev` 0; iOS 335 tests green, swiftformat and swiftlint clean.
+**Baseline verified 2026-08-06:** web 1516 tests green, iOS 330 tests green, production build clean, `npm audit --omit=dev` reports 0 vulnerabilities. <!-- figure-historical -->
+**Final gate 2026-08-06 (A16), on Angular 22:** web 1526 unit tests green under the coverage thresholds (96.1% statements), production build clean, parity-fixture diff clean, Playwright 111 green against the built bundle (one earlier run retried a showdown spec once - watch it, it was green on re-run), `npm audit --omit=dev` 0; iOS 335 tests green, swiftformat and swiftlint clean. <!-- figure-historical -->
 
 ---
 

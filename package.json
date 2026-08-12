@@ -12,7 +12,7 @@
     "export:fixtures": "tsx tools/export-parity-fixtures.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "npm run typecheck && npm run format:check",
+    "lint": "npm run typecheck && npm run format:check && node tools/check-records.mjs",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
     "e2e:report": "playwright show-report",

@@ -1,5 +1,7 @@
 # REVIEW-final - the whole run
 
+<!-- records: historical-file - a closed round's record. Its figures and transcripts were true at the commits that produced them; this round does not rewrite them, so the figures and transcript rules do not bind here. Citations are still resolved and bounds-checked. -->
+
 Independent adversarial review of the complete run, `fc7d0c32de8e89f41fd3457a1e5bd014b40e43d5..071b7d022902b812c0e3eb3c95296e51311d5eb1`, plus the full review trail in `reviews/`.
 
 - Reviewed at `071b7d022902b812c0e3eb3c95296e51311d5eb1`, branch `prod-readiness/2026-08-10`.

@@ -1,5 +1,7 @@
 # ARTIFACTS - round 2
 
+<!-- records: historical-file - a closed round's record. Its figures and transcripts were true at the commits that produced them; this round does not rewrite them, so the figures and transcript rules do not bind here. Citations are still resolved and bounds-checked. -->
+
 Evidence for every round-2 finding that reached a terminal state.
 A finding is RESOLVED only with an artifact here showing the defect **present** and then **absent**,
 produced by running the thing rather than by reading the code.

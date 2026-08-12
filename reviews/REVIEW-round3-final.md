@@ -1,5 +1,7 @@
 # REVIEW - round 3, final
 
+<!-- records: historical-file - a closed round's record. Its figures and transcripts were true at the commits that produced them; this round does not rewrite them, so the figures and transcript rules do not bind here. Citations are still resolved and bounds-checked. -->
+
 **Verdict: PASS-WITH-FINDINGS**
 
 Range reviewed: `d502bfb..076d49d` (two commits - `d1eea82`, the remediation answering

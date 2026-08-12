@@ -1,5 +1,7 @@
 # REVIEW-pass7 - Pass 7 (TESTS)
 
+<!-- records: historical-file - a closed round's record. Its figures and transcripts were true at the commits that produced them; this round does not rewrite them, so the figures and transcript rules do not bind here. Citations are still resolved and bounds-checked. -->
+
 Independent adversarial review of `0ed9a807f81c6a85845718f4b0f56e489bdb9ab2..3417bfbeebf337e73c128d710b9612c507175a9e`.
 Subject: the single commit `3417bfb` "make the dist E2E lane run the server it names", which claims finding **R0-4** RESOLVED.
 
