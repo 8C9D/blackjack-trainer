@@ -612,6 +612,45 @@ server we took for an orphan. It cost one invalidated CI-mode transcript (re-run
 N1) and a reviewer twelve aborted runs. **No block in the table above is one of those casualties.**
 That is finding K2.
 
+# ROUND 4
+
+A fourth bounded sweep, continuing the branch above.
+Work list, in the brief's order: the records check (P1), K3 (P2), N1/N5 (P1, PATCH-READY), K1/K2/M3
+(P3), and the two non-code items D1 and I1.
+Baseline for every round-4 "green" claim: [`reviews/BASELINE-round4.md`](reviews/BASELINE-round4.md).
+Artifacts: [`reviews/ARTIFACTS-round4.md`](reviews/ARTIFACTS-round4.md).
+
+- Branch: `prod-readiness/round4-2026-08-12`
+- Base commit: `f5e8fc8cd952751986aff69b8810cc8b86bd135d` (tip of round 3, unmerged, never pushed)
+- Date: 2026-08-12
+
+The connecting theme, taken from the round-4 brief: **stop the records from being the defect.** Round
+3's code survived six adversarial reviews and its records produced 31 regressions, every one of them
+a record rather than a defect in `src/`. This round's first item is a gate that refuses four of those
+shapes mechanically, and it is first precisely because everything after it produces records.
+
+## ROUND 4 ASSUMPTIONS
+
+1. **All four owner decisions arrived unsubstituted.** Every one still read `<<< ... >>>` when this run
+   started, which the brief defines as UNANSWERED, so each takes the conservative branch and is
+   recorded here rather than guessed:
+
+   | decision           | still reads   | taken as           | consequence                                                                                                            |
+   | ------------------ | ------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+   | support email      | `<<< ... >>>` | **still unknown**  | D1 stays DEFERRED, placeholder left visible, no address invented. Fourth round open.                                   |
+   | push a branch / PR | `<<< ... >>>` | **no, stay local** | N1 and N5 stay PATCH-READY, are not re-filed, and their status is copied forward verbatim. Nothing is pushed anywhere. |
+   | iCloud entitlement | `<<< ... >>>` | **keep declared**  | I1 carried forward unchanged, respecting D2. The O2 warning is re-verified line by line.                               |
+   | merging            | `<<< ... >>>` | **leave unmerged** | Four rounds now sit unmerged on one branch. Nothing is rebased and nothing touches `main`.                             |
+
+   The conservative branch was taken on all four. Round 2 was damaged by unsubstituted placeholders
+   treated as answers; this run treats them as the absence of an answer, which is what they are.
+
+2. **GitHub Actions cannot be executed here, and this round may not push.** Every claim about what a
+   GitHub runner does remains UNVERIFIED, named precisely, and is not re-derived from a YAML parse.
+
+3. **The npm registry is unreachable.** `--offline` resolves from `~/.npm/_cacache` and contacts
+   nothing; anything needing more than the local cache is bounded and recorded against its finding.
+
 # Citation bindings
 
 <!-- prettier-ignore-start -->
@@ -619,7 +658,7 @@ That is finding K2.
 Machine-checked by `tools/check-records.mjs` (rule 2). Every `file:line` citation in this ledger that
 points into a file this branch has changed is pinned here to a fragment that must still be present at
 those lines; the gate refuses the commit if one drifts. Round 3 lost two citations to exactly that
-drift (R3-20) and this round's own gate found eight more that had survived since round 1.
+drift (R3-20) and this round's own gate found nine more, at eleven places.
 
 A `cite-historical` entry is a citation that deliberately names where something *was*: the location a
 finding described before it was fixed, or - twice - a location that never existed, which is the
