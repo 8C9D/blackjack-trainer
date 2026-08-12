@@ -1,5 +1,7 @@
 # REVIEW-pass6 - Pass 6 (BUILD AND DEPLOY)
 
+<!-- records: historical-file - a closed round's record. Its figures and transcripts were true at the commits that produced them; this round does not rewrite them, so the figures and transcript rules do not bind here. Citations are still resolved and bounds-checked. -->
+
 Independent adversarial review of `5c9ca364c07aadb73035eec67cac98d4f928a5d9..6131b07d972889195cad015dd439b6ae348f1024`.
 Subject: the single commit `6131b07` "point the installed app at itself rather than the site root", which claims finding **W1** RESOLVED.
 

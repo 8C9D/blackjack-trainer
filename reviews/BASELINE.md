@@ -1,5 +1,7 @@
 # BASELINE
 
+<!-- records: historical-file - a closed round's record. Its figures and transcripts were true at the commits that produced them; this round does not rewrite them, so the figures and transcript rules do not bind here. Citations are still resolved and bounds-checked. -->
+
 Raw output of every gate this repository ships, captured before any code in this
 production-readiness run was touched.
 Every later "green" claim in `PROD-READINESS.md` or in a stage review is measured

@@ -1,5 +1,7 @@
 # REVIEW - round 3, stage 2
 
+<!-- records: historical-file - a closed round's record. Its figures and transcripts were true at the commits that produced them; this round does not rewrite them, so the figures and transcript rules do not bind here. Citations are still resolved and bounds-checked. -->
+
 **Verdict: PASS-WITH-FINDINGS**
 
 Range: `406a32e..b09470d`, two commits - `772e4a7` ("pool the before-rate the reviewer disproved and

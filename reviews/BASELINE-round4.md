@@ -35,20 +35,25 @@ reproduces, sandboxed build/test commands abort.
 
 ## Result
 
-| #   | gate              | command                                                                                                   | exit | result                                          |
-| --- | ----------------- | --------------------------------------------------------------------------------------------------------- | ---- | ----------------------------------------------- |
-| 1   | lint              | `npm run lint`                                                                                            | 0    | `All matched files use Prettier code style!`    |
-| 2   | build             | `npm run build`                                                                                           | 0    | 1 budget warning (inherited, P2-2)              |
-| 3   | unit tests        | `npm test`                                                                                                | 0    | 67 files, 1551 passed                           |
-| 4   | coverage gate     | `npm run test:coverage`                                                                                   | 0    | 96.16 / 93.28 / 93.22 / 98.00                   |
-| 5   | E2E               | `E2E_SERVER=dist npm run e2e` **x10**, and 200 repeats of two tests                                       | 0    | 10 of 10 green; 200 of 200 green - tables below |
-| 6   | parity anti-drift | `npm run export:fixtures` + `git diff --exit-code -- ios/Fixtures`                                        | 0    | 7 fixtures written, no drift                    |
-| 7   | swiftformat       | `swiftformat --lint .`                                                                                    | 0    | 0/105 files require formatting                  |
-| 8   | swiftlint         | `swiftlint lint`                                                                                          | 0    | 0 violations, 0 serious in 105 files            |
-| 9   | iOS build + test  | `xcodebuild -scheme BlackjackTrainer -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build test` | 0    | `** TEST SUCCEEDED **`, 335 tests in 38 suites  |
+| #   | gate              | command                                                                                                   | exit | result                                           |
+| --- | ----------------- | --------------------------------------------------------------------------------------------------------- | ---- | ------------------------------------------------ |
+| 1   | lint              | `npm run lint`                                                                                            | 0    | `All matched files use Prettier code style!`     |
+| 2   | build             | `npm run build`                                                                                           | 0    | 1 budget warning (inherited, P2-2)               |
+| 3   | unit tests        | `npm test`                                                                                                | 0    | 67 files, 1551 passed <!-- figure-historical --> |
+| 4   | coverage gate     | `npm run test:coverage`                                                                                   | 0    | 96.16 / 93.28 / 93.22 / 98.00                    |
+| 5   | E2E               | `E2E_SERVER=dist npm run e2e` **x10**, and 200 repeats of two tests                                       | 0    | 10 of 10 green; 200 of 200 green - tables below  |
+| 6   | parity anti-drift | `npm run export:fixtures` + `git diff --exit-code -- ios/Fixtures`                                        | 0    | 7 fixtures written, no drift                     |
+| 7   | swiftformat       | `swiftformat --lint .`                                                                                    | 0    | 0/105 files require formatting                   |
+| 8   | swiftlint         | `swiftlint lint`                                                                                          | 0    | 0 violations, 0 serious in 105 files             |
+| 9   | iOS build + test  | `xcodebuild -scheme BlackjackTrainer -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build test` | 0    | `** TEST SUCCEEDED **`, 335 tests in 38 suites   |
 
 **Nine of nine green.** Round 3's closing claim reproduces exactly, including both figures it moved:
-the unit gate is 67 files / 1551 tests, and coverage is 96.16 / 93.28 / 93.22 / 98.00.
+the unit gate is 67 files / 1551 tests, and coverage is 96.16 / 93.28 / 93.22 / 98.00. <!-- figure-historical -->
+
+The two statements of `1551` above carry a `figure-historical` marker in the source of this file.
+They are deliberate: this document records the count at the **base** commit, and the round's tip adds
+tests, so the records gate would otherwise refuse them for disagreeing with the current figure. The
+marker is how a record says "this number is a measurement of something else, on purpose".
 
 One honesty note about the order these ran in. Gates 1-6 ran against the clean tree. Gates 7-9 were
 first run while this round's records edits were already in the working tree; they touch only

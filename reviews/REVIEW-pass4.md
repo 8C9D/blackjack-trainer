@@ -1,5 +1,7 @@
 # REVIEW-pass4 - Pass 4 (failure behaviour), finding W2
 
+<!-- records: historical-file - a closed round's record. Its figures and transcripts were true at the commits that produced them; this round does not rewrite them, so the figures and transcript rules do not bind here. Citations are still resolved and bounds-checked. -->
+
 Independent adversarial review of `a52847d449497a4acc254b3f275ddacba9321671..ac6a523020c63ce63eaf323118de16d39aedae5d`.
 Subject: the single commit `ac6a523`, "tell the trainee when the service worker can no longer serve the app", which the frozen work list assigns to W2 with a terminal state target of RESOLVED (`PROD-READINESS.md:183`).
 

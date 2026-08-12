@@ -1,5 +1,7 @@
 # Verification artifacts
 
+<!-- records: historical-file - a closed round's record. Its figures and transcripts were true at the commits that produced them; this round does not rewrite them, so the figures and transcript rules do not bind here. Citations are still resolved and bounds-checked. -->
+
 Recorded command output for each work-list finding this run claims to have resolved.
 A finding may not be marked RESOLVED in `PROD-READINESS.md` without an entry here.
 A green test report is not evidence about the committed code; what follows is the changed

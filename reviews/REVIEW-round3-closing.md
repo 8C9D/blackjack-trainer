@@ -1,5 +1,7 @@
 # REVIEW - round 3, closing
 
+<!-- records: historical-file - a closed round's record. Its figures and transcripts were true at the commits that produced them; this round does not rewrite them, so the figures and transcript rules do not bind here. Citations are still resolved and bounds-checked. -->
+
 **Verdict: REJECT**
 
 Range reviewed: `076d49d..4f39478`, one commit - "correct the closing records the final review

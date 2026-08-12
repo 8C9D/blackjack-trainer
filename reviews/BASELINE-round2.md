@@ -1,5 +1,7 @@
 # BASELINE - round 2
 
+<!-- records: historical-file - a closed round's record. Its figures and transcripts were true at the commits that produced them; this round does not rewrite them, so the figures and transcript rules do not bind here. Citations are still resolved and bounds-checked. -->
+
 Every gate, re-run from scratch on the round-2 branch point before any round-2 change.
 The round-1 end-of-run table in `PROD-READINESS.md` is a claim; this file is the measurement.
 

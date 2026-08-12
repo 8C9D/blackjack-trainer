@@ -1,5 +1,9 @@
 # REVIEW-0 - Stage 0 (RECON)
 
+<!-- records: historical-file - a closed round's record. Its figures and transcripts were true at the commits that produced them; this round does not rewrite them, so the figures and transcript rules do not bind here. Citations are still resolved and bounds-checked. -->
+
+<!-- cite-historical: src/app/app.config.ts:38-41 - this finding IS that the citation named a line past the end of a 38-line file. Resolving it would delete the defect being reported. -->
+
 Independent adversarial review of `fc7d0c32de8e89f41fd3457a1e5bd014b40e43d5..438349bbb365ca1bacda07d16c15d65565b24af6`.
 Subject: `PROD-READINESS.md` (every finding, individually) and `reviews/BASELINE.md`.
 
