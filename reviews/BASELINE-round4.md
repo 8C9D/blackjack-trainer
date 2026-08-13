@@ -50,10 +50,13 @@ reproduces, sandboxed build/test commands abort.
 **Nine of nine green.** Round 3's closing claim reproduces exactly, including both figures it moved:
 the unit gate is 67 files / 1551 tests, and coverage is 96.16 / 93.28 / 93.22 / 98.00. <!-- figure-historical -->
 
-The two statements of `1551` above carry a `figure-historical` marker in the source of this file.
-They are deliberate: this document records the count at the **base** commit, and the round's tip adds
-tests, so the records gate would otherwise refuse them for disagreeing with the current figure. The
-marker is how a record says "this number is a measurement of something else, on purpose".
+Three lines above carry a `figure-historical` marker in the source of this file: the two statements of
+`1551` and the coverage row. They are deliberate. This document records the figures at the **base**
+commit, and the round's tip adds tests and moves coverage, so the records gate would otherwise refuse
+them for disagreeing with the current values. The marker is how a record says "this number is a
+measurement of something else, on purpose". The marker applies to its own line only - it used to reach
+the following line too, which is how the coverage row was exempt without anyone marking it
+(REVIEW-round4-stage1 F4).
 
 One honesty note about the order these ran in. Gates 1-6 ran against the clean tree. Gates 7-9 were
 first run while this round's records edits were already in the working tree; they touch only
