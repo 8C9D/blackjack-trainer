@@ -509,3 +509,85 @@ ambiguous-basename refusal, the frozen-document exemption, the `transcript-liter
 checker from 76.77% to 86.45% branches and the project back to 92.89%. That is real coverage of a
 release gate, not a number moved for its own sake, but the headroom is thinner than it was and the
 next tool added in-process will need the same care. Named as **K6** in NEXT ROUND.
+
+## N1 and N5 (P1, PATCH-READY) - not touched, not re-filed
+
+The owner decision authorising a push arrived unsubstituted, so the conservative branch applies: this
+round pushed nothing, opened no PR, and observed no GitHub run. N1 and N5 stay **PATCH-READY** with
+round 3's status copied forward verbatim, and the five UNVERIFIED claims named under N1 in
+`reviews/ARTIFACTS-round3.md` remain UNVERIFIED for the same reason they were: a GitHub runner is the
+only thing that can settle them.
+
+Re-filing a PATCH-READY finding as new work is what round 3 was told not to do with round 2's patches,
+so nothing here re-derives them. The one thing this round did touch nearby was `pages.yml`'s
+**citations**, not `pages.yml`: three ledger references to line 37 pointed at content N1's own patch
+had moved to line 48. That is a records defect, recorded under the records check above, not a change
+to the workflow.
+
+## D1 (P1) - the support address is still a placeholder, fourth round running
+
+Re-verified at both cited lines at this commit:
+
+```console
+$ grep -n 'CONTACT_EMAIL_HERE' ios/AppStore/privacy.html ios/AppStore/support.html; echo "GREP_EXIT=$?"; sed -n '53p' .github/workflows/pages.yml
+ios/AppStore/privacy.html:65:  <a href="mailto:CONTACT_EMAIL_HERE">CONTACT_EMAIL_HERE</a>.</p>
+ios/AppStore/support.html:55:    <a href="mailto:CONTACT_EMAIL_HERE">CONTACT_EMAIL_HERE</a> and I'll get back to you.
+GREP_EXIT=0
+          cp ios/AppStore/privacy.html ios/AppStore/support.html site/
+```
+
+Exactly the lines round 3 recorded - 65 and 55 - and `pages.yml:53` still copies both files into the
+published site. The address was UNANSWERED again, so nothing was invented and the placeholder is left
+visible.
+
+**DEFERRED**, for the fourth consecutive round. It is at the top of this round's report rather than in
+a table because it is now the only thing between a fully gated deploy and a publishable one.
+
+## I1 (P1) - the iCloud data-loss path, re-verified line by line
+
+The decision on the entitlement arrived unsubstituted, so it stays declared: that is the conservative
+branch and it is also what respects launch decision D2 (ship the binary with the capability inert;
+provisioning later turns sync on with no app update). Nothing was changed.
+
+Round 3 verified the `LAUNCH-CHECKLIST.md` O2 warning at five citations and recorded that any drift
+means someone edited the store. All five re-verified here, plus the sixth the warning names inline:
+
+```console
+$ cd ios/BlackjackTrainer; sed -n '63,72p' Stores/CloudKeyValueStore.swift; sed -n '63,65p' Stores/StatsStore.swift; sed -n '78p' Stores/StatsStore.swift; sed -n '16p' Views/Flow/PracticeDataSection.swift; sed -n '113p' App/AppModel.swift
+        cloud.synchronize()
+        // At launch, adopt an existing cloud value; otherwise seed the cloud with
+        // whatever was stored locally (e.g. before iCloud was enabled).
+        for store in stores {
+            if cloud.data(forKey: store.cloudKey) != nil {
+                store.adoptFromCloud()
+            } else {
+                store.pushToCloud()
+            }
+        }
+    private func persist() {
+        StatsPersistence.save(stats, key: key, defaults: defaults)
+        pushToCloud()
+        stats = value
+            Button("Reset practice data", role: .destructive) { confirmingReset = true }
+    func resetPracticeData() {
+```
+
+| citation                         | what the warning says is there                                  | found |
+| -------------------------------- | --------------------------------------------------------------- | ----- |
+| `CloudKeyValueStore.swift:63-72` | `synchronize()`, then adopt-or-seed with no wait for a download | yes   |
+| `StatsStore.swift:63-65`         | `persist()` calls `pushToCloud()` on every recorded rep         | yes   |
+| `StatsStore.swift:78`            | `stats = value`, last-writer-wins adoption                      | yes   |
+| `PracticeDataSection.swift:16`   | the user-facing **Reset practice data** action                  | yes   |
+| `AppModel.swift:113`             | `func resetPracticeData()`, its handler                         | yes   |
+| `AppModel.swift:49-78`           | the wiring, live for all nine stores                            | yes   |
+
+The last one is the only one that needs counting rather than reading. The range ends with the
+`StatsCloudSync(cloud:stores:)` call, and the array holds exactly nine: `basicStrategyStats`,
+`runningCountStats`, `trueCountStats`, `deviationStats`, `deckEstimationStats`, `flowPrefs`,
+`practiceHistory`, `missTally`, `countDrift`.
+
+No drift at any of the six. The entitlement is still declared in
+`ios/BlackjackTrainer/BlackjackTrainer.entitlements`, wired from `ios/project.yml:40`, with the comment
+explaining that the app degrades to local-only until the capability is provisioned.
+
+**DEFERRED at P1**, carried forward unchanged. Nobody edited the store.
