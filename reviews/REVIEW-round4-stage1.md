@@ -1,5 +1,7 @@
 # REVIEW - round 4, stage 1
 
+<!-- records: historical-file - an answered review. Its figures and transcripts were true at the commit it reviewed and were checked by this gate when it was written; the remediation it prompted has since moved several of them, and rewriting a reviewer's evidence to match a later tree would destroy the record. Citations here are still resolved and bounds-checked. -->
+
 Adversarial review of `f5e8fc8..b04d9f1` on `prod-readiness/round4-2026-08-12`: `983cc84` (round-4
 baseline), `00b4abb` (the records gate), `b04d9f1` (the round-4 ledger section and its artifact).
 Every figure, transcript and citation in the changed files was treated as an unverified claim and

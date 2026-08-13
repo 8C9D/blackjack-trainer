@@ -1,5 +1,7 @@
 # REVIEW - round 4, stage 4
 
+<!-- records: historical-file - an answered review. Its figures and transcripts were true at the commit it reviewed and were checked by this gate when it was written; the remediation it prompted has since moved several of them, and rewriting a reviewer's evidence to match a later tree would destroy the record. Citations here are still resolved and bounds-checked. -->
+
 Adversarial review of `4ad4d24..aadd4b5` on `prod-readiness/round4-2026-08-12`: `77f75fa` (gate 5 re-measured and
 pooled into three blocks), `501343a` (the gate section says which commit it measures), `c024fec` (the marker
 escape closed "as a class", everything the rule change invalidated re-measured, and the stage-3 review

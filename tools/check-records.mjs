@@ -47,6 +47,7 @@
  *                                                a NAME= line
  */
 import { execFileSync } from 'node:child_process';
+import * as prettier from 'prettier';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -59,8 +60,8 @@ import { fileURLToPath } from 'node:url';
 export const FIGURES = {
   // The count at the round's tip, not at its baseline. `reviews/BASELINE-round4.md`
   // states the baseline's 1551 on purpose and marks those two lines as such.
-  unitTests: 1609,
-  coverage: [96.1, 93.11, 93.46, 97.9],
+  unitTests: 1619,
+  coverage: [96.05, 92.91, 93.48, 97.86],
   m2: { failures: 33, executions: 600, rate: 5.5 },
 };
 
@@ -109,68 +110,94 @@ export function slug(text) {
     .replace(/ +/g, '-');
 }
 
+/**
+ * Where the code is, according to the parser that already formats these files.
+ *
+ * This used to be a hand-written scanner and it was wrong eight times: a marker
+ * honoured inside an inline-code span, a double-backtick span, a backtick fence,
+ * a `~~~` fence, an indented block, a mismatched delimiter, a fence whose info
+ * string was two words, a blockquoted block. Each fix added the spelling that
+ * had just been found, and three of them left the gate refusing *less* than
+ * before (REVIEW-round4-stage1 F1, stage-2 F1, stage-3 F6, stage-4 F6/F7,
+ * stage-5 F1/F2/F3). Enumerating spellings of "this is code" does not terminate;
+ * asking a real markdown parser does.
+ *
+ * Prettier is already a dependency and already runs on these files immediately
+ * before this gate, so its answer is the one the repository formats by.
+ * `__debug.parse` is an internal API: if it changes this throws and the gate
+ * goes red, which is the direction a records gate should fail in.
+ */
+async function parseDoc(markdown) {
+  const { ast } = await prettier.__debug.parse(markdown, { parser: 'markdown' });
+  const text = markdown.split('\n');
+  const code = [];
+  const inline = new Map();
+  const visit = (node) => {
+    if (!node || typeof node !== 'object') return;
+    if (node.type === 'code' && node.position) {
+      code.push({
+        start: node.position.start.line,
+        end: node.position.end.line,
+        lang: node.lang ?? '',
+      });
+    }
+    if (node.type === 'inlineCode' && node.position) {
+      const { start, end } = node.position;
+      for (let line = start.line; line <= end.line; line++) {
+        const from = line === start.line ? start.column - 1 : 0;
+        const to = line === end.line ? end.column - 1 : Number.MAX_SAFE_INTEGER;
+        if (!inline.has(line)) inline.set(line, []);
+        inline.get(line).push([from, to]);
+      }
+    }
+    for (const key of Object.keys(node)) {
+      const value = node[key];
+      if (Array.isArray(value)) value.forEach(visit);
+      else if (value && typeof value === 'object' && value.type) visit(value);
+    }
+  };
+  visit(ast);
+
+  const codeLine = new Map();
+  for (const block of code) {
+    for (let line = block.start; line <= block.end; line++) codeLine.set(line, block);
+  }
+  return {
+    text,
+    code,
+    /** True for any line a reader sees as code, of every kind markdown has. */
+    isCode: (line) => codeLine.has(line),
+    /** The line with its inline-code spans blanked: what can carry a directive. */
+    applied(line) {
+      const raw = text[line - 1] ?? '';
+      const spans = inline.get(line);
+      if (!spans) return raw;
+      return [...raw]
+        .map((ch, i) => (spans.some(([from, to]) => i >= from && i < to) ? ' ' : ch))
+        .join('');
+    },
+    /** Every line that can carry a directive, joined - for document-wide markers. */
+    directiveText() {
+      return text.map((_, i) => (codeLine.has(i + 1) ? '' : this.applied(i + 1))).join('\n');
+    },
+  };
+}
+
 /** Every heading anchor a markdown file offers, duplicates suffixed as GitHub does. */
-export function anchorsOf(markdown) {
+export async function anchorsOf(markdown) {
+  const doc = await parseDoc(markdown);
   const seen = new Map();
   const anchors = new Set();
-  for (const { text, fenced } of lines(markdown)) {
-    if (fenced) continue;
+  doc.text.forEach((text, i) => {
+    if (doc.isCode(i + 1)) return;
     const m = /^#{1,6} +(.*)$/.exec(text);
-    if (!m) continue;
+    if (!m) return;
     const base = slug(m[1]);
     const n = seen.get(base) ?? 0;
     seen.set(base, n + 1);
     anchors.add(n === 0 ? base : `${base}-${n}`);
-  }
-  return anchors;
-}
-
-/**
- * Walk a document once, tagging each line with the fence it sits in. Every rule
- * needs this and none of them may disagree about where a code block starts.
- */
-function lines(markdown) {
-  let fence = null;
-  return markdown.split('\n').map((text, i) => {
-    // Both fence syntaxes, closed the way CommonMark closes them: by the same
-    // character, at least as long as the opener. Accepting either delimiter for
-    // either opener let a `~~~` line *printed inside* a console fence end that
-    // fence as far as this file was concerned, while a reader still saw one
-    // block - which made the gate strictly weaker than before the fix
-    // (REVIEW-round4-stage4 F6).
-    const delim = /^\s*(`{3,}|~{3,}) *([A-Za-z0-9_-]*)\s*$/.exec(text);
-    if (delim && fence === null) {
-      fence = { char: delim[1][0], length: delim[1].length, info: delim[2] || 'plain' };
-      return {
-        text,
-        no: i + 1,
-        fenced: true,
-        indented: false,
-        info: fence.info,
-        isFenceMarker: true,
-      };
-    }
-    if (delim && fence !== null && delim[1][0] === fence.char && delim[1].length >= fence.length) {
-      const info = fence.info;
-      fence = null;
-      return { text, no: i + 1, fenced: true, indented: false, info, isFenceMarker: true };
-    }
-    // A four-space indent is a code block in markdown, so a directive written in
-    // one is a directive nobody can see rendered. It is reported separately from
-    // `fenced` and used for directives only: making it mean "code" outright
-    // exempted every citation and link on such a line from rules 1 and 2, which
-    // is a silent exemption and the opposite of what was wanted
-    // (REVIEW-round4-stage4 F7).
-    const indented = fence === null && /^ {4,}\S/.test(text);
-    return {
-      text,
-      no: i + 1,
-      fenced: fence !== null,
-      indented,
-      info: fence?.info ?? null,
-      isFenceMarker: false,
-    };
   });
+  return anchors;
 }
 
 /**
@@ -187,65 +214,17 @@ function lines(markdown) {
  * they sit in.
  */
 function exemptions(doc) {
-  let wholeFile = false;
+  const wholeFile = /<!-- records: historical-file\b/.test(doc.directiveText());
   const marked = new Set();
   let active = false;
-  for (const { text, no, fenced, indented } of lines(doc)) {
-    const live = markersIn(text, fenced || indented);
-    if (!fenced && /^# /.test(text)) active = false;
-    if (live.includes('historical-file')) wholeFile = true;
-    if (live.includes('historical')) active = true;
+  doc.text.forEach((text, i) => {
+    const no = i + 1;
+    const live = doc.isCode(no) ? '' : doc.applied(no);
+    if (!doc.isCode(no) && /^# /.test(text)) active = false;
+    if (/<!-- records: historical\b(?!-file)/.test(live)) active = true;
     if (active) marked.add(no);
-  }
-  return {
-    frozen: wholeFile,
-    stale: (no) => wholeFile || marked.has(no),
-  };
-}
-
-/**
- * The `records:` markers a line actually applies, ignoring any it merely talks
- * about.
- *
- * A directive counts only where a directive can be written. Two places it cannot
- * be: inside an inline-code span (documentation naming the marker, a review
- * quoting it) and inside a fenced block (a transcript of a command whose text
- * contains it). Honouring the first froze the document carrying this round's
- * evidence (REVIEW-round4-stage1 F1); the fix for that was written against
- * inline code alone, so a strip regex printed inside a `console` fence froze
- * three quarters of the same document one commit later (REVIEW-round4-stage2
- * F1). This is the rule stated as a class rather than patched per instance.
- */
-function markersIn(text, fenced) {
-  if (fenced) return [];
-  return [...applied(text).matchAll(/<!-- records: (historical-file|historical)\b/g)].map(
-    (m) => m[1],
-  );
-}
-
-/**
- * The part of a line that can carry a directive: everything outside inline code.
- *
- * Backtick runs are matched by length, because ``` `` `` ``` is an inline-code span
- * too and a regex pairing single backticks steps straight over it - which left a
- * marker quoted that way still freezing its document (REVIEW-round4-stage3 F6).
- */
-function applied(text) {
-  return text.replace(/(`+)[\s\S]*?\1/g, '');
-}
-
-/**
- * Every line of a document that can carry a directive, with inline code removed.
- * All five markers this file reads are collected from here and nowhere else:
- * three of them used to be matched against the raw document, so a binding
- * written inside a transcript satisfied rule 2 and a `transcript-literal` named
- * in prose turned rule 3 off for the fence below it (REVIEW-round4-stage3 F6).
- */
-function directiveText(doc) {
-  return lines(doc)
-    .filter((line) => !line.fenced && !line.indented)
-    .map((line) => applied(line.text))
-    .join('\n');
+  });
+  return { frozen: wholeFile, stale: (no) => wholeFile || marked.has(no) };
 }
 
 function readDoc(root, rel) {
@@ -279,25 +258,30 @@ export function recordsDocs(root) {
 
 // --- rule 1: every anchor a record links to is a heading that exists ---------
 
-function checkAnchors(root, docs) {
+async function checkAnchors(root, docs, parsed) {
   const bad = [];
   const anchorCache = new Map();
-  const anchorsFor = (rel) => {
+  const anchorsFor = async (rel) => {
     if (!anchorCache.has(rel)) {
-      anchorCache.set(rel, existsSync(join(root, rel)) ? anchorsOf(readDoc(root, rel)) : null);
+      anchorCache.set(
+        rel,
+        existsSync(join(root, rel)) ? await anchorsOf(readDoc(root, rel)) : null,
+      );
     }
     return anchorCache.get(rel);
   };
   for (const doc of docs) {
     const dir = dirname(doc);
-    for (const { text, no, fenced } of lines(readDoc(root, doc))) {
-      if (fenced) continue;
+    const parsedDoc = parsed.get(doc);
+    for (const [i, text] of parsedDoc.text.entries()) {
+      const no = i + 1;
+      if (parsedDoc.isCode(no)) continue;
       for (const m of text.matchAll(LINK)) {
         const [file, anchor] = m[1].split('#');
         if (/^[a-z]+:/.test(m[1])) continue; // external URL
         const target = file === '' ? doc : join(dir, file).replace(/\\/g, '/');
         if (!target.endsWith('.md')) continue;
-        const anchors = anchorsFor(target);
+        const anchors = await anchorsFor(target);
         if (anchors === null) {
           bad.push(`${doc}:${no}: link target does not exist: ${target}`);
         } else if (anchor !== undefined && !anchors.has(anchor)) {
@@ -327,7 +311,7 @@ function resolvePath(root, tracked, cited) {
   return !cited.includes('/') ? 'external' : null;
 }
 
-function checkCitations(root, docs, tracked) {
+function checkCitations(root, docs, tracked, parsed) {
   const bad = [];
   const fileLines = new Map();
   const linesOf = (rel) => {
@@ -340,12 +324,12 @@ function checkCitations(root, docs, tracked) {
     return fileLines.get(rel);
   };
   for (const doc of docs) {
-    const body = readDoc(root, doc);
+    const parsedDoc = parsed.get(doc);
     const bindings = new Map();
     const historical = new Set();
     // The fragment is double-quoted and may contain escaped quotes, because the
     // content worth pinning is often JSON.
-    const directives = directiveText(body);
+    const directives = parsedDoc.directiveText();
     for (const m of directives.matchAll(
       /<!-- cite: (\S+):(\d+(?:-\d+)?) "((?:[^"\\]|\\.)*)" -->/g,
     )) {
@@ -354,9 +338,10 @@ function checkCitations(root, docs, tracked) {
     for (const m of directives.matchAll(/<!-- cite-historical: ([^\s]+):(\d+(?:-\d+)?)/g)) {
       historical.add(`${m[1]}:${m[2]}`);
     }
-    const needsBinding = BINDING_DOCS.test(doc) && !exemptions(body).frozen;
-    for (const { text, no, fenced } of lines(body)) {
-      if (fenced) continue;
+    const needsBinding = BINDING_DOCS.test(doc) && !exemptions(parsedDoc).frozen;
+    for (const [i, text] of parsedDoc.text.entries()) {
+      const no = i + 1;
+      if (parsedDoc.isCode(no)) continue;
       for (const m of text.matchAll(CITATION)) {
         const cited = m[1];
         const range = m[2].slice(1);
@@ -444,57 +429,40 @@ function noteEchoes(commandText, into) {
   }
 }
 
-function checkTranscripts(root, docs) {
+function checkTranscripts(root, docs, parsed) {
   const bad = [];
   for (const doc of docs) {
-    const body = readDoc(root, doc);
-    const { stale } = exemptions(body);
-    const all = lines(body);
-    let inConsole = false;
-    let command = null;
-    let exempt = false;
-    let previous = '';
-    // Every echo the fence shows, whichever command line it sits on. The label
-    // has to be traceable to an echo the reader can see; requiring it on the
-    // owning line alone would refuse the honest two-step form, where the labels
-    // are echoed into a file by the commands above and the file is then printed.
-    let echoed = new Set();
-    for (const line of all) {
-      const { text, no, info, fenced, isFenceMarker } = line;
-      if (stale(no)) continue;
-      if (isFenceMarker) {
-        if (!inConsole && info === 'console') {
-          inConsole = true;
-          exempt = applied(previous).includes('<!-- transcript-literal -->');
-          command = null;
-          echoed = new Set();
-        } else if (inConsole) {
-          inConsole = false;
+    const parsedDoc = parsed.get(doc);
+    const { stale } = exemptions(parsedDoc);
+    // Walk the parser's own code blocks rather than hunting for fence markers:
+    // every "where does this block end" defect in this round came from deciding
+    // that by hand.
+    for (const block of parsedDoc.code) {
+      if (block.lang !== 'console') continue;
+      const exempt = lastDirectiveLineBefore(parsedDoc, block.start).includes(
+        '<!-- transcript-literal -->',
+      );
+      let command = null;
+      const echoed = new Set();
+      for (let no = block.start + 1; no < block.end; no++) {
+        if (stale(no)) continue;
+        const text = parsedDoc.text[no - 1] ?? '';
+        if (/^\$ /.test(text)) {
+          command = { text: text.slice(2), line: no, open: continues(text) };
+          noteEchoes(command.text, echoed);
+          continue;
         }
-        continue;
-      }
-      if (!inConsole) {
-        if (text.trim() !== '' && !fenced) previous = text;
-        continue;
-      }
-      if (/^\$ /.test(text)) {
-        command = { text: text.slice(2), line: no, open: continues(text) };
-        noteEchoes(command.text, echoed);
-        continue;
-      }
-      if (command?.open) {
-        command.text += `\n${text}`;
-        command.open = continues(command.text);
-        noteEchoes(text, echoed);
-        continue;
-      }
-      const label = EXIT_LABEL.exec(text);
-      if (!label || exempt) continue;
-      const name = label[1];
-      const printed = echoed.has(name);
-      if (!printed) {
+        if (command?.open) {
+          command.text += `\n${text}`;
+          command.open = continues(command.text);
+          noteEchoes(text, echoed);
+          continue;
+        }
+        const label = EXIT_LABEL.exec(text);
+        if (!label || exempt) continue;
+        if (echoed.has(label[1])) continue;
         bad.push(
-          `${doc}:${no}: a \`\`\`console block prints \`${name}=\` as output of ` +
+          `${doc}:${no}: a \`\`\`console block prints \`${label[1]}=\` as output of ` +
             (command
               ? `\`${command.text.split('\n')[0].trim()}\` (line ${command.line})`
               : 'no command') +
@@ -506,9 +474,24 @@ function checkTranscripts(root, docs) {
   return bad;
 }
 
+/**
+ * The nearest line above a block that could carry a directive. Read through the
+ * same parse as every other marker: `transcript-literal` was the one marker of
+ * six not read that way, and that is how an indented one disarmed rule 3
+ * (REVIEW-round4-stage5 F1).
+ */
+function lastDirectiveLineBefore(doc, line) {
+  for (let no = line - 1; no >= 1; no--) {
+    if (doc.isCode(no)) continue;
+    const text = doc.applied(no);
+    if (text.trim() !== '') return text;
+  }
+  return '';
+}
+
 // --- rule 4: one value per figure, everywhere the round states it ------------
 
-function checkFigures(root, docs, figures) {
+function checkFigures(root, docs, figures, parsed) {
   const bad = [];
   const [cs, cb, cf, cl] = figures.coverage;
   const sweeps = [
@@ -552,18 +535,26 @@ function checkFigures(root, docs, figures) {
     },
   ];
   for (const doc of docs) {
-    const body = readDoc(root, doc);
-    const { stale } = exemptions(body);
-    const all = lines(body);
-    all.forEach(({ text, no, fenced, indented, info }) => {
+    const parsedDoc = parsed.get(doc);
+    const { stale } = exemptions(parsedDoc);
+    const consoleLine = new Set();
+    for (const block of parsedDoc.code) {
+      if (block.lang !== 'console') continue;
+      for (let no = block.start; no <= block.end; no++) consoleLine.add(no);
+    }
+    parsedDoc.text.forEach((text, i) => {
+      const no = i + 1;
       if (stale(no)) return;
-      if (fenced && info === 'console') return;
+      // Verbatim run transcripts only. A `diff` block claims to show file
+      // content and is still swept.
+      if (consoleLine.has(no)) return;
       // The marked line and nothing else. Reaching to the *next* line as well
       // was undocumented and untested, and it had already turned rule 4 off on
       // the baseline's coverage row purely because of its neighbour
       // (REVIEW-round4-stage1 F4). A figure wrapped away from its marker now
       // has to carry its own.
-      if (!fenced && !indented && applied(text).includes('<!-- figure-historical -->')) return;
+      if (!parsedDoc.isCode(no) && parsedDoc.applied(no).includes('<!-- figure-historical -->'))
+        return;
       for (const sweep of sweeps) {
         if (sweep.only && !sweep.only.test(text)) continue;
         for (const m of text.matchAll(sweep.re)) {
@@ -578,7 +569,7 @@ function checkFigures(root, docs, figures) {
 
 // --- driver ------------------------------------------------------------------
 
-export function checkRecords({ root, docs, tracked, figures = FIGURES } = {}) {
+export async function checkRecords({ root, docs, tracked, figures = FIGURES } = {}) {
   const documents = docs ?? recordsDocs(root);
   const files =
     tracked ??
@@ -588,21 +579,23 @@ export function checkRecords({ root, docs, tracked, figures = FIGURES } = {}) {
         .split('\n')
         .filter(Boolean),
     );
-  const failures = [];
-  failures.push(
-    ...checkAnchors(root, documents),
-    ...checkCitations(root, documents, files),
-    ...checkTranscripts(root, documents),
-    ...checkFigures(root, documents, figures),
-  );
-  return failures;
+  // Parse every document once. Each rule then asks the same parse where the code
+  // is, so no two of them can disagree about it.
+  const parsed = new Map();
+  for (const doc of documents) parsed.set(doc, await parseDoc(readDoc(root, doc)));
+  return [
+    ...(await checkAnchors(root, documents, parsed)),
+    ...checkCitations(root, documents, files, parsed),
+    ...checkTranscripts(root, documents, parsed),
+    ...checkFigures(root, documents, figures, parsed),
+  ];
 }
 
 const invokedDirectly =
   process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (invokedDirectly) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-  const failures = checkRecords({ root });
+  const failures = await checkRecords({ root });
   if (failures.length === 0) {
     console.log(`records: ${recordsDocs(root).length} documents checked, no defects`);
     process.exit(0);
