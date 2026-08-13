@@ -157,10 +157,11 @@ TREE_CLEAN_EXIT=0
 `TREE_CLEAN_EXIT=0` with no output above it is `git status --porcelain --untracked-files=no` printing
 nothing: all four mutations are gone and the tree is the commit again.
 
-### It caught this round's own commit, once, before it shipped
+### It caught this round's own commits, twice, before either shipped
 
-Wiring the checker into `npm run lint` changed `package.json`, which moved the content one of the
-ledger's own bindings pinned. The gate refused it:
+Both are recorded as regressions R4-1 and R4-2 in the ledger. The first: wiring the checker into
+`npm run lint` changed `package.json`, which moved the content one of the ledger's own bindings
+pinned. The gate refused it:
 
 ```console
 $ node tools/check-records.mjs; echo "SELFCATCH_EXIT=$?"
@@ -175,6 +176,22 @@ SELFCATCH_EXIT=1
 
 The binding was re-pinned to `"scripts": {`, and the baseline's two statements of its own measurement
 were marked `figure-historical`, which is what that marker is for.
+
+The second was K2's own fix, which inserted eight comment lines above `const PORT` and pushed two
+ledger citations down - the R3-20 shape, in the round that built the gate against it, four commits
+after building it:
+
+```console
+$ node tools/check-records.mjs; echo "SELFCATCH2_EXIT=$?"
+records: 2 defect(s)
+  PROD-READINESS.md:395: playwright.config.ts:18 no longer contains "retries: process.env.CI ? 1 : 0,"
+  PROD-READINESS.md:527: playwright.config.ts:6 no longer contains "const PORT = 4200;"
+SELFCATCH2_EXIT=1
+```
+
+Neither reached a commit. Set against that: the three findings the stage-1 reviewer had to catch by
+reading, because they were defects **in the gate itself** - and a gate cannot be the only thing
+checking the gate.
 
 ### One attack of my own, on the exemption that worries me most
 
