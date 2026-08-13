@@ -745,7 +745,9 @@ their evidence rather than taken quietly.
 
 ## Gates at the end of round 4
 
-Every gate re-run at `4ad4d24`, the last commit of the round. Gate 5's measurements ran while a
+Every gate re-run at `4ad4d24`, the last commit of the round that changes code. Commits after it
+change records only, and gate 1 - which is the gate that reads records, and the only one that can
+notice a records change - was re-run and green at each of them. Gate 5's measurements ran while a
 reviewer was working in a separate worktree on a separate port, which is the arrangement K2's fix
 exists to allow; the load that puts on the machine can only make a timing-sensitive suite more likely
 to fail, so green runs under it are a stronger result than green runs idle, not a weaker one.
