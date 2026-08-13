@@ -651,6 +651,80 @@ shapes mechanically, and it is first precisely because everything after it produ
 3. **The npm registry is unreachable.** `--offline` resolves from `~/.npm/_cacache` and contacts
    nothing; anything needing more than the local cache is bounded and recorded against its finding.
 
+## ROUND 4 status
+
+Terminal states are RESOLVED (artifact evidence), DEFERRED (reason), REJECTED TWICE (reverted,
+objection recorded), or PATCH-READY (finished and verified, blocked only on an owner permission or an
+unreachable resource). Severity is re-triaged from scratch.
+
+| id      | prior severity | re-triaged | status                                                                                                                                                                                                                                |
+| ------- | -------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| records | new (brief P1) | **P1**     | RESOLVED - `tools/check-records.mjs` runs in `npm run lint`; all four round-3 defect shapes refused, each proven by reintroduction. Artifact: [the records check](reviews/ARTIFACTS-round4.md#p1---the-records-check)                 |
+| K3      | P2             | **P2**     | RESOLVED - both halves closed by two instruments; the third property (raising a real banner) was never part of either half and goes to NEXT ROUND as K5. Artifact: [K3](reviews/ARTIFACTS-round4.md#k3-p2---nothing-asserted-n4s-fix) |
+| N1      | P1             | **P1**     | **PATCH-READY**, unchanged. No push was authorised, so nothing was observed on GitHub and nothing was re-filed. Status copied forward from round 3 verbatim.                                                                          |
+| N5      | P1             | **P1**     | **PATCH-READY**, unchanged, same reason.                                                                                                                                                                                              |
+| K1      | P3             | **P3**     | RESOLVED - `site/` ignored by git and prettier; lint green with the assembled tree still on disk. Artifact: [K1](reviews/ARTIFACTS-round4.md#k1-p3---the-deploys-own-assemble-step-takes-lint-red-locally)                            |
+| K2      | P3             | **P3**     | RESOLVED - `E2E_PORT` override; two concurrent runs measured colliding on one port and green on two. Artifact: [K2](reviews/ARTIFACTS-round4.md#k2-p3---one-hardcoded-port-meant-one-e2e-run-per-machine)                             |
+| M3      | P3             | **P3**     | DEFERRED - blind spot **re-measured and narrower than recorded**: 75 files, 1 under `tools/`. Artifact: [M3](reviews/ARTIFACTS-round4.md#m3-p3---the-coverage-gate-and-tools)                                                         |
+| D1      | P1             | **P1**     | DEFERRED - address still unknown, placeholder left visible, re-verified at both cited lines. Fourth round open. Artifact: [D1](reviews/ARTIFACTS-round4.md#d1-p1---the-support-address-is-still-a-placeholder-fourth-round-running)   |
+| I1      | P1             | **P1**     | DEFERRED - entitlement stays declared; the O2 warning re-verified at all six citations with no drift. Artifact: [I1](reviews/ARTIFACTS-round4.md#i1-p1---the-icloud-data-loss-path-re-verified-line-by-line)                          |
+
+**What the re-triage changed: nothing, and that is a finding of its own.** The brief asked whether
+round 3 was right to re-triage M2 to P1 and nothing else. Checked here: every severity above is the
+one it was carried in at, because no evidence moved. M3 is the only candidate for a change - its blind
+spot turned out narrower than recorded - and narrower is not more severe, so it stays P3.
+
+## ROUND 4 regressions introduced and fixed inside this run
+
+Defects this run put into its own output. Two, both caught by the gate this round exists to build,
+before either reached a commit.
+
+| id       | stage | what                                                                                                                                                                                    | resolution                                                                                                                                                                                                                                                                   |
+| -------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **R4-1** | 1     | Wiring the records checker into `npm run lint` edited `package.json`, which moved the content the ledger's own binding for `package.json:4-20` pinned. The gate refused the commit.     | Binding re-pinned to `"scripts": {`, which the edit does not move. This is the checker catching the exact defect class it was written for, on its own commit, and the refusal is published in the artifact.                                                                  |
+| **R4-2** | 4     | K2's fix inserted eight comment lines above `const PORT`, moving two ledger citations into `playwright.config.ts` - the R3-20 shape again, in the round that built the gate against it. | The gate refused it. The `retries` citation re-resolved from line 18 to `playwright.config.ts:26`, the claim being still true and only the line having moved; the port citation is marked `cite-historical`, because K2's row quotes the hardcoded value this round removed. |
+
+Neither reached a commit, which is the difference from round 3: its 31 records defects were all found
+by reading, after the fact, by six reviewers over four stages.
+
+## ROUND 4 NEXT ROUND
+
+Findings discovered after round 4's work list froze. Not fixed in this run.
+
+| id     | severity | evidence                                                                                                                                                                                                                                                                                                              | why it is not in this run                                                                                                                                                                                                               |
+| ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **K4** | P3       | Closed-round records publish an exit label as the output of a command that cannot print it **105 times**, across eleven files, worst in `REVIEW-round2-stage2.md` (25) and `ARTIFACTS-round3.md` (18). Measured by stripping the historical markers and re-running the records gate; the census is in the artifact.   | Fixing one means writing the `echo` that produced the label, and nobody knows what was actually typed. Reconstructing it would be manufacturing a transcript - a worse defect than the one being fixed. Left marked, counted and named. |
+| **K5** | P2       | No gate raises a **real** update banner against a production bundle. K3's two halves cover the CSS and the measurement's ordering; neither drives a service-worker `VERSION_READY`, which needs a second deployed build.                                                                                              | Smaller than K3 was, and genuinely blocked on infrastructure this round could not build: two builds and a worker update, not a test.                                                                                                    |
+| **K6** | P3       | The coverage gate's branch headroom is now **0.89 points** (92.89% against a floor of 92), down from 1.28, because the report gained a partially covered tool. The floors were tuned against a `src/**`-only baseline and no longer describe what is measured.                                                        | Re-tuning coverage floors is a judgement about what the gate should refuse, not a defect, and it belongs with whoever owns the thresholds.                                                                                              |
+| **K7** | P3       | `tools/serve-dist.spec.mjs`'s header comment says `@types/node` "is not a dependency and installing one needs the network", and explains the file's `.mjs` choice by it. Round 3 added `@types/node` from the local npm cache (M1), so the stated reason no longer holds - the file's rationale outlived its premise. | A source comment in a passing test, found while reading for M3. Correcting it is a one-line judgement about whether the `.mjs` choice still stands, which is a different question.                                                      |
+
+## What round 4 actually changed
+
+| file                                                      | change                                                                                                                                         |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tools/check-records.mjs`, `tools/check-records.spec.mjs` | new: the records gate and its 42 tests                                                                                                         |
+| `package.json`                                            | `npm run lint` now ends with the records gate                                                                                                  |
+| `src/app/app.spec.ts`                                     | K3: one test pinning that the banner is measured after the DOM refreshes, and a `makeRect` helper the existing stubs now share                 |
+| `e2e/smoke/responsive.e2e.ts`                             | K3: four tests pinning that the three screens and the shell answer `--update-space`                                                            |
+| `.gitignore`, `.prettierignore`                           | K1: `site/`, the directory the Pages deploy's own assemble step creates                                                                        |
+| `playwright.config.ts`                                    | K2: the port is `E2E_PORT`, defaulting to 4200                                                                                                 |
+| `e2e/README.md`                                           | K2: how to run two suites at once, and the two rules that survive the fix                                                                      |
+| `vitest.config.ts`                                        | M3: the comment now says what actually decides whether a tool is in the coverage report, re-measured                                           |
+| `PROD-READINESS.md`, `LAUNCH-CHECKLIST.md`, `reviews/*`   | nine stale citations re-resolved, seven marked historical, the markers the gate reads, the ledger, the artifacts, the baseline and the reviews |
+
+No user-visible capability was added. No product configuration key was added: the one new key is
+`E2E_PORT`, which is test-runner configuration the brief names as editable, and `site/` is an ignore
+entry rather than a key. No dependency changed and no registry was contacted.
+
+## Termination: round 4's frozen work list
+
+The list was frozen at the brief's items, in the brief's order: the records check, K3, N1/N5, K1/K2/M3,
+D1/I1. Every one was taken. **The trim rule never fired**: items 1 and 2 did not prove open-ended, so
+no P3 item moved to NEXT ROUND, and nothing was dropped.
+
+Four findings discovered while verifying others (K4, K5, K6, K7) are in ROUND 4 NEXT ROUND, named with
+their evidence rather than taken quietly.
+
 # Citation bindings
 
 <!-- prettier-ignore-start -->
