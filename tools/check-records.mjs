@@ -11,8 +11,8 @@
  *                   (R3-12), and the round's opening P1 pointed at nothing.
  *   2. citations  - `awk 'NR==42' pages.yml` printed line 53 because a patch
  *                   earlier in the same round pushed the file down eleven lines
- *                   (R3-20). A citation into a file the branch edits is a claim
- *                   about content, so it has to be pinned to content.
+ *                   (R3-20). A citation is a claim about content, so it has to
+ *                   be pinned to content.
  *   3. transcripts- exit labels were published as the output of scripts that
  *                   cannot print them (R3-15, R3-27): two commands presented as
  *                   one execution.
@@ -22,10 +22,11 @@
  * Scope, stated because a checker's blind spots matter more than its rules:
  *
  * - Rules 1 and 3 run over every records document, including a reviewer's.
- * - Rule 2 resolves and bounds-checks citations everywhere; it additionally
- *   demands a content binding only in the ledger and the artifact files, and
- *   only for citations into files this branch has changed. That is the set that
- *   can have moved. A citation into an untouched file cannot drift.
+ * - Rule 2 resolves and bounds-checks citations everywhere, and additionally
+ *   demands a content binding in the ledger and the artifact files - every
+ *   citation in them, unconditionally. It used to ask git which files the branch
+ *   had changed and pin only those; that set empties on merge, which turned the
+ *   rule off silently (REVIEW-round4-stage1 F5).
  * - Rule 4 runs over records that are not marked historical. A closed round's
  *   figures were true at its commits, and this round does not rewrite them;
  *   marking them is the explicit escape rather than a silent exemption.
@@ -58,8 +59,8 @@ import { fileURLToPath } from 'node:url';
 export const FIGURES = {
   // The count at the round's tip, not at its baseline. `reviews/BASELINE-round4.md`
   // states the baseline's 1551 on purpose and marks those two lines as such.
-  unitTests: 1594,
-  coverage: [96.07, 92.89, 93.41, 97.89],
+  unitTests: 1593,
+  coverage: [96.06, 92.83, 93.43, 97.89],
   m2: { failures: 33, executions: 600, rate: 5.5 },
 };
 
@@ -70,7 +71,10 @@ const BINDING_DOCS = /^(PROD-READINESS\.md|reviews\/ARTIFACTS.*\.md)$/;
 // leaving it out of this pattern is how three stale ones survived three rounds.
 const CITATION =
   /`([A-Za-z0-9_.][A-Za-z0-9_./-]*\.(?:ts|tsx|scss|html|yml|yaml|json|mjs|js|swift|md))(:\d+(?:-\d+)?)`/g;
-const LINK = /\]\(([^)\s]+#[^)\s]+)\)/g;
+// Every markdown link target, with or without an `#anchor`. Requiring the `#`
+// meant a link to a file that does not exist was never looked at, and one such
+// link was live in the records (REVIEW-round4-stage1 F12).
+const LINK = /\]\(([^)\s]+)\)/g;
 const EXIT_LABEL = /^\s*([A-Z][A-Z0-9_]*)=/;
 
 /** GitHub's heading slug: lowercase, drop punctuation, spaces to hyphens. */
@@ -133,18 +137,38 @@ function lines(markdown) {
  * they sit in.
  */
 function exemptions(doc) {
-  const wholeFile = /<!-- records: historical-file\b/.test(doc);
+  let wholeFile = false;
   const marked = new Set();
   let active = false;
   for (const { text, no, fenced } of lines(doc)) {
+    const live = markersIn(text);
     if (!fenced && /^# /.test(text)) active = false;
-    if (/<!-- records: historical\b(?!-file)/.test(text)) active = true;
+    if (live.includes('historical-file')) wholeFile = true;
+    if (live.includes('historical')) active = true;
     if (active) marked.add(no);
   }
   return {
     frozen: wholeFile,
     stale: (no) => wholeFile || marked.has(no),
   };
+}
+
+/**
+ * The `records:` markers a line actually applies, ignoring any it merely talks
+ * about. A marker inside an inline-code span is prose - documentation naming the
+ * marker, a review quoting it - and honouring those froze the one document
+ * carrying this round's evidence, silently, because the marker renders as
+ * nothing (REVIEW-round4-stage1 F1). Every marker this file reads is filtered
+ * the same way.
+ */
+function markersIn(text) {
+  const prose = text.replace(/`[^`]*`/g, '');
+  return [...prose.matchAll(/<!-- records: (historical-file|historical)\b/g)].map((m) => m[1]);
+}
+
+/** Strip inline-code spans, so a marker quoted in prose is not a marker. */
+function applied(text) {
+  return text.replace(/`[^`]*`/g, '');
 }
 
 function readDoc(root, rel) {
@@ -165,19 +189,16 @@ export function recordsDocs(root) {
   return docs;
 }
 
-/** Files this branch has changed: the set whose line numbers can have moved. */
-export function changedOnBranch(root, base = 'main') {
-  try {
-    const out = execFileSync('git', ['diff', '--name-only', `${base}...HEAD`], {
-      cwd: root,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    });
-    return new Set(out.trim().split('\n').filter(Boolean));
-  } catch {
-    return null;
-  }
-}
+/**
+ * Rule 2 used to demand a binding only for files `git diff main...HEAD` reported
+ * as changed, on the reasoning that only those can have moved. That set is empty
+ * the moment the branch is merged, and absent entirely in a checkout with no
+ * `main` ref, so the rule would have reported success while checking nothing —
+ * the exact "a checker that stops matching does not fail, it passes forever"
+ * failure this file's header names (REVIEW-round4-stage1 F5). There is no git
+ * here any more: every citation in the ledger and the artifacts is pinned, or
+ * marked historical, unconditionally.
+ */
 
 // --- rule 1: every anchor a record links to is a heading that exists ---------
 
@@ -202,7 +223,7 @@ function checkAnchors(root, docs) {
         const anchors = anchorsFor(target);
         if (anchors === null) {
           bad.push(`${doc}:${no}: link target does not exist: ${target}`);
-        } else if (!anchors.has(anchor)) {
+        } else if (anchor !== undefined && !anchors.has(anchor)) {
           bad.push(`${doc}:${no}: no heading in ${target} slugs to #${anchor}`);
         }
       }
@@ -229,7 +250,7 @@ function resolvePath(root, tracked, cited) {
   return !cited.includes('/') ? 'external' : null;
 }
 
-function checkCitations(root, docs, tracked, changed) {
+function checkCitations(root, docs, tracked) {
   const bad = [];
   const fileLines = new Map();
   const linesOf = (rel) => {
@@ -275,11 +296,11 @@ function checkCitations(root, docs, tracked, changed) {
           bad.push(`${doc}:${no}: \`${key}\` is past the end of ${rel} (${content.length} lines)`);
           continue;
         }
-        if (!needsBinding || !changed?.has(rel)) continue;
+        if (!needsBinding) continue;
         const fragment = bindings.get(key);
         if (fragment === undefined) {
           bad.push(
-            `${doc}:${no}: \`${key}\` cites a file this branch changed, so it needs ` +
+            `${doc}:${no}: \`${key}\` is not pinned to content: add ` +
               `<!-- cite: ${cited}:${range} "<fragment>" --> or a cite-historical marker`,
           );
           continue;
@@ -297,13 +318,41 @@ function checkCitations(root, docs, tracked, changed) {
 // --- rule 3: a transcript is one execution -----------------------------------
 
 /**
+ * Whether a shell command continues onto the next line: a trailing backslash, or
+ * an unclosed double quote. The quote half matters because the ordinary way to
+ * write a multi-line command in these records is `python3 -c "` with no
+ * backslash anywhere, and reading its remaining lines as *output* made every
+ * echo on them invisible to this rule (REVIEW-round4-stage1 F6).
+ */
+function continues(commandText) {
+  if (/\\$/.test(commandText.trim())) return true;
+  // A real scan rather than counting quotes, so an apostrophe inside a
+  // double-quoted argument (`echo "I'm done"`) does not read as an open quote.
+  let single = false;
+  let double = false;
+  for (let i = 0; i < commandText.length; i++) {
+    const c = commandText[i];
+    if (c === '\\' && !single) {
+      i++;
+      continue;
+    }
+    if (c === "'" && !double) single = !single;
+    else if (c === '"' && !single) double = !double;
+  }
+  return single || double;
+}
+
+/**
  * Record every `NAME=` an `echo` in this command line can produce. Only what
  * follows an `echo` counts: `E2E_SERVER=dist cmd; echo "X_EXIT=$?"` produces
  * `X_EXIT=`, not `E2E_SERVER=`, and treating the environment prefix as printable
  * is how a composed transcript would slip through.
  */
 function noteEchoes(commandText, into) {
-  for (const segment of commandText.split(/\becho\b/).slice(1)) {
+  // `console.log` counts as well as `echo`: a `node -e` one-liner that prints
+  // `FILE_COUNT=75` is a command that really does produce the label, and
+  // refusing it would push honest transcripts onto the escape hatch.
+  for (const segment of commandText.split(/\becho\b|console\.log/).slice(1)) {
     const upTo = segment.split(/[;|]|&&/)[0];
     for (const m of upTo.matchAll(/([A-Z][A-Z0-9_]*)=/g)) into.add(m[1]);
   }
@@ -343,13 +392,13 @@ function checkTranscripts(root, docs) {
         continue;
       }
       if (/^\$ /.test(text)) {
-        command = { text: text.slice(2), line: no, open: /\\$/.test(text.trim()) };
+        command = { text: text.slice(2), line: no, open: continues(text) };
         noteEchoes(command.text, echoed);
         continue;
       }
       if (command?.open) {
         command.text += `\n${text}`;
-        command.open = /\\$/.test(text.trim());
+        command.open = continues(command.text);
         noteEchoes(text, echoed);
         continue;
       }
@@ -421,8 +470,12 @@ function checkFigures(root, docs, figures) {
     all.forEach(({ text, no, fenced, info }, i) => {
       if (stale(no)) return;
       if (fenced && info === 'console') return;
-      if (text.includes('<!-- figure-historical -->')) return;
-      if (i > 0 && all[i - 1].text.includes('<!-- figure-historical -->')) return;
+      // The marked line and nothing else. Reaching to the *next* line as well
+      // was undocumented and untested, and it had already turned rule 4 off on
+      // the baseline's coverage row purely because of its neighbour
+      // (REVIEW-round4-stage1 F4). A figure wrapped away from its marker now
+      // has to carry its own.
+      if (applied(text).includes('<!-- figure-historical -->')) return;
       for (const sweep of sweeps) {
         if (sweep.only && !sweep.only.test(text)) continue;
         for (const m of text.matchAll(sweep.re)) {
@@ -437,7 +490,7 @@ function checkFigures(root, docs, figures) {
 
 // --- driver ------------------------------------------------------------------
 
-export function checkRecords({ root, docs, tracked, changed, figures = FIGURES } = {}) {
+export function checkRecords({ root, docs, tracked, figures = FIGURES } = {}) {
   const documents = docs ?? recordsDocs(root);
   const files =
     tracked ??
@@ -447,17 +500,10 @@ export function checkRecords({ root, docs, tracked, changed, figures = FIGURES }
         .split('\n')
         .filter(Boolean),
     );
-  const changedSet = changed === undefined ? changedOnBranch(root) : changed;
   const failures = [];
-  if (changedSet === null) {
-    failures.push(
-      'could not compute the set of files this branch changed (git diff main...HEAD failed), ' +
-        'so citation bindings cannot be enforced',
-    );
-  }
   failures.push(
     ...checkAnchors(root, documents),
-    ...checkCitations(root, documents, files, changedSet ?? new Set()),
+    ...checkCitations(root, documents, files),
     ...checkTranscripts(root, documents),
     ...checkFigures(root, documents, figures),
   );

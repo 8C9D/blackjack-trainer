@@ -13,15 +13,16 @@ the finding that exists to make that class of defect impossible rather than mere
 
 ### What it refuses
 
-`tools/check-records.mjs`, run from `npm run lint`, over 25 documents: `PROD-READINESS.md`,
-`LAUNCH-CHECKLIST.md` and everything under `reviews/`.
+`tools/check-records.mjs`, run from `npm run lint`, over every records document: `PROD-READINESS.md`,
+`LAUNCH-CHECKLIST.md` and everything under `reviews/`. The count is discovered from the filesystem and
+printed by the gate, so it rises as reviews land rather than being a figure stated here.
 
-| rule | refuses                                                                                                                                            | the round-3 defect it answers |
-| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| 1    | a markdown link to a `#anchor` that no heading in the target file slugs to                                                                         | R3-12                         |
-| 2    | a `file:line` citation that names no tracked file, runs past the end of one, or - for a file this branch has changed - is not pinned to a fragment | R3-20                         |
-| 3    | a ```console fence printing a `NAME=` line that no `echo` in the fence could have produced                                                         | R3-15, R3-27                  |
-| 4    | a round-level figure (unit-test count, coverage quadruple, pooled M2 count and rate) stated with any value but the current one                     | R3-1, R3-11, R3-18, R3-24     |
+| rule | refuses                                                                                                                                         | the round-3 defect it answers |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| 1    | a markdown link to a `#anchor` that no heading in the target file slugs to                                                                      | R3-12                         |
+| 2    | a `file:line` citation that names no tracked file, runs past the end of one, or - in the ledger and the artifacts - is not pinned to a fragment | R3-20                         |
+| 3    | a ```console fence printing a `NAME=` line that no `echo` in the fence could have produced                                                      | R3-15, R3-27                  |
+| 4    | a round-level figure (unit-test count, coverage quadruple, pooled M2 count and rate) stated with any value but the current one                  | R3-1, R3-11, R3-18, R3-24     |
 
 ### What it does not refuse, stated because a gate's blind spots matter more than its rules
 
@@ -31,9 +32,17 @@ the finding that exists to make that class of defect impossible rather than mere
   at the commits that produced them and this round does not rewrite them. This is the explicit escape
   the brief allows, taken deliberately and at one granularity rather than sprinkled per line - and
   the census below says exactly what it is exempting.
-- **Citations are not exempt anywhere.** The ledger is read as one document, so every citation in it
-  resolves, is in bounds, and - where the file has changed on this branch - is pinned to content, no
-  matter which round's section it sits in. That is what found the nine stale ones below.
+- **Citations are not exempt anywhere.** Every citation in the ledger and the artifacts resolves, is
+  in bounds, and is pinned to content, no matter which round's section it sits in. That is what found
+  the nine stale ones below.
+
+  This was weaker when it was first written: the binding requirement applied only to files
+  `git diff main...HEAD` reported as changed. That set is empty the moment the branch merges and
+  absent in a checkout with no `main` ref, so the rule would have gone on reporting success while
+  checking nothing - the failure this gate's own header names. REVIEW-round4-stage1 F5 demonstrated it
+  by breaking a binding in a repository where `main` resolved to `HEAD` and watching the gate pass.
+  There is no git in rule 2 any more, at the price of 48 further bindings.
+
 - **Rule 2 does not demand bindings from a reviewer's file**, only from the ledger and the artifacts.
   A reviewer cites lines constantly and a binding requirement would be a tax on review, not on
   accuracy. Their citations are still resolved and bounds-checked.
@@ -41,11 +50,24 @@ the finding that exists to make that class of defect impossible rather than mere
   Editing one so it agrees with a current figure would be falsifying evidence.
 - **Rule 4 knows four figures**, not every number in the records. A wrong number outside that set
   passes. The set is the one the brief names, and adding to it is one line in `FIGURES`.
-- **Rule 3 accepts an echo anywhere in the same fence**, not only on the owning command line. The
+- **Rule 3 accepts an echo on any _command line_ in the same fence**, not only on the owning one. The
   brief's wording is stricter, and the reason for the relaxation is a real and honest form: the iOS
-  gates echo their labels into a file and the file is then printed. Every one of the 105 real
+  gates echo their labels into a file and the file is then printed. Every one of the 103 real
   instances in the census below is still refused, because none of those fences contains the echo at
-  all.
+  all. Output lines are not scanned for echoes, which is the whole point - a fabricated label line
+  cannot license itself.
+- **Rule 3 can be fooled by a command that merely mentions a label after the word `echo`.** A
+  `grep -c "echo GATE_EXIT=" /dev/null` followed by `GATE_EXIT=0` is accepted, because the rule reads
+  the command text rather than executing it. Found by REVIEW-round4-stage1 F13, left as a stated blind
+  spot rather than closed: the honest two-step form the rule exists to allow is nearly indistinguishable
+  from it.
+- **A marker only counts outside inline code.** Naming `<!-- records: historical-file -->` in prose,
+  as this document does two bullets up, used to freeze the document that named it - silently, because
+  the marker renders as nothing. That is how this very file sat outside three of the four rules until
+  REVIEW-round4-stage1 F1 found it. Markers inside backticks are now prose.
+- **`figure-historical` covers the line it is on and nothing else.** It used to reach the following
+  line as well, undocumented and untested, which is how the baseline's coverage row escaped rule 4
+  because of its neighbour (F4).
 
 ### Proof that each rule is non-vacuous
 
@@ -174,43 +196,74 @@ is the same patch R3-20 was filed about. Round 3 corrected the two it noticed.
 **Two citations past the end of a file**, both deliberate and now marked: R0-2 and REVIEW-0 quote a
 citation that named lines 39-41 of a 38-line file, which _is_ the defect they report.
 
-**Seven citations describing pre-fix code**, marked `cite-historical` rather than re-pointed, because
-the line they name no longer holds what the finding described - the finding was fixed. Re-pointing
-those would have quietly rewritten what round 1 found.
+**Eight citations marked `cite-historical` in the ledger** rather than re-pointed, because the line
+they name no longer holds what the finding described - the finding was fixed, or the citation names a
+location that never existed, which is itself the finding. Re-pointing those would have quietly
+rewritten what round 1 found. The count was published as seven, which
+REVIEW-round4-stage1 F11 corrected. The artifacts file carries nine more, all of them the "before"
+column of the table above.
 
 ### Census: what the historical markers are exempting
 
-Stripping every historical marker and re-running, purely as a measurement:
+Stripping every historical marker and re-running, purely as a measurement. The first published version
+of this block showed a command that did not produce the numbers beside it (REVIEW-round4-stage1 F7);
+this is one execution, and the strip is done in the live tree and then reverted with `git checkout --`.
 
 ```console
-$ node -e '...strip every historical marker from reviews/*.md and PROD-READINESS.md...'; node tools/check-records.mjs > $S/census.txt 2>&1; echo "CENSUS_EXIT=$?"; head -1 $S/census.txt
+$ node -e '
+const {readFileSync,writeFileSync,readdirSync}=require("fs");
+for(const f of readdirSync("reviews")){if(!f.endsWith(".md"))continue;const p="reviews/"+f;
+ const s=readFileSync(p,"utf8");writeFileSync(p,s.replace(/<!-- records: historical[^>]*-->/g,""));}
+writeFileSync("PROD-READINESS.md",readFileSync("PROD-READINESS.md","utf8").replace(/<!-- records: historical[^>]*-->/g,""));
+console.log("STRIPPED_OK=1");
+'; node tools/check-records.mjs > $S/census2.txt 2>&1; echo "CENSUS_EXIT=$?"; head -1 $S/census2.txt; echo "rule 3 transcripts: $(grep -c 'block prints' $S/census2.txt)"; echo "rule 4 figures:     $(grep -cE 'unit-test count|coverage quadruple|pooled M2' $S/census2.txt)"; grep 'block prints' $S/census2.txt | sed -E 's/^  ([^:]+):.*/\1/' | sort | uniq -c | sort -rn
+STRIPPED_OK=1
 CENSUS_EXIT=1
-records: 241 defect(s)
-$ echo "rule 3 transcripts: $(grep -c 'block prints' $S/census.txt)"; echo "rule 2 bindings:    $(grep -c 'cites a file this branch changed' $S/census.txt)"; echo "rule 4 figures:     $(grep -cE 'unit-test count|coverage quadruple|pooled M2' $S/census.txt)"; echo "rule 1+bounds:      $(grep -cE 'no heading in|is past the end|names no tracked' $S/census.txt)"
-rule 3 transcripts: 105
-rule 2 bindings:    27
-rule 4 figures:     109
-rule 1+bounds:      0
+records: 273 defect(s)
+rule 3 transcripts: 103
+rule 4 figures:     113
+  25 reviews/REVIEW-round3-stage2.md
+  18 reviews/ARTIFACTS-round3.md
+  17 reviews/REVIEW-round2-stage2.md
+  10 reviews/REVIEW-round3-stage1.md
+  10 reviews/ARTIFACTS-round2.md
+   8 reviews/REVIEW-round3-closing.md
+   4 reviews/REVIEW-round3-stage3.md
+   4 reviews/REVIEW-round3-closing2.md
+   3 reviews/REVIEW-round3-final.md
+   2 reviews/REVIEW-round2-stage3.md
+   2 reviews/REVIEW-round2-final.md
 ```
 
-The number that matters is **105**: closed-round records publish an exit label as the output of a
-command that cannot print it 105 times. Round 3 found two instances of this by reading (R3-15, R3-27)
-and fixed those two. It is spread across eleven files, worst in `REVIEW-round2-stage2.md` (25) and
+The number that matters is **103**: closed-round records publish an exit label as the output of a
+command that cannot print it 103 times. Round 3 found two instances of this by reading (R3-15, R3-27)
+and fixed those two. It is spread across eleven files, worst in `REVIEW-round3-stage2.md` (25) and
 `ARTIFACTS-round3.md` (18).
 
 They are not fixed here, and the reason is not effort. Fixing one means writing the `echo` that
 produced the label, and **nobody knows what was actually typed** - reconstructing it would be
 manufacturing the transcript, which is a worse defect than the one being fixed. They are left marked,
-counted, and named as finding **K4** in NEXT ROUND. The 109 figure hits are almost entirely dated,
-legitimate history (round 1's `1526 tests`, round 3's baseline `1547`); they are not a defect count.
+counted, and named as finding **K4** in NEXT ROUND. The 113 figure hits are almost entirely dated,
+legitimate history (round 1's `1526 tests`, round 3's baseline `1547`); they are not a defect count. <!-- figure-historical -->
+
+A caution about this census, learned by running it: the revert used
+`git checkout -- PROD-READINESS.md reviews/`, which also reverted uncommitted work in those paths. The
+measurement is sound and reproducible; the method is only safe against a committed tree.
 
 ### Its own tests
 
-`tools/check-records.spec.mjs`, 34 tests, run by the unit gate via `angular.json`'s
-`../tools/**/*.spec.mjs` include. Every one is a positive control: it builds a throwaway document tree
-with a known defect and asserts the checker still refuses it. The failure mode being guarded against
-is specific - a records checker whose regex stops matching does not fail, it passes forever, and the
-round that trusts it gets a clean sweep that never ran.
+`tools/check-records.spec.mjs`, 41 tests, run by the unit gate via `angular.json`'s
+`../tools/**/*.spec.mjs` include. The failure mode being guarded against is specific: a records checker
+whose regex stops matching does not fail, it passes forever, and the round that trusts it gets a clean
+sweep that never ran.
+
+So the tests come in pairs, and the important half of each pair is the **positive** control - a
+throwaway document tree with a known defect, asserting the checker still refuses it. Counted from the
+file: 18 tests assert a refusal, 19 assert an acceptance (a correct document, or one of the documented
+escapes), and 5 are unit tests of the slug and anchor helpers that assert neither. The acceptance half
+is not filler - it is what stops a rule from being satisfied by refusing everything. An earlier version
+of this paragraph called all 34 of them positive controls, which REVIEW-round4-stage1 F10 disproved by
+counting.
 
 ```console
 $ npx ng test --include="../tools/check-records.spec.mjs" > $S/records-spec2.txt 2>&1; echo "SPEC_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/records-spec2.txt | grep -E 'Test Files|Tests '
@@ -221,19 +274,11 @@ SPEC_EXIT=0
 
 ### Gates at the stage-1 commit
 
-```console
-$ npm run lint > $S/lint-s1.txt 2>&1; echo "LINT_EXIT=$?"; tail -3 $S/lint-s1.txt; npm test > $S/test-s1c.txt 2>&1; echo "TEST_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/test-s1c.txt | grep -E 'Test Files|Tests '
-LINT_EXIT=0
-Checking formatting...
-All matched files use Prettier code style!
-records: 25 documents checked, no defects
-TEST_EXIT=0
- Test Files  68 passed (68)
-      Tests  1585 passed (1585)
-```
-
-The unit gate moves from 67 files / 1551 tests to 68 / 1585: one file, 34 tests, all of them the
-checker's. <!-- figure-historical -->
+The block first published here reported `records: 25 documents checked`, which is the count at the
+commit _before_ this artifact file existed: the gate counts `reviews/` from the filesystem, so at the
+commit the block claims to certify the command prints a larger number. REVIEW-round4-stage1 F2 caught
+it. Rather than restate a figure that moves every time a review lands, the round's gates are reported
+once, at the tip, in the closing table of this document, and the per-stage numbers are not repeated.
 
 ## K3 (P2) - nothing asserted N4's fix
 
@@ -591,3 +636,31 @@ No drift at any of the six. The entitlement is still declared in
 explaining that the app degrades to local-only until the capability is provisioned.
 
 **DEFERRED at P1**, carried forward unchanged. Nobody edited the store.
+
+<!-- prettier-ignore-start -->
+
+<!-- Citation bindings, machine-checked by tools/check-records.mjs (rule 2).
+     The nine below are cite-historical because they are the "before" column of
+     the stale-citation table: locations this round found wrong and moved. Pinning
+     them to whatever now sits at those lines would assert the opposite of what
+     the table says. -->
+<!-- cite-historical: .github/workflows/pages.yml:37 - the base-href build step before this round re-resolved it to line 48. -->
+<!-- cite-historical: pages.yml:41-42 - the upload step before this round re-resolved it to 55-57. -->
+<!-- cite-historical: .github/workflows/pages.yml:42 - the legal-page copy before this round re-resolved it to line 53. -->
+<!-- cite-historical: pages.yml:42 - the same copy step, cited a second time under P2-5. -->
+<!-- cite-historical: playwright.config.ts:20 - the CI retries line before this round re-resolved it, twice: to 18, then to 26 when K2 landed. -->
+<!-- cite-historical: tsconfig.spec.json:9 - the spec scope before this round re-resolved it to line 14. -->
+<!-- cite-historical: e2e/smoke/showdown.e2e.ts:65 - the M2 test before this round re-resolved it to line 75. -->
+<!-- cite-historical: .github/workflows/ci.yml:48-50 - the CI E2E job before this round re-resolved it to 79-81. -->
+<!-- cite-historical: tools/serve-dist.mjs:33-34 - the path-traversal comment before this round re-resolved it to line 40. -->
+
+<!-- cite: pages.yml:53 "cp ios/AppStore/privacy.html ios/AppStore/support.html site/" -->
+<!-- cite: CloudKeyValueStore.swift:63-72 "cloud.synchronize()" -->
+<!-- cite: StatsStore.swift:63-65 "private func persist() {" -->
+<!-- cite: StatsStore.swift:78 "stats = value" -->
+<!-- cite: PracticeDataSection.swift:16 "Button(\"Reset practice data\", role: .destructive)" -->
+<!-- cite: AppModel.swift:113 "func resetPracticeData() {" -->
+<!-- cite: AppModel.swift:49-78 "let cloud = UbiquitousKeyValueStore()" -->
+<!-- cite: ios/project.yml:40 "CODE_SIGN_ENTITLEMENTS: BlackjackTrainer/BlackjackTrainer.entitlements" -->
+
+<!-- prettier-ignore-end -->

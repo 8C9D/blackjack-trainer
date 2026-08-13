@@ -40,7 +40,7 @@ reproduces, sandboxed build/test commands abort.
 | 1   | lint              | `npm run lint`                                                                                            | 0    | `All matched files use Prettier code style!`     |
 | 2   | build             | `npm run build`                                                                                           | 0    | 1 budget warning (inherited, P2-2)               |
 | 3   | unit tests        | `npm test`                                                                                                | 0    | 67 files, 1551 passed <!-- figure-historical --> |
-| 4   | coverage gate     | `npm run test:coverage`                                                                                   | 0    | 96.16 / 93.28 / 93.22 / 98.00                    |
+| 4   | coverage gate     | `npm run test:coverage`                                                                                   | 0    | 96.16 / 93.28 / 93.22 / 98.00                    | <!-- figure-historical --> |
 | 5   | E2E               | `E2E_SERVER=dist npm run e2e` **x10**, and 200 repeats of two tests                                       | 0    | 10 of 10 green; 200 of 200 green - tables below  |
 | 6   | parity anti-drift | `npm run export:fixtures` + `git diff --exit-code -- ios/Fixtures`                                        | 0    | 7 fixtures written, no drift                     |
 | 7   | swiftformat       | `swiftformat --lint .`                                                                                    | 0    | 0/105 files require formatting                   |
