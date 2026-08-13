@@ -62,10 +62,25 @@ printed by the gate, so it rises as reviews land rather than being a figure stat
   the command text rather than executing it. Found by REVIEW-round4-stage1 F13, left as a stated blind
   spot rather than closed: the honest two-step form the rule exists to allow is nearly indistinguishable
   from it.
-- **A marker only counts outside inline code.** Naming `<!-- records: historical-file -->` in prose,
-  as this document does two bullets up, used to freeze the document that named it - silently, because
-  the marker renders as nothing. That is how this very file sat outside three of the four rules until
-  REVIEW-round4-stage1 F1 found it. Markers inside backticks are now prose.
+- **A marker counts only where a marker can be written**: not inside an inline-code span, and not
+  inside a fenced block. Naming the marker in prose, as this document does two bullets up, used to
+  freeze the document that named it - silently, because the marker renders as nothing. That is how
+  this very file sat outside three of the four rules until REVIEW-round4-stage1 F1 found it.
+
+  The first fix covered inline code only, and one commit later the census transcript below - which
+  prints the marker's own text as part of a `node -e` command - froze three quarters of this document
+  by the same mechanism (REVIEW-round4-stage2 F1). Fixing an instance rather than a class is how a
+  defect comes back with a different spelling, and it came back inside the answer to the review that
+  reported it.
+
+- **Rule 3 reads a command line the way a shell would, not by counting quotes.** An unpaired
+  apostrophe in a trailing `# comment` used to read as an open quote, which swallowed the rest of the
+  fence as command text and stopped every output line in it from being checked - a false negative
+  introduced by the fix for a different false negative (REVIEW-round4-stage2 F3). The scan now stops
+  at an unquoted `#`.
+- **The coverage figures are pinned with a +/-0.05 tolerance, not exactly.** The branch percentage is
+  not deterministic: one run in twelve differs by a single branch. Pinning to two decimals would have
+  refused records stating a figure their author had just measured (REVIEW-round4-stage2 F9).
 - **`figure-historical` covers the line it is on and nothing else.** It used to reach the following
   line as well, undocumented and untested, which is how the baseline's coverage row escaped rule 4
   because of its neighbour (F4).
@@ -296,18 +311,23 @@ measurement is sound and reproducible; the method is only safe against a committ
 
 ### Its own tests
 
-`tools/check-records.spec.mjs`, 41 tests, run by the unit gate via `angular.json`'s
+`tools/check-records.spec.mjs`, 47 tests, run by the unit gate via `angular.json`'s
 `../tools/**/*.spec.mjs` include. The failure mode being guarded against is specific: a records checker
 whose regex stops matching does not fail, it passes forever, and the round that trusts it gets a clean
 sweep that never ran.
 
 So the tests come in pairs, and the important half of each pair is the **positive** control - a
 throwaway document tree with a known defect, asserting the checker still refuses it. Counted from the
-file: 18 tests assert a refusal, 19 assert an acceptance (a correct document, or one of the documented
-escapes), and 5 are unit tests of the slug and anchor helpers that assert neither. The acceptance half
-is not filler - it is what stops a rule from being satisfied by refusing everything. An earlier version
-of this paragraph called all 34 of them positive controls, which REVIEW-round4-stage1 F10 disproved by
-counting.
+file at this commit, in buckets that do partition it: 20 assert only a refusal, 21 assert only an
+acceptance (a correct document, or one of the documented escapes), 1 asserts both, and 5 are unit tests
+of the slug and anchor helpers that assert neither - 47. The acceptance half is not filler; it is what
+stops a rule from being satisfied by refusing everything.
+
+Two earlier versions of this paragraph were wrong about this same suite, which is worth leaving on the
+page. The first called every test a positive control (REVIEW-round4-stage1 F10). The correction to that
+published a breakdown summing to one more than the suite, by counting the one both-ways test in two
+buckets (REVIEW-round4-stage2 F4). The sentence in the spec's own header carried the first error a
+commit longer than this document did, and is fixed too.
 
 ```console
 $ npx ng test --include="../tools/check-records.spec.mjs" > $S/records-spec2.txt 2>&1; echo "SPEC_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/records-spec2.txt | grep -E 'Test Files|Tests '
@@ -322,7 +342,9 @@ The block first published here reported `records: 25 documents checked`, which i
 commit _before_ this artifact file existed: the gate counts `reviews/` from the filesystem, so at the
 commit the block claims to certify the command prints a larger number. REVIEW-round4-stage1 F2 caught
 it. Rather than restate a figure that moves every time a review lands, the round's gates are reported
-once, at the tip, in the closing table of this document, and the per-stage numbers are not repeated.
+once, at the tip, in **the ledger's** "Gates at the end of round 4" section - not in this document,
+which has no gate table and had none when an earlier version of this paragraph pointed here
+(REVIEW-round4-stage2 F5).
 
 ## K3 (P2) - nothing asserted N4's fix
 
@@ -334,18 +356,33 @@ Both halves are closed here, by two different instruments, because they are two 
 
 K3's claim is that the reserve can be deleted outright and every gate stays green. Deleting
 `min-height: calc(100dvh - var(--update-space, 0px))` (and its `100vh` fallback) from all three
-screens and `padding-bottom: var(--update-space, 0px)` from `app.scss`:
+screens and `padding-bottom: var(--update-space, 0px)` from `app.scss`, re-run at the round's tip
+because the first version of this block was published against an earlier one and its test count no
+longer reproduced (REVIEW-round4-stage2 F7):
 
 ```console
-$ npm run lint > $S/k3-lint-mutant.txt 2>&1; echo "K3_LINT_MUTANT_EXIT=$?"; npm test > $S/k3-test-mutant.txt 2>&1; echo "K3_TEST_MUTANT_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/k3-test-mutant.txt | grep -E 'Tests '; npm run build > $S/k3-build-mutant.txt 2>&1; echo "K3_BUILD_MUTANT_EXIT=$?"
+$ python3 -c "
+for p in ['src/app/features/home/home-page.component.scss','src/app/features/drill/drill-page.scss','src/app/features/card-counting/card-counting-page.component.scss']:
+    s=open(p).read()
+    s=s.replace('min-height: calc(100vh - var(--update-space, 0px));','min-height: 100vh;')
+    s=s.replace('min-height: calc(100dvh - var(--update-space, 0px));','min-height: 100dvh;')
+    open(p,'w').write(s)
+p='src/app/app.scss'; s=open(p).read()
+open(p,'w').write(s.replace('  padding-bottom: var(--update-space, 0px);\n',''))
+print('K3 reserve deleted from all four files')
+"; echo "MUTATE_EXIT=$?"; npm run lint > $S/k3b-lint.txt 2>&1; echo "K3_LINT_MUTANT_EXIT=$?"; npm test > $S/k3b-test.txt 2>&1; echo "K3_TEST_MUTANT_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/k3b-test.txt | grep -E 'Tests '; npm run build > $S/k3b-build.txt 2>&1; echo "K3_BUILD_MUTANT_EXIT=$?"; git checkout -- src/app/app.scss src/app/features/home/home-page.component.scss src/app/features/drill/drill-page.scss src/app/features/card-counting/card-counting-page.component.scss; echo "RESTORE_EXIT=$?"
+K3 reserve deleted from all four files
+MUTATE_EXIT=0
 K3_LINT_MUTANT_EXIT=0
 K3_TEST_MUTANT_EXIT=0
-      Tests  1586 passed (1586)
+      Tests  1599 passed (1599)
 K3_BUILD_MUTANT_EXIT=0
+RESTORE_EXIT=0
 ```
 
-Three gates, all green, with the entire fix removed. That is the finding, reproduced at this commit
-rather than taken from round 3's word.
+Three gates, all green, with the entire fix removed - and the lint gate now includes the records
+checker, so that is four things that do not notice. That is the finding, reproduced at the commit this
+document ships at rather than taken from round 3's word.
 
 ### The CSS half: `e2e/smoke/responsive.e2e.ts`, four tests, real Chromium
 
@@ -474,20 +511,24 @@ K1_LINT_BEFORE_EXIT=1
 
 ### Absent
 
-One entry in each ignore file, each carrying the reason:
+One entry in each ignore file, each carrying the reason. Re-run at the round's tip, because the first
+version of this block was published against an earlier one and its document count no longer reproduced
+(REVIEW-round4-stage2 F7):
 
 ```console
-$ npm run lint > $S/k1-lint-after.txt 2>&1; echo "K1_LINT_AFTER_EXIT=$?"; tail -2 $S/k1-lint-after.txt; git status --porcelain | grep '^??'; echo "GIT_SEES_SITE=$(git status --porcelain | grep -c 'site/')"
-K1_LINT_AFTER_EXIT=0
+$ npm run build -- --base-href /blackjack-trainer/ > $S/k1b-build.txt 2>&1; echo "K1_BUILD_EXIT=$?"; mkdir -p site && cp -R dist/blackjack-trainer/browser/. site/ && cp ios/AppStore/privacy.html ios/AppStore/support.html site/ && cp site/index.html site/404.html; echo "K1_ASSEMBLE_EXIT=$?"; echo "SITE_TOPLEVEL=$(ls site | wc -l | tr -d ' ') SITE_FILES=$(find site -type f | wc -l | tr -d ' ')"; npm run lint > $S/k1b-lint.txt 2>&1; echo "K1_LINT_WITH_IGNORE_EXIT=$?"; tail -2 $S/k1b-lint.txt; echo "GIT_SEES_SITE=$(git status --porcelain | grep -c 'site/')"
+K1_BUILD_EXIT=0
+K1_ASSEMBLE_EXIT=0
+SITE_TOPLEVEL=34 SITE_FILES=93
+K1_LINT_WITH_IGNORE_EXIT=0
 All matched files use Prettier code style!
-records: 26 documents checked, no defects
-?? .agents/
-?? .codex/
+records: 28 documents checked, no defects
 GIT_SEES_SITE=0
 ```
 
-Green **with `site/` still on disk**, which is the point: the fix is that the tree may exist, not that
-it was deleted. It was removed afterwards with `rm -rf site` - a directory this run created.
+Green **with `site/` still on disk** - 34 entries, 93 files - which is the point: the fix is that the
+tree may exist, not that it was deleted. Git does not see it either. It was removed afterwards with
+`rm -rf site`, a directory this run created.
 
 **RESOLVED.**
 
@@ -539,32 +580,36 @@ or give one run the `serve` lane.
 ## M3 (P3) - the coverage gate and `tools/`
 
 Round 3 deferred this with "74 files in the report, 0 of them under `tools/`" and the diagnosis that
-coverage cannot see `tools/`. Re-measured here with a `json-summary` reporter added temporarily to
-`vitest.config.ts` (added, measured, reverted with `git checkout --`), the diagnosis is **wrong**, and
-this round's own work is what disproved it:
+coverage cannot see `tools/`. Re-measured here, the diagnosis is **wrong**, and this round's own work
+is what disproved it.
+
+The `json-summary` reporter is not in the committed config, so the enabling edit is part of the
+transcript rather than a claim in the prose above it - the first version of this block showed only the
+second half, which cannot run against the committed tree (REVIEW-round4-stage2 F11):
 
 ```console
-$ npm run test:coverage > $S/m3-cov2.txt 2>&1; echo "COVERAGE_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/m3-cov2.txt | grep -E 'Tests |Statements|Branches|Functions|Lines'; node -e '
+$ sed -i '' "s/reporter: \['text-summary'\],/reporter: ['text-summary', 'json-summary'],/" vitest.config.ts; echo "REPORTER_ADDED_EXIT=$?"; npm run test:coverage > $S/final-cov.txt 2>&1; echo "COVERAGE_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/final-cov.txt | grep -E 'Test Files|Tests |Statements|Branches|Functions|Lines'; node -e '
 const s=require("./coverage/blackjack-trainer/coverage-summary.json");
 const files=Object.keys(s).filter(k=>k!=="total");
-const tools=files.filter(f=>f.includes("/tools/"));
-console.log("FILE_COUNT="+files.length+" UNDER_TOOLS="+tools.length);
-for(const f of tools){const m=s[f];console.log("  "+f.replace(process.cwd()+"/","")+"  stmts="+m.statements.pct+" branch="+m.branches.pct+" funcs="+m.functions.pct+" lines="+m.lines.pct);}
-'
+const t=files.filter(f=>f.includes("/tools/"));
+console.log("FILE_COUNT="+files.length+" UNDER_TOOLS="+t.length);
+for(const f of t){const m=s[f];console.log("  "+f.replace(process.cwd()+"/","")+" "+m.statements.pct+" / "+m.branches.pct+" / "+m.functions.pct+" / "+m.lines.pct);}
+'; git checkout -- vitest.config.ts; echo "REPORTER_REVERTED_EXIT=$?"
+REPORTER_ADDED_EXIT=0
 COVERAGE_EXIT=0
-      Tests  1594 passed (1594)
-Statements   : 96.07% ( 5535/5761 )
-Branches     : 92.89% ( 2497/2688 )
-Functions    : 93.41% ( 951/1018 )
-Lines        : 97.89% ( 4278/4370 )
+ Test Files  68 passed (68)
+      Tests  1599 passed (1599)
+Statements   : 96.1% ( 5554/5779 )
+Branches     : 93.07% ( 2515/2702 )
+Functions    : 93.44% ( 955/1022 )
+Lines        : 97.9% ( 4290/4382 )
 FILE_COUNT=75 UNDER_TOOLS=1
-  tools/check-records.mjs  stmts=94.14 branch=86.45 funcs=100 lines=95.69
+  tools/check-records.mjs 94.94 / 89.94 / 100 / 95.92
+REPORTER_REVERTED_EXIT=0
 ```
 
-**Superseded, and kept rather than rewritten.** The block above is the measurement as it stood when
-M3 was taken. The stage-1 review then required eight more tests in the checker's spec, which moved
-every figure again; the round's closing coverage is 96.06 / 92.83 / 93.43 / 97.89 with 1593 unit tests,
-recorded in the ledger's closing gate table. The file count and the `tools/` count below did not move.
+`text-summary` prints `96.1%` and `97.9%`; the tables here write them as 96.10 and 97.90 so all four
+are quoted on the same basis.
 
 **75 files, 1 under `tools/`.** What decides whether a tool is in the report is not where it lives but
 how a test reaches it:
@@ -589,36 +634,33 @@ Adding a covered tool to the report moved every percentage, and the branches flo
 
 | figure     | baseline | now       | floor | headroom |
 | ---------- | -------- | --------- | ----- | -------- |
-| statements | 96.16    | **96.06** | 94    | 2.06     |
-| branches   | 93.28    | **92.83** | 92    | **0.83** |
-| functions  | 93.22    | **93.43** | 90    | 3.43     |
-| lines      | 98.00    | **97.89** | 96    | 1.89     |
+| statements | 96.16    | **96.10** | 94    | 2.10     |
+| branches   | 93.28    | **93.07** | 92    | **1.07** |
+| functions  | 93.22    | **93.44** | 90    | 3.44     |
+| lines      | 98.00    | **97.90** | 96    | 1.90     |
 
-<!-- figure-historical -->
+**The branch figure is not deterministic, and this round got that wrong once before recording it
+properly.** REVIEW-round4-stage1 (F3) reported it moving between runs, measuring 92.29 once and 92.33
+twice. This document answered with three consecutive runs at the tip that agreed to the last decimal,
+and called the figure stable. REVIEW-round4-stage2 (F9) then ran it **twelve** times at one commit:
+eleven printed `Branches : 92.83%` and one printed `92.87%` - a single branch out of 2695, 0.037
+points. Three samples could not see a one-in-twelve event, and reporting "it reproduces" from three
+samples was the same error as round 3 reporting 0-of-10 full-suite runs for a 5.5% per-execution flake.
 
-REVIEW-round4-stage1 (F3) reported the branch figure as not reproducible, measuring 92.29 once and
-92.33 twice. Re-measured here three times in a row at the tip, it did not move:
+The consequence was live: rule 4 pinned the quadruple to two decimals, so it would have refused a
+record stating a figure its author had just measured, about one time in twelve, and told them their
+own number was wrong. Coverage is now pinned with a **+/-0.05 tolerance**, which absorbs one-branch
+jitter and still refuses the round-3 baseline quadruple, whose nearest component differs by 0.10. Two
+tests pin both halves of that. Whether 0.05 is the right width is a judgement for whoever owns the
+thresholds; it is named in **K6**.
 
-```console
-$ for i in 1 2 3; do npm run test:coverage > $S/cov-rep$i.txt 2>&1; echo "run$i exit=$? $(sed 's/\x1b\[[0-9;]*m//g' $S/cov-rep$i.txt | grep -E 'Statements|Branches|Functions|Lines' | tr '\n' ' ')"; done
-run1 exit=0 Statements   : 96.06% ( 5547/5774 ) Branches     : 92.83% ( 2502/2695 ) Functions    : 93.43% ( 954/1021 ) Lines        : 97.89% ( 4286/4378 )
-run2 exit=0 Statements   : 96.06% ( 5547/5774 ) Branches     : 92.83% ( 2502/2695 ) Functions    : 93.43% ( 954/1021 ) Lines        : 97.89% ( 4286/4378 )
-run3 exit=0 Statements   : 96.06% ( 5547/5774 ) Branches     : 92.83% ( 2502/2695 ) Functions    : 93.43% ( 954/1021 ) Lines        : 97.89% ( 4286/4378 )
-```
-
-Identical to the last decimal, three times. That does not disprove the reviewer's observation - they
-measured a different tree, mid-remediation - but it does mean the figure the gate pins is stable at the
-commit it is pinned against, and it is the reason the gate can pin a figure at all. If it ever does
-drift, rule 4 turns a flaky measurement into a red gate, which is the failure mode to watch: named as
-part of **K6**.
-
-The first measurement after the checker landed was worse - 92.33% branches, 0.33 above the floor -
-because the checker's own uncovered paths went straight into the denominator. Eight more tests for the
-paths that decide what gets checked at all (`recordsDocs`, `changedOnBranch` and its failure, the
-ambiguous-basename refusal, the frozen-document exemption, the `transcript-literal` escape) took the
-checker from 76.77% to 86.45% branches and the project back to 92.83%. That is real coverage of a
-release gate, not a number moved for its own sake, but the headroom is thinner than it was and the
-next tool added in-process will need the same care. Named as **K6** in NEXT ROUND.
+The margin was worse before the reviews than after them. The first measurement once the checker landed
+was 92.33% branches, 0.33 above the floor, because the checker's own uncovered paths went straight into
+the denominator. Fourteen tests added across the two remediation cycles - for the paths that decide
+what gets checked at all, and then for each defect the reviewers found - took the checker from 76.77%
+to 89.94% branches and the project to 93.07%. That is real coverage of a release gate rather than a
+number moved for its own sake, but the headroom is still below the baseline's 1.28, and the next tool
+added in-process will need the same care. Named as **K6** in NEXT ROUND.
 
 ## N1 and N5 (P1, PATCH-READY) - not touched, not re-filed
 

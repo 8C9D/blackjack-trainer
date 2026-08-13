@@ -59,10 +59,25 @@ import { fileURLToPath } from 'node:url';
 export const FIGURES = {
   // The count at the round's tip, not at its baseline. `reviews/BASELINE-round4.md`
   // states the baseline's 1551 on purpose and marks those two lines as such.
-  unitTests: 1593,
-  coverage: [96.06, 92.83, 93.43, 97.89],
+  unitTests: 1599,
+  coverage: [96.1, 93.07, 93.44, 97.9],
   m2: { failures: 33, executions: 600, rate: 5.5 },
 };
+
+/**
+ * How far a stated coverage figure may sit from the pinned one before the gate
+ * refuses it.
+ *
+ * Not a fudge factor: the branch percentage genuinely is not deterministic here.
+ * Measured over twelve consecutive `npm run test:coverage` runs at one commit,
+ * eleven printed 92.83% and one printed 92.87% - one branch out of 2695, which
+ * is 0.037 points (REVIEW-round4-stage2 F9). Pinning to two decimals would
+ * therefore refuse a record stating a figure its author had just measured, about
+ * one time in twelve, and tell them their true number was wrong. This tolerance
+ * absorbs that jitter and still refuses the round-3 baseline quadruple, whose
+ * nearest component differs by 0.10.
+ */
+const COVERAGE_TOLERANCE = 0.05;
 
 /** Documents whose citations must be pinned to content, not only resolved. */
 const BINDING_DOCS = /^(PROD-READINESS\.md|reviews\/ARTIFACTS.*\.md)$/;
@@ -141,7 +156,7 @@ function exemptions(doc) {
   const marked = new Set();
   let active = false;
   for (const { text, no, fenced } of lines(doc)) {
-    const live = markersIn(text);
+    const live = markersIn(text, fenced);
     if (!fenced && /^# /.test(text)) active = false;
     if (live.includes('historical-file')) wholeFile = true;
     if (live.includes('historical')) active = true;
@@ -155,18 +170,25 @@ function exemptions(doc) {
 
 /**
  * The `records:` markers a line actually applies, ignoring any it merely talks
- * about. A marker inside an inline-code span is prose - documentation naming the
- * marker, a review quoting it - and honouring those froze the one document
- * carrying this round's evidence, silently, because the marker renders as
- * nothing (REVIEW-round4-stage1 F1). Every marker this file reads is filtered
- * the same way.
+ * about.
+ *
+ * A directive counts only where a directive can be written. Two places it cannot
+ * be: inside an inline-code span (documentation naming the marker, a review
+ * quoting it) and inside a fenced block (a transcript of a command whose text
+ * contains it). Honouring the first froze the document carrying this round's
+ * evidence (REVIEW-round4-stage1 F1); the fix for that was written against
+ * inline code alone, so a strip regex printed inside a `console` fence froze
+ * three quarters of the same document one commit later (REVIEW-round4-stage2
+ * F1). This is the rule stated as a class rather than patched per instance.
  */
-function markersIn(text) {
-  const prose = text.replace(/`[^`]*`/g, '');
-  return [...prose.matchAll(/<!-- records: (historical-file|historical)\b/g)].map((m) => m[1]);
+function markersIn(text, fenced) {
+  if (fenced) return [];
+  return [...applied(text).matchAll(/<!-- records: (historical-file|historical)\b/g)].map(
+    (m) => m[1],
+  );
 }
 
-/** Strip inline-code spans, so a marker quoted in prose is not a marker. */
+/** The part of a line that can carry a directive: everything outside inline code. */
 function applied(text) {
   return text.replace(/`[^`]*`/g, '');
 }
@@ -327,7 +349,11 @@ function checkCitations(root, docs, tracked) {
 function continues(commandText) {
   if (/\\$/.test(commandText.trim())) return true;
   // A real scan rather than counting quotes, so an apostrophe inside a
-  // double-quoted argument (`echo "I'm done"`) does not read as an open quote.
+  // double-quoted argument (`echo "I'm done"`) does not read as an open quote -
+  // and so an apostrophe in a trailing `# comment` does not either. The second
+  // case is the more common one and the more damaging: read as an open quote, it
+  // swallows the rest of the fence as command text and no output line in it is
+  // ever checked again (REVIEW-round4-stage2 F3).
   let single = false;
   let double = false;
   for (let i = 0; i < commandText.length; i++) {
@@ -338,6 +364,7 @@ function continues(commandText) {
     }
     if (c === "'" && !double) single = !single;
     else if (c === '"' && !single) double = !double;
+    else if (c === '#' && !single && !double && (i === 0 || /\s/.test(commandText[i - 1]))) break;
   }
   return single || double;
 }
@@ -438,7 +465,9 @@ function checkFigures(root, docs, figures) {
       name: 'coverage quadruple',
       re: /\b(\d{2}\.\d{1,2}) ?\/ ?(\d{2}\.\d{1,2}) ?\/ ?(\d{2}\.\d{1,2}) ?\/ ?(\d{2}\.\d{1,2})\b/g,
       ok: (m) =>
-        Number(m[1]) === cs && Number(m[2]) === cb && Number(m[3]) === cf && Number(m[4]) === cl,
+        [cs, cb, cf, cl].every(
+          (want, i) => Math.abs(Number(m[i + 1]) - want) <= COVERAGE_TOLERANCE,
+        ),
       say: (m) =>
         `states ${m[1]} / ${m[2]} / ${m[3]} / ${m[4]} where the round's coverage is ` +
         `${cs} / ${cb} / ${cf} / ${cl}`,
@@ -475,7 +504,7 @@ function checkFigures(root, docs, figures) {
       // the baseline's coverage row purely because of its neighbour
       // (REVIEW-round4-stage1 F4). A figure wrapped away from its marker now
       // has to carry its own.
-      if (applied(text).includes('<!-- figure-historical -->')) return;
+      if (!fenced && applied(text).includes('<!-- figure-historical -->')) return;
       for (const sweep of sweeps) {
         if (sweep.only && !sweep.only.test(text)) continue;
         for (const m of text.matchAll(sweep.re)) {
