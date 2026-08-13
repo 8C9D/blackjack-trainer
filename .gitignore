@@ -5,6 +5,11 @@
 /tmp
 /out-tsc
 /bazel-out
+# The Pages deploy assembles the published site here (.github/workflows/pages.yml,
+# the "Assemble the site" step). On a runner the checkout is fresh so it never
+# matters; run that step locally to verify the workflow and it leaves 28 built
+# files at the repository root, one `git add -A` from being committed.
+/site
 
 # Node
 /node_modules

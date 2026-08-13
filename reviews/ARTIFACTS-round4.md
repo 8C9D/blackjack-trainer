@@ -352,3 +352,160 @@ also the measurement that round 3's comment was right - they genuinely could not
 The third row is what is left of K3, and it is smaller than what K3 described: raising a real banner
 needs a service-worker `VERSION_READY` against a second deployed build. It is carried to NEXT ROUND as
 **K5** rather than claimed.
+
+## K1 (P3) - the deploy's own assemble step takes lint red locally
+
+### Present
+
+`site/` is in neither ignore file, and the Pages deploy assembles the published site into it at the
+repository root. Running that step - which anyone verifying the workflow does - leaves built files
+behind. The whole thing, reproduced at this commit:
+
+```console
+$ grep -n 'site' .gitignore .prettierignore; echo "IGNORE_GREP_EXIT=$?"; npm run build -- --base-href /blackjack-trainer/ > $S/k1-build.txt 2>&1; echo "K1_BUILD_EXIT=$?"; mkdir -p site && cp -R dist/blackjack-trainer/browser/. site/ && cp ios/AppStore/privacy.html ios/AppStore/support.html site/ && cp site/index.html site/404.html; echo "K1_ASSEMBLE_EXIT=$?"; ls site | wc -l
+IGNORE_GREP_EXIT=1
+K1_BUILD_EXIT=0
+K1_ASSEMBLE_EXIT=0
+      34
+$ npm run lint > $S/k1-lint-before.txt 2>&1; echo "K1_LINT_BEFORE_EXIT=$?"; grep -c '^\[warn\]' $S/k1-lint-before.txt; grep -c '^\[warn\] site/' $S/k1-lint-before.txt; grep '^\[warn\]' $S/k1-lint-before.txt | tail -3; git status --porcelain | grep '^??'
+K1_LINT_BEFORE_EXIT=1
+29
+28
+[warn] site/styles-KH7BOXCE.css
+[warn] site/support.html
+[warn] Code style issues found in 28 files. Run Prettier with --write to fix.
+?? .agents/
+?? .codex/
+?? site/
+```
+
+`IGNORE_GREP_EXIT=1` is grep finding no match in either ignore file. Exit 1 from the lint gate, 29
+`[warn]` lines of which 28 are `site/*` (the 29th is prettier's summary) - and `?? site/`, one
+`git add -A` from being committed, which is how `.agents/` and `.codex/` got committed last round.
+
+### Absent
+
+One entry in each ignore file, each carrying the reason:
+
+```console
+$ npm run lint > $S/k1-lint-after.txt 2>&1; echo "K1_LINT_AFTER_EXIT=$?"; tail -2 $S/k1-lint-after.txt; git status --porcelain | grep '^??'; echo "GIT_SEES_SITE=$(git status --porcelain | grep -c 'site/')"
+K1_LINT_AFTER_EXIT=0
+All matched files use Prettier code style!
+records: 26 documents checked, no defects
+?? .agents/
+?? .codex/
+GIT_SEES_SITE=0
+```
+
+Green **with `site/` still on disk**, which is the point: the fix is that the tree may exist, not that
+it was deleted. It was removed afterwards with `rm -rf site` - a directory this run created.
+
+**RESOLVED.**
+
+## K2 (P3) - one hardcoded port meant one E2E run per machine
+
+`playwright.config.ts` hardcoded `const PORT = 4200`. The port is now `E2E_PORT`, defaulting to 4200,
+and it is passed through to `tools/serve-dist.mjs` so both halves of the dist lane agree.
+
+The experiment holds everything constant but the port: the same two greps, the same lane, run
+concurrently, twice.
+
+**Same port - one of the pair dies:**
+
+```console
+$ ( E2E_PORT=4501 E2E_SERVER=dist npx playwright test --grep "key hints are visible at desktop width" > $S/k2-same-a.txt 2>&1; echo "SAME_PORT_A_EXIT=$?" > $S/k2-same-a-exit.txt ) & ( E2E_PORT=4501 E2E_SERVER=dist npx playwright test --grep "the shell reserves the same space" > $S/k2-same-b.txt 2>&1; echo "SAME_PORT_B_EXIT=$?" > $S/k2-same-b-exit.txt ) & wait; cat $S/k2-same-a-exit.txt $S/k2-same-b-exit.txt
+SAME_PORT_A_EXIT=1
+SAME_PORT_B_EXIT=0
+$ sed 's/\x1b\[[0-9;]*m//g' $S/k2-same-a.txt | grep -E 'EADDRINUSE|Error:|address already'
+[WebServer] Error: listen EADDRINUSE: address already in use 127.0.0.1:4501
+[WebServer]   code: 'EADDRINUSE',
+Error: Process from config.webServer was not able to start. Exit code: 1
+```
+
+**Different ports - both green:**
+
+```console
+$ ( E2E_PORT=4501 E2E_SERVER=dist npx playwright test --grep "key hints are visible at desktop width" > $S/k2-run-4501.txt 2>&1; echo "RUN_4501_EXIT=$?" > $S/k2-4501-exit.txt ) & ( E2E_PORT=4502 E2E_SERVER=dist npx playwright test --grep "the shell reserves the same space" > $S/k2-run-4502.txt 2>&1; echo "RUN_4502_EXIT=$?" > $S/k2-4502-exit.txt ) & wait; cat $S/k2-4501-exit.txt $S/k2-4502-exit.txt; sed 's/\x1b\[[0-9;]*m//g' $S/k2-run-4501.txt | tail -2; sed 's/\x1b\[[0-9;]*m//g' $S/k2-run-4502.txt | tail -2
+RUN_4501_EXIT=0
+RUN_4502_EXIT=0
+
+  1 passed (6.0s)
+
+  1 passed (6.0s)
+```
+
+Ports 4501 and 4502 were confirmed free first. An earlier attempt used 4300 and failed with
+`http://127.0.0.1:4300 is already used`, because another agent's probe server was on it - which is the
+operational rule working exactly as intended: **that listener was left alone, not killed.**
+
+### What the fix does not buy, measured rather than assumed
+
+Two `dist`-lane runs still share `dist/`: the lane builds what it serves, so both write the same
+output directory even on different ports. The concurrent pair above passed, but one observation is not
+a guarantee, and the note in `e2e/README.md` says so and tells the next person to stagger the starts
+or give one run the `serve` lane.
+
+**RESOLVED**, with that limit stated.
+
+## M3 (P3) - the coverage gate and `tools/`
+
+Round 3 deferred this with "74 files in the report, 0 of them under `tools/`" and the diagnosis that
+coverage cannot see `tools/`. Re-measured here with a `json-summary` reporter added temporarily to
+`vitest.config.ts` (added, measured, reverted with `git checkout --`), the diagnosis is **wrong**, and
+this round's own work is what disproved it:
+
+```console
+$ npm run test:coverage > $S/m3-cov2.txt 2>&1; echo "COVERAGE_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/m3-cov2.txt | grep -E 'Tests |Statements|Branches|Functions|Lines'; node -e '
+const s=require("./coverage/blackjack-trainer/coverage-summary.json");
+const files=Object.keys(s).filter(k=>k!=="total");
+const tools=files.filter(f=>f.includes("/tools/"));
+console.log("FILE_COUNT="+files.length+" UNDER_TOOLS="+tools.length);
+for(const f of tools){const m=s[f];console.log("  "+f.replace(process.cwd()+"/","")+"  stmts="+m.statements.pct+" branch="+m.branches.pct+" funcs="+m.functions.pct+" lines="+m.lines.pct);}
+'
+COVERAGE_EXIT=0
+      Tests  1594 passed (1594)
+Statements   : 96.07% ( 5535/5761 )
+Branches     : 92.89% ( 2497/2688 )
+Functions    : 93.41% ( 951/1018 )
+Lines        : 97.89% ( 4278/4370 )
+FILE_COUNT=75 UNDER_TOOLS=1
+  tools/check-records.mjs  stmts=94.14 branch=86.45 funcs=100 lines=95.69
+```
+
+**75 files, 1 under `tools/`.** What decides whether a tool is in the report is not where it lives but
+how a test reaches it:
+
+| tool                              | in the report | why                                                                                                                                       |
+| --------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `tools/check-records.mjs`         | **yes**       | its spec imports it in-process, like any other module                                                                                     |
+| `tools/serve-dist.mjs`            | no            | runs as a child process; v8 coverage in this process cannot see it                                                                        |
+| `tools/export-parity-fixtures.ts` | no            | calls `main()` at the bottom of the file, so importing it would rewrite tracked files under `ios/Fixtures` as a side effect of `npm test` |
+
+So M3 is narrower than it was filed as, and what remains needs two things this round did not build:
+coverage collected from a child process and merged into the in-process report, and a guard on the
+exporter's `main()` so it can be imported at all. The second is a refactor of an 879-line generator
+whose output feeds a release gate, taken on a P3 finding; it is not worth the risk here.
+
+**DEFERRED**, with the blind spot re-measured and `vitest.config.ts`'s comment - which stated round
+3's now-false 74/0 - corrected to say what actually decides it.
+
+### A consequence worth naming: the coverage gate lost margin
+
+Adding a covered tool to the report moved every percentage, and the branches floor is the tight one:
+
+| figure     | baseline | now       | floor | headroom |
+| ---------- | -------- | --------- | ----- | -------- |
+| statements | 96.16    | **96.07** | 94    | 2.07     |
+| branches   | 93.28    | **92.89** | 92    | **0.89** |
+| functions  | 93.22    | **93.41** | 90    | 3.41     |
+| lines      | 98.00    | **97.89** | 96    | 1.89     |
+
+<!-- figure-historical -->
+
+The first measurement after the checker landed was worse - 92.33% branches, 0.33 above the floor -
+because the checker's own uncovered paths went straight into the denominator. Eight more tests for the
+paths that decide what gets checked at all (`recordsDocs`, `changedOnBranch` and its failure, the
+ambiguous-basename refusal, the frozen-document exemption, the `transcript-literal` escape) took the
+checker from 76.77% to 86.45% branches and the project back to 92.89%. That is real coverage of a
+release gate, not a number moved for its own sake, but the headroom is thinner than it was and the
+next tool added in-process will need the same care. Named as **K6** in NEXT ROUND.
