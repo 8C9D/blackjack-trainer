@@ -1,9 +1,17 @@
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { anchorsOf, checkRecords, slug } from './check-records.mjs';
+import {
+  anchorsOf,
+  changedOnBranch,
+  checkRecords,
+  FIGURES,
+  recordsDocs,
+  slug,
+} from './check-records.mjs';
 
 /**
  * `tools/check-records.mjs` is a release gate (it runs inside `npm run lint`),
@@ -397,6 +405,122 @@ describe('rule 4: figures', () => {
     );
     expect(bad).toHaveLength(1);
     expect(bad[0]).toContain('states 1533');
+  });
+});
+
+describe('the parts that decide what gets checked at all', () => {
+  it('collects the ledger, the checklist and every review as records', () => {
+    writeFileSync(join(root, 'PROD-READINESS.md'), '# L\n');
+    writeFileSync(join(root, 'LAUNCH-CHECKLIST.md'), '# C\n');
+    writeFileSync(join(root, 'reviews', 'b.md'), '# B\n');
+    writeFileSync(join(root, 'reviews', 'a.md'), '# A\n');
+    writeFileSync(join(root, 'reviews', 'notes.txt'), 'ignored');
+    expect(recordsDocs(root)).toEqual([
+      'PROD-READINESS.md',
+      'LAUNCH-CHECKLIST.md',
+      'reviews/a.md',
+      'reviews/b.md',
+    ]);
+  });
+
+  it('omits documents that are not there rather than throwing', () => {
+    expect(recordsDocs(root)).toEqual([]);
+  });
+
+  it('reports no changed set rather than silently enforcing nothing', () => {
+    // A tree with no git history: `git diff` fails, and the honest answer is to
+    // say the at-risk set is unknown, not to pass every citation.
+    expect(changedOnBranch(root)).toBeNull();
+    const bad = checkRecords({ root, docs: [], tracked: new Set(), figures: FIGURES });
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('could not compute the set of files this branch changed');
+  });
+
+  it('reads the branch diff when there is one', () => {
+    execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: root });
+    execFileSync('git', ['config', 'user.email', 'r@example.com'], { cwd: root });
+    execFileSync('git', ['config', 'user.name', 'R'], { cwd: root });
+    writeFileSync(join(root, 'a.txt'), 'one\n');
+    execFileSync('git', ['add', 'a.txt'], { cwd: root });
+    execFileSync('git', ['commit', '-qm', 'base'], { cwd: root });
+    execFileSync('git', ['checkout', '-qb', 'work'], { cwd: root });
+    writeFileSync(join(root, 'a.txt'), 'two\n');
+    execFileSync('git', ['commit', '-qam', 'change'], { cwd: root });
+    expect(changedOnBranch(root)).toEqual(new Set(['a.txt']));
+  });
+
+  it('refuses a citation whose basename matches more than one tracked file', () => {
+    const bad = check(
+      { 'PROD-READINESS.md': 'See `page.ts:1`.\n' },
+      {
+        docs: ['PROD-READINESS.md'],
+        tracked: new Set(['PROD-READINESS.md', 'a/page.ts', 'b/page.ts']),
+      },
+    );
+    expect(bad[0]).toContain('names no tracked file (or names several)');
+  });
+
+  it('lifts the binding requirement for a frozen document, but not the bounds check', () => {
+    const changed = new Set(['src/thing.ts']);
+    expect(
+      check(
+        {
+          'reviews/ARTIFACTS-round1.md':
+            '# A\n\n<!-- records: historical-file -->\n\nSee `src/thing.ts:1`.\n',
+          'src/thing.ts': 'a\nb\n',
+        },
+        { docs: ['reviews/ARTIFACTS-round1.md'], changed },
+      ),
+    ).toEqual([]);
+    const bad = check(
+      {
+        'reviews/ARTIFACTS-round1.md':
+          '# A\n\n<!-- records: historical-file -->\n\nSee `src/thing.ts:9`.\n',
+        'src/thing.ts': 'a\nb\n',
+      },
+      { docs: ['reviews/ARTIFACTS-round1.md'], changed },
+    );
+    expect(bad[0]).toContain('is past the end');
+  });
+
+  it('honours a transcript-literal marker before a fence that really printed a label', () => {
+    expect(
+      check({
+        'reviews/A.md': [
+          '# A',
+          '',
+          '<!-- transcript-literal -->',
+          '',
+          '```console',
+          '$ cat .env.example',
+          'API_BASE=https://example.test',
+          '```',
+          '',
+        ].join('\n'),
+      }),
+    ).toEqual([]);
+  });
+
+  it('applies a historical-file marker wherever it sits, even past a second h1', () => {
+    expect(
+      check(
+        {
+          'reviews/A.md': [
+            '# A',
+            '',
+            '<!-- records: historical-file -->',
+            '',
+            'Round 1 measured 1526 passed.',
+            '',
+            '# Appendix',
+            '',
+            'and 1533 passed later.',
+            '',
+          ].join('\n'),
+        },
+        { figures: FIGURES },
+      ),
+    ).toEqual([]);
   });
 });
 

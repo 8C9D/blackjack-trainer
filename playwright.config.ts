@@ -3,7 +3,15 @@ import { defineConfig, devices } from '@playwright/test';
 import { SERVES_DIST } from './e2e/fixtures/lane';
 
 // The dev server the E2E suite drives. `npm start` (ng serve) binds here.
-const PORT = 4200;
+//
+// Overridable because 4200 was hardcoded, and one hardcoded port means one E2E
+// run per machine: the dist lane starts its own server and refuses a port it did
+// not start, so a second run either fails to start or — twice in round 3 — has
+// its server killed by whoever mistook it for an orphan, costing one invalidated
+// transcript and twelve aborted runs. `E2E_PORT=4300 npm run e2e` runs alongside
+// a run on the default port. It is passed through to `tools/serve-dist.mjs` as
+// `PORT` below, so both halves of the dist lane agree about where to bind.
+const PORT = Number(process.env.E2E_PORT ?? 4200);
 const baseURL = `http://127.0.0.1:${PORT}`;
 
 // Chromium-only in v1: one browser is enough to catch wiring / routing /
