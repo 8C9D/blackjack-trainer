@@ -176,6 +176,32 @@ SELFCATCH_EXIT=1
 The binding was re-pinned to `"scripts": {`, and the baseline's two statements of its own measurement
 were marked `figure-historical`, which is what that marker is for.
 
+### One attack of my own, on the exemption that worries me most
+
+The historical markers are the gate's largest concession, and the way they could go wrong quietly is
+by reaching further than intended - which is exactly what F1 and F4 turned out to be. So: does the
+`<!-- records: historical -->` marker under `# ROUND 3` leak past the next h1 into round 4's own
+section? Injecting a superseded figure into the round-4 status section and running the gate:
+
+```console
+$ python3 -c "
+p='PROD-READINESS.md'; s=open(p).read()
+old='**What the re-triage changed: nothing, and that is a finding of its own.**'
+new='**What the re-triage changed: nothing, and that is a finding of its own.** The suite is 1547 passed.'
+assert s.count(old)==1
+open(p,'w').write(s.replace(old,new))
+"; echo "INJECT_EXIT=$?"; node tools/check-records.mjs; echo "LEAK_TEST_EXIT=$?"; git checkout -- PROD-READINESS.md; node tools/check-records.mjs; echo "RESTORED_EXIT=$?"
+INJECT_EXIT=0
+records: 1 defect(s)
+  PROD-READINESS.md:672: unit-test count states 1547 where the round's unit-test count is 1593
+LEAK_TEST_EXIT=1
+records: 27 documents checked, no defects
+RESTORED_EXIT=0
+```
+
+It does not leak. Round 4's section is inside the gate, and a figure that disagreed with the round's
+own would be refused there.
+
 ### What it found on the real records, unprompted
 
 **Nine stale citations in the ledger, at eleven places.** Every one points at content that has moved,
