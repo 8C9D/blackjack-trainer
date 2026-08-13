@@ -3,7 +3,7 @@
 <!-- records: historical-file - a closed round's record. Its figures and transcripts were true at the commits that produced them; this round does not rewrite them, so the figures and transcript rules do not bind here. Citations are still resolved and bounds-checked. -->
 
 Evidence for every round-3 finding: the defect present, then absent, produced by running the thing.
-Baseline for every "green" claim here: [`reviews/BASELINE-round3.md`](reviews/BASELINE-round3.md).
+Baseline for every "green" claim here: [`reviews/BASELINE-round3.md`](BASELINE-round3.md).
 
 Every transcript names the exact tree state it was taken at, because round 2 shipped three that did
 not hold at the commit carrying them. Where a proof was invalidated by a later stage it is re-derived

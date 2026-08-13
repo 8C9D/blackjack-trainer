@@ -1,17 +1,9 @@
-import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import {
-  anchorsOf,
-  changedOnBranch,
-  checkRecords,
-  FIGURES,
-  recordsDocs,
-  slug,
-} from './check-records.mjs';
+import { anchorsOf, checkRecords, FIGURES, recordsDocs, slug } from './check-records.mjs';
 
 /**
  * `tools/check-records.mjs` is a release gate (it runs inside `npm run lint`),
@@ -26,8 +18,10 @@ import {
  * known defect and asserts the checker still refuses it.
  *
  * The fixtures are whole throwaway trees rather than the repository, so a test
- * cannot pass because the real records happen to be clean, and `changed` is
- * injected rather than read from git, because a fixture tree has no history.
+ * cannot pass because the real records happen to be clean. Nothing here consults
+ * git: rule 2 used to ask it which files had changed and pin only those, which
+ * is the defect REVIEW-round4-stage1 F5 reported, so a fixture tree with no
+ * history is now exactly as strict as the repository.
  */
 
 let root;
@@ -40,7 +34,7 @@ beforeEach(() => {
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
 /** Write a document and run the checker over exactly the documents named. */
-function check(files, { docs, changed = new Set(), tracked, figures } = {}) {
+function check(files, { docs, tracked, figures } = {}) {
   for (const [rel, body] of Object.entries(files)) {
     mkdirSync(dirname(join(root, rel)), { recursive: true });
     writeFileSync(join(root, rel), body);
@@ -49,7 +43,6 @@ function check(files, { docs, changed = new Set(), tracked, figures } = {}) {
     root,
     docs: docs ?? Object.keys(files).filter((f) => f.endsWith('.md')),
     tracked: tracked ?? new Set(Object.keys(files)),
-    changed,
     figures,
   });
 }
@@ -104,16 +97,15 @@ describe('rule 1: anchors', () => {
 });
 
 describe('rule 2: citations', () => {
-  const changed = new Set(['src/thing.ts']);
   const source = 'a\nb\nconst PORT = 4200;\nd\n';
 
-  it('refuses a citation into a changed file that is not bound to content', () => {
+  it('refuses a citation that is not pinned to content', () => {
     const bad = check(
       { 'PROD-READINESS.md': 'The port is `src/thing.ts:3`.\n', 'src/thing.ts': source },
-      { docs: ['PROD-READINESS.md'], changed },
+      { docs: ['PROD-READINESS.md'] },
     );
     expect(bad).toHaveLength(1);
-    expect(bad[0]).toContain('cites a file this branch changed');
+    expect(bad[0]).toContain('is not pinned to content');
   });
 
   it('refuses a binding whose fragment has moved off the cited line (R3-20)', () => {
@@ -123,7 +115,7 @@ describe('rule 2: citations', () => {
           'The port is `src/thing.ts:1`.\n<!-- cite: src/thing.ts:1 "const PORT = 4200;" -->\n',
         'src/thing.ts': source,
       },
-      { docs: ['PROD-READINESS.md'], changed },
+      { docs: ['PROD-READINESS.md'] },
     );
     expect(bad).toHaveLength(1);
     expect(bad[0]).toContain('no longer contains "const PORT = 4200;"');
@@ -137,7 +129,7 @@ describe('rule 2: citations', () => {
             'The port is `src/thing.ts:3`.\n<!-- cite: src/thing.ts:3 "const PORT = 4200;" -->\n',
           'src/thing.ts': source,
         },
-        { docs: ['PROD-READINESS.md'], changed },
+        { docs: ['PROD-READINESS.md'] },
       ),
     ).toEqual([]);
   });
@@ -150,7 +142,7 @@ describe('rule 2: citations', () => {
             'See `src/thing.ts:1`.\n<!-- cite: src/thing.ts:1 "say \\"hi\\"" -->\n',
           'src/thing.ts': 'say "hi"\n',
         },
-        { docs: ['PROD-READINESS.md'], changed },
+        { docs: ['PROD-READINESS.md'] },
       ),
     ).toEqual([]);
   });
@@ -158,7 +150,7 @@ describe('rule 2: citations', () => {
   it('refuses a citation past the end of the file, bound or not', () => {
     const bad = check(
       { 'PROD-READINESS.md': 'See `src/thing.ts:40`.\n', 'src/thing.ts': source },
-      { docs: ['PROD-READINESS.md'], changed: new Set() },
+      { docs: ['PROD-READINESS.md'] },
     );
     expect(bad[0]).toContain('is past the end of src/thing.ts (4 lines)');
   });
@@ -166,8 +158,11 @@ describe('rule 2: citations', () => {
   it('does not count a trailing newline as a line', () => {
     expect(
       check(
-        { 'PROD-READINESS.md': 'See `src/thing.ts:4`.\n', 'src/thing.ts': source },
-        { docs: ['PROD-READINESS.md'], changed: new Set() },
+        {
+          'PROD-READINESS.md': 'See `src/thing.ts:4`.\n<!-- cite: src/thing.ts:4 "d" -->\n',
+          'src/thing.ts': source,
+        },
+        { docs: ['PROD-READINESS.md'] },
       ),
     ).toEqual([]);
   });
@@ -178,7 +173,7 @@ describe('rule 2: citations', () => {
         'PROD-READINESS.md': 'See `.github/workflows/x.yml:9`.\n',
         '.github/workflows/x.yml': 'a\n',
       },
-      { docs: ['PROD-READINESS.md'], changed: new Set() },
+      { docs: ['PROD-READINESS.md'] },
     );
     expect(bad[0]).toContain('is past the end');
   });
@@ -191,7 +186,7 @@ describe('rule 2: citations', () => {
             'See `src/thing.ts:40`.\n<!-- cite-historical: src/thing.ts:40 -->\n',
           'src/thing.ts': source,
         },
-        { docs: ['PROD-READINESS.md'], changed },
+        { docs: ['PROD-READINESS.md'] },
       ),
     ).toEqual([]);
   });
@@ -202,7 +197,7 @@ describe('rule 2: citations', () => {
         'reviews/REVIEW-x.md': 'See `src/thing.ts:3` and `src/thing.ts:99`.\n',
         'src/thing.ts': source,
       },
-      { docs: ['reviews/REVIEW-x.md'], changed },
+      { docs: ['reviews/REVIEW-x.md'] },
     );
     expect(bad).toHaveLength(1);
     expect(bad[0]).toContain('is past the end');
@@ -212,7 +207,7 @@ describe('rule 2: citations', () => {
     expect(
       check(
         { 'PROD-READINESS.md': 'See `dist/blackjack-trainer/browser/ngsw-worker.js:583`.\n' },
-        { docs: ['PROD-READINESS.md'], changed },
+        { docs: ['PROD-READINESS.md'] },
       ),
     ).toEqual([]);
   });
@@ -427,26 +422,15 @@ describe('the parts that decide what gets checked at all', () => {
     expect(recordsDocs(root)).toEqual([]);
   });
 
-  it('reports no changed set rather than silently enforcing nothing', () => {
-    // A tree with no git history: `git diff` fails, and the honest answer is to
-    // say the at-risk set is unknown, not to pass every citation.
-    expect(changedOnBranch(root)).toBeNull();
-    const bad = checkRecords({ root, docs: [], tracked: new Set(), figures: FIGURES });
+  it('pins citations with no git at all, in a tree that has no history', () => {
+    // The whole of F5: this fixture is not a repository, so a rule that asked
+    // git which files had changed would have nothing to enforce and would pass.
+    const bad = check(
+      { 'PROD-READINESS.md': 'See `src/thing.ts:1`.\n', 'src/thing.ts': 'a\n' },
+      { docs: ['PROD-READINESS.md'] },
+    );
     expect(bad).toHaveLength(1);
-    expect(bad[0]).toContain('could not compute the set of files this branch changed');
-  });
-
-  it('reads the branch diff when there is one', () => {
-    execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: root });
-    execFileSync('git', ['config', 'user.email', 'r@example.com'], { cwd: root });
-    execFileSync('git', ['config', 'user.name', 'R'], { cwd: root });
-    writeFileSync(join(root, 'a.txt'), 'one\n');
-    execFileSync('git', ['add', 'a.txt'], { cwd: root });
-    execFileSync('git', ['commit', '-qm', 'base'], { cwd: root });
-    execFileSync('git', ['checkout', '-qb', 'work'], { cwd: root });
-    writeFileSync(join(root, 'a.txt'), 'two\n');
-    execFileSync('git', ['commit', '-qam', 'change'], { cwd: root });
-    expect(changedOnBranch(root)).toEqual(new Set(['a.txt']));
+    expect(bad[0]).toContain('is not pinned to content');
   });
 
   it('refuses a citation whose basename matches more than one tracked file', () => {
@@ -461,7 +445,6 @@ describe('the parts that decide what gets checked at all', () => {
   });
 
   it('lifts the binding requirement for a frozen document, but not the bounds check', () => {
-    const changed = new Set(['src/thing.ts']);
     expect(
       check(
         {
@@ -469,7 +452,7 @@ describe('the parts that decide what gets checked at all', () => {
             '# A\n\n<!-- records: historical-file -->\n\nSee `src/thing.ts:1`.\n',
           'src/thing.ts': 'a\nb\n',
         },
-        { docs: ['reviews/ARTIFACTS-round1.md'], changed },
+        { docs: ['reviews/ARTIFACTS-round1.md'] },
       ),
     ).toEqual([]);
     const bad = check(
@@ -478,7 +461,7 @@ describe('the parts that decide what gets checked at all', () => {
           '# A\n\n<!-- records: historical-file -->\n\nSee `src/thing.ts:9`.\n',
         'src/thing.ts': 'a\nb\n',
       },
-      { docs: ['reviews/ARTIFACTS-round1.md'], changed },
+      { docs: ['reviews/ARTIFACTS-round1.md'] },
     );
     expect(bad[0]).toContain('is past the end');
   });
@@ -544,7 +527,7 @@ describe('the gate as a whole', () => {
         'reviews/A.md': '# A\n',
         'src/thing.ts': 'a\n',
       },
-      { docs: ['PROD-READINESS.md'], changed: new Set(['src/thing.ts']) },
+      { docs: ['PROD-READINESS.md'] },
     );
     expect(bad).toHaveLength(4);
   });
