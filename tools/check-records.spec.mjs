@@ -551,6 +551,69 @@ describe('a directive counts only where a directive can be written', () => {
   });
 });
 
+describe('the fence model is the one a reader sees', () => {
+  const T = '```';
+  const M = '<!-- records: historical-file -->';
+  const stale = 'A live figure: 1547 passed.\n';
+
+  // Each of these was an escape at some point in this round. They are kept as a
+  // set rather than one test because the defect came back three times, each time
+  // as a spelling nobody had written a fixture for (REVIEW-round4-stage4 F6).
+  const escapes = {
+    'a tilde line printed inside a backtick fence does not close it': `# A\n\n${T}console\n$ ls\n~~~\nFAKE_EXIT=0\n${T}\n`,
+    'a triple backtick inside a longer fence does not close it': `# A\n\n\`\`\`\`console\n$ ls\n${T}\nFAKE_EXIT=0\n\`\`\`\`\n`,
+  };
+  for (const [name, body] of Object.entries(escapes)) {
+    it(name, () => {
+      const bad = check({ 'reviews/A.md': body });
+      expect(bad).toHaveLength(1);
+      expect(bad[0]).toContain('cannot print it');
+    });
+  }
+
+  const frozen = {
+    'after a tilde line inside a backtick fence': `# A\n\n${T}console\n$ cat m\n~~~\n${M}\n${T}\n\n${stale}`,
+    'after a triple backtick inside a longer fence': `# A\n\n\`\`\`\`console\n$ cat m\n${T}\n${M}\n\`\`\`\`\n\n${stale}`,
+    'inside a tilde fence': `# A\n\n~~~console\n$ cat m\n${M}\n~~~\n\n${stale}`,
+    'inside a double-backtick span': `# A\n\nProse quoting \`\` ${M} \`\` inline.\n\n${stale}`,
+    'inside an indented code block': `# A\n\n    ${M}\n\n${stale}`,
+  };
+  for (const [where, body] of Object.entries(frozen)) {
+    it(`does not honour a marker written ${where}`, () => {
+      const bad = check({ 'reviews/A.md': body }, { figures: FIGURES });
+      expect(bad).toHaveLength(1);
+      expect(bad[0]).toContain('states 1547');
+    });
+  }
+
+  it('still checks a citation on an indented line', () => {
+    // Treating an indented line as code outright exempted every citation and
+    // link on one, which is a silent exemption in a binding document
+    // (REVIEW-round4-stage4 F7). Indentation suppresses directives, not rules.
+    const bad = check(
+      {
+        'reviews/ARTIFACTS-x.md': '# A\n\n-   a list item\n\n    The code is at `foo.ts:99`.\n',
+        'foo.ts': 'const x = 1;\n',
+      },
+      { docs: ['reviews/ARTIFACTS-x.md'], tracked: new Set(['reviews/ARTIFACTS-x.md', 'foo.ts']) },
+    );
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('is past the end');
+  });
+
+  it('does not accept a binding written inside a fence', () => {
+    const bad = check(
+      {
+        'reviews/ARTIFACTS-x.md': `# A\n\nThe code is at \`foo.ts:1\`.\n\n${T}console\n$ echo hi\n<!-- cite: foo.ts:1 "const x = 1;" -->\n${T}\n`,
+        'foo.ts': 'const x = 1;\n',
+      },
+      { docs: ['reviews/ARTIFACTS-x.md'], tracked: new Set(['reviews/ARTIFACTS-x.md', 'foo.ts']) },
+    );
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('is not pinned to content');
+  });
+});
+
 describe('rule 3 reads a command line the way a shell would', () => {
   function fence(command, label) {
     return ['# A', '', '```console', `$ ${command}`, label, '```', ''].join('\n');
@@ -607,16 +670,13 @@ describe('rule 4 tolerates the coverage jitter it measured', () => {
   });
 
   it('keeps a margin between the jitter it absorbs and the figure it refuses', () => {
-    // The whole design in one assertion. One-branch jitter must be inside the
-    // tolerance and the superseded quadruple must be outside it - and at the
-    // figures this round pins, the nearest component of that quadruple is 0.06,
-    // one hundredth of a point beyond the tolerance. Moving `FIGURES` closer to
-    // the round-3 baseline than that would silently make the gate accept it,
-    // and this test is what refuses to let that happen quietly.
+    // A quadruple is refused when *any* component is outside tolerance, so what
+    // governs the refusal is the largest component difference, not the smallest.
+    // An earlier version of this test asserted the smallest and would have gone
+    // red for a pin the gate still refuses correctly (REVIEW-round4-stage4 F8).
     const baseline = [96.16, 93.28, 93.22, 98.0];
-    const nearest = Math.min(...FIGURES.coverage.map((p, i) => Math.abs(baseline[i] - p)));
-    expect(0.037).toBeLessThan(0.05);
-    expect(nearest).toBeGreaterThan(0.05);
+    const largest = Math.max(...FIGURES.coverage.map((p, i) => Math.abs(baseline[i] - p)));
+    expect(largest).toBeGreaterThan(0.05);
   });
 });
 
