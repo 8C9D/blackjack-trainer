@@ -561,6 +561,11 @@ FILE_COUNT=75 UNDER_TOOLS=1
   tools/check-records.mjs  stmts=94.14 branch=86.45 funcs=100 lines=95.69
 ```
 
+**Superseded, and kept rather than rewritten.** The block above is the measurement as it stood when
+M3 was taken. The stage-1 review then required eight more tests in the checker's spec, which moved
+every figure again; the round's closing coverage is 96.06 / 92.83 / 93.43 / 97.89 with 1593 unit tests,
+recorded in the ledger's closing gate table. The file count and the `tools/` count below did not move.
+
 **75 files, 1 under `tools/`.** What decides whether a tool is in the report is not where it lives but
 how a test reaches it:
 
@@ -584,9 +589,9 @@ Adding a covered tool to the report moved every percentage, and the branches flo
 
 | figure     | baseline | now       | floor | headroom |
 | ---------- | -------- | --------- | ----- | -------- |
-| statements | 96.16    | **96.07** | 94    | 2.07     |
-| branches   | 93.28    | **92.89** | 92    | **0.89** |
-| functions  | 93.22    | **93.41** | 90    | 3.41     |
+| statements | 96.16    | **96.06** | 94    | 2.06     |
+| branches   | 93.28    | **92.83** | 92    | **0.83** |
+| functions  | 93.22    | **93.43** | 90    | 3.43     |
 | lines      | 98.00    | **97.89** | 96    | 1.89     |
 
 <!-- figure-historical -->
@@ -611,7 +616,7 @@ The first measurement after the checker landed was worse - 92.33% branches, 0.33
 because the checker's own uncovered paths went straight into the denominator. Eight more tests for the
 paths that decide what gets checked at all (`recordsDocs`, `changedOnBranch` and its failure, the
 ambiguous-basename refusal, the frozen-document exemption, the `transcript-literal` escape) took the
-checker from 76.77% to 86.45% branches and the project back to 92.89%. That is real coverage of a
+checker from 76.77% to 86.45% branches and the project back to 92.83%. That is real coverage of a
 release gate, not a number moved for its own sake, but the headroom is thinner than it was and the
 next tool added in-process will need the same care. Named as **K6** in NEXT ROUND.
 
