@@ -752,11 +752,18 @@ their evidence rather than taken quietly.
 
 ## Gates at the end of round 4
 
-Every gate re-run at `c024fec`, the round's last commit that changes code or tests - the commits after
-it change this ledger only, and gate 1 is re-run and green at each - **except gates 7 to 9**, which
-last ran at
-`4ad4d24`: nothing under `ios/` has changed since (`git diff --name-only 4ad4d24..HEAD -- ios/` is
-empty), and swiftformat, swiftlint and xcodebuild read nothing else.
+All nine re-run at `92c5ad0`, the round's last commit that changes code or tests. Any commit after it
+changes this ledger only, and gate 1 - the one gate that reads records - is re-run and green at each.
+
+Gate 5's ten-run distribution below was measured at the three commits it names, and nothing under
+`src/`, `e2e/`, `playwright.config.ts`, `angular.json` or `public/` has changed since the last of them,
+so only the single closing run needed repeating here. That is the `115 passed` in the table above.
+
+This paragraph is the third attempt at it. The first named one commit while two rows carried a later
+tree's numbers, because rule 4 refused the figures that had actually been measured and they were edited
+to satisfy the gate while the sentence saying where they came from was left alone - the "corrected
+everywhere" shape, produced by the machine built to prevent it, and invisible to rule 4 by construction
+(REVIEW-round4-stage3 F1, stage-4 F6). A table of measurements has to name the tree it measured.
 
 That distinction is here because the first version of this section did not make it. It named one
 commit and carried a later tree's numbers in two rows, because rule 4 refused the figures that had
