@@ -42,7 +42,10 @@ printed by the gate, so it rises as reviews land rather than being a figure stat
   checking nothing - the failure this gate's own header names. REVIEW-round4-stage1 F5 demonstrated it
   by breaking a binding in a repository where `main` resolved to `HEAD` and watching the gate pass.
   There is no git in rule 2 any more, at the price of pinning every citation in both documents: 65
-  markers in the ledger (57 bindings, 8 historical) and 19 in this file (10 and 9).
+  markers in the ledger (57 bindings, 8 historical) and 17 in this file (8 and 9). The second figure
+  was published as 19, counting two lines of fenced command text as bindings - which the checker
+  itself stopped doing in the same commit that this count was checked against
+  (REVIEW-round4-stage3 F8).
 
 - **Rule 2 does not demand bindings from a reviewer's file**, only from the ledger and the artifacts.
   A reviewer cites lines constantly and a binding requirement would be a tax on review, not on
@@ -187,8 +190,6 @@ records: 3 defect(s)
 SELFCATCH_EXIT=1
 ```
 
-<!-- figure-historical -->
-
 The binding was re-pinned to `"scripts": {`, and the baseline's two statements of its own measurement
 were marked `figure-historical`, which is what that marker is for.
 
@@ -225,9 +226,9 @@ open(p,'w').write(s.replace(old,new))
 "; echo "INJECT_EXIT=$?"; node tools/check-records.mjs; echo "LEAK_TEST_EXIT=$?"; git checkout -- PROD-READINESS.md; node tools/check-records.mjs; echo "RESTORED_EXIT=$?"
 INJECT_EXIT=0
 records: 1 defect(s)
-  PROD-READINESS.md:672: unit-test count states 1547 where the round's unit-test count is 1593
+  PROD-READINESS.md:672: unit-test count states 1547 where the round's unit-test count is 1600
 LEAK_TEST_EXIT=1
-records: 27 documents checked, no defects
+records: 29 documents checked, no defects
 RESTORED_EXIT=0
 ```
 
@@ -278,36 +279,43 @@ console.log("STRIPPED_OK=1");
 '; node tools/check-records.mjs > $S/census2.txt 2>&1; echo "CENSUS_EXIT=$?"; head -1 $S/census2.txt; echo "rule 3 transcripts: $(grep -c 'block prints' $S/census2.txt)"; echo "rule 4 figures:     $(grep -cE 'unit-test count|coverage quadruple|pooled M2' $S/census2.txt)"; grep 'block prints' $S/census2.txt | sed -E 's/^  ([^:]+):.*/\1/' | sort | uniq -c | sort -rn
 STRIPPED_OK=1
 CENSUS_EXIT=1
-records: 273 defect(s)
-rule 3 transcripts: 103
-rule 4 figures:     113
+records: 276 defect(s)
+rule 3 transcripts: 105
+rule 4 figures:     114
   25 reviews/REVIEW-round3-stage2.md
   18 reviews/ARTIFACTS-round3.md
   17 reviews/REVIEW-round2-stage2.md
   10 reviews/REVIEW-round3-stage1.md
   10 reviews/ARTIFACTS-round2.md
    8 reviews/REVIEW-round3-closing.md
-   4 reviews/REVIEW-round3-stage3.md
+    6 reviews/REVIEW-round3-stage3.md
    4 reviews/REVIEW-round3-closing2.md
    3 reviews/REVIEW-round3-final.md
    2 reviews/REVIEW-round2-stage3.md
    2 reviews/REVIEW-round2-final.md
 ```
 
-The number that matters is **103**: closed-round records publish an exit label as the output of a
-command that cannot print it 103 times. Round 3 found two instances of this by reading (R3-15, R3-27)
+The number that matters is **105**: closed-round records publish an exit label as the output of a
+command that cannot print it 105 times. Round 3 found two instances of this by reading (R3-15, R3-27)
 and fixed those two. It is spread across eleven files, worst in `REVIEW-round3-stage2.md` (25) and
 `ARTIFACTS-round3.md` (18).
+
+This census was published as 103 first, and that number was invalidated by this round's own rule-3 fix:
+teaching the quote scan to stop at a `#` comment made two more fences legible, both in
+`REVIEW-round3-stage3.md`, which goes from 4 to 6. Nobody re-measured the thing the fixed bug had been
+hiding until REVIEW-round4-stage3 F2 did. That is the sharpest lesson of the round for anyone extending
+this gate: **a rule change invalidates every measurement the old rule produced.** The census is a
+measurement, not a fact, and so is every count in this document.
 
 They are not fixed here, and the reason is not effort. Fixing one means writing the `echo` that
 produced the label, and **nobody knows what was actually typed** - reconstructing it would be
 manufacturing the transcript, which is a worse defect than the one being fixed. They are left marked,
-counted, and named as finding **K4** in NEXT ROUND. The 113 figure hits are almost entirely dated,
+counted, and named as finding **K4** in NEXT ROUND. The 114 figure hits are almost entirely dated,
 legitimate history (round 1's `1526 tests`, round 3's baseline `1547`); they are not a defect count. <!-- figure-historical -->
 
-A caution about this census, learned by running it: the revert used
+One more caution, learned by running it: the first attempt reverted with
 `git checkout -- PROD-READINESS.md reviews/`, which also reverted uncommitted work in those paths. The
-measurement is sound and reproducible; the method is only safe against a committed tree.
+run above copies the two paths aside first and copies them back, which is safe against a dirty tree.
 
 ### Its own tests
 
@@ -330,11 +338,16 @@ buckets (REVIEW-round4-stage2 F4). The sentence in the spec's own header carried
 commit longer than this document did, and is fixed too.
 
 ```console
-$ npx ng test --include="../tools/check-records.spec.mjs" > $S/records-spec2.txt 2>&1; echo "SPEC_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/records-spec2.txt | grep -E 'Test Files|Tests '
+$ npx ng test --include="../tools/check-records.spec.mjs" > $S/spec-final.txt 2>&1; echo "SPEC_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/spec-final.txt | grep -E 'Test Files|Tests '
 SPEC_EXIT=0
  Test Files  1 passed (1)
-      Tests  34 passed (34)
+      Tests  47 passed (47)
 ```
+
+This transcript printed `34` for two commits after the suite had grown past it, under a paragraph that
+said 47 (REVIEW-round4-stage2 F4, again as REVIEW-round4-stage3 F3). Rule 4 does not know the suite's
+size, so nothing but a person re-running it stands between this number and the next wrong one - which
+is the honest reason it was wrong twice.
 
 ### Gates at the stage-1 commit
 
@@ -361,7 +374,7 @@ because the first version of this block was published against an earlier one and
 longer reproduced (REVIEW-round4-stage2 F7):
 
 ```console
-$ python3 -c "
+$ npm run lint > $S/pre2.txt 2>&1; echo "LINT_BEFORE_MUTATION_EXIT=$?"; python3 -c "
 for p in ['src/app/features/home/home-page.component.scss','src/app/features/drill/drill-page.scss','src/app/features/card-counting/card-counting-page.component.scss']:
     s=open(p).read()
     s=s.replace('min-height: calc(100vh - var(--update-space, 0px));','min-height: 100vh;')
@@ -370,12 +383,14 @@ for p in ['src/app/features/home/home-page.component.scss','src/app/features/dri
 p='src/app/app.scss'; s=open(p).read()
 open(p,'w').write(s.replace('  padding-bottom: var(--update-space, 0px);\n',''))
 print('K3 reserve deleted from all four files')
-"; echo "MUTATE_EXIT=$?"; npm run lint > $S/k3b-lint.txt 2>&1; echo "K3_LINT_MUTANT_EXIT=$?"; npm test > $S/k3b-test.txt 2>&1; echo "K3_TEST_MUTANT_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/k3b-test.txt | grep -E 'Tests '; npm run build > $S/k3b-build.txt 2>&1; echo "K3_BUILD_MUTANT_EXIT=$?"; git checkout -- src/app/app.scss src/app/features/home/home-page.component.scss src/app/features/drill/drill-page.scss src/app/features/card-counting/card-counting-page.component.scss; echo "RESTORE_EXIT=$?"
+"; echo "MUTATE_EXIT=$?"; npm run lint > $S/k3e-lint.txt 2>&1; echo "K3_LINT_MUTANT_EXIT=$?"; npm test > $S/k3e-test.txt 2>&1; echo "K3_TEST_MUTANT_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/k3e-test.txt | grep -E 'Tests '; npm run build > $S/k3e-build.txt 2>&1; echo "K3_BUILD_MUTANT_EXIT=$?"; git checkout -- src/app/app.scss src/app/features/home/home-page.component.scss src/app/features/drill/drill-page.scss src/app/features/card-counting/card-counting-page.component.scss; echo "RESTORE_EXIT=$?"
+K3 reserve deleted from all four files
+LINT_BEFORE_MUTATION_EXIT=0
 K3 reserve deleted from all four files
 MUTATE_EXIT=0
 K3_LINT_MUTANT_EXIT=0
 K3_TEST_MUTANT_EXIT=0
-      Tests  1599 passed (1599)
+      Tests  1600 passed (1600)
 K3_BUILD_MUTANT_EXIT=0
 RESTORE_EXIT=0
 ```
@@ -483,9 +498,14 @@ needs a service-worker `VERSION_READY` against a second deployed build. It is ca
 
 ### Present
 
-`site/` is in neither ignore file, and the Pages deploy assembles the published site into it at the
-repository root. Running that step - which anyone verifying the workflow does - leaves built files
-behind. The whole thing, reproduced at this commit:
+`site/` is in neither ignore file, and the Pages deploy assembles the published site into it. Running
+that step - which anyone verifying the workflow does - leaves built files behind.
+
+This block **cannot** be reproduced at this commit, and saying otherwise was a defect of its own
+(REVIEW-round4-stage3 F5): its first command greps the ignore files for `site` and finds nothing, which
+stopped being true the moment the fix landed. It is the measurement of the defect, taken at `74fc6f7`'s
+parent, and it is what a "before" transcript always is - a record of a state the tree no longer has.
+The "Absent" block below it is the one that reproduces today.
 
 ```console
 $ grep -n 'site' .gitignore .prettierignore; echo "IGNORE_GREP_EXIT=$?"; npm run build -- --base-href /blackjack-trainer/ > $S/k1-build.txt 2>&1; echo "K1_BUILD_EXIT=$?"; mkdir -p site && cp -R dist/blackjack-trainer/browser/. site/ && cp ios/AppStore/privacy.html ios/AppStore/support.html site/ && cp site/index.html site/404.html; echo "K1_ASSEMBLE_EXIT=$?"; ls site | wc -l
@@ -588,7 +608,7 @@ transcript rather than a claim in the prose above it - the first version of this
 second half, which cannot run against the committed tree (REVIEW-round4-stage2 F11):
 
 ```console
-$ sed -i '' "s/reporter: \['text-summary'\],/reporter: ['text-summary', 'json-summary'],/" vitest.config.ts; echo "REPORTER_ADDED_EXIT=$?"; npm run test:coverage > $S/final-cov.txt 2>&1; echo "COVERAGE_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/final-cov.txt | grep -E 'Test Files|Tests |Statements|Branches|Functions|Lines'; node -e '
+$ sed -i '' "s/reporter: \['text-summary'\],/reporter: ['text-summary', 'json-summary'],/" vitest.config.ts; echo "REPORTER_ADDED_EXIT=$?"; npm run test:coverage > $S/cov-final2.txt 2>&1; echo "COVERAGE_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/cov-final2.txt | grep -E 'Test Files|Tests |Statements|Branches|Functions|Lines'; node -e '
 const s=require("./coverage/blackjack-trainer/coverage-summary.json");
 const files=Object.keys(s).filter(k=>k!=="total");
 const t=files.filter(f=>f.includes("/tools/"));
@@ -598,13 +618,13 @@ for(const f of t){const m=s[f];console.log("  "+f.replace(process.cwd()+"/","")+
 REPORTER_ADDED_EXIT=0
 COVERAGE_EXIT=0
  Test Files  68 passed (68)
-      Tests  1599 passed (1599)
-Statements   : 96.1% ( 5554/5779 )
-Branches     : 93.07% ( 2515/2702 )
-Functions    : 93.44% ( 955/1022 )
-Lines        : 97.9% ( 4290/4382 )
+      Tests  1600 passed (1600)
+Statements   : 96.1% ( 5559/5784 )
+Branches     : 93.09% ( 2521/2708 )
+Functions    : 93.46% ( 958/1025 )
+Lines        : 97.9% ( 4295/4387 )
 FILE_COUNT=75 UNDER_TOOLS=1
-  tools/check-records.mjs 94.94 / 89.94 / 100 / 95.92
+  tools/check-records.mjs 95.03 / 90.28 / 100 / 96.01
 REPORTER_REVERTED_EXIT=0
 ```
 
@@ -635,8 +655,8 @@ Adding a covered tool to the report moved every percentage, and the branches flo
 | figure     | baseline | now       | floor | headroom |
 | ---------- | -------- | --------- | ----- | -------- |
 | statements | 96.16    | **96.10** | 94    | 2.10     |
-| branches   | 93.28    | **93.07** | 92    | **1.07** |
-| functions  | 93.22    | **93.44** | 90    | 3.44     |
+| branches   | 93.28    | **93.09** | 92    | **1.09** |
+| functions  | 93.22    | **93.46** | 90    | 3.46     |
 | lines      | 98.00    | **97.90** | 96    | 1.90     |
 
 **The branch figure is not deterministic, and this round got that wrong once before recording it
@@ -650,15 +670,19 @@ samples was the same error as round 3 reporting 0-of-10 full-suite runs for a 5.
 The consequence was live: rule 4 pinned the quadruple to two decimals, so it would have refused a
 record stating a figure its author had just measured, about one time in twelve, and told them their
 own number was wrong. Coverage is now pinned with a **+/-0.05 tolerance**, which absorbs one-branch
-jitter and still refuses the round-3 baseline quadruple, whose nearest component differs by 0.10. Two
-tests pin both halves of that. Whether 0.05 is the right width is a judgement for whoever owns the
+jitter and still refuses the round-3 baseline quadruple - but by less than it first claimed. Against the
+figures this round pins, that quadruple's nearest component is **0.06**, one hundredth of a point
+outside the tolerance; 0.10 was the distance from a _superseded_ pin, published in two places
+(REVIEW-round4-stage3 F7). Three tests now hold the window open against `FIGURES` itself rather than a
+fixture's copy of it, so narrowing it fails loudly. Whether 0.05 is the right width, and whether a
+figure this fragile should be pinned to two decimals at all, is a judgement for whoever owns the
 thresholds; it is named in **K6**.
 
 The margin was worse before the reviews than after them. The first measurement once the checker landed
 was 92.33% branches, 0.33 above the floor, because the checker's own uncovered paths went straight into
 the denominator. Fourteen tests added across the two remediation cycles - for the paths that decide
 what gets checked at all, and then for each defect the reviewers found - took the checker from 76.77%
-to 89.94% branches and the project to 93.07%. That is real coverage of a release gate rather than a
+to 90.28% branches and the project to 93.09%. That is real coverage of a release gate rather than a
 number moved for its own sake, but the headroom is still below the baseline's 1.28, and the next tool
 added in-process will need the same care. Named as **K6** in NEXT ROUND.
 

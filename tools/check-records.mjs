@@ -59,8 +59,8 @@ import { fileURLToPath } from 'node:url';
 export const FIGURES = {
   // The count at the round's tip, not at its baseline. `reviews/BASELINE-round4.md`
   // states the baseline's 1551 on purpose and marks those two lines as such.
-  unitTests: 1599,
-  coverage: [96.1, 93.07, 93.44, 97.9],
+  unitTests: 1600,
+  coverage: [96.1, 93.09, 93.46, 97.9],
   m2: { failures: 33, executions: 600, rate: 5.5 },
 };
 
@@ -74,8 +74,12 @@ export const FIGURES = {
  * is 0.037 points (REVIEW-round4-stage2 F9). Pinning to two decimals would
  * therefore refuse a record stating a figure its author had just measured, about
  * one time in twelve, and tell them their true number was wrong. This tolerance
- * absorbs that jitter and still refuses the round-3 baseline quadruple, whose
- * nearest component differs by 0.10.
+ * absorbs that jitter and still refuses the round-3 baseline quadruple - but the
+ * margin is thin: at the figures pinned above, that quadruple's nearest
+ * component is 0.06, one hundredth of a point outside the tolerance. A test
+ * asserts both ends of that window against `FIGURES` itself, so moving the pin
+ * closer to the baseline than the tolerance fails loudly rather than quietly
+ * widening the gate's blind spot (REVIEW-round4-stage3 F7).
  */
 const COVERAGE_TOLERANCE = 0.05;
 
@@ -124,7 +128,10 @@ export function anchorsOf(markdown) {
 function lines(markdown) {
   let fence = null;
   return markdown.split('\n').map((text, i) => {
-    const open = /^\s*```+ *([A-Za-z0-9_-]*)/.exec(text);
+    // Both fence syntaxes. Knowing only backticks meant "not inside a fenced
+    // block" quietly meant "not inside a backtick fence" (REVIEW-round4-stage3
+    // F6).
+    const open = /^\s*(?:```+|~~~+) *([A-Za-z0-9_-]*)/.exec(text);
     if (open && fence === null) {
       fence = open[1] || 'plain';
       return { text, no: i + 1, fenced: true, info: fence, isFenceMarker: true };
@@ -134,7 +141,18 @@ function lines(markdown) {
       fence = null;
       return { text, no: i + 1, fenced: true, info, isFenceMarker: true };
     }
-    return { text, no: i + 1, fenced: fence !== null, info: fence, isFenceMarker: false };
+    // A four-space indent is a code block in markdown, and a directive written
+    // in one is a directive nobody can see rendered. Treated as code even
+    // outside a fence: the failure this errs towards is a visible refusal, and
+    // the one it errs away from is a silent exemption.
+    const indented = fence === null && /^ {4,}\S/.test(text);
+    return {
+      text,
+      no: i + 1,
+      fenced: fence !== null || indented,
+      info: fence,
+      isFenceMarker: false,
+    };
   });
 }
 
@@ -188,9 +206,29 @@ function markersIn(text, fenced) {
   );
 }
 
-/** The part of a line that can carry a directive: everything outside inline code. */
+/**
+ * The part of a line that can carry a directive: everything outside inline code.
+ *
+ * Backtick runs are matched by length, because ``` `` `` ``` is an inline-code span
+ * too and a regex pairing single backticks steps straight over it - which left a
+ * marker quoted that way still freezing its document (REVIEW-round4-stage3 F6).
+ */
 function applied(text) {
-  return text.replace(/`[^`]*`/g, '');
+  return text.replace(/(`+)[\s\S]*?\1/g, '');
+}
+
+/**
+ * Every line of a document that can carry a directive, with inline code removed.
+ * All five markers this file reads are collected from here and nowhere else:
+ * three of them used to be matched against the raw document, so a binding
+ * written inside a transcript satisfied rule 2 and a `transcript-literal` named
+ * in prose turned rule 3 off for the fence below it (REVIEW-round4-stage3 F6).
+ */
+function directiveText(doc) {
+  return lines(doc)
+    .filter((line) => !line.fenced)
+    .map((line) => applied(line.text))
+    .join('\n');
 }
 
 function readDoc(root, rel) {
@@ -290,10 +328,13 @@ function checkCitations(root, docs, tracked) {
     const historical = new Set();
     // The fragment is double-quoted and may contain escaped quotes, because the
     // content worth pinning is often JSON.
-    for (const m of body.matchAll(/<!-- cite: (\S+):(\d+(?:-\d+)?) "((?:[^"\\]|\\.)*)" -->/g)) {
+    const directives = directiveText(body);
+    for (const m of directives.matchAll(
+      /<!-- cite: (\S+):(\d+(?:-\d+)?) "((?:[^"\\]|\\.)*)" -->/g,
+    )) {
       bindings.set(`${m[1]}:${m[2]}`, m[3].replace(/\\(.)/g, '$1'));
     }
-    for (const m of body.matchAll(/<!-- cite-historical: ([^\s]+):(\d+(?:-\d+)?)/g)) {
+    for (const m of directives.matchAll(/<!-- cite-historical: ([^\s]+):(\d+(?:-\d+)?)/g)) {
       historical.add(`${m[1]}:${m[2]}`);
     }
     const needsBinding = BINDING_DOCS.test(doc) && !exemptions(body).frozen;
@@ -376,10 +417,11 @@ function continues(commandText) {
  * is how a composed transcript would slip through.
  */
 function noteEchoes(commandText, into) {
-  // `console.log` counts as well as `echo`: a `node -e` one-liner that prints
-  // `FILE_COUNT=75` is a command that really does produce the label, and
-  // refusing it would push honest transcripts onto the escape hatch.
-  for (const segment of commandText.split(/\becho\b|console\.log/).slice(1)) {
+  // `console.log` and python's `print` count as well as `echo`: a `node -e` or
+  // `python3 -c` one-liner that prints `FILE_COUNT=75` is a command that really
+  // does produce the label, and refusing it would push honest transcripts onto
+  // the escape hatch.
+  for (const segment of commandText.split(/\becho\b|console\.log|\bprint\(/).slice(1)) {
     const upTo = segment.split(/[;|]|&&/)[0];
     for (const m of upTo.matchAll(/([A-Z][A-Z0-9_]*)=/g)) into.add(m[1]);
   }
@@ -401,12 +443,12 @@ function checkTranscripts(root, docs) {
     // are echoed into a file by the commands above and the file is then printed.
     let echoed = new Set();
     for (const line of all) {
-      const { text, no, info, isFenceMarker } = line;
+      const { text, no, info, fenced, isFenceMarker } = line;
       if (stale(no)) continue;
       if (isFenceMarker) {
         if (!inConsole && info === 'console') {
           inConsole = true;
-          exempt = previous.includes('<!-- transcript-literal -->');
+          exempt = applied(previous).includes('<!-- transcript-literal -->');
           command = null;
           echoed = new Set();
         } else if (inConsole) {
@@ -415,7 +457,7 @@ function checkTranscripts(root, docs) {
         continue;
       }
       if (!inConsole) {
-        if (text.trim() !== '') previous = text;
+        if (text.trim() !== '' && !fenced) previous = text;
         continue;
       }
       if (/^\$ /.test(text)) {
