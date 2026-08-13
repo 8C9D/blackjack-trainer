@@ -7,8 +7,10 @@
 /bazel-out
 # The Pages deploy assembles the published site here (.github/workflows/pages.yml,
 # the "Assemble the site" step). On a runner the checkout is fresh so it never
-# matters; run that step locally to verify the workflow and it leaves 28 built
-# files at the repository root, one `git add -A` from being committed.
+# matters; run that step locally to verify the workflow and it leaves 34 entries
+# at the repository root (93 files in all), one `git add -A` from being
+# committed. 28 is a different count - what prettier then flags - and was the
+# number this comment first gave.
 /site
 
 # Node

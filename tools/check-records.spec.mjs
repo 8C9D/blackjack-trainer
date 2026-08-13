@@ -14,8 +14,12 @@ import { anchorsOf, checkRecords, FIGURES, recordsDocs, slug } from './check-rec
  * silently stops matching - a regex that no longer sees a citation, a marker
  * that accidentally exempts everything - does not fail. It passes, on every
  * document, forever, and the round after it reports a clean sweep it never ran.
- * Every test here is therefore a *positive* control: it builds a document with a
- * known defect and asserts the checker still refuses it.
+ * So the tests come in pairs. The important half of each pair is the *positive*
+ * control - a document with a known defect, asserting the checker still refuses
+ * it - and the other half asserts the complement, that a correct document and
+ * each documented escape are accepted, which is what stops a rule from being
+ * satisfied by refusing everything. Not every test is a positive control; saying
+ * so here was itself a wrong claim about this suite (REVIEW-round4-stage1 F10).
  *
  * The fixtures are whole throwaway trees rather than the repository, so a test
  * cannot pass because the real records happen to be clean. Nothing here consults
@@ -504,6 +508,101 @@ describe('the parts that decide what gets checked at all', () => {
         { figures: FIGURES },
       ),
     ).toEqual([]);
+  });
+});
+
+describe('a directive counts only where a directive can be written', () => {
+  const figures = FIGURES;
+
+  it('does not honour a marker printed inside a fenced block', () => {
+    // The census transcript in this round's own artifact prints the marker's
+    // text as part of a `sed`/`node` command. Read as a marker, it froze three
+    // quarters of the document that carried every proof in the round
+    // (REVIEW-round4-stage2 F1).
+    const bad = check(
+      {
+        'reviews/A.md': [
+          '# A',
+          '',
+          '```console',
+          '$ node -e \'s.replace(/<!-- records: historical[^>]*-->/g,"")\'',
+          'STRIPPED_OK=1',
+          '```',
+          '',
+          'And below it, 1547 passed.',
+          '',
+        ].join('\n'),
+      },
+      { figures },
+    );
+    // Both rules still bind below the fence: the label, and the figure.
+    expect(bad).toHaveLength(2);
+    expect(bad.join(' ')).toContain('cannot print it');
+    expect(bad.join(' ')).toContain('states 1547');
+  });
+
+  it('still honours a marker written as a marker', () => {
+    expect(
+      check(
+        { 'reviews/A.md': '# A\n\n<!-- records: historical-file -->\n\n1547 passed.\n' },
+        { figures },
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe('rule 3 reads a command line the way a shell would', () => {
+  function fence(command, label) {
+    return ['# A', '', '```console', `$ ${command}`, label, '```', ''].join('\n');
+  }
+
+  it('does not let an apostrophe in a comment turn the rule off', () => {
+    // An unpaired apostrophe used to read as an open quote, so every remaining
+    // line of the fence became command text and no output was ever checked
+    // (REVIEW-round4-stage2 F3).
+    const bad = check({ 'reviews/A.md': fence("ls   # the app's own output", 'FAKE_EXIT=0') });
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('cannot print it');
+  });
+
+  it('still treats a genuinely open quote as a continuation', () => {
+    expect(
+      check({
+        'reviews/A.md': [
+          '# A',
+          '',
+          '```console',
+          '$ python3 -c "',
+          'print(1)',
+          '"; echo "RUN_EXIT=$?"',
+          'RUN_EXIT=0',
+          '```',
+          '',
+        ].join('\n'),
+      }),
+    ).toEqual([]);
+  });
+});
+
+describe('rule 4 tolerates the coverage jitter it measured', () => {
+  const figures = { ...FIGURES, coverage: [96.06, 92.83, 93.43, 97.89] };
+
+  it('accepts a quadruple one branch away from the pinned one', () => {
+    // 92.87 against a pinned 92.83 is one branch of 2695. Eleven of twelve runs
+    // printed 92.83 and one printed 92.87 (REVIEW-round4-stage2 F9); refusing
+    // that would tell an author their own measurement was wrong.
+    expect(
+      check({ 'reviews/A.md': '# A\n\nCoverage is 96.06 / 92.87 / 93.43 / 97.89.\n' }, { figures }),
+    ).toEqual([]);
+  });
+
+  it('still refuses the superseded quadruple', () => {
+    const bad = check(
+      { 'reviews/A.md': '# A\n\nCoverage is 96.16 / 93.28 / 93.22 / 98.00.\n' },
+      { figures },
+    );
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('coverage quadruple');
   });
 });
 

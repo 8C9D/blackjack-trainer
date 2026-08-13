@@ -9,8 +9,11 @@ import { SERVES_DIST } from './e2e/fixtures/lane';
 // not start, so a second run either fails to start or — twice in round 3 — has
 // its server killed by whoever mistook it for an orphan, costing one invalidated
 // transcript and twelve aborted runs. `E2E_PORT=4300 npm run e2e` runs alongside
-// a run on the default port. It is passed through to `tools/serve-dist.mjs` as
-// `PORT` below, so both halves of the dist lane agree about where to bind.
+// a run on the default port. Both lanes take it: the dist lane passes it to
+// `tools/serve-dist.mjs` as `PORT`, the serve lane to `ng serve` as `--port`. It
+// was wired to the dist lane alone at first, so the very command this comment
+// offers would have waited two minutes for a server binding 4200 and timed out
+// with nothing naming the mismatch (REVIEW-round4-stage2 F6).
 const PORT = Number(process.env.E2E_PORT ?? 4200);
 const baseURL = `http://127.0.0.1:${PORT}`;
 
@@ -47,7 +50,7 @@ export default defineConfig({
     // production bundle has to be looking at this commit's production bundle.
     command: SERVES_DIST
       ? `npm run build && PORT=${PORT} node tools/serve-dist.mjs`
-      : 'npm start -- --host 127.0.0.1',
+      : `npm start -- --host 127.0.0.1 --port ${PORT}`,
     url: baseURL,
     // Attaching to whatever already answers on the port is a convenience for the
     // `serve` lane, where the thing you have running is the thing under test.
