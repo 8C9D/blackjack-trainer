@@ -696,12 +696,12 @@ the gate. A checker cannot be the only thing checking the checker.
 
 Findings discovered after round 4's work list froze. Not fixed in this run.
 
-| id     | severity | evidence                                                                                                                                                                                                                                                                                                              | why it is not in this run                                                                                                                                                                                                               |
-| ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **K4** | P3       | Closed-round records publish an exit label as the output of a command that cannot print it **103 times**, across eleven files, worst in `REVIEW-round3-stage2.md` (25) and `ARTIFACTS-round3.md` (18). Measured by stripping the historical markers and re-running the records gate; the census is in the artifact.   | Fixing one means writing the `echo` that produced the label, and nobody knows what was actually typed. Reconstructing it would be manufacturing a transcript - a worse defect than the one being fixed. Left marked, counted and named. |
-| **K5** | P2       | No gate raises a **real** update banner against a production bundle. K3's two halves cover the CSS and the measurement's ordering; neither drives a service-worker `VERSION_READY`, which needs a second deployed build.                                                                                              | Smaller than K3 was, and genuinely blocked on infrastructure this round could not build: two builds and a worker update, not a test.                                                                                                    |
-| **K6** | P3       | The coverage gate's branch headroom is now **0.89 points** (92.89% against a floor of 92), down from 1.28, because the report gained a partially covered tool. The floors were tuned against a `src/**`-only baseline and no longer describe what is measured.                                                        | Re-tuning coverage floors is a judgement about what the gate should refuse, not a defect, and it belongs with whoever owns the thresholds.                                                                                              |
-| **K7** | P3       | `tools/serve-dist.spec.mjs`'s header comment says `@types/node` "is not a dependency and installing one needs the network", and explains the file's `.mjs` choice by it. Round 3 added `@types/node` from the local npm cache (M1), so the stated reason no longer holds - the file's rationale outlived its premise. | A source comment in a passing test, found while reading for M3. Correcting it is a one-line judgement about whether the `.mjs` choice still stands, which is a different question.                                                      |
+| id     | severity | evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | why it is not in this run                                                                                                                                                                                                               |
+| ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **K4** | P3       | Closed-round records publish an exit label as the output of a command that cannot print it **103 times**, across eleven files, worst in `REVIEW-round3-stage2.md` (25) and `ARTIFACTS-round3.md` (18). Measured by stripping the historical markers and re-running the records gate; the census is in the artifact.                                                                                                                                                                                        | Fixing one means writing the `echo` that produced the label, and nobody knows what was actually typed. Reconstructing it would be manufacturing a transcript - a worse defect than the one being fixed. Left marked, counted and named. |
+| **K5** | P2       | No gate raises a **real** update banner against a production bundle. K3's two halves cover the CSS and the measurement's ordering; neither drives a service-worker `VERSION_READY`, which needs a second deployed build.                                                                                                                                                                                                                                                                                   | Smaller than K3 was, and genuinely blocked on infrastructure this round could not build: two builds and a worker update, not a test.                                                                                                    |
+| **K6** | P3       | The coverage gate's branch headroom is now **0.83 points** (92.83% against a floor of 92), down from 1.28, because the report gained a partially covered tool. The stage-1 reviewer also measured the branch figure moving between runs mid-round (92.29 and 92.33); three consecutive runs at the tip did not move, but a figure the records gate pins must not drift, and nothing here proves it cannot. The floors were tuned against a `src/**`-only baseline and no longer describe what is measured. | Re-tuning coverage floors is a judgement about what the gate should refuse, not a defect, and it belongs with whoever owns the thresholds.                                                                                              |
+| **K7** | P3       | `tools/serve-dist.spec.mjs`'s header comment says `@types/node` "is not a dependency and installing one needs the network", and explains the file's `.mjs` choice by it. Round 3 added `@types/node` from the local npm cache (M1), so the stated reason no longer holds - the file's rationale outlived its premise.                                                                                                                                                                                      | A source comment in a passing test, found while reading for M3. Correcting it is a one-line judgement about whether the `.mjs` choice still stands, which is a different question.                                                      |
 
 ## What round 4 actually changed
 
@@ -729,6 +729,55 @@ no P3 item moved to NEXT ROUND, and nothing was dropped.
 
 Four findings discovered while verifying others (K4, K5, K6, K7) are in ROUND 4 NEXT ROUND, named with
 their evidence rather than taken quietly.
+
+## Gates at the end of round 4
+
+Every gate re-run at `0fbe138`. Gate 5's two measurements ran while the stage-2 reviewer was working in
+a separate worktree on a separate port, which is the arrangement K2's fix exists to allow; the load
+that puts on the machine can only make a timing-sensitive suite more likely to fail, so ten green runs
+under it is a stronger result than ten green runs idle, not a weaker one.
+
+| #   | gate              | exit | result                                                                    |
+| --- | ----------------- | ---- | ------------------------------------------------------------------------- |
+| 1   | lint              | 0    | `tsc` x3 projects + prettier + the records gate: 27 documents, no defects |
+| 2   | build             | 0    | the inherited chart-page budget warning (P2-2), unchanged                 |
+| 3   | unit tests        | 0    | 68 files, 1593 passed                                                     |
+| 4   | coverage gate     | 0    | 96.06 / 92.83 / 93.43 / 97.89                                             |
+| 5   | E2E               | 0    | `115 passed`, and see the distribution below                              |
+| 6   | parity anti-drift | 0    | 7 fixtures written, `git diff --exit-code -- ios/Fixtures` clean          |
+| 7   | swiftformat       | 0    | 0/105 files require formatting                                            |
+| 8   | swiftlint         | 0    | 0 violations, 0 serious in 105 files                                      |
+| 9   | iOS build + test  | 0    | `** TEST SUCCEEDED **`, 335 tests in 38 suites                            |
+
+**Nine of nine green**, as at the baseline. Gate 1 now runs a tenth check inside itself.
+
+Three figures moved against the baseline and each is accounted for:
+
+- unit tests 1551 -> 1593: 41 for the records gate's own spec, 1 for K3's ordering test. <!-- figure-historical -->
+- E2E 111 -> 115: K3's four CSS-half tests.
+- coverage moved to 96.06 / 92.83 / 93.43 / 97.89, from a baseline of
+  96.16 / 93.28 / 93.22 / 98.00. <!-- figure-historical -->
+  The report gained `tools/check-records.mjs`, covered at 94.14 / 86.45 / 100 / 95.69, which drags the
+  totals down while adding real coverage of a release gate. Branch headroom over the 92 floor is 0.83;
+  finding K6.
+
+### Gate 5 as a distribution and as a rate, before and after
+
+| when                        | commit    | full-suite runs | failures | 2-spec executions | failures |
+| --------------------------- | --------- | --------------- | -------- | ----------------- | -------- |
+| baseline, before any change | `f5e8fc8` | 10              | **0**    | 200               | **0**    |
+| closing, all changes        | `0fbe138` | 10              | **0**    | 200               | **0**    |
+
+Twenty full-suite runs and 400 executions of the two tests round 3 patched, across the round, with
+zero failures. The per-execution half is the one that carries weight: against round 3's pooled
+before-rate for the M2 test of 5.5% per execution, `0.945^200 = 1.22e-5`, so 200 clean executions
+would happen about one time in 82,000 if that rate still held. What it does not establish is that the
+rate is zero - the exact 95% upper bound given 0 of 200 is **1.49%** per execution - only that it is
+not what it was. No round-3 regression appeared in either block.
+
+The full-suite instrument remains one observation per test per run, which is why both are reported.
+Round 3 measured 0 of 10 full-suite runs for a defect that was really 33 in 600 executions, and that
+is the reason this round measures the gate twice, two ways, at both ends.
 
 # Citation bindings
 
