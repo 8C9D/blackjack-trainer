@@ -41,7 +41,8 @@ printed by the gate, so it rises as reviews land rather than being a figure stat
   absent in a checkout with no `main` ref, so the rule would have gone on reporting success while
   checking nothing - the failure this gate's own header names. REVIEW-round4-stage1 F5 demonstrated it
   by breaking a binding in a repository where `main` resolved to `HEAD` and watching the gate pass.
-  There is no git in rule 2 any more, at the price of 48 further bindings.
+  There is no git in rule 2 any more, at the price of pinning every citation in both documents: 65
+  markers in the ledger (57 bindings, 8 historical) and 19 in this file (10 and 9).
 
 - **Rule 2 does not demand bindings from a reviewer's file**, only from the ledger and the artifacts.
   A reviewer cites lines constantly and a binding requirement would be a tax on review, not on
@@ -546,6 +547,22 @@ Adding a covered tool to the report moved every percentage, and the branches flo
 | lines      | 98.00    | **97.89** | 96    | 1.89     |
 
 <!-- figure-historical -->
+
+REVIEW-round4-stage1 (F3) reported the branch figure as not reproducible, measuring 92.29 once and
+92.33 twice. Re-measured here three times in a row at the tip, it did not move:
+
+```console
+$ for i in 1 2 3; do npm run test:coverage > $S/cov-rep$i.txt 2>&1; echo "run$i exit=$? $(sed 's/\x1b\[[0-9;]*m//g' $S/cov-rep$i.txt | grep -E 'Statements|Branches|Functions|Lines' | tr '\n' ' ')"; done
+run1 exit=0 Statements   : 96.06% ( 5547/5774 ) Branches     : 92.83% ( 2502/2695 ) Functions    : 93.43% ( 954/1021 ) Lines        : 97.89% ( 4286/4378 )
+run2 exit=0 Statements   : 96.06% ( 5547/5774 ) Branches     : 92.83% ( 2502/2695 ) Functions    : 93.43% ( 954/1021 ) Lines        : 97.89% ( 4286/4378 )
+run3 exit=0 Statements   : 96.06% ( 5547/5774 ) Branches     : 92.83% ( 2502/2695 ) Functions    : 93.43% ( 954/1021 ) Lines        : 97.89% ( 4286/4378 )
+```
+
+Identical to the last decimal, three times. That does not disprove the reviewer's observation - they
+measured a different tree, mid-remediation - but it does mean the figure the gate pins is stable at the
+commit it is pinned against, and it is the reason the gate can pin a figure at all. If it ever does
+drift, rule 4 turns a flaky measurement into a red gate, which is the failure mode to watch: named as
+part of **K6**.
 
 The first measurement after the checker landed was worse - 92.33% branches, 0.33 above the floor -
 because the checker's own uncovered paths went straight into the denominator. Eight more tests for the
