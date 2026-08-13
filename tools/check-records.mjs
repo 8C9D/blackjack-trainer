@@ -59,8 +59,8 @@ import { fileURLToPath } from 'node:url';
 export const FIGURES = {
   // The count at the round's tip, not at its baseline. `reviews/BASELINE-round4.md`
   // states the baseline's 1551 on purpose and marks those two lines as such.
-  unitTests: 1600,
-  coverage: [96.1, 93.09, 93.46, 97.9],
+  unitTests: 1609,
+  coverage: [96.1, 93.11, 93.46, 97.9],
   m2: { failures: 33, executions: 600, rate: 5.5 },
 };
 
@@ -73,13 +73,17 @@ export const FIGURES = {
  * eleven printed 92.83% and one printed 92.87% - one branch out of 2695, which
  * is 0.037 points (REVIEW-round4-stage2 F9). Pinning to two decimals would
  * therefore refuse a record stating a figure its author had just measured, about
- * one time in twelve, and tell them their true number was wrong. This tolerance
- * absorbs that jitter and still refuses the round-3 baseline quadruple - but the
- * margin is thin: at the figures pinned above, that quadruple's nearest
- * component is 0.06, one hundredth of a point outside the tolerance. A test
- * asserts both ends of that window against `FIGURES` itself, so moving the pin
- * closer to the baseline than the tolerance fails loudly rather than quietly
- * widening the gate's blind spot (REVIEW-round4-stage3 F7).
+ * one time in twelve, and tell them their true number was wrong.
+ *
+ * The other end of the window is how wide this can get before a superseded
+ * quadruple slips through. A quadruple is refused when *any* of its four
+ * components is outside tolerance, so what governs that is the **largest**
+ * component difference, not the smallest: against the round-3 baseline the
+ * largest is 0.24, so the refusal survives any tolerance below it. Two earlier
+ * versions of this comment got that backwards and quoted the smallest - 0.10,
+ * then 0.06 - which read as a margin of one hundredth of a point where the real
+ * margin is nearly five times the jitter (REVIEW-round4-stage3 F7,
+ * REVIEW-round4-stage4 F8). A test holds both ends against `FIGURES` itself.
  */
 const COVERAGE_TOLERANCE = 0.05;
 
@@ -128,29 +132,42 @@ export function anchorsOf(markdown) {
 function lines(markdown) {
   let fence = null;
   return markdown.split('\n').map((text, i) => {
-    // Both fence syntaxes. Knowing only backticks meant "not inside a fenced
-    // block" quietly meant "not inside a backtick fence" (REVIEW-round4-stage3
-    // F6).
-    const open = /^\s*(?:```+|~~~+) *([A-Za-z0-9_-]*)/.exec(text);
-    if (open && fence === null) {
-      fence = open[1] || 'plain';
-      return { text, no: i + 1, fenced: true, info: fence, isFenceMarker: true };
+    // Both fence syntaxes, closed the way CommonMark closes them: by the same
+    // character, at least as long as the opener. Accepting either delimiter for
+    // either opener let a `~~~` line *printed inside* a console fence end that
+    // fence as far as this file was concerned, while a reader still saw one
+    // block - which made the gate strictly weaker than before the fix
+    // (REVIEW-round4-stage4 F6).
+    const delim = /^\s*(`{3,}|~{3,}) *([A-Za-z0-9_-]*)\s*$/.exec(text);
+    if (delim && fence === null) {
+      fence = { char: delim[1][0], length: delim[1].length, info: delim[2] || 'plain' };
+      return {
+        text,
+        no: i + 1,
+        fenced: true,
+        indented: false,
+        info: fence.info,
+        isFenceMarker: true,
+      };
     }
-    if (open && fence !== null) {
-      const info = fence;
+    if (delim && fence !== null && delim[1][0] === fence.char && delim[1].length >= fence.length) {
+      const info = fence.info;
       fence = null;
-      return { text, no: i + 1, fenced: true, info, isFenceMarker: true };
+      return { text, no: i + 1, fenced: true, indented: false, info, isFenceMarker: true };
     }
-    // A four-space indent is a code block in markdown, and a directive written
-    // in one is a directive nobody can see rendered. Treated as code even
-    // outside a fence: the failure this errs towards is a visible refusal, and
-    // the one it errs away from is a silent exemption.
+    // A four-space indent is a code block in markdown, so a directive written in
+    // one is a directive nobody can see rendered. It is reported separately from
+    // `fenced` and used for directives only: making it mean "code" outright
+    // exempted every citation and link on such a line from rules 1 and 2, which
+    // is a silent exemption and the opposite of what was wanted
+    // (REVIEW-round4-stage4 F7).
     const indented = fence === null && /^ {4,}\S/.test(text);
     return {
       text,
       no: i + 1,
-      fenced: fence !== null || indented,
-      info: fence,
+      fenced: fence !== null,
+      indented,
+      info: fence?.info ?? null,
       isFenceMarker: false,
     };
   });
@@ -173,8 +190,8 @@ function exemptions(doc) {
   let wholeFile = false;
   const marked = new Set();
   let active = false;
-  for (const { text, no, fenced } of lines(doc)) {
-    const live = markersIn(text, fenced);
+  for (const { text, no, fenced, indented } of lines(doc)) {
+    const live = markersIn(text, fenced || indented);
     if (!fenced && /^# /.test(text)) active = false;
     if (live.includes('historical-file')) wholeFile = true;
     if (live.includes('historical')) active = true;
@@ -226,7 +243,7 @@ function applied(text) {
  */
 function directiveText(doc) {
   return lines(doc)
-    .filter((line) => !line.fenced)
+    .filter((line) => !line.fenced && !line.indented)
     .map((line) => applied(line.text))
     .join('\n');
 }
@@ -538,7 +555,7 @@ function checkFigures(root, docs, figures) {
     const body = readDoc(root, doc);
     const { stale } = exemptions(body);
     const all = lines(body);
-    all.forEach(({ text, no, fenced, info }, i) => {
+    all.forEach(({ text, no, fenced, indented, info }) => {
       if (stale(no)) return;
       if (fenced && info === 'console') return;
       // The marked line and nothing else. Reaching to the *next* line as well
@@ -546,7 +563,7 @@ function checkFigures(root, docs, figures) {
       // the baseline's coverage row purely because of its neighbour
       // (REVIEW-round4-stage1 F4). A figure wrapped away from its marker now
       // has to carry its own.
-      if (!fenced && applied(text).includes('<!-- figure-historical -->')) return;
+      if (!fenced && !indented && applied(text).includes('<!-- figure-historical -->')) return;
       for (const sweep of sweeps) {
         if (sweep.only && !sweep.only.test(text)) continue;
         for (const m of text.matchAll(sweep.re)) {

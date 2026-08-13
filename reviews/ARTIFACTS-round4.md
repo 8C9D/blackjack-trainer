@@ -56,7 +56,7 @@ printed by the gate, so it rises as reviews land rather than being a figure stat
   passes. The set is the one the brief names, and adding to it is one line in `FIGURES`.
 - **Rule 3 accepts an echo on any _command line_ in the same fence**, not only on the owning one. The
   brief's wording is stricter, and the reason for the relaxation is a real and honest form: the iOS
-  gates echo their labels into a file and the file is then printed. Every one of the 103 real
+  gates echo their labels into a file and the file is then printed. Every one of the 105 real
   instances in the census below is still refused, because none of those fences contains the echo at
   all. Output lines are not scanned for echoes, which is the whole point - a fabricated label line
   cannot license itself.
@@ -276,24 +276,31 @@ for(const f of readdirSync("reviews")){if(!f.endsWith(".md"))continue;const p="r
  const s=readFileSync(p,"utf8");writeFileSync(p,s.replace(/<!-- records: historical[^>]*-->/g,""));}
 writeFileSync("PROD-READINESS.md",readFileSync("PROD-READINESS.md","utf8").replace(/<!-- records: historical[^>]*-->/g,""));
 console.log("STRIPPED_OK=1");
-'; node tools/check-records.mjs > $S/census2.txt 2>&1; echo "CENSUS_EXIT=$?"; head -1 $S/census2.txt; echo "rule 3 transcripts: $(grep -c 'block prints' $S/census2.txt)"; echo "rule 4 figures:     $(grep -cE 'unit-test count|coverage quadruple|pooled M2' $S/census2.txt)"; grep 'block prints' $S/census2.txt | sed -E 's/^  ([^:]+):.*/\1/' | sort | uniq -c | sort -rn
+'; node tools/check-records.mjs > $S/census4.txt 2>&1; echo "CENSUS_EXIT=$?"; head -1 $S/census4.txt; echo "rule 3 transcripts: $(grep -c 'block prints' $S/census4.txt)"; echo "rule 4 figures:     $(grep -cE 'unit-test count|coverage quadruple|pooled M2' $S/census4.txt)"; grep 'block prints' $S/census4.txt | sed -E 's/^  ([^:]+):.*/\1/' | sort | uniq -c | sort -rn; cp -R $S/keep2/reviews/. reviews/ && cp $S/keep2/ledger.md PROD-READINESS.md; echo "RESTORED_EXIT=$?"; node tools/check-records.mjs; echo "GATE_AFTER_RESTORE_EXIT=$?"
 STRIPPED_OK=1
 CENSUS_EXIT=1
-records: 276 defect(s)
+records: 275 defect(s)
 rule 3 transcripts: 105
-rule 4 figures:     114
+rule 4 figures:     113
   25 reviews/REVIEW-round3-stage2.md
   18 reviews/ARTIFACTS-round3.md
   17 reviews/REVIEW-round2-stage2.md
   10 reviews/REVIEW-round3-stage1.md
   10 reviews/ARTIFACTS-round2.md
    8 reviews/REVIEW-round3-closing.md
-    6 reviews/REVIEW-round3-stage3.md
+   6 reviews/REVIEW-round3-stage3.md
    4 reviews/REVIEW-round3-closing2.md
    3 reviews/REVIEW-round3-final.md
    2 reviews/REVIEW-round2-stage3.md
    2 reviews/REVIEW-round2-final.md
+RESTORED_EXIT=0
+records: 30 documents checked, no defects
+GATE_AFTER_RESTORE_EXIT=0
 ```
+
+The tree is copied aside before the strip and copied back after it (`$S/keep2`), and the gate is re-run at the
+end to show it came back - the first version of this census reverted with `git checkout -- reviews/`, which also
+throws away uncommitted work.
 
 The number that matters is **105**: closed-round records publish an exit label as the output of a
 command that cannot print it 105 times. Round 3 found two instances of this by reading (R3-15, R3-27)
@@ -310,7 +317,7 @@ measurement, not a fact, and so is every count in this document.
 They are not fixed here, and the reason is not effort. Fixing one means writing the `echo` that
 produced the label, and **nobody knows what was actually typed** - reconstructing it would be
 manufacturing the transcript, which is a worse defect than the one being fixed. They are left marked,
-counted, and named as finding **K4** in NEXT ROUND. The 114 figure hits are almost entirely dated,
+counted, and named as finding **K4** in NEXT ROUND. The 113 figure hits are almost entirely dated,
 legitimate history (round 1's `1526 tests`, round 3's baseline `1547`); they are not a defect count. <!-- figure-historical -->
 
 One more caution, learned by running it: the first attempt reverted with
@@ -319,35 +326,31 @@ run above copies the two paths aside first and copies them back, which is safe a
 
 ### Its own tests
 
-`tools/check-records.spec.mjs`, 47 tests, run by the unit gate via `angular.json`'s
-`../tools/**/*.spec.mjs` include. The failure mode being guarded against is specific: a records checker
-whose regex stops matching does not fail, it passes forever, and the round that trusts it gets a clean
-sweep that never ran.
+`tools/check-records.spec.mjs`, run by the unit gate via `angular.json`'s `../tools/**/*.spec.mjs`
+include. The failure mode being guarded against is specific: a records checker whose regex stops
+matching does not fail, it passes forever, and the round that trusts it gets a clean sweep that never
+ran.
 
-So the tests come in pairs, and the important half of each pair is the **positive** control - a
-throwaway document tree with a known defect, asserting the checker still refuses it. Counted from the
-file at this commit, in buckets that do partition it: 20 assert only a refusal, 21 assert only an
-acceptance (a correct document, or one of the documented escapes), 1 asserts both, and 5 are unit tests
-of the slug and anchor helpers that assert neither - 47. The acceptance half is not filler; it is what
-stops a rule from being satisfied by refusing everything.
-
-Two earlier versions of this paragraph were wrong about this same suite, which is worth leaving on the
-page. The first called every test a positive control (REVIEW-round4-stage1 F10). The correction to that
-published a breakdown summing to one more than the suite, by counting the one both-ways test in two
-buckets (REVIEW-round4-stage2 F4). The sentence in the spec's own header carried the first error a
-commit longer than this document did, and is fixed too.
+So the tests come in pairs. The important half of each pair is the **positive** control - a throwaway
+document tree with a known defect, asserting the checker still refuses it. The other half asserts the
+complement, that a correct document and each documented escape are accepted, which is what stops a
+rule from being satisfied by refusing everything. Most of the suite is the first kind, and the largest
+single group is one fixture per marker escape found during this round's reviews.
 
 ```console
-$ npx ng test --include="../tools/check-records.spec.mjs" > $S/spec-final.txt 2>&1; echo "SPEC_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/spec-final.txt | grep -E 'Test Files|Tests '
+$ npx ng test --include="../tools/check-records.spec.mjs" > $S/z-spec.txt 2>&1; echo "SPEC_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/z-spec.txt | grep -E 'Tests '
 SPEC_EXIT=0
- Test Files  1 passed (1)
-      Tests  47 passed (47)
+      Tests  57 passed (57)
 ```
 
-This transcript printed `34` for two commits after the suite had grown past it, under a paragraph that
-said 47 (REVIEW-round4-stage2 F4, again as REVIEW-round4-stage3 F3). Rule 4 does not know the suite's
-size, so nothing but a person re-running it stands between this number and the next wrong one - which
-is the honest reason it was wrong twice.
+**No count of this suite appears anywhere else in the round's records, and that is deliberate.** Its
+size was published wrong four times - 34, then 41, then 47, then a partition of 20 + 21 + 1 + 5 that
+summed to one less than the suite and put the newest test in none of its buckets (REVIEW-round4-stage1
+F10, stage-2 F4, stage-3 F3, stage-4 F1). Each correction was written in a commit that added another
+test. Rule 4 does not track this figure, so nothing but a person re-running the command stood between
+it and the next wrong value, and four people in a row lost that bet. The partition is gone rather than
+corrected a fifth time: a number that must be re-derived by hand every time the file changes is a
+defect generator, and the transcript above is the only place the size is stated.
 
 ### Gates at the stage-1 commit
 
@@ -374,7 +377,7 @@ because the first version of this block was published against an earlier one and
 longer reproduced (REVIEW-round4-stage2 F7):
 
 ```console
-$ npm run lint > $S/pre2.txt 2>&1; echo "LINT_BEFORE_MUTATION_EXIT=$?"; python3 -c "
+$ npm run lint > $S/pre3.txt 2>&1; echo "LINT_BEFORE_MUTATION_EXIT=$?"; python3 -c "
 for p in ['src/app/features/home/home-page.component.scss','src/app/features/drill/drill-page.scss','src/app/features/card-counting/card-counting-page.component.scss']:
     s=open(p).read()
     s=s.replace('min-height: calc(100vh - var(--update-space, 0px));','min-height: 100vh;')
@@ -383,14 +386,13 @@ for p in ['src/app/features/home/home-page.component.scss','src/app/features/dri
 p='src/app/app.scss'; s=open(p).read()
 open(p,'w').write(s.replace('  padding-bottom: var(--update-space, 0px);\n',''))
 print('K3 reserve deleted from all four files')
-"; echo "MUTATE_EXIT=$?"; npm run lint > $S/k3e-lint.txt 2>&1; echo "K3_LINT_MUTANT_EXIT=$?"; npm test > $S/k3e-test.txt 2>&1; echo "K3_TEST_MUTANT_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/k3e-test.txt | grep -E 'Tests '; npm run build > $S/k3e-build.txt 2>&1; echo "K3_BUILD_MUTANT_EXIT=$?"; git checkout -- src/app/app.scss src/app/features/home/home-page.component.scss src/app/features/drill/drill-page.scss src/app/features/card-counting/card-counting-page.component.scss; echo "RESTORE_EXIT=$?"
-K3 reserve deleted from all four files
+"; echo "MUTATE_EXIT=$?"; npm run lint > $S/k3f-lint.txt 2>&1; echo "K3_LINT_MUTANT_EXIT=$?"; npm test > $S/k3f-test.txt 2>&1; echo "K3_TEST_MUTANT_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/k3f-test.txt | grep -E 'Tests '; npm run build > $S/k3f-build.txt 2>&1; echo "K3_BUILD_MUTANT_EXIT=$?"; git checkout -- src/app/app.scss src/app/features/home/home-page.component.scss src/app/features/drill/drill-page.scss src/app/features/card-counting/card-counting-page.component.scss; echo "RESTORE_EXIT=$?"
 LINT_BEFORE_MUTATION_EXIT=0
 K3 reserve deleted from all four files
 MUTATE_EXIT=0
 K3_LINT_MUTANT_EXIT=0
 K3_TEST_MUTANT_EXIT=0
-      Tests  1600 passed (1600)
+      Tests  1609 passed (1609)
 K3_BUILD_MUTANT_EXIT=0
 RESTORE_EXIT=0
 ```
@@ -536,19 +538,20 @@ version of this block was published against an earlier one and its document coun
 (REVIEW-round4-stage2 F7):
 
 ```console
-$ npm run build -- --base-href /blackjack-trainer/ > $S/k1b-build.txt 2>&1; echo "K1_BUILD_EXIT=$?"; mkdir -p site && cp -R dist/blackjack-trainer/browser/. site/ && cp ios/AppStore/privacy.html ios/AppStore/support.html site/ && cp site/index.html site/404.html; echo "K1_ASSEMBLE_EXIT=$?"; echo "SITE_TOPLEVEL=$(ls site | wc -l | tr -d ' ') SITE_FILES=$(find site -type f | wc -l | tr -d ' ')"; npm run lint > $S/k1b-lint.txt 2>&1; echo "K1_LINT_WITH_IGNORE_EXIT=$?"; tail -2 $S/k1b-lint.txt; echo "GIT_SEES_SITE=$(git status --porcelain | grep -c 'site/')"
+$ npm run build -- --base-href /blackjack-trainer/ > $S/z-k1build.txt 2>&1; echo "K1_BUILD_EXIT=$?"; mkdir -p site && cp -R dist/blackjack-trainer/browser/. site/ && cp ios/AppStore/privacy.html ios/AppStore/support.html site/ && cp site/index.html site/404.html; echo "K1_ASSEMBLE_EXIT=$?"; echo "SITE_TOPLEVEL=$(ls site | wc -l | tr -d ' ') SITE_FILES=$(find site -type f | wc -l | tr -d ' ')"; npm run lint > $S/z-k1lint.txt 2>&1; echo "K1_LINT_WITH_IGNORE_EXIT=$?"; grep -E 'All matched files|records:' $S/z-k1lint.txt; echo "GIT_SEES_SITE=$(git status --porcelain --untracked-files=all | grep -c site/)"; rm -rf site; echo "CLEANUP_EXIT=$?"
 K1_BUILD_EXIT=0
 K1_ASSEMBLE_EXIT=0
 SITE_TOPLEVEL=34 SITE_FILES=93
 K1_LINT_WITH_IGNORE_EXIT=0
 All matched files use Prettier code style!
-records: 28 documents checked, no defects
+records: 30 documents checked, no defects
 GIT_SEES_SITE=0
+CLEANUP_EXIT=0
 ```
 
 Green **with `site/` still on disk** - 34 entries, 93 files - which is the point: the fix is that the
-tree may exist, not that it was deleted. Git does not see it either. It was removed afterwards with
-`rm -rf site`, a directory this run created.
+tree may exist, not that it was deleted. Git does not see it either, and the same command removes it
+again, so the fence begins and ends with the tree in the state it found it.
 
 **RESOLVED.**
 

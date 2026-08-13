@@ -88,7 +88,7 @@ Ordered by priority. Each item states its own done-when so completion is checkab
       Hard 4 confirmed still unreachable: web `parseScenarioKey('hard-4-v-6')` → null (existing test), iOS chart rows start at 5 and `scenarioRefFor` classifies 2,2 as a pair, so no hard-4 ref is ever recorded — its same-value fallback in `hardTotalCards` stays defensive-only.
       Verified: web 1518 green, iOS 327 green, `export:fixtures` diff clean, prettier/eslint/swiftformat/swiftlint clean._
       `src/app/features/drill/drill-hand.ts:242` and `ios/BlackjackTrainer/Flow/DrillHand.swift:124` enumerate only `a < b` pairs, so hard 20 has no candidate and falls through to a same-value pair.
-      Both charts render hard rows through 20 (`chart-page.component.ts:53`, `StrategyChart.swift:15`), so the cell drills `Q,Q`, asks "10,10 vs 10", offers Split, and files misses under `pair-10-v-10`.
+      Both charts render hard rows through 20 (`chart-page.component.ts:60`, `StrategyChart.swift:15`), so the cell drills `Q,Q`, asks "10,10 vs 10", offers Split, and files misses under `pair-10-v-10`.
       Reproduce first with a failing test on each platform, then fix.
       **Done when:** drilling hard 20 deals a non-pair hard 20, the banner and question agree, Split is not offered, the miss files under `hard-20-v-*`, the unreachable hard-4 path is confirmed still unreachable, and both suites are green.
 
