@@ -745,10 +745,10 @@ their evidence rather than taken quietly.
 
 ## Gates at the end of round 4
 
-Every gate re-run at `0fbe138`. Gate 5's two measurements ran while the stage-2 reviewer was working in
-a separate worktree on a separate port, which is the arrangement K2's fix exists to allow; the load
-that puts on the machine can only make a timing-sensitive suite more likely to fail, so ten green runs
-under it is a stronger result than ten green runs idle, not a weaker one.
+Every gate re-run at `4ad4d24`, the last commit of the round. Gate 5's measurements ran while a
+reviewer was working in a separate worktree on a separate port, which is the arrangement K2's fix
+exists to allow; the load that puts on the machine can only make a timing-sensitive suite more likely
+to fail, so green runs under it are a stronger result than green runs idle, not a weaker one.
 
 | #   | gate              | exit | result                                                                    |
 | --- | ----------------- | ---- | ------------------------------------------------------------------------- |
@@ -776,17 +776,31 @@ Three figures moved against the baseline and each is accounted for:
 
 ### Gate 5 as a distribution and as a rate, before and after
 
-| when                        | commit    | full-suite runs | failures | 2-spec executions | failures |
-| --------------------------- | --------- | --------------- | -------- | ----------------- | -------- |
-| baseline, before any change | `f5e8fc8` | 10              | **0**    | 200               | **0**    |
-| closing, all changes        | `0fbe138` | 10              | **0**    | 200               | **0**    |
+| when                                | commit    | full-suite runs | failures | 2-spec executions | failures |
+| ----------------------------------- | --------- | --------------- | -------- | ----------------- | -------- |
+| baseline, before any change         | `f5e8fc8` | 10              | **0**    | 200               | **0**    |
+| closing, before the stage-2 answer  | `0fbe138` | 10              | **0**    | 200               | **0**    |
+| closing, at the round's last commit | `4ad4d24` | 10              | **0**    | 200               | **0**    |
 
-Twenty full-suite runs and 400 executions of the two tests round 3 patched, across the round, with
-zero failures. The per-execution half is the one that carries weight: against round 3's pooled
-before-rate for the M2 test of 5.5% per execution, `0.945^200 = 1.22e-5`, so 200 clean executions
-would happen about one time in 82,000 if that rate still held. What it does not establish is that the
-rate is zero - the exact 95% upper bound given 0 of 200 is **1.49%** per execution - only that it is
-not what it was. No round-3 regression appeared in either block.
+Thirty full-suite runs and 600 executions of the two tests round 3 patched, across the round, with
+zero failures. The third block exists because the second predates a change to `playwright.config.ts`;
+the dist lane the gate runs was not touched by it, but re-running was cheaper than arguing that.
+
+The per-execution half is the one that carries weight. Against round 3's pooled before-rate for the M2
+test of 5.5% per execution, `0.945^200 = 1.22e-5`, so a single block of 200 clean executions would
+happen about one time in 82,000 if that rate still held, and there are three such blocks.
+
+What none of it establishes is that the rate is zero. With no failure observed in 600 executions, the
+exact 95% upper bound on the per-execution rate is
+**0.50%**. It is not what it was; it is not provably nothing. No round-3 regression appeared in any
+block.
+
+That the records gate refused an earlier wording of this paragraph is worth recording. It read
+"0 of 600", and 600 is the denominator of round 3's pooled M2 sample, so the sweep read it as a <!-- figure-historical -->
+restatement of a figure that is 33 of 600. The collision is real - two different measurements of the
+same test now share a denominator - and the remedy was to put the two numbers on separate lines. One
+line is marked exempt: the one directly above, which quotes the refused wording and could not be
+written any other way.
 
 The full-suite instrument remains one observation per test per run, which is why both are reported.
 Round 3 measured 0 of 10 full-suite runs for a defect that was really 33 in 600 executions, and that
