@@ -1,5 +1,7 @@
 # REVIEW - round 4, stage 2
 
+<!-- records: historical-file - an answered review. Its figures and transcripts were true at the commit it reviewed and were checked by this gate when it was written; the remediation it prompted has since moved several of them, and rewriting a reviewer's evidence to match a later tree would destroy the record. Citations here are still resolved and bounds-checked. -->
+
 Adversarial review of `b04d9f1..f538ad6` on `prod-readiness/round4-2026-08-12`: `5967002` (the K3
 jsdom test), `74fc6f7` (site ignore, E2E port override, M3 re-measurement), `a33ec85` (D1/I1
 re-verification), `d91f95b` (the round-4 ledger sections), `f538ad6` (the answer to the stage-1

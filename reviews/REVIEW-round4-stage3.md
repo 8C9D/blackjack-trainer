@@ -1,5 +1,7 @@
 # REVIEW - round 4, stage 3
 
+<!-- records: historical-file - an answered review. Its figures and transcripts were true at the commit it reviewed and were checked by this gate when it was written; the remediation it prompted has since moved several of them, and rewriting a reviewer's evidence to match a later tree would destroy the record. Citations here are still resolved and bounds-checked. -->
+
 Adversarial review of `f538ad6..4ad4d24` on `prod-readiness/round4-2026-08-12`: `3834053` (two published
 counts made measurable), `60128a5` (the marker-leak attack), `470659d` (the second self-catch), `0fbe138`
 (the baseline's three marked lines), `152aee2` (the closing gate section), and `4ad4d24` (the answer to
