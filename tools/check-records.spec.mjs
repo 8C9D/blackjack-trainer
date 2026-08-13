@@ -585,24 +585,38 @@ describe('rule 3 reads a command line the way a shell would', () => {
 });
 
 describe('rule 4 tolerates the coverage jitter it measured', () => {
-  const figures = { ...FIGURES, coverage: [96.06, 92.83, 93.43, 97.89] };
+  // Against `FIGURES` itself, not a copy: the margin that matters is the one the
+  // gate actually enforces, and a fixture with its own numbers cannot notice
+  // when moving `FIGURES` narrows it (REVIEW-round4-stage3 F7).
+  const [cs, cb, cf, cl] = FIGURES.coverage;
+  const quad = (...q) => q.map((n) => n.toFixed(2)).join(' / ');
 
   it('accepts a quadruple one branch away from the pinned one', () => {
-    // 92.87 against a pinned 92.83 is one branch of 2695. Eleven of twelve runs
-    // printed 92.83 and one printed 92.87 (REVIEW-round4-stage2 F9); refusing
-    // that would tell an author their own measurement was wrong.
+    // One branch of 2702 is 0.037 points. Eleven of twelve runs printed 92.83
+    // and one printed 92.87 (REVIEW-round4-stage2 F9); refusing that would tell
+    // an author their own measurement was wrong.
     expect(
-      check({ 'reviews/A.md': '# A\n\nCoverage is 96.06 / 92.87 / 93.43 / 97.89.\n' }, { figures }),
+      check({ 'reviews/A.md': `# A\n\nCoverage is ${quad(cs, cb + 0.04, cf, cl)}.\n` }),
     ).toEqual([]);
   });
 
-  it('still refuses the superseded quadruple', () => {
-    const bad = check(
-      { 'reviews/A.md': '# A\n\nCoverage is 96.16 / 93.28 / 93.22 / 98.00.\n' },
-      { figures },
-    );
+  it('still refuses the round-3 baseline quadruple', () => {
+    const bad = check({ 'reviews/A.md': '# A\n\nCoverage is 96.16 / 93.28 / 93.22 / 98.00.\n' });
     expect(bad).toHaveLength(1);
     expect(bad[0]).toContain('coverage quadruple');
+  });
+
+  it('keeps a margin between the jitter it absorbs and the figure it refuses', () => {
+    // The whole design in one assertion. One-branch jitter must be inside the
+    // tolerance and the superseded quadruple must be outside it - and at the
+    // figures this round pins, the nearest component of that quadruple is 0.06,
+    // one hundredth of a point beyond the tolerance. Moving `FIGURES` closer to
+    // the round-3 baseline than that would silently make the gate accept it,
+    // and this test is what refuses to let that happen quietly.
+    const baseline = [96.16, 93.28, 93.22, 98.0];
+    const nearest = Math.min(...FIGURES.coverage.map((p, i) => Math.abs(baseline[i] - p)));
+    expect(0.037).toBeLessThan(0.05);
+    expect(nearest).toBeGreaterThan(0.05);
   });
 });
 
