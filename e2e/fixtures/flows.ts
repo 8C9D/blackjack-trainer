@@ -49,14 +49,27 @@ export async function configureBetSpread(page: Page): Promise<void> {
 // showdown is offered. The answers need not be correct — this is flow, not math.
 // A `seed` pins the app's randomness (the shoe's shuffle included) via the
 // `?seed=` hook, so a spec can rely on the exact cards the showdown will deal.
-export async function runCountingRound(page: Page, seed?: number): Promise<void> {
+// `cards` is how many the drill will stream before it asks anything, which the
+// caller sets in Settings and this helper otherwise has no way to know.
+export async function runCountingRound(page: Page, seed?: number, cards = 3): Promise<void> {
   await page.goto(
     seed === undefined ? '/drill/card-counting' : `/drill/card-counting?seed=${seed}`,
   );
   await page.getByRole('button', { name: /Start counting/ }).click();
 
+  // Nothing is asked until every card has streamed, and the stream is as long as
+  // the caller made it: `cards` at the 100 ms minimum interval the configure
+  // helpers set. Playwright's fixed 5 s default does not know that. Measured
+  // under the full parallel suite on two machines-worth of runs, the 26-card
+  // caller spends 2.68-3.08 s of it just streaming — so the old fixed budget was
+  // 1.6-1.9x the stream, and one full-suite run in 30 exceeded the whole budget
+  // and failed here. This raises the ceiling rather than removing it: the same
+  // caller now has 2.5-2.8x, i.e. a machine more than ~2.8x slower than this one
+  // fails every time, where before it took ~1.9x. It is not the same move as raising a timeout
+  // to hide a race — the form is not racing anything, it arrives on a schedule
+  // the test itself set, and the budget now scales with that schedule.
   const estimate = page.getByLabel('How many decks remain?');
-  await expect(estimate).toBeVisible();
+  await expect(estimate).toBeVisible({ timeout: 5_000 + cards * 100 });
   await estimate.fill('6');
   await page.getByRole('button', { name: /Submit estimate/ }).click();
 

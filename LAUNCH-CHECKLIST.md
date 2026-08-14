@@ -8,8 +8,8 @@ Decisions (`D*`) gate some of both and are listed first.
 
 Status legend: `[ ]` not started, `[~]` in progress, `[x]` done, `[-]` cut or not applicable.
 
-**Baseline verified 2026-08-06:** web 1516 tests green, iOS 330 tests green, production build clean, `npm audit --omit=dev` reports 0 vulnerabilities.
-**Final gate 2026-08-06 (A16), on Angular 22:** web 1526 unit tests green under the coverage thresholds (96.1% statements), production build clean, parity-fixture diff clean, Playwright 111 green against the built bundle (one earlier run retried a showdown spec once - watch it, it was green on re-run), `npm audit --omit=dev` 0; iOS 335 tests green, swiftformat and swiftlint clean.
+**Baseline verified 2026-08-06:** web 1516 tests green, iOS 330 tests green, production build clean, `npm audit --omit=dev` reports 0 vulnerabilities. <!-- figure-historical -->
+**Final gate 2026-08-06 (A16), on Angular 22:** web 1526 unit tests green under the coverage thresholds (96.1% statements), production build clean, parity-fixture diff clean, Playwright 111 green against the built bundle (one earlier run retried a showdown spec once - watch it, it was green on re-run), `npm audit --omit=dev` 0; iOS 335 tests green, swiftformat and swiftlint clean. <!-- figure-historical -->
 
 ---
 
@@ -88,7 +88,7 @@ Ordered by priority. Each item states its own done-when so completion is checkab
       Hard 4 confirmed still unreachable: web `parseScenarioKey('hard-4-v-6')` → null (existing test), iOS chart rows start at 5 and `scenarioRefFor` classifies 2,2 as a pair, so no hard-4 ref is ever recorded — its same-value fallback in `hardTotalCards` stays defensive-only.
       Verified: web 1518 green, iOS 327 green, `export:fixtures` diff clean, prettier/eslint/swiftformat/swiftlint clean._
       `src/app/features/drill/drill-hand.ts:242` and `ios/BlackjackTrainer/Flow/DrillHand.swift:124` enumerate only `a < b` pairs, so hard 20 has no candidate and falls through to a same-value pair.
-      Both charts render hard rows through 20 (`chart-page.component.ts:53`, `StrategyChart.swift:15`), so the cell drills `Q,Q`, asks "10,10 vs 10", offers Split, and files misses under `pair-10-v-10`.
+      Both charts render hard rows through 20 (`chart-page.component.ts:60`, `StrategyChart.swift:15`), so the cell drills `Q,Q`, asks "10,10 vs 10", offers Split, and files misses under `pair-10-v-10`.
       Reproduce first with a failing test on each platform, then fix.
       **Done when:** drilling hard 20 deals a non-pair hard 20, the banner and question agree, Split is not offered, the miss files under `hard-20-v-*`, the unreachable hard-4 path is confirmed still unreachable, and both suites are green.
 
@@ -235,6 +235,35 @@ These need the Apple account, a physical device, or an attestation an agent must
 Take five minutes on the decisions above before the agent starts; two of them change how much work there is.
 
 ### O2. Provision the iCloud capability _(only if D2 = ship iCloud)_
+
+> **Fix the launch-seed race before you do this. Provisioning turns sync on for the already-shipped
+> binary with no app update (D2 above), so the day you flip this switch, every copy already on a phone
+> starts running the path below.** Tracked as finding I1 in `PROD-READINESS.md`.
+>
+> `ios/BlackjackTrainer/Stores/CloudKeyValueStore.swift:63-72`: `synchronize()` does not wait for an
+> iCloud download. On a device whose KVS cache has not populated yet, `cloud.data(forKey:)` returns
+> `nil`, the `else` branch calls `pushToCloud()`, and this device's empty state is written over the
+> shared key. Adoption is last-writer-wins - `StatsStore.swift:78` replaces local state wholesale with
+> `stats = value` - so the wipe then propagates to every other device. Wiring is live for all nine
+> stores (`App/AppModel.swift:49-78`).
+>
+> Three things to know before choosing a fix, each verified against this tree:
+>
+> 1. **Narrowing the launch seed alone is not enough.** `StatsStore.swift:63-65` calls `pushToCloud()`
+>    from `persist()`, i.e. on every recorded rep. Skipping the seed when local state is empty just
+>    moves the race to the first hand the trainee plays.
+> 2. **"Ignore an empty cloud value" is not a safe fix either.** The app has a user-facing **Reset
+>    practice data** action (`Views/Flow/PracticeDataSection.swift:16` → `App/AppModel.swift:113`), so
+>    an empty record is a legitimate state a user asked to propagate. Suppressing it would break that
+>    feature to paper over this one.
+> 3. What is left is the real work: merge semantics on adoption, or gating every push until the store
+>    is known to have completed its initial sync (`NSUbiquitousKeyValueStoreInitialSyncChange` on the
+>    external-change notification). Either changes user-visible sync behaviour, which is why two
+>    successive production-readiness runs deferred it rather than guessing.
+>
+> None of this is testable in this repository: it needs two provisioned devices and Apple's servers
+> (recorded under CANNOT ASSESS). Do O11 on two real devices, with practice data already on one of
+> them, before you trust it.
 
 Easiest path is through Xcode, which registers the App ID for you.
 

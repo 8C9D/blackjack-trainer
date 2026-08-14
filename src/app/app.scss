@@ -2,6 +2,20 @@
   display: block;
   background: var(--ground);
   color: var(--ink);
+  // The update banner is `position: fixed` over the bottom of the viewport, so
+  // whatever is under it cannot be reached. `--update-space` is its measured
+  // height plus the gap it floats above (App.measureBanner), and 0px whenever
+  // there is no banner — which is every render but the two that raise one, so
+  // every computed value below is unchanged in the ordinary case. Here it lets a
+  // screen that scrolls scroll its last control out from under the banner; the
+  // three viewport-sized screens subtract it from their own height instead, so
+  // no scrolling is needed wherever the layout has room to give — measured, that
+  // is 375x700 and up. Below that the drill's own content (~499px) is already at
+  // its minimum, `min-height` cannot shrink past it, and the page becomes
+  // scrollable by however much of the reserve the content forces past the
+  // viewport instead — 161px of 162 at 375x500, 93 of 162 at 320x568 — which
+  // makes the controls reachable by scrolling rather than not reachable at all.
+  padding-bottom: var(--update-space, 0px);
   min-height: 100vh;
   // Dynamic viewport unit avoids the mobile-browser "100vh is too tall under
   // the address bar" gap; falls back to 100vh where dvh is unsupported.

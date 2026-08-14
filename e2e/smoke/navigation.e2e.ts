@@ -116,6 +116,15 @@ test.describe('navigation & routing', () => {
     expect(href).toBeTruthy();
     const manifest = await (await page.request.get(href!)).json();
     expect(manifest.display).toBe('standalone');
+    // Asserted as the raw strings, on purpose. `start_url` and `scope` resolve
+    // against the manifest's own URL, and this suite serves the app at the
+    // origin root, where '/' and './' resolve alike — so a check on the resolved
+    // value would pass either way and prove nothing. What is being pinned is
+    // that neither is anchored to the origin root: the Pages deploy publishes
+    // the app under /blackjack-trainer/, and an absolute '/' there sends every
+    // installed copy to a different project's site.
+    expect(manifest.start_url).toBe('./');
+    expect(manifest.scope).toBe('./');
     const maskable = manifest.icons.filter((i: { purpose?: string }) =>
       i.purpose?.includes('maskable'),
     );

@@ -34,6 +34,17 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run lint
+      - run: CI=true npm run test:coverage
+      - name: Verify parity fixtures are up to date (anti-drift gate)
+        run: |
+          npm run export:fixtures
+          git diff --exit-code -- ios/Fixtures
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npm run e2e
+        env:
+          E2E_SERVER: dist
       - run: npm run build -- --base-href /blackjack-trainer/
       - name: Assemble the site (app + legal pages + SPA fallback)
         run: |
