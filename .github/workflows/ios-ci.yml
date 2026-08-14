@@ -12,6 +12,12 @@ on:
       - 'ios/**'
       - '.github/workflows/ios-ci.yml'
 
+# The job below runs on a macOS runner at the 10x rate; a second push
+# supersedes the in-flight run instead of paying for both.
+concurrency:
+  group: ios-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-test:
     runs-on: macos-15
