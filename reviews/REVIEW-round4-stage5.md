@@ -1,5 +1,7 @@
 # REVIEW - round 4, stage 5 (final)
 
+<!-- records: historical-file - an answered review. Its figures and transcripts were true at the commit it reviewed and were checked by this gate when it was written; the remediation it prompted has since moved several of them, and its citations into `tools/check-records.mjs` name the implementation that remediation deleted. Rewriting a reviewer's evidence to match a later tree would destroy the record. Citations here are still resolved and bounds-checked. This marker was added by the stage-6 remediation (stage-6 F6): the commit that answered this review both rewrote the file it cites and omitted the freeze its own principle requires. -->
+
 Range reviewed: `aadd4b5..06332d9`, one commit, "repair the fence model the last fix broke and stop
 restating figures that move".
 Ledger: `PROD-READINESS.md`.

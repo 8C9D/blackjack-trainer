@@ -1,5 +1,7 @@
 # REVIEW - round 4, stage 6
 
+<!-- records: historical-file - an answered review. Its figures and transcripts were true at the tree it reviewed (the tip of `c024fec..HEAD`) and were checked by this gate when it was written; the remediation it prompted moved the unit-test count and the ledger lines it cites by line number. Rewriting a reviewer's evidence to match a later tree would destroy the record. Citations here are still resolved and bounds-checked. Marker added by the remediation that answered it, per the ledger's freezing principle. -->
+
 Range reviewed: `c024fec..HEAD`, four commits, centred on `92c5ad0` ("delete the hand-rolled block
 parser and ask the one prettier already runs"). The ledger's own closing section asked for this
 review: the parser delegation is the largest single edit to the gate in the round and it landed
