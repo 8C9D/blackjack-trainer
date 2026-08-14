@@ -340,14 +340,19 @@ single group is one fixture per marker escape found during this round's reviews.
 ```console
 $ npx ng test --include="../tools/check-records.spec.mjs" > $S/z-spec.txt 2>&1; echo "SPEC_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/z-spec.txt | grep -E 'Tests '
 SPEC_EXIT=0
-      Tests  57 passed (57)
+      Tests  68 passed (68)
 ```
 
-**No count of this suite appears anywhere else in the round's records, and that is deliberate.** Its
-size was published wrong four times - 34, then 41, then 47, then a partition of 20 + 21 + 1 + 5 that
-summed to one less than the suite and put the newest test in none of its buckets (REVIEW-round4-stage1
-F10, stage-2 F4, stage-3 F3, stage-4 F1). Each correction was written in a commit that added another
-test. Rule 4 does not track this figure, so nothing but a person re-running the command stood between
+Re-run whole at the stage-6 remediation tree: the parser rewrite and a stage-6 fixture had moved the
+count twice while the previous paste still printed the pre-rewrite suite, unnoticed from `92c5ad0`
+until the remediation swept for exactly this.
+
+**No live count of this suite appears anywhere else in the round's records, and that is
+deliberate.** Its size was published wrong five times - 34, then 41, then 47, then a partition of
+20 + 21 + 1 + 5 that summed to one less than the suite and put the newest test in none of its
+buckets (REVIEW-round4-stage1 F10, stage-2 F4, stage-3 F3, stage-4 F1), and then, after this
+paragraph first said "four", once more in the ledger's limit section (stage-6 F3). Each correction
+was written in a commit that added another test. Rule 4 does not track this figure, so nothing but a person re-running the command stood between
 it and the next wrong value, and four people in a row lost that bet. The partition is gone rather than
 corrected a fifth time: a number that must be re-derived by hand every time the file changes is a
 defect generator, and the transcript above is the only place the size is stated.

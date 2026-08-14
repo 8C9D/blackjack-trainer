@@ -368,6 +368,22 @@ describe('rule 4: figures', () => {
     expect(bad.join(' ')).toContain('pooled M2 failure count');
   });
 
+  it('does not honour a figure-historical marker printed inside a code block', async () => {
+    // A diff block quoting a marked line prints the marker's text as code.
+    // Honoured there, it would exempt any stale figure sharing those lines -
+    // and the guard refusing that survived a mutation run with the suite green
+    // (REVIEW-round4-stage6 F7), so this fixture pins it.
+    const bad = await check(
+      {
+        'reviews/A.md':
+          '# A\n\n```diff\n+ The old count was 1547 passed. <!-- figure-historical -->\n```\n',
+      },
+      { figures },
+    );
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('states 1547');
+  });
+
   it('honours a figure-historical marker on the same line', async () => {
     expect(
       await check(

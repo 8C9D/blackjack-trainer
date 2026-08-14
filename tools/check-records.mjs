@@ -60,7 +60,7 @@ import { fileURLToPath } from 'node:url';
 export const FIGURES = {
   // The count at the round's tip, not at its baseline. `reviews/BASELINE-round4.md`
   // states the baseline's 1551 on purpose and marks those two lines as such.
-  unitTests: 1619,
+  unitTests: 1620,
   coverage: [96.05, 92.91, 93.48, 97.86],
   m2: { failures: 33, executions: 600, rate: 5.5 },
 };
