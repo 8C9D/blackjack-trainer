@@ -1,6 +1,6 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { SwUpdate, type VersionEvent } from '@angular/service-worker';
+import { SwUpdate, type UnrecoverableStateEvent, type VersionEvent } from '@angular/service-worker';
 import { Subject } from 'rxjs';
 
 import { App } from './app';
@@ -10,11 +10,13 @@ import { resetStorageWriteRefused, writeJson } from './core/services/storage';
 
 describe('App', () => {
   let versionUpdates: Subject<VersionEvent>;
+  let unrecoverable: Subject<UnrecoverableStateEvent>;
   let reloadPage: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     localStorage.clear();
     versionUpdates = new Subject<VersionEvent>();
+    unrecoverable = new Subject<UnrecoverableStateEvent>();
     reloadPage = vi.fn();
     await TestBed.configureTestingModule({
       imports: [App],
@@ -22,7 +24,7 @@ describe('App', () => {
         provideRouter(APP_ROUTES),
         {
           provide: SwUpdate,
-          useValue: { isEnabled: true, versionUpdates },
+          useValue: { isEnabled: true, versionUpdates, unrecoverable },
         },
         { provide: PAGE_RELOAD, useValue: reloadPage },
       ],
@@ -35,6 +37,10 @@ describe('App', () => {
       currentVersion: { hash: 'old' },
       latestVersion: { hash: 'new' },
     });
+  }
+
+  function announceUnrecoverable(): void {
+    unrecoverable.next({ type: 'UNRECOVERABLE_STATE', reason: 'cached response missing' });
   }
 
   it('is a bare shell: a router outlet and no navigation chrome', async () => {
@@ -55,10 +61,41 @@ describe('App', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.update')?.textContent).toContain('Update ready');
     expect(compiled.querySelector('.update__copy')?.getAttribute('role')).toBe('status');
+    // These three were static attributes until the banner grew a second state.
+    // Pinned on this side too, so the recovery branch cannot quietly take the
+    // accessible name or the announcement politeness away from this one.
+    expect(compiled.querySelector('.update__copy')?.getAttribute('aria-live')).toBe('polite');
+    expect(compiled.querySelector('.update')?.getAttribute('aria-label')).toBe(
+      'App update available',
+    );
 
     (compiled.querySelector('.update__later') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(compiled.querySelector('.update')).toBeNull();
+  });
+
+  // A worker that has lost cached files serves an app that half-works, and the
+  // shell was the only place that could say so.
+  it('asks for a reload, with no way to dismiss it, when the worker breaks', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.update')).toBeNull();
+
+    announceUnrecoverable();
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const banner = compiled.querySelector('.update');
+    expect(banner?.textContent).toContain('Reload to repair this app');
+    expect(banner?.textContent).not.toContain('A newer version');
+    expect(banner?.getAttribute('aria-label')).toBe('App needs reloading');
+    // A fault interrupts; an offer waits its turn.
+    expect(compiled.querySelector('.update__copy')?.getAttribute('role')).toBe('alert');
+    expect(compiled.querySelector('.update__copy')?.getAttribute('aria-live')).toBe('assertive');
+    // Dismissing a broken app would hide the only signal the trainee gets.
+    expect(compiled.querySelector('.update__later')).toBeNull();
+
+    (compiled.querySelector('.update__reload') as HTMLButtonElement).click();
+    expect(reloadPage).toHaveBeenCalledOnce();
   });
 
   // Nothing else in the app can tell: the drill goes on grading, the session bar
@@ -91,6 +128,163 @@ describe('App', () => {
       expect(notice.textContent).toContain('not saving your practice');
       expect(notice.getAttribute('role')).toBe('alert');
       expect(notice.querySelector('a')?.getAttribute('href')).toBe('/settings');
+    });
+  });
+
+  // The banner is `position: fixed` over the bottom of the viewport, and the
+  // drill screens are exactly viewport-tall and cannot scroll, so anything the
+  // banner covers is unreachable. The shell publishes what it covers; the
+  // layouts subtract it. jsdom has no layout engine, so the element's rect is
+  // stubbed — the wiring is what is under test, and the geometry it produces is
+  // measured in a real browser (reviews/ARTIFACTS-round3.md, N4).
+  describe('the space the update banner stands in front of', () => {
+    // jsdom's window is 768 tall by default; the geometry below was measured at
+    // 375x700, so the viewport is pinned to match it.
+    function pinViewportHeight(height: number): void {
+      Object.defineProperty(window, 'innerHeight', { value: height, configurable: true });
+    }
+
+    // Drive the real failure path rather than poking the signal: the banner's
+    // own Reload button, with the injected page reload throwing.
+    function failAReload(fixture: ComponentFixture<App>, host: HTMLElement): void {
+      reloadPage.mockImplementationOnce(() => {
+        throw new Error('reload refused');
+      });
+      (host.querySelector('.update__reload') as HTMLButtonElement).click();
+      fixture.detectChanges();
+    }
+
+    function makeRect(top: number, height: number): DOMRect {
+      return {
+        top,
+        height,
+        bottom: top + height,
+        left: 0,
+        right: 375,
+        width: 375,
+        x: 0,
+        y: top,
+      } as DOMRect;
+    }
+
+    function stubRect(element: HTMLElement, top: number, height: number): void {
+      const rect = makeRect(top, height);
+      element.getBoundingClientRect = () => rect;
+    }
+
+    it('is zero while no banner is up', () => {
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+      const host = fixture.nativeElement as HTMLElement;
+      expect(host.querySelector('.update')).toBeNull();
+      expect(host.style.getPropertyValue('--update-space')).toBe('0px');
+    });
+
+    it('is the banner height plus the gap it floats above, once one is up', () => {
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+      const host = fixture.nativeElement as HTMLElement;
+
+      pinViewportHeight(700);
+      announceUpdate();
+      fixture.detectChanges();
+      const banner = host.querySelector('.update') as HTMLElement;
+      // The geometry a real Chromium measures at 375x700: the banner stacks into
+      // a column below the 34rem breakpoint and floats 16px off the bottom.
+      stubRect(banner, 538.03, 145.97);
+      window.dispatchEvent(new Event('resize'));
+      fixture.detectChanges();
+
+      // 700 - 538.03, rounded up: the whole band from its top edge to the floor.
+      expect(host.style.getPropertyValue('--update-space')).toBe('162px');
+    });
+
+    // A copy change has to re-measure: the element is the same element, so
+    // nothing about the view tells the shell its height moved. What this pins is
+    // the dependency — delete `updateFailed()`/`recoveryNeeded()` from the
+    // afterRenderEffect and it fails with 162px where 183px is wanted.
+    //
+    // It does not pin *when* the measurement is taken: the stub below returns the
+    // grown height from the moment it is installed, so it answers the same
+    // whether it is read before or after the DOM refreshes. The test after this
+    // one is the one that pins the ordering.
+    it('follows the banner when only its copy grows', () => {
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+      const host = fixture.nativeElement as HTMLElement;
+
+      pinViewportHeight(700);
+      announceUpdate();
+      fixture.detectChanges();
+      const banner = host.querySelector('.update') as HTMLElement;
+      stubRect(banner, 538.03, 145.97);
+      window.dispatchEvent(new Event('resize'));
+      fixture.detectChanges();
+      expect(host.style.getPropertyValue('--update-space')).toBe('162px');
+
+      // A failed reload adds a line to the same banner: 145.97 -> 166.16, the
+      // geometry a real Chromium measures for that state at this viewport.
+      stubRect(banner, 517.84, 166.16);
+      failAReload(fixture, host);
+      fixture.detectChanges();
+      expect(host.style.getPropertyValue('--update-space')).toBe('183px');
+    });
+
+    // The ordering property itself, which K3 recorded as guarded by nothing.
+    //
+    // jsdom has no layout, so it cannot be caught by measuring. It can be caught
+    // by making the stub behave the way a real element does: report a height that
+    // depends on what is inside the element *at the moment it is asked*, rather
+    // than a constant fixed in advance. A measurement taken before the DOM
+    // refreshes does not see the failed-reload line yet, and gets the old height
+    // back — which is exactly what a real Chromium did.
+    //
+    // Mutate `afterRenderEffect` to `effect` in `App` and this fails with 162px
+    // where 183px is wanted: the 21px the app shipped short for one commit
+    // (REVIEW-round3-stage3 F2).
+    it('measures the banner after the DOM refreshes, not before', () => {
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+      const host = fixture.nativeElement as HTMLElement;
+
+      pinViewportHeight(700);
+      announceUpdate();
+      fixture.detectChanges();
+      const banner = host.querySelector('.update') as HTMLElement;
+
+      // Both geometries are the ones a real Chromium measures at 375x700; which
+      // one comes back is decided by the element's own content, not by the test.
+      const offer = makeRect(538.03, 145.97);
+      const withError = makeRect(517.84, 166.16);
+      banner.getBoundingClientRect = () =>
+        banner.querySelector('.update__error') ? withError : offer;
+
+      window.dispatchEvent(new Event('resize'));
+      fixture.detectChanges();
+      expect(host.style.getPropertyValue('--update-space')).toBe('162px');
+
+      failAReload(fixture, host);
+      expect(host.querySelector('.update__error')).not.toBeNull();
+      expect(host.style.getPropertyValue('--update-space')).toBe('183px');
+    });
+
+    it('goes back to zero when the offer is dismissed', () => {
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+      const host = fixture.nativeElement as HTMLElement;
+
+      pinViewportHeight(700);
+      announceUpdate();
+      fixture.detectChanges();
+      stubRect(host.querySelector('.update') as HTMLElement, 538.03, 145.97);
+      window.dispatchEvent(new Event('resize'));
+      fixture.detectChanges();
+      expect(host.style.getPropertyValue('--update-space')).toBe('162px');
+
+      (host.querySelector('.update__later') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(host.querySelector('.update')).toBeNull();
+      expect(host.style.getPropertyValue('--update-space')).toBe('0px');
     });
   });
 

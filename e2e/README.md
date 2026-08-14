@@ -20,9 +20,67 @@ npm run e2e:report    # open the last HTML report
 ```
 
 The config's `webServer` starts `npm start` (http://127.0.0.1:4200) and reuses a
-dev server you already have running locally. In CI (`CI` set) it instead serves
-the production bundle with `tools/serve-dist.mjs`, so run `npm run build` first
-in that mode.
+dev server you already have running locally. `E2E_SERVER=dist` instead builds the
+production bundle and serves it with `tools/serve-dist.mjs`; CI (`CI` set)
+defaults to it.
+
+The dist lane runs `npm run build` itself rather than trusting whatever `dist/`
+holds. It used to serve the directory as found, so the suite could report green
+against a bundle built from another commit — with `src/app/app.routes.ts` edited
+and no rebuild it still reported `13 passed`, exit 0, because the served bundle
+carried the old title.
+
+`E2E_SERVER` takes exactly `dist` or `serve`. Anything else stops the run:
+
+```
+Error: E2E_SERVER must be one of 'dist' | 'serve', got 'dsit'.
+Unset it to take the default ('dist' under CI, otherwise 'serve').
+```
+
+It used to be read as `=== 'dist'`, so every other spelling quietly selected the
+`serve` lane — a typo in this variable, including in the CI workflow that sets
+it, silently swapped which server the whole suite tested.
+
+The `dist` lane never reuses a server already on the port. If something else is
+listening it stops with
+
+```
+Error: http://127.0.0.1:4200 is already used, make sure that nothing is running
+on the port/url or set reuseExistingServer:true in config.webServer.
+```
+
+**Do not take that suggestion.** Setting `reuseExistingServer: true` is what the
+message says because Playwright cannot know which server it found, and it is
+exactly what this lane must not do: a stray `ng serve` on 4200 lets the whole
+suite pass green having never loaded a single built file, which is a gate
+reporting on an artifact it did not run. Stop whatever holds the port instead
+(`lsof -nP -iTCP:4200 -sTCP:LISTEN`). The `serve` lane still reuses, because
+there the server you have running _is_ the thing under test.
+
+## Two runs on one machine
+
+The port is `E2E_PORT`, defaulting to 4200:
+
+```bash
+E2E_PORT=4300 E2E_SERVER=dist npm run e2e   # runs alongside a run on 4200
+```
+
+It was hardcoded, and one hardcoded port meant one E2E run per machine. Measured
+both ways: two concurrent runs on the same port fail one of the pair with
+`Error: listen EADDRINUSE: address already in use 127.0.0.1:4501`, and the same
+two runs on 4501 and 4502 both exit 0.
+
+Two operational rules survive the fix, and both were paid for:
+
+1. **Never kill a listener you did not start.** The failure above looks exactly
+   like an orphaned server. Twice in round 3 someone decided it was one, killed
+   it, and destroyed a measurement in progress — one invalidated CI-mode
+   transcript and twelve aborted runs. If a port is busy, use another port or
+   wait.
+2. **Two `dist`-lane runs still share `dist/`.** The lane builds what it serves,
+   so both runs write the same output directory even on different ports. The
+   concurrent pair above passed, but nothing here makes that safe in general;
+   stagger their starts, or give one of them the `serve` lane.
 
 ## Layout
 
@@ -30,6 +88,8 @@ in that mode.
 e2e/
 ├── fixtures/
 │   ├── app.fixture.ts   # base test: lands each spec on a clean home
+│   ├── flows.ts         # shared multi-step drill flows
+│   ├── lane.ts          # which server backs the run (dist vs serve), defined once
 │   └── viewports.ts     # DESKTOP (1024×768), PHONE (390×844)
 └── smoke/
     ├── navigation.e2e.ts     # routes, titles, redirects, keyboard nav

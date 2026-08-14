@@ -1,7 +1,20 @@
 import { defineConfig, devices } from '@playwright/test';
 
+import { SERVES_DIST } from './e2e/fixtures/lane';
+
 // The dev server the E2E suite drives. `npm start` (ng serve) binds here.
-const PORT = 4200;
+//
+// Overridable because 4200 was hardcoded, and one hardcoded port means one E2E
+// run per machine: the dist lane starts its own server and refuses a port it did
+// not start, so a second run either fails to start or — twice in round 3 — has
+// its server killed by whoever mistook it for an orphan, costing one invalidated
+// transcript and twelve aborted runs. `E2E_PORT=4300 npm run e2e` runs alongside
+// a run on the default port. Both lanes take it: the dist lane passes it to
+// `tools/serve-dist.mjs` as `PORT`, the serve lane to `ng serve` as `--port`. It
+// was wired to the dist lane alone at first, so the very command this comment
+// offers would have waited two minutes for a server binding 4200 and timed out
+// with nothing naming the mismatch (REVIEW-round4-stage2 F6).
+const PORT = Number(process.env.E2E_PORT ?? 4200);
 const baseURL = `http://127.0.0.1:${PORT}`;
 
 // Chromium-only in v1: one browser is enough to catch wiring / routing /
@@ -29,12 +42,24 @@ export default defineConfig({
     // IPv4 explicitly: its default host resolves to ::1 (IPv6) on macOS, but
     // the readiness check and baseURL use 127.0.0.1, and a mismatch makes
     // Playwright wait forever for a server that is up.
-    command:
-      (process.env.E2E_SERVER ?? (process.env.CI ? 'dist' : 'serve')) === 'dist'
-        ? `PORT=${PORT} node tools/serve-dist.mjs`
-        : 'npm start -- --host 127.0.0.1',
+    // The dist lane builds what it serves. It used to serve whatever `dist/`
+    // happened to hold, so the suite could report green against a bundle built
+    // from a different commit — measured: with `src/app/app.routes.ts` edited and
+    // no rebuild, `E2E_SERVER=dist` still reported `13 passed`, exit 0, because
+    // the served bundle still carried the old title. A gate that names the
+    // production bundle has to be looking at this commit's production bundle.
+    command: SERVES_DIST
+      ? `npm run build && PORT=${PORT} node tools/serve-dist.mjs`
+      : `npm start -- --host 127.0.0.1 --port ${PORT}`,
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    // Attaching to whatever already answers on the port is a convenience for the
+    // `serve` lane, where the thing you have running is the thing under test.
+    // The dist lane is never reused: it exists to test the production bundle
+    // specifically, and a stray `ng serve` on this port would let the whole
+    // suite pass green having never started serve-dist or loaded a built file —
+    // a gate reporting on an artifact it did not run. Refusing the port instead
+    // turns that into a startup error naming the port.
+    reuseExistingServer: !process.env.CI && !SERVES_DIST,
     timeout: 120_000,
   },
 });

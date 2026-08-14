@@ -5,6 +5,15 @@
 /tmp
 /out-tsc
 /bazel-out
+# The Pages deploy assembles the published site here (.github/workflows/pages.yml,
+# the "Assemble the site" step). On a runner the checkout is fresh so it never
+# matters; run that step locally to verify the workflow and it leaves one
+# directory here holding 34 entries and 93 files, which without this rule is one
+# `git add -A` from being committed. Two earlier versions of this sentence were
+# wrong about it: the first said 28 files, which is prettier's warning count and
+# not a file count, and the second put all 34 at the repository root rather than
+# inside site/.
+/site
 
 # Node
 /node_modules

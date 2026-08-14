@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { SERVES_DIST } from '../fixtures/lane';
+
 // 52 faces plus the face-down back.
 const CARD_COUNT = 53;
 
@@ -24,8 +26,6 @@ async function cachedCards(page: Page): Promise<number> {
 // ran, and every card was a blank rectangle with its alt text spilling out. The
 // hand could not be read, which is the whole of what the app shows.
 test.describe('offline', () => {
-  // The dev server serves an unregistered worker, so the suite's default local
-  // run has nothing to test. Skipped, never silently passed.
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     const registered = await page
@@ -34,7 +34,30 @@ test.describe('offline', () => {
       })
       .then(() => true)
       .catch(() => false);
-    test.skip(!registered, 'No service worker: run with E2E_SERVER=dist against a built app.');
+    // What "no worker took control" means depends on the lane, and the two
+    // readings are opposites.
+    //
+    // In the dist lane it means the production bundle shipped without the worker
+    // its offline claim depends on — the defect this suite exists to report, not
+    // a reason to stand down. Deciding it from runtime state made that
+    // indistinguishable from the benign case: delete `ngsw-worker.js` from the
+    // built bundle and the whole offline claim skipped itself, green, at
+    // `109 passed, 2 skipped`, with nothing comparing that count to 111.
+    //
+    // In the serve lane it usually means the dev server, which registers none at
+    // all (`provideServiceWorker({ enabled: !isDevMode() })`) — nothing to test.
+    // But that lane reuses whatever already holds the port, and pointing it at a
+    // built bundle does register a worker, so the skip stays conditional on the
+    // worker rather than on the lane. Making it lane-conditional silently
+    // dropped that case from `2 passed` to `2 skipped`.
+    if (SERVES_DIST) {
+      expect(
+        registered,
+        'no service worker took control of the page: the built bundle must ship and register ngsw-worker.js',
+      ).toBe(true);
+    } else {
+      test.skip(!registered, 'No service worker on this lane: nothing to test.');
+    }
     // Controlling the page is not the same as having finished installing: the
     // Angular worker activates first and goes on prefetching afterwards. Cut
     // the network at that moment and a lazy route chunk is simply missing, so

@@ -1,6 +1,10 @@
 # Build output
 dist/
 .angular/
+# Assembled by the Pages deploy's own step; built files, not source. Without this
+# `prettier --check .` descends into them and takes `npm run lint` red the moment
+# anyone runs that step locally.
+site/
 
 # Dependencies
 node_modules/
