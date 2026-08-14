@@ -754,9 +754,9 @@ their evidence rather than taken quietly. K7 was subsequently taken by the stage
 
 ## Gates at the end of round 4
 
-Gates 1 to 6 re-run at the stage-6 remediation commit - the commit this sentence lands in, named
-here by the commit after it the way `934f9e9` named `92c5ad0` - which is the round's last commit
-that changes code or tests: it adds one fixture to the gate's own spec. Gates 7 to 9 last ran at
+Gates 1 to 6 re-run at `6dbd932`, the stage-6 remediation commit - measured against its tree before
+it was committed, and named here by the commit after it the way `934f9e9` named `92c5ad0` - which is
+the round's last commit that changes code or tests: it adds one fixture to the gate's own spec. Gates 7 to 9 last ran at
 `4ad4d24`: nothing under `ios/` has changed since (`git diff --name-only 4ad4d24..HEAD -- ios/` is
 empty, re-verified at the remediation tree), and swiftformat, swiftlint and xcodebuild read nothing
 else. Any commit after the named one changes this ledger only, and gate 1 - the one gate that reads
