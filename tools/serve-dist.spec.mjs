@@ -29,11 +29,12 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
  * would not compile". A `.spec.ts` here does run — `tsconfig.spec.json` includes
  * only `src/**`, so a spec under `tools/` is never typechecked and the compiler
  * never sees it. TypeScript would buy the look of type safety and none of it.
- * Putting `tools/**` into `tsconfig.spec.json` is what makes it real, and that
- * fails on `TS2591: Cannot find name 'process'` because `@types/node` is not a
- * dependency and installing one needs the network. So: `.mjs`, which states the
- * absence rather than dressing it up, and matches `serve-dist.mjs` itself.
- * See the ledger's M1.
+ * An earlier version of this comment also blamed a missing `@types/node`;
+ * round 3's M1 installed it, so that premise is gone (finding K7) and the
+ * remaining obstacle is scope: widening `tsconfig.spec.json` to `tools/**` is
+ * what would make a `.spec.ts` here real, and that is a typecheck-scope decision
+ * for whoever owns the config, not a file naming choice. So: `.mjs`, which
+ * matches `serve-dist.mjs` itself. See the ledger's M1 and K7.
  */
 
 const SHELL = '<!doctype html><title>shell</title><app-root></app-root>';
