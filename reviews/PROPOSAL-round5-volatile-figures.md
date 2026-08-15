@@ -2,7 +2,8 @@
 
 Written by the stage-6 remediation pass against finding K8, for the round-5 brief. This is a design,
 not a change: implementing it edits the gate's semantics, which under round 4's rules needs a fresh
-review, and round 4 closed on its sixth. Nothing here is implemented.
+review, and round 4 closed on its sixth. Nothing here was implemented when it was written; the
+closing section below records the round-5 implementation and its choices.
 
 ## The problem, from the record
 
@@ -68,3 +69,50 @@ gate-semantics changes need a fresh reviewer more than they need speed. Round 4'
 practiced the discipline by hand instead - its closing table names `6dbd932`, its prose points at the
 table, and the suite size lives in one transcript - so round 5 inherits both the design and a
 worked example of the target state.
+
+## Implemented in round 5
+
+The design above shipped in round 5's remediation branch, in the commit that carries this section.
+What the gate now does where the design left a choice open, and the one place it is stricter than
+written:
+
+- The marker is `<!-- gate-table: <commit> -->`, seven to forty hex characters, written directly
+  above its table: blank lines may sit between marker and table, nothing else may. A marker that
+  names no commit, names a commit the repository does not have, or has no table under it is
+  refused.
+- "The gate refuses a gate table with no such marker" is enforced through the sweep itself: an
+  unmarked table's volatile rows are prose, and the sweep refuses them. A table with no volatile
+  figure in it needs no marker, and the gate does not invent a definition of "gate table" in order
+  to demand one.
+- "One gate table per round" is not machine-enforced. A closed round's table sits in a section
+  marked historical, where rule 4 does not bind; the gate checks every live marker it finds and
+  leaves the one-per-round discipline to the authors, because a round boundary is not something
+  the checker can see.
+- Item 4's check runs on every gate run rather than "on demand", and compares against the last
+  committed version of the document that differs from the working tree, found by walking the
+  file's history with renames followed - so a table edited without re-naming its tree is refused
+  while the edit is uncommitted, at the commit that lands it, and at every tree after it until the
+  marker moves. Stricter than written, in the direction a records gate should fail. As first
+  shipped, this bullet claimed that comparison while the code shortcut it to HEAD and then HEAD's
+  first parent, which forgot the defect one covering commit after it landed and never saw a
+  renamed document at all; the round-5 stage-1 review measured both escapes (its F1), and the
+  remediation implemented the walk the record had been describing, with the escape histories
+  pinned as fixtures that drive the checker's real git callbacks in throwaway repositories.
+- `FIGURES` shrank to the pooled M2 sample, exactly as item 3 says, and the coverage jitter
+  tolerance went with the pin that needed it.
+
+The migration sweep the design priced turned out mostly paid already, except in the closing section
+the paragraph above calls "a worked example of the target state". The closing review measured that
+claim false (its F3), enumerating five statements in the bullets under the gate table: the
+unit-test count and its baseline, the E2E count move, the current and baseline coverage quadruples,
+the per-file checker quadruple, and the branch headroom. Round 5's migration rewrote the count and
+quadruple statements as pointers and marked the table - two of them visible to the inverted sweep
+only once K9's quadruple fix taught it a bare `100` - and left the other two standing, because
+neither the E2E count nor a headroom matches the design's two volatile shapes and the sweep does
+not refuse them. An earlier version of this paragraph restated the enumeration minus exactly those
+two items before declaring the claim answered (round-5 stage-1 review, F4); the standing headroom
+sentence then went stale the way any volatile figure does (the same review's F2), and the
+remediation restated it as a fact about the tree the table names. So the sentence above is true of
+what the sweep governs, at the tree that carries this section, and was not true of the tree it was
+written at; the figures the sweep does not govern stand on their authors' discipline, which is the
+migration cost this design accepted rather than removed.
