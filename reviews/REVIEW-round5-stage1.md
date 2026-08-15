@@ -1,5 +1,7 @@
 # REVIEW - round 5, stage 1
 
+<!-- records: historical-file - an answered review, its remediation verdict appended by its own reviewer. The review's figures and transcripts were true at `fa86106`, the tree it reviewed; the verdict's at `ad3c987`, the remediation it accepted; both were checked by this gate with the file unfrozen before this marker was added. The remediation rewrote the checker lines the review cites (the walk replaced the shortcut at the cited previousOf lines), which is exactly the drift the freezing principle names, so the marker is added with the verdict rather than left to the next pass. Citations here are still resolved and bounds-checked. -->
+
 Range reviewed: `bde7d33..fa86106`, nine commits: the closing review's five findings remediated (`d542cf3`, `dd2d445`, `21a7cbc`, `71a9af0`), the K8 design implemented (`100cb8f`), the five K9 holes closed (`c099b1e`) and recorded (`554733f`), four workflow actions bumped (`d986aff`), and the N1/N5 limits discharged against an observed runner (`fa86106`).
 This is the range the round-4 closing review asked for, plus two items it did not: the gate's rule 4 inverted from a pin to a refusal, and rule 3's line reading rebuilt to see through containers.
 Both are gate-semantics changes, which is exactly the class the round's history says needs fresh eyes most: every fix to this gate has historically introduced a new hole or a stale figure, and a quieter gate looks identical to a cleaner tree.
@@ -270,3 +272,146 @@ That is one reviewer-hour of evidence that the inverted rule is livable, which r
 F1 is blocking and it is both kinds of defect at once: a live record stating gate semantics the gate does not have, and a gate hole of the round's signature class - the moved-table check, the one mechanical answer to "the table false at the tree it names", goes permanently quiet one covering commit or one rename after the defect lands, while the gate at the base of the range would have refused the same table at every commit.
 Everything else in the range is honest work that held under attack: all five closing findings answered on their terms and re-measured, all ten guard mutations killed by their own fixtures, the K9 holes genuinely closed with no regression I could construct beyond the disclosed trade-offs, the N1/N5 discharge verified at GitHub itself, and the migration to the new discipline performed without a single quiet exemption.
 The remediation for F1 is small and has two honest shapes; F2 to F4 are records sweeps that can ride along with it.
+
+## Remediation verdict - 2026-08-15, on `fa50f87..ad3c987`
+
+The four findings above were remediated in four commits (`7f7f536`, `8220729`, `82e7439`, `ad3c987`), reviewed here by the reviewer who filed them.
+Every claim was re-verified against the source and against fresh throwaway repositories, not against the remediation's description of itself.
+
+| finding | verdict    | why                                                                                                                                                                                                                                                         |
+| ------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F1      | **ACCEPT** | `previousOf` now walks the file's history with renames followed; all three escape histories I measured are re-driven below and refused, a clean history is not falsely refused, and the record now describes the walk that shipped.                         |
+| F2      | **ACCEPT** | both statements of the headroom are past-tense facts about `6dbd932` with pointers at where the moving value lives; "derived from the pinned branch figure" became "derived at the time from the then-pinned"; both parser-arm fixtures I named were added. |
+| F3      | **ACCEPT** | a `# ROUND 5` section now carries the round's running inventory, and the `d986aff` row states in bold that the bumped actions have not executed on a runner.                                                                                                |
+| F4      | **ACCEPT** | the proposal restates closing F3's enumeration whole, names the two standing items and the design reason they stand, and scopes the worked-example claim to what the sweep governs.                                                                         |
+
+**Overall: ACCEPT.** One new finding came out of probing the walk, filed below as F5: it is not a failure of this remediation - it predates it, inside my own stage-1 range, and I missed it - but it is open, and it will turn CI red on the first push after this branch merges.
+
+### F1, re-driven on its own terms
+
+The three escapes, against the shipped checker's real default callbacks in fresh repositories:
+
+```console
+$ S=/private/tmp/claude-501/-Users-arthurzhang-dev-blackjack-trainer/f476f314-0af6-45d4-b550-3b8110120231/scratchpad; rm -rf $S/wnd2 && mkdir -p $S/wnd2/tools $S/wnd2/reviews && cd $S/wnd2 && git init -q . && cp /Users/arthurzhang/dev/blackjack-trainer/tools/check-records.mjs tools/ && ln -sfn /Users/arthurzhang/dev/blackjack-trainer/node_modules node_modules && git add tools && git -c user.email=t@t -c user.name=t commit -qm c0 && SHA=$(git rev-parse --short HEAD) && printf '# A\n\n<!-- gate-table: %s -->\n\n| # | gate | result |\n| --- | --- | --- |\n| 3 | unit tests | 1547 passed |\n' "$SHA" > reviews/A.md && git add reviews && git -c user.email=t@t -c user.name=t commit -qm c1 && node tools/check-records.mjs; echo "CLEAN_C1=$?"; sed -i '' 's/1547 passed/1533 passed/' reviews/A.md && git -c user.email=t@t -c user.name=t commit -qam c2 && echo x > other.txt && git add other.txt && git -c user.email=t@t -c user.name=t commit -qm c3 && node tools/check-records.mjs; echo "COVERING_COMMIT=$?"; echo y >> other.txt && git -c user.email=t@t -c user.name=t commit -qam c4 && node tools/check-records.mjs > /dev/null 2>&1; echo "TWO_COMMITS_LATER=$?"
+records: 1 documents checked, no defects
+CLEAN_C1=0
+records: 1 defect(s)
+  reviews/A.md:5: the gate table changed but its marker still names `26a55cc`; a re-measured table re-names the tree it measured
+COVERING_COMMIT=1
+TWO_COMMITS_LATER=1
+```
+
+```console
+$ cd $S/wnd2 && git mv reviews/A.md reviews/B.md && sed -i '' 's/1533 passed/1200 passed/' reviews/B.md && node tools/check-records.mjs > $S/p-staged.txt 2>&1; echo "STAGED_RENAME=$?"; grep -c "re-names the tree" $S/p-staged.txt; git -c user.email=t@t -c user.name=t commit -qam c5 && node tools/check-records.mjs > $S/p-committed.txt 2>&1; echo "COMMITTED_RENAME=$?"; grep -c "re-names the tree" $S/p-committed.txt
+STAGED_RENAME=1
+1
+COMMITTED_RENAME=1
+1
+```
+
+The covering-commit escape and both rename escapes are closed, and the refusal persists at later trees instead of fading.
+A doc touched by fifteen hundred commits keeps the gate fast, because the walk stops at the first version that differs:
+
+```console
+$ cd $S/deep && git rev-list --count HEAD; time node tools/check-records.mjs; echo "DEEP_EXIT=$?"
+1502
+records: 1 documents checked, no defects
+node tools/check-records.mjs  0.23s user 0.05s system 147% cpu 0.192 total
+DEEP_EXIT=0
+```
+
+I mutation-checked the walk myself, four ways - the stage-1 shortcut restored, `--follow` dropped, the staged-rename fallback disabled, the differs requirement removed - each verified applied on disk before running:
+
+```console
+$ S=/private/tmp/claude-501/-Users-arthurzhang-dev-blackjack-trainer/f476f314-0af6-45d4-b550-3b8110120231/scratchpad; cd /Users/arthurzhang/dev/blackjack-trainer; cp tools/check-records.mjs $S/orig2-checker.mjs; for m in shortcut nofollow nostaged nodiffer; do cp $S/orig2-checker.mjs tools/check-records.mjs; node $S/mutate2.mjs $m || { echo "$m: APPLY FAILED"; continue; }; npx vitest run tools/check-records.spec.mjs > $S/mut2-$m.txt 2>&1; ec=$?; line=$(sed 's/\x1b\[[0-9;]*m//g' $S/mut2-$m.txt | grep -E "Tests  " | head -1); echo "$m: exit=$ec | $line"; done; cp $S/orig2-checker.mjs tools/check-records.mjs; git diff --quiet -- tools; echo "RESTORED=$?"
+MUTATION shortcut: applied
+shortcut: exit=1 |       Tests  3 failed | 87 passed (90)
+MUTATION nofollow: applied
+nofollow: exit=1 |       Tests  1 failed | 89 passed (90)
+MUTATION nostaged: applied
+nostaged: exit=1 |       Tests  1 failed | 89 passed (90)
+MUTATION nodiffer: applied
+nodiffer: exit=1 |       Tests  2 failed | 88 passed (90)
+RESTORED=0
+```
+
+All four are killed, each by exactly the real-repository fixture written for its history, none incidentally.
+
+**One residual, recorded rather than filed.**
+The walk refuses an honest revert forever: a bad table edit that lands and is then reverted to the marker's original body leaves the newest differing version being the bad one, so the gate stays red at every later tree even though the current table is true at the tree its marker names.
+
+```console
+$ cd $S/osc && node tools/check-records.mjs; echo "AFTER_REVERT=$?"; echo x > o.txt && git add o.txt && git -c user.email=t@t -c user.name=t commit -qm c4 && node tools/check-records.mjs > /dev/null 2>&1; echo "REVERT_PLUS_ONE=$?"
+records: 1 defect(s)
+  reviews/A.md:5: the gate table changed but its marker still names `cfac71f`; a re-measured table re-names the tree it measured
+AFTER_REVERT=1
+REVERT_PLUS_ONE=1
+```
+
+The letter of the new record covers this ("until the marker moves"), and the direction is strict, but the only exits are moving the marker - wrong, nothing was re-measured - or freezing the section.
+Whoever next touches the gate should decide whether the comparison target ought to be the version at the marker's own commit rather than the newest differing version; that choice is a design change, not this remediation's debt.
+A brand-new document carrying a fabricated marked table remains accepted, unchanged: with no history there is nothing to compare, which the design discloses as the trust it extends to a first measurement.
+
+### F2 to F4, re-verified
+
+The K6 row and the closing bullet now state 0.91 as a fact about `6dbd932`, the tree the round-4 gate table names; nothing in the records states the current headroom, which I confirmed by search; and the coverage run below shows the remediation's fixtures moved the branch figure up, because the git-default callback arms my F2 counted as uncovered are now driven by real repositories.
+The `# ROUND 5` inventory names every change of the round including this review, and the actions-bump row carries the unexercised-pipeline disclosure.
+The proposal's re-enumeration matches closing F3's five items word for word, and its scoping sentence is accurate: the two standing figures are outside the sweep's two shapes, and the E2E count is one the sweep declines on purpose.
+
+### The gates, re-run at `ad3c987`
+
+```console
+$ npm run lint > $S/r-lint.txt 2>&1; echo "LINT_EXIT=$?"; tail -1 $S/r-lint.txt
+LINT_EXIT=0
+records: 35 documents checked, no defects
+```
+
+```console
+$ for c in 7f7f536 8220729 82e7439 ad3c987; do git worktree add --detach $S/rwt$c $c > /dev/null 2>&1; ln -sfn "$PWD/node_modules" $S/rwt$c/node_modules; (cd $S/rwt$c && npm run lint > $S/rlint-$c.txt 2>&1); echo "$c: lint_exit=$? | $(tail -1 $S/rlint-$c.txt)"; git worktree remove --force $S/rwt$c; done
+7f7f536: lint_exit=0 | records: 35 documents checked, no defects
+8220729: lint_exit=0 | records: 35 documents checked, no defects
+82e7439: lint_exit=0 | records: 35 documents checked, no defects
+ad3c987: lint_exit=0 | records: 35 documents checked, no defects
+```
+
+```console
+$ npm run test:coverage > $S/r-cov.txt 2>&1; echo "COV_EXIT=$?"; sed 's/\x1b\[[0-9;]*m//g' $S/r-cov.txt | grep -E "Test Files|Tests |Statements|Branches|Functions|Lines  "
+COV_EXIT=0
+ Test Files  68 passed (68)
+      Tests  1642 passed (1642)
+Statements   : 96.06% ( 5671/5903 )
+Branches     : 92.96% ( 2589/2785 )
+Functions    : 93.54% ( 971/1038 )
+Lines        : 97.85% ( 4374/4470 )
+```
+
+Every figure the remediation claimed reproduces exactly.
+
+## F5 - the gate is red in a shallow clone, and CI's checkout is shallow
+
+**What happens.** `actions/checkout@v5` fetches depth 1 by default, and neither workflow sets `fetch-depth`; `ci.yml`'s `validate` job and `pages.yml`'s `build` job both run `npm run lint`.
+In a depth-one clone the marker's commit does not exist as an object, so `commitExists` fails and the gate refuses the ledger's own gate table; the history walk, for its part, sees no history and silently skips.
+Measured in a depth-one clone of this repository at `ad3c987`:
+
+```console
+$ S=/private/tmp/claude-501/-Users-arthurzhang-dev-blackjack-trainer/f476f314-0af6-45d4-b550-3b8110120231/scratchpad; rm -rf $S/shallow && git clone -q --depth 1 file:///Users/arthurzhang/dev/blackjack-trainer $S/shallow 2>/dev/null && cd $S/shallow && git rev-list --count HEAD; ln -sfn /Users/arthurzhang/dev/blackjack-trainer/node_modules node_modules; node tools/check-records.mjs; echo "SHALLOW_GATE_EXIT=$?"
+1
+records: 1 defect(s)
+  PROD-READINESS.md:795: gate-table marker names `6dbd932`, which is not a commit in this repository
+SHALLOW_GATE_EXIT=1
+```
+
+**Why it has not bitten yet.** The green runs the N1 and N5 rows cite ran at `2ac2a68`, where the gate had no gate-table logic; the K8 gate has never executed on a runner.
+The first push after this branch merges turns the `validate` job and the Pages `build` job - the one N1's discharge relies on to stand between a push and a deploy - red on every push, with a false positive about a commit that is in the repository.
+
+**Where it came from, honestly.** `100cb8f` introduced `commitExists`, inside the range my stage-1 review covered; I probed it with injected callbacks and full-history worktrees and never with a shallow clone, so I missed it, and the remediation under review here neither introduced nor touched it.
+It fails strict - nothing escapes silently, CI is loudly red - but a gate that is red on every honest push is a broken gate.
+
+**P2, blocking for the next push, not for this remediation.**
+The remedy is a choice to make and record: `fetch-depth: 0` on the two checkouts (one line each, plus an inventory row), or a gate-side policy for repositories whose history is absent, in which case the walk's behavior there should be stated too.
+
+## Verdict on the remediation
+
+**ACCEPT.**
+All four findings are closed on the terms they were filed on, with the escape histories pinned as fixtures that drive the checker's real git callbacks - the exact instrument whose absence let the shortcut ship - and the records now describe the gate that exists.
+F5 stands open for the next remediation, filed above with its measurement.
