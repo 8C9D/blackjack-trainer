@@ -760,8 +760,14 @@ it was committed, and named here by the commit after it the way `934f9e9` named 
 the round's last commit that changes code or tests: it adds one fixture to the gate's own spec. Gates 7 to 9 last ran at
 `4ad4d24`: nothing under `ios/` has changed since (`git diff --name-only 4ad4d24..HEAD -- ios/` is
 empty, re-verified at the remediation tree), and swiftformat, swiftlint and xcodebuild read nothing
-else. Any commit after the named one changes this ledger only, and gate 1 - the one gate that reads
-records - is re-run and green at each.
+else. The commits between the named one and `2ac2a68` touch no code or test this table measures:
+they change this ledger, the reviews, the round-5 proposal, and - through the merge of `main`'s
+side - two workflow files, `.gitignore` and four `.agents/` skill files. Gate 1, run at every one
+of those commits by the closing review and re-run for this sentence, exits 0 at all of them except
+the merge commit itself: at `599da6c` it exits 1 with two defects, because `main`'s concurrency
+block had shifted `ci.yml` down five lines and broken two bindings, which `2ac2a68` re-resolved.
+An earlier version of this sentence claimed the range changed the ledger only and held gate 1 green
+at each; both halves were false, measured by the closing review (REVIEW-round4-closing F2).
 
 This section is the fourth attempt at naming its tree, and the second and third attempts are what
 stage-6 F1 and F2 rejected. The first named one commit while two rows carried a later tree's
