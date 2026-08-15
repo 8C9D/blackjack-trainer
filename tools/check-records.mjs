@@ -98,6 +98,16 @@ const CITATION =
 const LINK = /\]\(([^)\s]+)\)/g;
 const EXIT_LABEL = /^\s*([A-Z][A-Z0-9_]*)=/;
 
+/**
+ * Whether a fence renders as a run transcript. GitHub's highlighter is
+ * case-insensitive, so a ```Console fence reads identically to ```console on
+ * the page; treating only the lowercase spelling as a transcript let a
+ * fabricated one skip rule 3 entirely (K9, REVIEW-round4-stage6 F9). One
+ * predicate, used by rule 3's walk and rule 4's exemption, so the two rules
+ * cannot disagree about what a transcript is.
+ */
+const isConsole = (block) => (block.lang ?? '').toLowerCase() === 'console';
+
 /** GitHub's heading slug: lowercase, drop punctuation, spaces to hyphens. */
 export function slug(text) {
   return text
@@ -129,13 +139,14 @@ async function parseDoc(markdown) {
   const text = markdown.split('\n');
   const code = [];
   const inline = new Map();
-  const visit = (node) => {
+  const visit = (node, quote) => {
     if (!node || typeof node !== 'object') return;
     if (node.type === 'code' && node.position) {
       code.push({
         start: node.position.start.line,
         end: node.position.end.line,
         lang: node.lang ?? '',
+        quote,
       });
     }
     if (node.type === 'inlineCode' && node.position) {
@@ -147,23 +158,44 @@ async function parseDoc(markdown) {
         inline.get(line).push([from, to]);
       }
     }
+    const deeper = quote + (node.type === 'blockquote' ? 1 : 0);
     for (const key of Object.keys(node)) {
       const value = node[key];
-      if (Array.isArray(value)) value.forEach(visit);
-      else if (value && typeof value === 'object' && value.type) visit(value);
+      if (Array.isArray(value)) value.forEach((child) => visit(child, deeper));
+      else if (value && typeof value === 'object' && value.type) visit(value, deeper);
     }
   };
-  visit(ast);
+  visit(ast, 0);
 
   const codeLine = new Map();
+  const dequote = (line, depth) => {
+    for (let d = 0; d < depth; d++) line = line.replace(/^ {0,3}> ?/, '');
+    return line;
+  };
   for (const block of code) {
     for (let line = block.start; line <= block.end; line++) codeLine.set(line, block);
+    // CommonMark strips up to the opening fence's indentation from every
+    // content line, so a transcript indented in a list item reads the same to
+    // its reader as a top-level one - and must read the same to rule 3 (K9).
+    const opening = dequote(text[block.start - 1] ?? '', block.quote);
+    block.dedent = new RegExp(`^ {0,${/^ */.exec(opening)[0].length}}`);
   }
   return {
     text,
     code,
     /** True for any line a reader sees as code, of every kind markdown has. */
     isCode: (line) => codeLine.has(line),
+    /**
+     * A code block's line as its reader sees it: blockquote markers and the
+     * fence's own indentation removed. The parser answers "where is the code";
+     * the raw lines still wear their containers, and rule 3's prompt and label
+     * regexes must read the transcript rather than its wrapping - a `> $`
+     * prompt matched nothing, so a fabricated blockquoted transcript was
+     * checked as nothing (K9, REVIEW-round4-stage6 F8, F12).
+     */
+    blockLine(block, line) {
+      return dequote(text[line - 1] ?? '', block.quote).replace(block.dedent, '');
+    },
     /** The line with its inline-code spans blanked: what can carry a directive. */
     applied(line) {
       const raw = text[line - 1] ?? '';
@@ -435,7 +467,7 @@ function checkTranscripts(root, docs, parsed) {
     // every "where does this block end" defect in this round came from deciding
     // that by hand.
     for (const block of parsedDoc.code) {
-      if (block.lang !== 'console') continue;
+      if (!isConsole(block)) continue;
       const exempt = lastDirectiveLineBefore(parsedDoc, block.start).includes(
         '<!-- transcript-literal -->',
       );
@@ -443,7 +475,7 @@ function checkTranscripts(root, docs, parsed) {
       const echoed = new Set();
       for (let no = block.start + 1; no < block.end; no++) {
         if (stale(no)) continue;
-        const text = parsedDoc.text[no - 1] ?? '';
+        const text = parsedDoc.blockLine(block, no);
         if (/^\$ /.test(text)) {
           command = { text: text.slice(2), line: no, open: continues(text) };
           noteEchoes(command.text, echoed);
@@ -479,7 +511,11 @@ function checkTranscripts(root, docs, parsed) {
  */
 function lastDirectiveLineBefore(doc, line) {
   for (let no = line - 1; no >= 1; no--) {
-    if (doc.isCode(no)) continue;
+    // Another code block between here and the marker means the marker was
+    // written for that block. Skipping code let one marker exempt every fence
+    // until the next prose line, the second one unmarked to any reader of the
+    // source (K9, REVIEW-round4-stage6 F10).
+    if (doc.isCode(no)) return '';
     const text = doc.applied(no);
     if (text.trim() !== '') return text;
   }
@@ -546,7 +582,11 @@ async function checkFigures(root, docs, figures, parsed, repo) {
     {
       name: 'coverage quadruple',
       volatile: true,
-      re: /\b(\d{2}\.\d{1,2}) ?\/ ?(\d{2}\.\d{1,2}) ?\/ ?(\d{2}\.\d{1,2}) ?\/ ?(\d{2}\.\d{1,2})\b/g,
+      // A component is either a two-digit percentage with decimals or a bare
+      // `100`: requiring the decimal point made any quadruple containing a
+      // fully covered component - including the checker's own - invisible to
+      // this sweep (K9, REVIEW-round4-stage6 F12).
+      re: /\b(100(?:\.00?)?|\d{2}\.\d{1,2}) ?\/ ?(100(?:\.00?)?|\d{2}\.\d{1,2}) ?\/ ?(100(?:\.00?)?|\d{2}\.\d{1,2}) ?\/ ?(100(?:\.00?)?|\d{2}\.\d{1,2})\b/g,
       say: (m) =>
         `states ${m[1]} / ${m[2]} / ${m[3]} / ${m[4]} in prose; a coverage quadruple is ` +
         `volatile and lives only in the round's marked gate table or a verbatim transcript`,
@@ -576,7 +616,7 @@ async function checkFigures(root, docs, figures, parsed, repo) {
     const { stale } = exemptions(parsedDoc);
     const consoleLine = new Set();
     for (const block of parsedDoc.code) {
-      if (block.lang !== 'console') continue;
+      if (!isConsole(block)) continue;
       for (let no = block.start; no <= block.end; no++) consoleLine.add(no);
     }
 
