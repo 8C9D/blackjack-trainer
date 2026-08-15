@@ -103,8 +103,16 @@ written:
 
 The migration sweep the design priced turned out mostly paid already, except in the closing section
 the paragraph above calls "a worked example of the target state". The closing review measured that
-claim false (its F3): the bullets under the gate table stated the unit-test count, both coverage
-quadruples and the per-file checker quadruple in prose - two of those visible to the inverted sweep
-only once K9's quadruple fix taught it a bare `100`. Round 5's migration rewrote the bullets as
-pointers and marked the table, so the sentence above is true of the tree that carries this section,
-and was not true of the tree it was written at.
+claim false (its F3), enumerating five statements in the bullets under the gate table: the
+unit-test count and its baseline, the E2E count move, the current and baseline coverage quadruples,
+the per-file checker quadruple, and the branch headroom. Round 5's migration rewrote the count and
+quadruple statements as pointers and marked the table - two of them visible to the inverted sweep
+only once K9's quadruple fix taught it a bare `100` - and left the other two standing, because
+neither the E2E count nor a headroom matches the design's two volatile shapes and the sweep does
+not refuse them. An earlier version of this paragraph restated the enumeration minus exactly those
+two items before declaring the claim answered (round-5 stage-1 review, F4); the standing headroom
+sentence then went stale the way any volatile figure does (the same review's F2), and the
+remediation restated it as a fact about the tree the table names. So the sentence above is true of
+what the sweep governs, at the tree that carries this section, and was not true of the tree it was
+written at; the figures the sweep does not govern stand on their authors' discipline, which is the
+migration cost this design accepted rather than removed.
