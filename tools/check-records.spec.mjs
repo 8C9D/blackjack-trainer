@@ -728,6 +728,144 @@ describe('rule 3 reads a command line the way a shell would', () => {
   });
 });
 
+describe('a transcript is read through its container (K9)', () => {
+  const T = '```';
+
+  it('refuses a fabricated exit label in a blockquoted transcript (stage-6 F8)', async () => {
+    // The block renders as a console transcript and was walked, but `> $` and
+    // `> LINT_EXIT=` matched neither the prompt nor the label regex, so the
+    // whole fabrication checked as nothing.
+    const bad = await check({
+      'reviews/A.md': [
+        '# A',
+        '',
+        `> ${T}console`,
+        '> $ npm run lint',
+        '> LINT_EXIT=0',
+        `> ${T}`,
+        '',
+      ].join('\n'),
+    });
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('cannot print it');
+  });
+
+  it('accepts an honest blockquoted transcript', async () => {
+    expect(
+      await check({
+        'reviews/A.md': [
+          '# A',
+          '',
+          `> ${T}console`,
+          '> $ npm run lint > out.txt 2>&1; echo "LINT_EXIT=$?"',
+          '> LINT_EXIT=1',
+          `> ${T}`,
+          '',
+        ].join('\n'),
+      }),
+    ).toEqual([]);
+  });
+
+  it('refuses a fabricated exit label behind a case-spelled Console fence (stage-6 F9)', async () => {
+    const bad = await check({
+      'reviews/A.md': ['# A', '', `${T}Console`, '$ ls', 'FAKE_EXIT=0', T, ''].join('\n'),
+    });
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('cannot print it');
+  });
+
+  it('exempts a case-spelled Console transcript from rule 4 like any other transcript', async () => {
+    // The same predicate answers both rules, so a fence rule 3 walks as a
+    // transcript is also the transcript rule 4 leaves alone.
+    expect(
+      await check({
+        'reviews/A.md': [
+          '# A',
+          '',
+          `${T}Console`,
+          '$ npm test',
+          '      Tests  1547 passed (1547)',
+          T,
+          '',
+        ].join('\n'),
+      }),
+    ).toEqual([]);
+  });
+
+  it('exempts only the next fence after a transcript-literal marker (stage-6 F10)', async () => {
+    // One marker, two fences with only blanks between: the second is unmarked
+    // to any reader of the source and must not inherit the escape.
+    const bad = await check({
+      'reviews/A.md': [
+        '# A',
+        '',
+        '<!-- transcript-literal -->',
+        '',
+        `${T}console`,
+        '$ cat .env.example',
+        'API_BASE=https://example.test',
+        T,
+        '',
+        `${T}console`,
+        '$ ls',
+        'FAKE_EXIT=0',
+        T,
+        '',
+      ].join('\n'),
+    });
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('FAKE_EXIT');
+  });
+
+  it('accepts an honest transcript indented in a list item (stage-6 F12)', async () => {
+    // The false positive that bit the closing reviewer: the indented `$` was
+    // invisible, so three honest labels were refused as printed by no command.
+    expect(
+      await check({
+        'reviews/A.md': [
+          '# A',
+          '',
+          '- the run, recorded in a list:',
+          '',
+          `  ${T}console`,
+          '  $ npm run lint > o.txt 2>&1; echo "LINT_EXIT=$?"',
+          '  LINT_EXIT=0',
+          `  ${T}`,
+          '',
+        ].join('\n'),
+      }),
+    ).toEqual([]);
+  });
+
+  it('still refuses a fabricated label in a list-indented transcript', async () => {
+    const bad = await check({
+      'reviews/A.md': [
+        '# A',
+        '',
+        '- the run, recorded in a list:',
+        '',
+        `  ${T}console`,
+        '  $ npm run lint',
+        '  LINT_EXIT=0',
+        `  ${T}`,
+        '',
+      ].join('\n'),
+    });
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('cannot print it');
+  });
+
+  it('sees a coverage quadruple containing a bare 100 (stage-6 F12)', async () => {
+    // Requiring four dotted components made any quadruple with a fully covered
+    // component invisible - including the checker's own per-file coverage.
+    const bad = await check({
+      'reviews/A.md': '# A\n\nThe checker is covered at 94.11 / 87.89 / 100 / 95.33.\n',
+    });
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('coverage quadruple');
+  });
+});
+
 describe('rule 4: the gate table is the one home a volatile figure has', () => {
   const marked = (commit) =>
     [
