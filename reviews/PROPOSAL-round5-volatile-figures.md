@@ -89,10 +89,15 @@ written:
   leaves the one-per-round discipline to the authors, because a round boundary is not something
   the checker can see.
 - Item 4's check runs on every gate run rather than "on demand", and compares against the last
-  committed version of the document that differs from the working tree - HEAD while the edit is
-  uncommitted, HEAD's first parent once it lands - so a table edited without re-naming its tree is
-  refused in both places the gate runs. Stricter than written, in the direction a records gate
-  should fail.
+  committed version of the document that differs from the working tree, found by walking the
+  file's history with renames followed - so a table edited without re-naming its tree is refused
+  while the edit is uncommitted, at the commit that lands it, and at every tree after it until the
+  marker moves. Stricter than written, in the direction a records gate should fail. As first
+  shipped, this bullet claimed that comparison while the code shortcut it to HEAD and then HEAD's
+  first parent, which forgot the defect one covering commit after it landed and never saw a
+  renamed document at all; the round-5 stage-1 review measured both escapes (its F1), and the
+  remediation implemented the walk the record had been describing, with the escape histories
+  pinned as fixtures that drive the checker's real git callbacks in throwaway repositories.
 - `FIGURES` shrank to the pooled M2 sample, exactly as item 3 says, and the coverage jitter
   tolerance went with the pin that needed it.
 

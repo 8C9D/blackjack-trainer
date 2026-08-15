@@ -638,8 +638,9 @@ async function checkFigures(root, docs, figures, parsed, repo) {
     // A gate table edited without re-naming its tree is the "table false at the
     // tree it names" defect (REVIEW-round4-stage3 F1, stage-6 F1) made
     // mechanical: the figures may only change in the commit that moves the
-    // marker. Compared against the last committed version that differs, so the
-    // check bites both before the commit and on it.
+    // marker. Compared against the last committed version that differs -
+    // history walked, renames followed - so the check bites before the commit,
+    // on it, and at every tree after it until the marker moves.
     if (live.length > 0) {
       const previous = await repo.previousOf(doc);
       if (previous !== null) {
@@ -718,14 +719,16 @@ export async function checkRecords({
         }
       }),
     // The last committed version of the document that differs from the working
-    // tree: HEAD while the edit is uncommitted, HEAD's first parent once it is
-    // - so the moved-table check holds in both places a gate runs.
+    // tree, found by walking the file's history with renames followed. The
+    // first shipped version shortcut the walk to HEAD and HEAD's first parent,
+    // which forgot a moved table one covering commit after it landed and never
+    // saw a renamed document at all (REVIEW-round5-stage1 F1).
     previousOf:
       previousOf ??
       ((doc) => {
-        const show = (ref) => {
+        const git = (args) => {
           try {
-            return execFileSync('git', ['show', `${ref}:${doc}`], {
+            return execFileSync('git', ['-c', 'core.quotepath=false', ...args], {
               cwd: root,
               encoding: 'utf8',
               stdio: ['ignore', 'pipe', 'ignore'],
@@ -734,9 +737,43 @@ export async function checkRecords({
             return null;
           }
         };
-        const head = show('HEAD');
-        if (head !== null && head !== readDoc(root, doc)) return head;
-        return show('HEAD^');
+        // Commits that touched the file, newest first, each with the name the
+        // file wore in that commit: a rename's post-image name on the rename
+        // commit, the old name on everything older.
+        const history = (path) => {
+          const log = git(['log', '--follow', '--format=%x01%H', '--name-status', '--', path]);
+          if (log === null) return [];
+          const entries = [];
+          let commit = null;
+          for (const line of log.split('\n')) {
+            if (line.startsWith('\x01')) {
+              commit = line.slice(1).trim();
+              continue;
+            }
+            const status = /^[A-Z]\d*\t([^\t]+)(?:\t([^\t]+))?$/.exec(line);
+            if (commit && status) entries.push({ commit, path: status[2] ?? status[1] });
+          }
+          return entries;
+        };
+        let entries = history(doc);
+        if (entries.length === 0) {
+          // A path with no committed history is either genuinely new or the
+          // new name of a rename that has not landed yet (`git mv` stages
+          // one); the second case carries the old name's history and must not
+          // shed it (REVIEW-round5-stage1 F1).
+          const staged = git(['diff', '--cached', '--find-renames', '--name-status']);
+          const renamed = (staged ?? '')
+            .split('\n')
+            .map((line) => /^R\d*\t([^\t]+)\t([^\t]+)$/.exec(line))
+            .find((m) => m && m[2] === doc);
+          if (renamed) entries = history(renamed[1]);
+        }
+        const current = readDoc(root, doc);
+        for (const { commit, path } of entries) {
+          const content = git(['show', `${commit}:${path}`]);
+          if (content !== null && content !== current) return content;
+        }
+        return null;
       }),
   };
   // Parse every document once. Each rule then asks the same parse where the code

@@ -1,4 +1,5 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -386,6 +387,14 @@ describe('rule 4: figures', () => {
     expect(bad.join(' ')).toContain('pooled M2 failure count');
   });
 
+  it('sweeps a stale figure inside a fence with no language at all', async () => {
+    // A bare ``` fence has no info string; it is code, it is not a transcript,
+    // and rule 4 must still read it.
+    const bad = await check({ 'reviews/A.md': '# A\n\n```\n1547 passed\n```\n' }, { figures });
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('states 1547');
+  });
+
   it('does not honour a figure-historical marker printed inside a code block', async () => {
     // A diff block quoting a marked line prints the marker's text as code.
     // Honoured there, it would exempt any stale figure sharing those lines -
@@ -652,6 +661,21 @@ describe('a directive counts only where a reader sees prose', () => {
       expect(bad[0]).toContain('is not pinned to content');
     });
   }
+
+  it('does not honour a marker in an inline-code span that wraps across lines', async () => {
+    // CommonMark lets a code span carry a line break: the marker below is
+    // quoted inside one that opens on its own line and closes on the next,
+    // and a quoted marker is prose about a directive, not a directive.
+    const bad = await check(
+      {
+        'reviews/A.md':
+          '# A\n\nQuoting `x <!-- records: historical-file -->\ny` across lines.\n\n1547 passed.\n',
+      },
+      { figures: FIGURES },
+    );
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('states 1547');
+  });
 
   it('does not read a citation printed inside a transcript as a citation', async () => {
     // A published error message or grep output routinely names a file and line
@@ -954,6 +978,95 @@ describe('rule 4: the gate table is the one home a volatile figure has', () => {
         { commitExists: () => false },
       ),
     ).toEqual([]);
+  });
+});
+
+describe('the moved-table check against a real repository (round5-stage1 F1)', () => {
+  // These fixtures run the checker's *default* repository callbacks against a
+  // real throwaway git repo. Every other gate-table test injects `previousOf`,
+  // which is how the shipped walk went untested while the record described a
+  // stronger one: the round-5 stage-1 review measured a moved table going
+  // permanently green one covering commit after it landed, and a `git mv` plus
+  // edit going green everywhere. The walk now follows the file's history.
+  const gitq = (...args) =>
+    execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...args], {
+      cwd: root,
+      stdio: 'ignore',
+    });
+  const table = (commit, figure) =>
+    [
+      '# A',
+      '',
+      `<!-- gate-table: ${commit} -->`,
+      '',
+      '| #   | gate       | result       |',
+      '| --- | ---------- | ------------ |',
+      `| 3   | unit tests | ${figure} passed |`,
+      '',
+    ].join('\n');
+
+  /** A repo whose one doc is a marked gate table naming a real commit. */
+  function seedRepo() {
+    gitq('init', '-q');
+    writeFileSync(join(root, 'seed.txt'), 'seed\n');
+    gitq('add', '.');
+    gitq('commit', '-qm', 'seed');
+    const commit = execFileSync('git', ['rev-parse', '--short', 'HEAD'], {
+      cwd: root,
+      encoding: 'utf8',
+    }).trim();
+    writeFileSync(join(root, 'reviews', 'A.md'), table(commit, 1547));
+    gitq('add', '.');
+    gitq('commit', '-qm', 'table');
+    return commit;
+  }
+  const run = (doc) => checkRecords({ root, docs: [doc] });
+
+  it('still refuses a moved table one covering commit after it lands', async () => {
+    const commit = seedRepo();
+    writeFileSync(join(root, 'reviews', 'A.md'), table(commit, 1533));
+    gitq('commit', '-qam', 'edit the table without moving the marker');
+    writeFileSync(join(root, 'other.txt'), 'x\n');
+    gitq('add', '.');
+    gitq('commit', '-qm', 'a covering commit');
+    const bad = await run('reviews/A.md');
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('re-names the tree it measured');
+  });
+
+  it('follows a committed rename to the history the old path carries', async () => {
+    const commit = seedRepo();
+    gitq('mv', 'reviews/A.md', 'reviews/B.md');
+    writeFileSync(join(root, 'reviews', 'B.md'), table(commit, 1200));
+    gitq('commit', '-qam', 'rename and edit in one step');
+    const bad = await run('reviews/B.md');
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('re-names the tree it measured');
+  });
+
+  it('sees a staged rename before it is committed', async () => {
+    const commit = seedRepo();
+    gitq('mv', 'reviews/A.md', 'reviews/B.md');
+    writeFileSync(join(root, 'reviews', 'B.md'), table(commit, 1200));
+    const bad = await run('reviews/B.md');
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('re-names the tree it measured');
+  });
+
+  it('does not refuse a clean history whose table never moved', async () => {
+    seedRepo();
+    appendFileSync(join(root, 'reviews', 'A.md'), '\nProse under the table, committed.\n');
+    gitq('commit', '-qam', 'prose only');
+    appendFileSync(join(root, 'reviews', 'A.md'), '\nMore prose, uncommitted.\n');
+    expect(await run('reviews/A.md')).toEqual([]);
+  });
+
+  it('asks the real repository whether the named commit exists', async () => {
+    seedRepo();
+    writeFileSync(join(root, 'reviews', 'A.md'), table('deadbee', 1547));
+    const bad = await run('reviews/A.md');
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('not a commit in this repository');
   });
 });
 
