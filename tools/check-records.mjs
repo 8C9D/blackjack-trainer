@@ -17,7 +17,13 @@
  *                   cannot print them (R3-15, R3-27): two commands presented as
  *                   one execution.
  *   4. figures    - one rate was "corrected everywhere" four times and was wrong
- *                   each time (R3-1, R3-11, R3-18, R3-24).
+ *                   each time (R3-1, R3-11, R3-18, R3-24). Round 4 then showed
+ *                   the pin dragging prose to new values instead (K8), so rule 4
+ *                   now has two halves: figures with one true value forever stay
+ *                   pinned, and volatile figures - the unit-test count, the
+ *                   coverage quadruple - are refused in prose everywhere except
+ *                   the round's marked gate table and verbatim transcripts
+ *                   (reviews/PROPOSAL-round5-volatile-figures.md).
  *
  * Scope, stated because a checker's blind spots matter more than its rules:
  *
@@ -33,6 +39,12 @@
  * - Verbatim run transcripts (```console fences) are exempt from rule 4. A
  *   transcript records what a run printed. Editing one to agree with a current
  *   figure would be falsifying the evidence, which is the opposite of the point.
+ * - Volatile figures move whenever a test lands, so no prose statement of one
+ *   can stay true. They are allowed in exactly two places: a gate table opened
+ *   by a `gate-table` marker naming the commit measured, and transcripts. The
+ *   marker's commit must exist here, and a gate table edited without re-naming
+ *   its tree is refused - re-measurement is a human act, recorded by moving the
+ *   marker.
  *
  * Markers, all of them HTML comments so they render as nothing:
  *
@@ -45,6 +57,9 @@
  *                                                figure on purpose
  *   <!-- transcript-literal -->                  the next fence really did print
  *                                                a NAME= line
+ *   <!-- gate-table: <commit> -->                the table directly below states
+ *                                                this round's volatile figures,
+ *                                                measured at the named tree
  */
 import { execFileSync } from 'node:child_process';
 import * as prettier from 'prettier';
@@ -53,40 +68,22 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
- * The round's figures. Changing one of these is a deliberate act: the gate then
- * refuses every document that still states the old value, which is the whole
- * mechanism round 3 lacked when it corrected one rate four times.
+ * The round's pinned figures. Changing one of these is a deliberate act: the
+ * gate then refuses every document that still states the old value, which is
+ * the whole mechanism round 3 lacked when it corrected one rate four times.
+ *
+ * Only figures that are historical by nature - one measurement, one true value
+ * forever - are pinned. The unit-test count and the coverage quadruple used to
+ * be pinned here too, and the pin dragged every prose statement of them to each
+ * new tree's value, which produced round 4's dominant regression class (K8).
+ * Those figures are now refused in prose outright, everywhere but a marked gate
+ * table and transcripts, and with no prose allowed to state them there is no
+ * current value to chase - so no pin, and the coverage jitter tolerance the pin
+ * needed (REVIEW-round4-stage2 F9) went with it.
  */
 export const FIGURES = {
-  // The count at the round's tip, not at its baseline. `reviews/BASELINE-round4.md`
-  // states the baseline's 1551 on purpose and marks those two lines as such.
-  unitTests: 1620,
-  coverage: [96.05, 92.91, 93.48, 97.86],
   m2: { failures: 33, executions: 600, rate: 5.5 },
 };
-
-/**
- * How far a stated coverage figure may sit from the pinned one before the gate
- * refuses it.
- *
- * Not a fudge factor: the branch percentage genuinely is not deterministic here.
- * Measured over twelve consecutive `npm run test:coverage` runs at one commit,
- * eleven printed 92.83% and one printed 92.87% - one branch out of 2695, which
- * is 0.037 points (REVIEW-round4-stage2 F9). Pinning to two decimals would
- * therefore refuse a record stating a figure its author had just measured, about
- * one time in twelve, and tell them their true number was wrong.
- *
- * The other end of the window is how wide this can get before a superseded
- * quadruple slips through. A quadruple is refused when *any* of its four
- * components is outside tolerance, so what governs that is the **largest**
- * component difference, not the smallest: against the round-3 baseline the
- * largest is 0.24, so the refusal survives any tolerance below it. Two earlier
- * versions of this comment got that backwards and quoted the smallest - 0.10,
- * then 0.06 - which read as a margin of one hundredth of a point where the real
- * margin is nearly five times the jitter (REVIEW-round4-stage3 F7,
- * REVIEW-round4-stage4 F8). A test holds both ends against `FIGURES` itself.
- */
-const COVERAGE_TOLERANCE = 0.05;
 
 /** Documents whose citations must be pinned to content, not only resolved. */
 const BINDING_DOCS = /^(PROD-READINESS\.md|reviews\/ARTIFACTS.*\.md)$/;
@@ -489,30 +486,70 @@ function lastDirectiveLineBefore(doc, line) {
   return '';
 }
 
-// --- rule 4: one value per figure, everywhere the round states it ------------
+// --- rule 4: figures - volatile ones live in one marked table, pinned ones ---
+// --- hold one value everywhere the round states them -------------------------
 
-function checkFigures(root, docs, figures, parsed) {
+/**
+ * Every gate table a document declares, and every malformed declaration.
+ *
+ * A gate table is opened by a `gate-table` marker naming the commit measured,
+ * written directly above the table (blank lines allowed, nothing else). The
+ * blessed region is the contiguous run of `|` rows under the marker: the one
+ * place outside a transcript where a volatile figure may be written.
+ */
+function gateTables(parsedDoc) {
+  const regions = [];
   const bad = [];
-  const [cs, cb, cf, cl] = figures.coverage;
+  for (let no = 1; no <= parsedDoc.text.length; no++) {
+    if (parsedDoc.isCode(no)) continue;
+    const live = parsedDoc.applied(no);
+    if (!/<!-- gate-table\b/.test(live)) continue;
+    const m = /<!-- gate-table:\s*([0-9a-f]{7,40})\s*-->/.exec(live);
+    if (!m) {
+      bad.push({ no, why: 'a gate-table marker must name the commit measured' });
+      continue;
+    }
+    let start = no + 1;
+    while (start <= parsedDoc.text.length && parsedDoc.text[start - 1].trim() === '') start++;
+    let end = start;
+    while (end <= parsedDoc.text.length && /^\s*\|/.test(parsedDoc.text[end - 1])) end++;
+    if (end === start) {
+      bad.push({ no, why: 'a gate-table marker must sit directly above the table it names' });
+      continue;
+    }
+    regions.push({
+      marker: no,
+      commit: m[1],
+      start,
+      end: end - 1,
+      body: parsedDoc.text.slice(start - 1, end - 1).join('\n'),
+    });
+  }
+  return { regions, bad };
+}
+
+async function checkFigures(root, docs, figures, parsed, repo) {
+  const bad = [];
   const sweeps = [
     {
       name: 'unit-test count',
       // Four digits and up: the E2E suite's own `111 passed` is a different
-      // figure and is not this sweep's business.
+      // figure and is not this sweep's business. Volatile: any prose statement
+      // is refused, including one that is correct today, because a value that
+      // moves whenever a test lands will not stay correct (K8).
+      volatile: true,
       re: /\b(\d{4,5}) (?:unit )?(?:tests?|passed)\b/g,
-      ok: (m) => Number(m[1]) === figures.unitTests,
-      say: (m) => `states ${m[1]} where the round's unit-test count is ${figures.unitTests}`,
+      say: (m) =>
+        `states ${m[1]} in prose; the unit-test count is volatile and lives only in ` +
+        `the round's marked gate table or a verbatim transcript`,
     },
     {
       name: 'coverage quadruple',
+      volatile: true,
       re: /\b(\d{2}\.\d{1,2}) ?\/ ?(\d{2}\.\d{1,2}) ?\/ ?(\d{2}\.\d{1,2}) ?\/ ?(\d{2}\.\d{1,2})\b/g,
-      ok: (m) =>
-        [cs, cb, cf, cl].every(
-          (want, i) => Math.abs(Number(m[i + 1]) - want) <= COVERAGE_TOLERANCE,
-        ),
       say: (m) =>
-        `states ${m[1]} / ${m[2]} / ${m[3]} / ${m[4]} where the round's coverage is ` +
-        `${cs} / ${cb} / ${cf} / ${cl}`,
+        `states ${m[1]} / ${m[2]} / ${m[3]} / ${m[4]} in prose; a coverage quadruple is ` +
+        `volatile and lives only in the round's marked gate table or a verbatim transcript`,
     },
     {
       name: 'pooled M2 failure count',
@@ -542,6 +579,43 @@ function checkFigures(root, docs, figures, parsed) {
       if (block.lang !== 'console') continue;
       for (let no = block.start; no <= block.end; no++) consoleLine.add(no);
     }
+
+    const { regions, bad: malformed } = gateTables(parsedDoc);
+    for (const { no, why } of malformed) {
+      if (!stale(no)) bad.push(`${doc}:${no}: ${why}`);
+    }
+    const blessed = new Set();
+    const live = regions.filter((region) => !stale(region.marker));
+    for (const region of live) {
+      if (!repo.commitExists(region.commit)) {
+        bad.push(
+          `${doc}:${region.marker}: gate-table marker names \`${region.commit}\`, ` +
+            `which is not a commit in this repository`,
+        );
+      }
+      for (let no = region.start; no <= region.end; no++) blessed.add(no);
+    }
+    // A gate table edited without re-naming its tree is the "table false at the
+    // tree it names" defect (REVIEW-round4-stage3 F1, stage-6 F1) made
+    // mechanical: the figures may only change in the commit that moves the
+    // marker. Compared against the last committed version that differs, so the
+    // check bites both before the commit and on it.
+    if (live.length > 0) {
+      const previous = await repo.previousOf(doc);
+      if (previous !== null) {
+        const before = gateTables(await parseDoc(previous)).regions;
+        for (const region of live) {
+          const named = before.find((b) => b.commit === region.commit);
+          if (named && named.body !== region.body) {
+            bad.push(
+              `${doc}:${region.start}: the gate table changed but its marker still names ` +
+                `\`${region.commit}\`; a re-measured table re-names the tree it measured`,
+            );
+          }
+        }
+      }
+    }
+
     parsedDoc.text.forEach((text, i) => {
       const no = i + 1;
       if (stale(no)) return;
@@ -556,9 +630,10 @@ function checkFigures(root, docs, figures, parsed) {
       if (!parsedDoc.isCode(no) && parsedDoc.applied(no).includes('<!-- figure-historical -->'))
         return;
       for (const sweep of sweeps) {
+        if (sweep.volatile && blessed.has(no)) continue;
         if (sweep.only && !sweep.only.test(text)) continue;
         for (const m of text.matchAll(sweep.re)) {
-          if (sweep.ok(m)) continue;
+          if (!sweep.volatile && sweep.ok(m)) continue;
           bad.push(`${doc}:${no}: ${sweep.name} ${sweep.say(m)}`);
         }
       }
@@ -569,7 +644,14 @@ function checkFigures(root, docs, figures, parsed) {
 
 // --- driver ------------------------------------------------------------------
 
-export async function checkRecords({ root, docs, tracked, figures = FIGURES } = {}) {
+export async function checkRecords({
+  root,
+  docs,
+  tracked,
+  figures = FIGURES,
+  commitExists,
+  previousOf,
+} = {}) {
   const documents = docs ?? recordsDocs(root);
   const files =
     tracked ??
@@ -579,6 +661,44 @@ export async function checkRecords({ root, docs, tracked, figures = FIGURES } = 
         .split('\n')
         .filter(Boolean),
     );
+  // What rule 4's gate-table checks ask of the repository, injectable so the
+  // fixture suite's throwaway trees - which have no history - can answer.
+  const repo = {
+    commitExists:
+      commitExists ??
+      ((sha) => {
+        try {
+          execFileSync('git', ['cat-file', '-e', `${sha}^{commit}`], {
+            cwd: root,
+            stdio: 'ignore',
+          });
+          return true;
+        } catch {
+          return false;
+        }
+      }),
+    // The last committed version of the document that differs from the working
+    // tree: HEAD while the edit is uncommitted, HEAD's first parent once it is
+    // - so the moved-table check holds in both places a gate runs.
+    previousOf:
+      previousOf ??
+      ((doc) => {
+        const show = (ref) => {
+          try {
+            return execFileSync('git', ['show', `${ref}:${doc}`], {
+              cwd: root,
+              encoding: 'utf8',
+              stdio: ['ignore', 'pipe', 'ignore'],
+            });
+          } catch {
+            return null;
+          }
+        };
+        const head = show('HEAD');
+        if (head !== null && head !== readDoc(root, doc)) return head;
+        return show('HEAD^');
+      }),
+  };
   // Parse every document once. Each rule then asks the same parse where the code
   // is, so no two of them can disagree about it.
   const parsed = new Map();
@@ -587,7 +707,7 @@ export async function checkRecords({ root, docs, tracked, figures = FIGURES } = 
     ...(await checkAnchors(root, documents, parsed)),
     ...checkCitations(root, documents, files, parsed),
     ...checkTranscripts(root, documents, parsed),
-    ...checkFigures(root, documents, figures, parsed),
+    ...(await checkFigures(root, documents, figures, parsed, repo)),
   ];
 }
 
