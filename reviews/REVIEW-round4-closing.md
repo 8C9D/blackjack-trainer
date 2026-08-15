@@ -1,5 +1,7 @@
 # REVIEW - round 4, closing
 
+<!-- records: historical-file - an answered review. Its figures and transcripts were true at `2ac2a68`, the tree it reviewed, and were checked by this gate when it was written; the round-5 remediation it prompted moved the ledger lines it cites and retired the volatile-figure pins whose values its gate table restates. Rewriting a reviewer's evidence to match a later tree would destroy the record. Citations here are still resolved and bounds-checked. Marker added by the round-5 remediation that answered it, per the ledger's freezing principle. -->
+
 Range reviewed: `934f9e9..2ac2a68`, seven commits: the stage-6 review record itself (`296e71c`), the
 K7 comment restatement (`abe1631`), the stage-6 remediation (`6dbd932`), the commit that names its
 tree (`c728c68`), the K8 proposal (`f4fe4f9`), the merge of four rounds into `main` (`599da6c`), and

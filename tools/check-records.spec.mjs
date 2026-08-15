@@ -37,8 +37,13 @@ beforeEach(() => {
 
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
-/** Write a document and run the checker over exactly the documents named. */
-async function check(files, { docs, tracked, figures } = {}) {
+/**
+ * Write a document and run the checker over exactly the documents named. The
+ * fixture trees have no git history, so the gate-table repository questions
+ * default to the permissive answers here; tests about those questions inject
+ * their own.
+ */
+async function check(files, { docs, tracked, figures, commitExists, previousOf } = {}) {
   for (const [rel, body] of Object.entries(files)) {
     mkdirSync(dirname(join(root, rel)), { recursive: true });
     writeFileSync(join(root, rel), body);
@@ -48,6 +53,8 @@ async function check(files, { docs, tracked, figures } = {}) {
     docs: docs ?? Object.keys(files).filter((f) => f.endsWith('.md')),
     tracked: tracked ?? new Set(Object.keys(files)),
     figures,
+    commitExists: commitExists ?? (() => true),
+    previousOf: previousOf ?? (() => null),
   });
 }
 
@@ -307,15 +314,25 @@ describe('rule 3: transcripts', () => {
 
 describe('rule 4: figures', () => {
   const figures = {
-    unitTests: 1551,
-    coverage: [96.16, 93.28, 93.22, 98.0],
     m2: { failures: 33, executions: 600, rate: 5.5 },
   };
 
-  it('refuses a stale unit-test count (R3-1, R3-11, R3-18, R3-24)', async () => {
+  it('refuses a volatile unit-test count stated in prose (K8)', async () => {
     const bad = await check({ 'reviews/A.md': '# A\n\nThe suite is 1547 passed.\n' }, { figures });
     expect(bad).toHaveLength(1);
-    expect(bad[0]).toContain("states 1547 where the round's unit-test count is 1551");
+    expect(bad[0]).toContain('states 1547 in prose');
+  });
+
+  it('refuses a unit-test count even when nothing contradicts it', async () => {
+    // The old rule pinned a current value and accepted prose that matched it,
+    // which dragged the prose to every new tree's value (K8). There is no
+    // correct value to state any more: the shape itself is refused.
+    const bad = await check(
+      { 'reviews/A.md': '# A\n\nAll 1620 tests pass at this tip.\n' },
+      { figures },
+    );
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('volatile');
   });
 
   it('leaves the E2E suite count alone', async () => {
@@ -324,12 +341,13 @@ describe('rule 4: figures', () => {
     ).toEqual([]);
   });
 
-  it('refuses a stale coverage quadruple', async () => {
+  it('refuses a coverage quadruple stated in prose', async () => {
     const bad = await check(
       { 'reviews/A.md': '# A\n\nCoverage is 96.11 / 93.23 / 93.28 / 97.97 today.\n' },
       { figures },
     );
     expect(bad[0]).toContain('states 96.11 / 93.23 / 93.28 / 97.97');
+    expect(bad[0]).toContain('coverage quadruple');
   });
 
   it('refuses a stale pooled M2 count and a stale pooled M2 rate', async () => {
@@ -710,38 +728,94 @@ describe('rule 3 reads a command line the way a shell would', () => {
   });
 });
 
-describe('rule 4 tolerates the coverage jitter it measured', () => {
-  // Against `FIGURES` itself, not a copy: the margin that matters is the one the
-  // gate actually enforces, and a fixture with its own numbers cannot notice
-  // when moving `FIGURES` narrows it (REVIEW-round4-stage3 F7).
-  const [cs, cb, cf, cl] = FIGURES.coverage;
-  const quad = (...q) => q.map((n) => n.toFixed(2)).join(' / ');
+describe('rule 4: the gate table is the one home a volatile figure has', () => {
+  const marked = (commit) =>
+    [
+      '# A',
+      '',
+      `<!-- gate-table: ${commit} -->`,
+      '',
+      '| #   | gate       | result                        |',
+      '| --- | ---------- | ----------------------------- |',
+      '| 3   | unit tests | 1547 passed                   |',
+      '| 4   | coverage   | 96.11 / 93.23 / 93.28 / 97.97 |',
+      '',
+    ].join('\n');
 
-  it('accepts a quadruple one branch away from the pinned one', async () => {
-    // One branch of 2702 is 0.037 points. Eleven of twelve runs printed 92.83
-    // and one printed 92.87 (REVIEW-round4-stage2 F9); refusing that would tell
-    // an author their own measurement was wrong.
+  it('allows volatile figures inside a marked gate table', async () => {
+    expect(await check({ 'reviews/A.md': marked('abc1234') })).toEqual([]);
+  });
+
+  it('still refuses the same figures in prose next to the table', async () => {
+    const bad = await check({
+      'reviews/A.md': marked('abc1234') + '\nThe table above shows 1547 passed.\n',
+    });
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('states 1547 in prose');
+  });
+
+  it('refuses a gate-table marker that names no commit', async () => {
+    const bad = await check({
+      'reviews/A.md': marked('abc1234').replace('gate-table: abc1234', 'gate-table: the tip'),
+    });
+    expect(bad.join(' ')).toContain('must name the commit measured');
+  });
+
+  it('refuses a marker naming a commit the repository does not have', async () => {
+    const bad = await check({ 'reviews/A.md': marked('abc1234') }, { commitExists: () => false });
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('not a commit in this repository');
+  });
+
+  it('refuses a marker with no table under it', async () => {
+    const bad = await check({
+      'reviews/A.md': '# A\n\n<!-- gate-table: abc1234 -->\n\nProse, not a table.\n',
+    });
+    expect(bad.join(' ')).toContain('directly above the table');
+  });
+
+  it('refuses a gate table edited without re-naming its tree', async () => {
+    // The "table false at the tree it names" defect (stage-3 F1, stage-6 F1):
+    // the figures moved, the marker did not, so the table claims a measurement
+    // the named commit never produced.
+    const bad = await check(
+      { 'reviews/A.md': marked('abc1234') },
+      { previousOf: () => marked('abc1234').replace('1547 passed', '1533 passed') },
+    );
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('re-names the tree it measured');
+  });
+
+  it('accepts a re-measured table once the marker moves with it', async () => {
     expect(
-      await check({ 'reviews/A.md': `# A\n\nCoverage is ${quad(cs, cb + 0.04, cf, cl)}.\n` }),
+      await check(
+        { 'reviews/A.md': marked('def5678') },
+        { previousOf: () => marked('abc1234').replace('1547 passed', '1533 passed') },
+      ),
     ).toEqual([]);
   });
 
-  it('still refuses the round-3 baseline quadruple', async () => {
-    const bad = await check({
-      'reviews/A.md': '# A\n\nCoverage is 96.16 / 93.28 / 93.22 / 98.00.\n',
-    });
-    expect(bad).toHaveLength(1);
-    expect(bad[0]).toContain('coverage quadruple');
+  it('accepts an unchanged table while the document around it changes', async () => {
+    expect(
+      await check(
+        { 'reviews/A.md': marked('abc1234') + '\nNew prose after the table.\n' },
+        { previousOf: () => marked('abc1234') },
+      ),
+    ).toEqual([]);
   });
 
-  it('keeps a margin between the jitter it absorbs and the figure it refuses', async () => {
-    // A quadruple is refused when *any* component is outside tolerance, so what
-    // governs the refusal is the largest component difference, not the smallest.
-    // An earlier version of this test asserted the smallest and would have gone
-    // red for a pin the gate still refuses correctly (REVIEW-round4-stage4 F8).
-    const baseline = [96.16, 93.28, 93.22, 98.0];
-    const largest = Math.max(...FIGURES.coverage.map((p, i) => Math.abs(baseline[i] - p)));
-    expect(largest).toBeGreaterThan(0.05);
+  it('leaves a gate table inside a historical section to its own round', async () => {
+    // A closed round's table was true at its commits; the marker checks bind
+    // only where rule 4 itself binds.
+    expect(
+      await check(
+        {
+          'reviews/A.md':
+            '# A\n\n<!-- records: historical -->\n\n' + marked('abc1234').replace('# A\n\n', ''),
+        },
+        { commitExists: () => false },
+      ),
+    ).toEqual([]);
   });
 });
 
