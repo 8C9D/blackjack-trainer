@@ -940,6 +940,37 @@ called sound in order to satisfy a rule written for a stage whose _code_ was in 
 the rule exists to preserve is preserved instead - in the table above, in R4-3 to R4-10, and in K8
 and K9 - and nothing was reverted.
 
+# ROUND 5
+
+Round 5 is open: this section is its running record, opened by the stage-1 remediation because the
+round's changes had no inventory of their own (round-5 stage-1 review, F3), and it will be
+completed when the round closes. The work so far, on `prod-readiness/round5-2026-08-15`,
+continuing after round 4's merge to `main` and its closing review: the closing review's five
+findings remediated, the K8 design implemented and the live records migrated to it, the five K9
+holes closed, the N1/N5 UNVERIFIED limits discharged against an observed runner, and the stage-1
+review's four findings remediated. The stage-1 review
+([`reviews/REVIEW-round5-stage1.md`](reviews/REVIEW-round5-stage1.md)) rejected on the moved-table
+check remembering less than the record claimed; the remediation implemented the claimed walk.
+
+## What round 5 has changed so far
+
+Named per the inventory discipline the closing review's F5 established: a change gets recorded
+with its evidence rather than left to `git log`.
+
+| file                                                      | change                                                                                                                                                                                                                                                                                                                                                                                                   |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tools/check-records.mjs`                                 | rule 4 inverted per the K8 design (`100cb8f`); rule 3 reading transcripts through their containers, closing the five K9 holes (`c099b1e`); the moved-table comparison rebuilt as a history walk with renames followed, after the stage-1 review measured the shipped shortcut forgetting a moved table one covering commit after it landed and never seeing a renamed document (`7f7f536`)               |
+| `tools/check-records.spec.mjs`                            | fixtures pinning each of the above - including a set that drives the checker's real default git callbacks against throwaway repositories (the walk's two escape histories, a staged rename, a clean history accepted, a marker naming no real commit refused), where every earlier gate-table test had injected `previousOf` and left the shipped walk untested                                          |
+| `.github/workflows/ci.yml`, `.github/workflows/pages.yml` | `d986aff` bumped `actions/cache` to v6, `actions/upload-artifact` to v7, `actions/upload-pages-artifact` to v5 and `actions/deploy-pages` to v5, on the runner's node-20 deprecation notice. **The bumped versions have not yet executed on a runner**: the green runs the N1 and N5 rows cite ran the v4 actions at `main`'s tip, so the pipeline as now configured is unexercised until the next push. |
+| `PROD-READINESS.md`                                       | the round-4 closing range restated as the history actually ran, the round-4 change inventory completed, K9 recorded as taken, the N1/N5 limits discharged, the K6 row and the closing headroom bullet restated as facts about their trees with pointers at where the moving value lives, and this section                                                                                                |
+| `reviews/PROPOSAL-round5-volatile-figures.md`             | the "Implemented in round 5" section recording the implementation's choices; the moved-table bullet corrected to the walk that actually shipped; closing F3's five-item enumeration restated whole with the two standing items named                                                                                                                                                                     |
+| `reviews/ARTIFACTS-round4.md`                             | the two re-resolution targets the merge had moved carried forward and pinned (closing F4)                                                                                                                                                                                                                                                                                                                |
+| `reviews/REVIEW-round4-closing.md`                        | frozen as an answered review, per the freezing principle                                                                                                                                                                                                                                                                                                                                                 |
+| `reviews/REVIEW-round5-stage1.md`                         | the round-5 stage-1 review, added by its reviewer                                                                                                                                                                                                                                                                                                                                                        |
+
+No file under `src/`, `e2e/` or `ios/` changed in the round so far. No dependency changed and no
+registry was contacted.
+
 # Citation bindings
 
 <!-- prettier-ignore-start -->
