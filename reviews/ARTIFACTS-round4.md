@@ -253,6 +253,13 @@ is the same patch R3-20 was filed about. Round 3 corrected the two it noticed.
 | `.github/workflows/ci.yml:48-50`      | `:79-81` | the CI job where `CI=true` disables reuse              |
 | `tools/serve-dist.mjs:33-34`          | `:40`    | the comment asserting `normalize()` cannot escape ROOT |
 
+The "after" column records where this round re-resolved each citation, and two of those targets have
+moved again since: K2's comment lines and the stage-2 serve-lane fix pushed the retries line from 18
+to `playwright.config.ts:29`, and the merge to `main` carried a concurrency block that shifted
+`ci.yml` down five lines, so the E2E job's `E2E_SERVER: dist` now sits at
+`.github/workflows/ci.yml:84-86` - re-resolved in the ledger by `2ac2a68`, and found still reading
+79-81 here by the closing review (its F4).
+
 **Two citations past the end of a file**, both deliberate and now marked: R0-2 and REVIEW-0 quote a
 citation that named lines 39-41 of a 38-line file, which _is_ the defect they report.
 
@@ -787,13 +794,15 @@ explaining that the app degrades to local-only until the capability is provision
 <!-- cite-historical: pages.yml:41-42 - the upload step before this round re-resolved it to 55-57. -->
 <!-- cite-historical: .github/workflows/pages.yml:42 - the legal-page copy before this round re-resolved it to line 53. -->
 <!-- cite-historical: pages.yml:42 - the same copy step, cited a second time under P2-5. -->
-<!-- cite-historical: playwright.config.ts:20 - the CI retries line before this round re-resolved it, twice: to 18, then to 26 when K2 landed. -->
+<!-- cite-historical: playwright.config.ts:20 - the CI retries line before this round re-resolved it, twice: to 18, then to 26 when K2 landed; the stage-2 serve-lane fix moved it again, to 29, where the binding below pins it. -->
 <!-- cite-historical: tsconfig.spec.json:9 - the spec scope before this round re-resolved it to line 14. -->
 <!-- cite-historical: e2e/smoke/showdown.e2e.ts:65 - the M2 test before this round re-resolved it to line 75. -->
-<!-- cite-historical: .github/workflows/ci.yml:48-50 - the CI E2E job before this round re-resolved it to 79-81. -->
+<!-- cite-historical: .github/workflows/ci.yml:48-50 - the CI E2E job before this round re-resolved it to 79-81; main's concurrency block later shifted it to 84-86, where the binding below pins it. -->
 <!-- cite-historical: tools/serve-dist.mjs:33-34 - the path-traversal comment before this round re-resolved it to line 40. -->
 
 <!-- cite: pages.yml:53 "cp ios/AppStore/privacy.html ios/AppStore/support.html site/" -->
+<!-- cite: playwright.config.ts:29 "retries: process.env.CI ? 1 : 0," -->
+<!-- cite: .github/workflows/ci.yml:84-86 "E2E_SERVER: dist" -->
 <!-- cite: CloudKeyValueStore.swift:63-72 "cloud.synchronize()" -->
 <!-- cite: StatsStore.swift:63-65 "private func persist() {" -->
 <!-- cite: StatsStore.swift:78 "stats = value" -->
