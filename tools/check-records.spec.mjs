@@ -1,4 +1,5 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -37,8 +38,13 @@ beforeEach(() => {
 
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
-/** Write a document and run the checker over exactly the documents named. */
-async function check(files, { docs, tracked, figures } = {}) {
+/**
+ * Write a document and run the checker over exactly the documents named. The
+ * fixture trees have no git history, so the gate-table repository questions
+ * default to the permissive answers here; tests about those questions inject
+ * their own.
+ */
+async function check(files, { docs, tracked, figures, commitExists, previousOf } = {}) {
   for (const [rel, body] of Object.entries(files)) {
     mkdirSync(dirname(join(root, rel)), { recursive: true });
     writeFileSync(join(root, rel), body);
@@ -48,6 +54,8 @@ async function check(files, { docs, tracked, figures } = {}) {
     docs: docs ?? Object.keys(files).filter((f) => f.endsWith('.md')),
     tracked: tracked ?? new Set(Object.keys(files)),
     figures,
+    commitExists: commitExists ?? (() => true),
+    previousOf: previousOf ?? (() => null),
   });
 }
 
@@ -307,15 +315,25 @@ describe('rule 3: transcripts', () => {
 
 describe('rule 4: figures', () => {
   const figures = {
-    unitTests: 1551,
-    coverage: [96.16, 93.28, 93.22, 98.0],
     m2: { failures: 33, executions: 600, rate: 5.5 },
   };
 
-  it('refuses a stale unit-test count (R3-1, R3-11, R3-18, R3-24)', async () => {
+  it('refuses a volatile unit-test count stated in prose (K8)', async () => {
     const bad = await check({ 'reviews/A.md': '# A\n\nThe suite is 1547 passed.\n' }, { figures });
     expect(bad).toHaveLength(1);
-    expect(bad[0]).toContain("states 1547 where the round's unit-test count is 1551");
+    expect(bad[0]).toContain('states 1547 in prose');
+  });
+
+  it('refuses a unit-test count even when nothing contradicts it', async () => {
+    // The old rule pinned a current value and accepted prose that matched it,
+    // which dragged the prose to every new tree's value (K8). There is no
+    // correct value to state any more: the shape itself is refused.
+    const bad = await check(
+      { 'reviews/A.md': '# A\n\nAll 1620 tests pass at this tip.\n' },
+      { figures },
+    );
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('volatile');
   });
 
   it('leaves the E2E suite count alone', async () => {
@@ -324,12 +342,13 @@ describe('rule 4: figures', () => {
     ).toEqual([]);
   });
 
-  it('refuses a stale coverage quadruple', async () => {
+  it('refuses a coverage quadruple stated in prose', async () => {
     const bad = await check(
       { 'reviews/A.md': '# A\n\nCoverage is 96.11 / 93.23 / 93.28 / 97.97 today.\n' },
       { figures },
     );
     expect(bad[0]).toContain('states 96.11 / 93.23 / 93.28 / 97.97');
+    expect(bad[0]).toContain('coverage quadruple');
   });
 
   it('refuses a stale pooled M2 count and a stale pooled M2 rate', async () => {
@@ -366,6 +385,14 @@ describe('rule 4: figures', () => {
       { figures },
     );
     expect(bad.join(' ')).toContain('pooled M2 failure count');
+  });
+
+  it('sweeps a stale figure inside a fence with no language at all', async () => {
+    // A bare ``` fence has no info string; it is code, it is not a transcript,
+    // and rule 4 must still read it.
+    const bad = await check({ 'reviews/A.md': '# A\n\n```\n1547 passed\n```\n' }, { figures });
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('states 1547');
   });
 
   it('does not honour a figure-historical marker printed inside a code block', async () => {
@@ -635,6 +662,21 @@ describe('a directive counts only where a reader sees prose', () => {
     });
   }
 
+  it('does not honour a marker in an inline-code span that wraps across lines', async () => {
+    // CommonMark lets a code span carry a line break: the marker below is
+    // quoted inside one that opens on its own line and closes on the next,
+    // and a quoted marker is prose about a directive, not a directive.
+    const bad = await check(
+      {
+        'reviews/A.md':
+          '# A\n\nQuoting `x <!-- records: historical-file -->\ny` across lines.\n\n1547 passed.\n',
+      },
+      { figures: FIGURES },
+    );
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('states 1547');
+  });
+
   it('does not read a citation printed inside a transcript as a citation', async () => {
     // A published error message or grep output routinely names a file and line
     // that is not a claim about the tree - it is what the command printed. Rule
@@ -710,38 +752,321 @@ describe('rule 3 reads a command line the way a shell would', () => {
   });
 });
 
-describe('rule 4 tolerates the coverage jitter it measured', () => {
-  // Against `FIGURES` itself, not a copy: the margin that matters is the one the
-  // gate actually enforces, and a fixture with its own numbers cannot notice
-  // when moving `FIGURES` narrows it (REVIEW-round4-stage3 F7).
-  const [cs, cb, cf, cl] = FIGURES.coverage;
-  const quad = (...q) => q.map((n) => n.toFixed(2)).join(' / ');
+describe('a transcript is read through its container (K9)', () => {
+  const T = '```';
 
-  it('accepts a quadruple one branch away from the pinned one', async () => {
-    // One branch of 2702 is 0.037 points. Eleven of twelve runs printed 92.83
-    // and one printed 92.87 (REVIEW-round4-stage2 F9); refusing that would tell
-    // an author their own measurement was wrong.
+  it('refuses a fabricated exit label in a blockquoted transcript (stage-6 F8)', async () => {
+    // The block renders as a console transcript and was walked, but `> $` and
+    // `> LINT_EXIT=` matched neither the prompt nor the label regex, so the
+    // whole fabrication checked as nothing.
+    const bad = await check({
+      'reviews/A.md': [
+        '# A',
+        '',
+        `> ${T}console`,
+        '> $ npm run lint',
+        '> LINT_EXIT=0',
+        `> ${T}`,
+        '',
+      ].join('\n'),
+    });
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('cannot print it');
+  });
+
+  it('accepts an honest blockquoted transcript', async () => {
     expect(
-      await check({ 'reviews/A.md': `# A\n\nCoverage is ${quad(cs, cb + 0.04, cf, cl)}.\n` }),
+      await check({
+        'reviews/A.md': [
+          '# A',
+          '',
+          `> ${T}console`,
+          '> $ npm run lint > out.txt 2>&1; echo "LINT_EXIT=$?"',
+          '> LINT_EXIT=1',
+          `> ${T}`,
+          '',
+        ].join('\n'),
+      }),
     ).toEqual([]);
   });
 
-  it('still refuses the round-3 baseline quadruple', async () => {
+  it('refuses a fabricated exit label behind a case-spelled Console fence (stage-6 F9)', async () => {
     const bad = await check({
-      'reviews/A.md': '# A\n\nCoverage is 96.16 / 93.28 / 93.22 / 98.00.\n',
+      'reviews/A.md': ['# A', '', `${T}Console`, '$ ls', 'FAKE_EXIT=0', T, ''].join('\n'),
+    });
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('cannot print it');
+  });
+
+  it('exempts a case-spelled Console transcript from rule 4 like any other transcript', async () => {
+    // The same predicate answers both rules, so a fence rule 3 walks as a
+    // transcript is also the transcript rule 4 leaves alone.
+    expect(
+      await check({
+        'reviews/A.md': [
+          '# A',
+          '',
+          `${T}Console`,
+          '$ npm test',
+          '      Tests  1547 passed (1547)',
+          T,
+          '',
+        ].join('\n'),
+      }),
+    ).toEqual([]);
+  });
+
+  it('exempts only the next fence after a transcript-literal marker (stage-6 F10)', async () => {
+    // One marker, two fences with only blanks between: the second is unmarked
+    // to any reader of the source and must not inherit the escape.
+    const bad = await check({
+      'reviews/A.md': [
+        '# A',
+        '',
+        '<!-- transcript-literal -->',
+        '',
+        `${T}console`,
+        '$ cat .env.example',
+        'API_BASE=https://example.test',
+        T,
+        '',
+        `${T}console`,
+        '$ ls',
+        'FAKE_EXIT=0',
+        T,
+        '',
+      ].join('\n'),
+    });
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('FAKE_EXIT');
+  });
+
+  it('accepts an honest transcript indented in a list item (stage-6 F12)', async () => {
+    // The false positive that bit the closing reviewer: the indented `$` was
+    // invisible, so three honest labels were refused as printed by no command.
+    expect(
+      await check({
+        'reviews/A.md': [
+          '# A',
+          '',
+          '- the run, recorded in a list:',
+          '',
+          `  ${T}console`,
+          '  $ npm run lint > o.txt 2>&1; echo "LINT_EXIT=$?"',
+          '  LINT_EXIT=0',
+          `  ${T}`,
+          '',
+        ].join('\n'),
+      }),
+    ).toEqual([]);
+  });
+
+  it('still refuses a fabricated label in a list-indented transcript', async () => {
+    const bad = await check({
+      'reviews/A.md': [
+        '# A',
+        '',
+        '- the run, recorded in a list:',
+        '',
+        `  ${T}console`,
+        '  $ npm run lint',
+        '  LINT_EXIT=0',
+        `  ${T}`,
+        '',
+      ].join('\n'),
+    });
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('cannot print it');
+  });
+
+  it('sees a coverage quadruple containing a bare 100 (stage-6 F12)', async () => {
+    // Requiring four dotted components made any quadruple with a fully covered
+    // component invisible - including the checker's own per-file coverage.
+    const bad = await check({
+      'reviews/A.md': '# A\n\nThe checker is covered at 94.11 / 87.89 / 100 / 95.33.\n',
     });
     expect(bad).toHaveLength(1);
     expect(bad[0]).toContain('coverage quadruple');
   });
+});
 
-  it('keeps a margin between the jitter it absorbs and the figure it refuses', async () => {
-    // A quadruple is refused when *any* component is outside tolerance, so what
-    // governs the refusal is the largest component difference, not the smallest.
-    // An earlier version of this test asserted the smallest and would have gone
-    // red for a pin the gate still refuses correctly (REVIEW-round4-stage4 F8).
-    const baseline = [96.16, 93.28, 93.22, 98.0];
-    const largest = Math.max(...FIGURES.coverage.map((p, i) => Math.abs(baseline[i] - p)));
-    expect(largest).toBeGreaterThan(0.05);
+describe('rule 4: the gate table is the one home a volatile figure has', () => {
+  const marked = (commit) =>
+    [
+      '# A',
+      '',
+      `<!-- gate-table: ${commit} -->`,
+      '',
+      '| #   | gate       | result                        |',
+      '| --- | ---------- | ----------------------------- |',
+      '| 3   | unit tests | 1547 passed                   |',
+      '| 4   | coverage   | 96.11 / 93.23 / 93.28 / 97.97 |',
+      '',
+    ].join('\n');
+
+  it('allows volatile figures inside a marked gate table', async () => {
+    expect(await check({ 'reviews/A.md': marked('abc1234') })).toEqual([]);
+  });
+
+  it('still refuses the same figures in prose next to the table', async () => {
+    const bad = await check({
+      'reviews/A.md': marked('abc1234') + '\nThe table above shows 1547 passed.\n',
+    });
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('states 1547 in prose');
+  });
+
+  it('refuses a gate-table marker that names no commit', async () => {
+    const bad = await check({
+      'reviews/A.md': marked('abc1234').replace('gate-table: abc1234', 'gate-table: the tip'),
+    });
+    expect(bad.join(' ')).toContain('must name the commit measured');
+  });
+
+  it('refuses a marker naming a commit the repository does not have', async () => {
+    const bad = await check({ 'reviews/A.md': marked('abc1234') }, { commitExists: () => false });
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('not a commit in this repository');
+  });
+
+  it('refuses a marker with no table under it', async () => {
+    const bad = await check({
+      'reviews/A.md': '# A\n\n<!-- gate-table: abc1234 -->\n\nProse, not a table.\n',
+    });
+    expect(bad.join(' ')).toContain('directly above the table');
+  });
+
+  it('refuses a gate table edited without re-naming its tree', async () => {
+    // The "table false at the tree it names" defect (stage-3 F1, stage-6 F1):
+    // the figures moved, the marker did not, so the table claims a measurement
+    // the named commit never produced.
+    const bad = await check(
+      { 'reviews/A.md': marked('abc1234') },
+      { previousOf: () => marked('abc1234').replace('1547 passed', '1533 passed') },
+    );
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('re-names the tree it measured');
+  });
+
+  it('accepts a re-measured table once the marker moves with it', async () => {
+    expect(
+      await check(
+        { 'reviews/A.md': marked('def5678') },
+        { previousOf: () => marked('abc1234').replace('1547 passed', '1533 passed') },
+      ),
+    ).toEqual([]);
+  });
+
+  it('accepts an unchanged table while the document around it changes', async () => {
+    expect(
+      await check(
+        { 'reviews/A.md': marked('abc1234') + '\nNew prose after the table.\n' },
+        { previousOf: () => marked('abc1234') },
+      ),
+    ).toEqual([]);
+  });
+
+  it('leaves a gate table inside a historical section to its own round', async () => {
+    // A closed round's table was true at its commits; the marker checks bind
+    // only where rule 4 itself binds.
+    expect(
+      await check(
+        {
+          'reviews/A.md':
+            '# A\n\n<!-- records: historical -->\n\n' + marked('abc1234').replace('# A\n\n', ''),
+        },
+        { commitExists: () => false },
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe('the moved-table check against a real repository (round5-stage1 F1)', () => {
+  // These fixtures run the checker's *default* repository callbacks against a
+  // real throwaway git repo. Every other gate-table test injects `previousOf`,
+  // which is how the shipped walk went untested while the record described a
+  // stronger one: the round-5 stage-1 review measured a moved table going
+  // permanently green one covering commit after it landed, and a `git mv` plus
+  // edit going green everywhere. The walk now follows the file's history.
+  const gitq = (...args) =>
+    execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...args], {
+      cwd: root,
+      stdio: 'ignore',
+    });
+  const table = (commit, figure) =>
+    [
+      '# A',
+      '',
+      `<!-- gate-table: ${commit} -->`,
+      '',
+      '| #   | gate       | result       |',
+      '| --- | ---------- | ------------ |',
+      `| 3   | unit tests | ${figure} passed |`,
+      '',
+    ].join('\n');
+
+  /** A repo whose one doc is a marked gate table naming a real commit. */
+  function seedRepo() {
+    gitq('init', '-q');
+    writeFileSync(join(root, 'seed.txt'), 'seed\n');
+    gitq('add', '.');
+    gitq('commit', '-qm', 'seed');
+    const commit = execFileSync('git', ['rev-parse', '--short', 'HEAD'], {
+      cwd: root,
+      encoding: 'utf8',
+    }).trim();
+    writeFileSync(join(root, 'reviews', 'A.md'), table(commit, 1547));
+    gitq('add', '.');
+    gitq('commit', '-qm', 'table');
+    return commit;
+  }
+  const run = (doc) => checkRecords({ root, docs: [doc] });
+
+  it('still refuses a moved table one covering commit after it lands', async () => {
+    const commit = seedRepo();
+    writeFileSync(join(root, 'reviews', 'A.md'), table(commit, 1533));
+    gitq('commit', '-qam', 'edit the table without moving the marker');
+    writeFileSync(join(root, 'other.txt'), 'x\n');
+    gitq('add', '.');
+    gitq('commit', '-qm', 'a covering commit');
+    const bad = await run('reviews/A.md');
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('re-names the tree it measured');
+  });
+
+  it('follows a committed rename to the history the old path carries', async () => {
+    const commit = seedRepo();
+    gitq('mv', 'reviews/A.md', 'reviews/B.md');
+    writeFileSync(join(root, 'reviews', 'B.md'), table(commit, 1200));
+    gitq('commit', '-qam', 'rename and edit in one step');
+    const bad = await run('reviews/B.md');
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('re-names the tree it measured');
+  });
+
+  it('sees a staged rename before it is committed', async () => {
+    const commit = seedRepo();
+    gitq('mv', 'reviews/A.md', 'reviews/B.md');
+    writeFileSync(join(root, 'reviews', 'B.md'), table(commit, 1200));
+    const bad = await run('reviews/B.md');
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('re-names the tree it measured');
+  });
+
+  it('does not refuse a clean history whose table never moved', async () => {
+    seedRepo();
+    appendFileSync(join(root, 'reviews', 'A.md'), '\nProse under the table, committed.\n');
+    gitq('commit', '-qam', 'prose only');
+    appendFileSync(join(root, 'reviews', 'A.md'), '\nMore prose, uncommitted.\n');
+    expect(await run('reviews/A.md')).toEqual([]);
+  });
+
+  it('asks the real repository whether the named commit exists', async () => {
+    seedRepo();
+    writeFileSync(join(root, 'reviews', 'A.md'), table('deadbee', 1547));
+    const bad = await run('reviews/A.md');
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('not a commit in this repository');
   });
 });
 
