@@ -738,6 +738,7 @@ Findings discovered after round 4's work list froze. Not fixed in this run.
 | `playwright.config.ts`                                    | K2: the port is `E2E_PORT`, defaulting to 4200                                                                                                 |
 | `e2e/README.md`                                           | K2: how to run two suites at once, and the two rules that survive the fix                                                                      |
 | `vitest.config.ts`                                        | M3: the comment now says what actually decides whether a tool is in the coverage report, re-measured                                           |
+| `tools/serve-dist.spec.mjs`                               | K7: the header comment restated on the rationale that survives, its dead premise named as such (the stage-6 remediation pass)                  |
 | `PROD-READINESS.md`, `LAUNCH-CHECKLIST.md`, `reviews/*`   | nine stale citations re-resolved, eight marked historical, the markers the gate reads, the ledger, the artifacts, the baseline and the reviews |
 
 No user-visible capability was added. No product configuration key was added: the one new key is
@@ -757,7 +758,8 @@ their evidence rather than taken quietly. K7 was subsequently taken by the stage
 
 Gates 1 to 6 re-run at `6dbd932`, the stage-6 remediation commit - measured against its tree before
 it was committed, and named here by the commit after it the way `934f9e9` named `92c5ad0` - which is
-the round's last commit that changes code or tests: it adds one fixture to the gate's own spec. Gates 7 to 9 last ran at
+the round's last commit that changes code or tests: it adds one fixture to the gate's own spec and
+moves the `FIGURES` unit-test pin the fixture's landing implies. Gates 7 to 9 last ran at
 `4ad4d24`: nothing under `ios/` has changed since (`git diff --name-only 4ad4d24..HEAD -- ios/` is
 empty, re-verified at the remediation tree), and swiftformat, swiftlint and xcodebuild read nothing
 else. The commits between the named one and `2ac2a68` touch no code or test this table measures:
