@@ -803,12 +803,12 @@ explaining that the app degrades to local-only until the capability is provision
 <!-- cite: pages.yml:56 "cp ios/AppStore/privacy.html ios/AppStore/support.html site/" -->
 <!-- cite: playwright.config.ts:29 "retries: process.env.CI ? 1 : 0," -->
 <!-- cite: .github/workflows/ci.yml:87-89 "E2E_SERVER: dist" -->
-<!-- cite: CloudKeyValueStore.swift:63-72 "cloud.synchronize()" -->
+<!-- cite-historical: CloudKeyValueStore.swift:63-72 - the seed loop as round 4 read it, quoted in the table above; the I1 fix gated it, and those lines now document the gate. -->
 <!-- cite: StatsStore.swift:63-65 "private func persist() {" -->
 <!-- cite: StatsStore.swift:78 "stats = value" -->
 <!-- cite: PracticeDataSection.swift:16 "Button(\"Reset practice data\", role: .destructive)" -->
-<!-- cite: AppModel.swift:113 "func resetPracticeData() {" -->
-<!-- cite: AppModel.swift:49-78 "let cloud = UbiquitousKeyValueStore()" -->
+<!-- cite-historical: AppModel.swift:113 - `resetPracticeData()` where round 4 found it; the I1 fix added three lines above it and it is now at line 116. -->
+<!-- cite-historical: AppModel.swift:49-78 - the nine-store wiring as round 4 counted it; the I1 fix wraps the store in `InitialSyncGatedCloudStore` and the range that ends with the `StatsCloudSync(cloud:stores:)` array is now 49-81. -->
 <!-- cite: ios/project.yml:40 "CODE_SIGN_ENTITLEMENTS: BlackjackTrainer/BlackjackTrainer.entitlements" -->
 
 <!-- prettier-ignore-end -->

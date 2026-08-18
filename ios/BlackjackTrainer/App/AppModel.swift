@@ -46,7 +46,10 @@ final class AppModel {
         deviations = loaded.deviations
         deviationEvaluator = loaded.evaluator
 
-        let cloud = UbiquitousKeyValueStore()
+        // Gated: nothing reaches iCloud until this install has been told its
+        // initial download finished, so a cold KVS cache cannot publish its
+        // emptiness over another device's stats (I1).
+        let cloud = InitialSyncGatedCloudStore(wrapping: UbiquitousKeyValueStore())
         let basicStrategyStats = SessionStatsStore(key: StatsKeys.basicStrategy, cloud: cloud)
         let runningCountStats = SessionStatsStore(key: StatsKeys.cardCounting, cloud: cloud)
         let trueCountStats = SessionStatsStore(key: StatsKeys.trueCount, cloud: cloud)
