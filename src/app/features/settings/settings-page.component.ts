@@ -45,6 +45,12 @@ export const THEME_OPTIONS: readonly { value: ThemePref; label: string }[] = [
   { value: 'light', label: 'Light' },
 ];
 
+// A backup holds this app's declared localStorage keys, so a real one cannot
+// outgrow the origin's storage quota — a handful of megabytes in every browser
+// that ships one. 16 MB is well clear of that and still small enough that
+// reading it whole cannot exhaust the tab, which a mis-picked video would.
+export const MAX_BACKUP_FILE_BYTES = 16 * 1024 * 1024;
+
 // The one home for every pre-made decision: daily goal, table rules, and the
 // per-trainer drill configuration. Drill screens never show any of this.
 @Component({
@@ -397,6 +403,12 @@ export class SettingsPageComponent {
     // it the second pick fires no change event.
     input.value = '';
     if (!file) return;
+    // Checked before reading: `file.text()` on a mis-picked multi-gigabyte file
+    // buffers the whole thing into the tab before anything can reject it.
+    if (file.size > MAX_BACKUP_FILE_BYTES) {
+      this.backupStatus.set('That file is too big to be a backup.');
+      return;
+    }
     let text: string;
     try {
       text = await file.text();
