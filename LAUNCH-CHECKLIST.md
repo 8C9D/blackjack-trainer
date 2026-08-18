@@ -64,6 +64,7 @@ What remains needs the Apple account, a device, or your signature:
 8. **O9/O10/O12 - archive, TestFlight, submit** (choose the price tier at submission; manual release recommended).
 9. **O2/O11 (optional, post-1.0):** provision iCloud KVS and verify on two devices, then switch the store description to variant B.
 10. **Push** the local commits and the `v1.0.0` tag when you are ready; nothing has been pushed for you.
+    **Superseded 2026-08-18:** the push has since happened, so item 10 is done - the release commit and the `v1.0.0` tag are both on `origin/main`.
 
 ---
 
@@ -382,6 +383,7 @@ Everything so far has run in a simulator. Do this on your own iPhone before you 
 2. Bookmark Xcode > Organizer > Crashes. It is your only crash visibility, since the app ships no analytics by design, and it is free and requires no SDK.
 3. Rehearse the hotfix path once: know how long "bug reported" to "build uploaded" takes you before you need it.
 4. Push the local commits when you are ready. `main` is currently ahead of `origin/main`, and the agent will not push for you.
+   **Superseded 2026-08-18:** the push has since happened, so this item is done - `main` and `origin/main` name the same commit, and the `v1.0.0` tag is on the remote too.
 
 ---
 
