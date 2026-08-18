@@ -32,5 +32,36 @@
   </head>
   <body>
     <app-root></app-root>
+    <!-- The app is the whole page, so without JavaScript there is nothing here
+       at all. This is the only copy that can say so; the palette falls back to
+       the pre-boot ground and ink if the stylesheet is missing too. -->
+    <noscript>
+      <div
+        style="
+          box-sizing: border-box;
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 0.75rem;
+          max-width: 32rem;
+          margin: 0 auto;
+          padding: 2rem 1.25rem;
+          background: var(--ground, #15171c);
+          color: var(--ink, #e7e9ee);
+          font-family:
+            system-ui,
+            -apple-system,
+            'Segoe UI',
+            sans-serif;
+        "
+      >
+        <h1 style="margin: 0; font-size: 1.15rem; font-weight: 650">JavaScript is required</h1>
+        <p style="margin: 0; font-size: 0.9rem; line-height: 1.5; color: var(--ink-2, #c6cad3)">
+          Blackjack Trainer runs entirely in your browser, with no server behind it. Enable
+          JavaScript for this page and reload to use it.
+        </p>
+      </div>
+    </noscript>
   </body>
 </html>
