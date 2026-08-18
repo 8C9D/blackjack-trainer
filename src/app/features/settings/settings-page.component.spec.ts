@@ -9,7 +9,7 @@ import { FlowPrefsService } from '../../core/services/flow-prefs.service';
 import { MissTallyService } from '../../core/services/miss-tally.service';
 import { PracticeHistoryService } from '../../core/services/practice-history.service';
 import { ShowdownStatsService } from '../../core/services/showdown-stats.service';
-import { SettingsPageComponent } from './settings-page.component';
+import { MAX_BACKUP_FILE_BYTES, SettingsPageComponent } from './settings-page.component';
 
 function createPage(): {
   fixture: ComponentFixture<SettingsPageComponent>;
@@ -382,6 +382,26 @@ describe('SettingsPageComponent', () => {
       fixture.detectChanges();
 
       expect(status(fixture)!.textContent).toContain('not JSON');
+    });
+
+    it('refuses an oversized file without reading it', async () => {
+      const restore = vi.spyOn(TestBed.inject(BackupService), 'restore');
+      const { fixture } = createPage();
+      const c = fixture.componentInstance as unknown as {
+        onBackupFileChosen(e: Event): Promise<void>;
+      };
+      const text = vi.fn();
+      const target = {
+        files: [{ size: MAX_BACKUP_FILE_BYTES + 1, text }],
+        value: 'huge.json',
+      };
+
+      await c.onBackupFileChosen({ target } as unknown as Event);
+      fixture.detectChanges();
+
+      expect(text).not.toHaveBeenCalled();
+      expect(restore).not.toHaveBeenCalled();
+      expect(status(fixture)!.textContent).toContain('too big');
     });
 
     it('does nothing when the file dialog is dismissed', async () => {
