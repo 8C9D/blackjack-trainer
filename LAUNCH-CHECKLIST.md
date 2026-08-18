@@ -52,6 +52,7 @@ These stop a submission or produce a rejection. Everything else is quality.
 ## Handoff — what is left, all of it yours (written 2026-08-06, A16)
 
 The agent lane is complete: every A item above is ticked or cut, both suites are green on this commit, and the release commit carries a local `v1.0.0` tag (not pushed).
+**Superseded 2026-08-18:** the tag is no longer local-only - the release commit and the `v1.0.0` tag are both on `origin/main`.
 What remains needs the Apple account, a device, or your signature:
 
 1. **Start the paid-app paperwork now (D5):** App Store Connect > Agreements, Tax, and Banking - it can take days to clear and blocks submission of a paid app.
