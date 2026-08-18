@@ -210,7 +210,12 @@ export function mergePrefs(parsed: unknown): FlowPrefs {
     COUNTING_SYSTEMS.map((system) => system.id),
     d.counting.systemId,
   );
-  const system = COUNTING_SYSTEMS.find((candidate) => candidate.id === systemId)!;
+  // `systemId` is already constrained to an id in the data, so this lookup
+  // succeeds today. It stays optional rather than asserted so that removing a
+  // system from the data — the default included — degrades to running count
+  // like every other field here degrades, instead of throwing on load. This is
+  // the shape the iOS mirror already merges by.
+  const system = COUNTING_SYSTEMS.find((candidate) => candidate.id === systemId);
   const requestedMode = oneOf(
     cnt['mode'],
     ['running-count', 'true-count', 'key-count', 'bet-spread', 'deck-speed'] as const,
@@ -220,7 +225,8 @@ export function mergePrefs(parsed: unknown): FlowPrefs {
   // key-count drill needs a published IRC/key-count schedule (KO). The Settings
   // UI enforces both when changed interactively; the loader must enforce the
   // same invariants for stale or hand-edited payloads.
-  const mode: DrillMode = modeAllowedFor(system, requestedMode) ? requestedMode : 'running-count';
+  const mode: DrillMode =
+    system !== undefined && modeAllowedFor(system, requestedMode) ? requestedMode : 'running-count';
   const trueCountSource = oneOf(
     cnt['trueCountSource'],
     ['live-shoe', 'classic'] as const,
