@@ -942,35 +942,237 @@ and K9 - and nothing was reverted.
 
 # ROUND 5
 
-Round 5 is open: this section is its running record, opened by the stage-1 remediation because the
-round's changes had no inventory of their own (round-5 stage-1 review, F3), and it will be
-completed when the round closes. The work so far, on `prod-readiness/round5-2026-08-15`,
-continuing after round 4's merge to `main` and its closing review: the closing review's five
-findings remediated, the K8 design implemented and the live records migrated to it, the five K9
-holes closed, the N1/N5 UNVERIFIED limits discharged against an observed runner, and the stage-1
-review's four findings remediated. The stage-1 review
-([`reviews/REVIEW-round5-stage1.md`](reviews/REVIEW-round5-stage1.md)) rejected on the moved-table
-check remembering less than the record claimed; the remediation implemented the claimed walk.
+Round 5 is closed by this section.
+It was opened mid-round as a running record, because the round's changes had no inventory of their
+own until the stage-1 review said so (its F3), and it is completed here.
 
-## What round 5 has changed so far
+The round ran on `prod-readiness/round5-2026-08-15` from round 4's tip and merged to `main` at
+`dd3691b` once its review cycle closed.
+Work list, in the order it was taken: the round-4 closing review's five findings, the K8 design
+implemented and the live records migrated to it, the five K9 holes closed, and the N1/N5 UNVERIFIED
+limits discharged against an observed runner.
+Two items were added while the round ran: the four workflow actions the runner's node-20 deprecation
+notice flags, and the stage-1 review's own findings.
+Review: [`reviews/REVIEW-round5-stage1.md`](reviews/REVIEW-round5-stage1.md) - one reviewer, one
+REJECT on four findings, one remediation cycle, ACCEPT, and a fifth finding filed alongside the
+remediation verdict against a defect from earlier in the round.
+
+- Branch: `prod-readiness/round5-2026-08-15`
+- Base commit: `2ac2a6893f24f9b05b6ebe3b9890cdcfd4c90790` (tip of round 4, merged to `main` at
+  `dd3691b`)
+- Dates: opened 2026-08-15, closed 2026-08-18
+
+The connecting theme is round 4's own finding coming back one layer out: **a gate that has never run
+where it will run has not been tested.**
+Round 4 stopped on "a checker cannot be the only thing checking the checker", and round 5 then built
+the largest semantic change that checker has had on top of it.
+Both of this round's blocking findings are that shape - a live records document describing gate
+behaviour the gate did not have (F1), and a gate that was green at every commit on this machine and
+would have been red on every push (F5).
+Neither was visible to the gate, and neither was visible to any run performed here.
+
+## ROUND 5 status
+
+Terminal states are as in the rounds above: RESOLVED (evidence), DEFERRED (reason), PATCH-READY.
+The ids are the stage-1 review's own findings, and the severities are the ones its reviewer filed;
+none moved, because the remediation was re-verified against the source rather than against its own
+description of itself.
+
+| id     | severity                       | status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------ | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **F1** | P2, blocking                   | RESOLVED - `previousOf` rebuilt as a walk of the document's history with renames followed (`7f7f536`), and the records restated to describe the walk that shipped. The reviewer who filed it re-drove all three escape histories - the covering commit, the staged rename, the committed rename - against the shipped checker's real git callbacks in fresh repositories, mutation-checked the walk four ways, and ACCEPTed; the escape histories are fixtures now. One residual is recorded in the review rather than filed: the walk refuses an honest revert forever, and whether the comparison target should be the version at the marker's own commit is a design change for whoever next touches the gate.                                                                            |
+| **F2** | P3                             | RESOLVED - both live statements of the branch headroom restated as past-tense facts about `6dbd932`, the tree round 4's gate table names, with pointers at where the moving value is measured (`8220729`), and the two parser-arm fixtures the reviewer named added. ACCEPT. The finding is this round's own design lesson applied to the round that wrote it: a headroom is a derived figure that rule 4's two volatile shapes do not cover, so the gate was silent while the round's own commits moved it. K6 carries the standing question about the floors.                                                                                                                                                                                                                              |
+| **F3** | P3                             | RESOLVED - `d986aff`'s four action bumps recorded with their reason and their verification, in this section, which was opened to carry them (`ad3c987`). ACCEPT. The row's own disclosure - that the bumped versions had never executed on a runner - is discharged in the inventory below.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| **F4** | P4                             | RESOLVED - the volatile-figures proposal restates the closing review's five-item enumeration whole, names the two items the migration left standing and the design reason they stand, and scopes the worked-example claim to what the sweep governs (`82e7439`). ACCEPT.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| **F5** | P2, blocking for the next push | RESOLVED - `fetch-depth: 0` on the checkouts of the two jobs that run lint, `ci.yml`'s `validate` and `pages.yml`'s `build` (`4f9a69a`), landed before the merge, and the configuration has since run green on real runners twice. At `dd3691b`, 2026-08-15: CI run 31897725607, with `validate`, `e2e` and `pages-bundle` all success, and Pages run 31897725602, `build` success. At `c3f3db6`, 2026-08-18: CI run 32189457549, all three jobs success, and Pages run 32189457590, `build` success. `validate` and the Pages `build` job are the two that run `npm run lint`, so the marker's commit lookup and the history walk both executed on a full-history checkout and the shallow-clone red did not occur. Both Pages runs' `deploy` job failed on the pre-O4 404 described below. |
+
+The four ACCEPT verdicts are the stage-1 review's own, in its remediation table, recorded there by
+the reviewer who filed the findings.
+F5's closure is the only one that needed evidence from outside this checkout: the review could
+measure the shallow-clone red locally and could not measure the fix, because a runner is the only
+place the fix has an effect.
+That evidence now exists twice, at two trees, three days apart.
+
+What did not change is the deploy: in both Pages runs the `deploy` job failed inside
+`actions/deploy-pages` with "Failed to create deployment (status: 404) ... Ensure GitHub Pages has
+been enabled", which is O4, the owner's one-time step in the launch checklist, verbatim and
+unchanged since round 4 recorded it.
+It is the expected pre-O4 state of a repository whose Pages source has never been flipped, not a
+regression, and not a finding of this round.
+
+## ROUND 5 regressions introduced and fixed inside this run
+
+Defects this run put into its own output.
+Five, and all five are the stage-1 review's findings: four found by a reviewer reading commits that
+had already landed, and the fifth found by the same reviewer while probing his own remediation.
+None reached `main` unremediated.
+None is in `src/`, `e2e/` or `ios/`, and this round could not have put one there - it changed no
+file under any of them.
+
+| id       | stage                  | what                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | resolution                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| -------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **R5-1** | 1 (review)             | **F1**, blocking. `100cb8f` shipped the moved-table check as a two-step shortcut - HEAD, then HEAD's first parent - while the proposal, the ledger and the code's own comment all described a walk to the last committed version that differs. The gap is not cosmetic: an author who commits the bad table edit and one more commit before lint runs produces a history in which no gate anywhere sees it, and CI runs once per push at the head commit. A `git mv` plus a table edit was green both staged and committed. The gate at the base of the round's own range would have refused that table at every commit, because the pin checked values rather than edits - the regression direction that shipped twice in round 4. | `7f7f536` implements the described walk: renames followed, a staged-rename fallback, and a stop at the first committed version that differs. The escape histories are now fixtures that drive the checker's real default git callbacks in throwaway repositories - the instrument whose absence let the shortcut ship, since every earlier gate-table test injected `previousOf` and left the shipped semantics exercised by nothing. |
+| **R5-2** | 1 (review)             | **F2**. The round's own gate-code commits moved the coverage branch figure, and both live statements of round 4's headroom stood unchanged and stale - one in K6's row, one in the round-4 closing bullets - while the same range was adding "Since" annotations to three neighbouring rows. The bullet also derived its figure "from the pinned branch figure", a pin `100cb8f` had deleted, so the stated derivation was no longer performable at the tree.                                                                                                                                                                                                                                                                       | `8220729` restates both as facts about the tree round 4's gate table names, with pointers at where the moving value is measured, and adds the two parser-arm fixtures the reviewer named. The general case is recorded rather than patched: a derived figure like a headroom matches neither of rule 4's two shapes, so nothing mechanical will catch the next one. K6 carries it.                                                    |
+| **R5-3** | 1 (review)             | **F3**. `d986aff` bumped four workflow actions and no records document mentioned the bump, its reason or its verification - invisible outside `git log`, against the inventory discipline the round-4 closing review had just established (its F5), in the round that inherited it.                                                                                                                                                                                                                                                                                                                                                                                                                                                 | `ad3c987` opened this section as the round's running inventory and gave the bump a row carrying its reason, its verification and the disclosure that the bumped versions had never executed on a runner. That disclosure is discharged below.                                                                                                                                                                                         |
+| **R5-4** | 1 (review)             | **F4**. The volatile-figures proposal restated the closing review's F3 enumeration minus exactly the two items the migration had left standing, then declared the claim answered - narrowing a finding before answering it, which is the shape both stage-6 F11 and closing F3 were filed for.                                                                                                                                                                                                                                                                                                                                                                                                                                      | `82e7439` restates the enumeration whole, names the two standing items and the design reason they stand, and scopes the worked-example sentence to what the sweep governs.                                                                                                                                                                                                                                                            |
+| **R5-5** | 1 (remediation review) | **F5**, blocking for the next push. `100cb8f` gave the gate a marker-commit lookup and a history walk, and neither workflow set `fetch-depth`, so both jobs that run lint checked out depth 1. In a depth-one clone the marker's commit is not an object, so the gate refuses the ledger's own gate table with a false positive about a commit that is in the repository, and the walk sees no history and silently skips. Measured red in a depth-one clone at `ad3c987`. It had not bitten only because the K8 gate had never executed on a runner at all.                                                                                                                                                                        | `4f9a69a` sets `fetch-depth: 0` on the two checkouts, and it landed before the merge, so no push ever saw the red. The reviewer's own account of where it came from is the honest one: it predates the remediation he was reviewing, sits inside the range he had already reviewed, and he missed it - he probed the lookup with injected callbacks and full-history worktrees, and never with a shallow clone.                       |
+
+Four of the five are records defects and the fifth is a gate defect, which is round 4's distribution
+in miniature.
+What is new is where F5 hid.
+Not behind a marker, a fence or a spelling - behind the difference between the machine the gate is
+written on and the machine it runs on.
+Every checkout here has full history, so the gate was green at every commit of the round and would
+have been red on the first push after the merge, which happened the same day.
+The instrument that found it was not the gate and not a fresh reviewer: it was the same reviewer
+declining to stop at his own ACCEPT.
+
+## ROUND 5 NEXT ROUND
+
+Round 4's table under this heading held findings discovered after the work list froze and not fixed
+in the run.
+Round 5 has no such finding: F5 is the only one filed after the list froze, and it was taken rather
+than carried.
+So this table is the other thing a closing round owes its successor - everything still open at the
+close, with its evidence and the reason it is not in this round, so the next round starts from a
+list rather than from a diff.
+
+| id       | severity | evidence                                                                                             | why it is not in this round                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| -------- | -------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **D1**   | P1       | [ROUND 4 status](#round-4-status), [DEFERRED](#deferred)                                             | The support address is a fact only the owner holds, and this round may not ask for it. Fifth round open: the placeholder is still visible in both published legal pages and no address was invented. Owner lane.                                                                                                                                                                                                                               |
+| **I1**   | P1       | [ROUND 4 status](#round-4-status), [DEFERRED](#deferred)                                             | Deferred by decision D2 and unchanged since round 1. The entitlement stays declared and unprovisioned, which is what makes the data-loss path inert in the shipped build; a correct fix is merge semantics on adoption, which changes user-visible sync behaviour and is a feature. Load-bearing: provisioning turns the path on for already-shipped binaries with no app update, so this is fixed before anyone flips that switch, not after. |
+| **K4**   | P3       | [ROUND 4 NEXT ROUND](#round-4-next-round)                                                            | No clean fix by design. Repairing one fabricated exit label in a closed round's records means writing the `echo` that would have produced it, and nobody knows what was typed; the reconstruction would be a manufactured transcript, which is a worse defect than the one it fixes. Left marked, counted and named.                                                                                                                           |
+| **K5**   | P2       | [ROUND 4 NEXT ROUND](#round-4-next-round)                                                            | Blocked on O4 and on infrastructure this round could not build: raising a real update banner against a production bundle needs two deployed builds and a service-worker update, and the site is not deployed.                                                                                                                                                                                                                                  |
+| **K6**   | P3       | [ROUND 4 NEXT ROUND](#round-4-next-round), sharpened by the stage-1 review's F2                      | Re-tuning coverage floors is a judgement about what the gate should refuse, not a defect, and it belongs with whoever owns the thresholds. Round 5 moved the figure the row used to state and restated the row rather than closing it.                                                                                                                                                                                                         |
+| **M3**   | P3       | [ROUND 2 NEXT ROUND](#round-2-next-round), re-measured narrower in [ROUND 4 status](#round-4-status) | The coverage report's blind spot over `tools/`. Closing it means instrumenting a subprocess, or importing an exporter that would rewrite tracked fixtures as a side effect of `npm test`; both are larger than the finding.                                                                                                                                                                                                                    |
+| **P2-1** | P2       | [P2 (documented, not fixed)](#p2-documented-not-fixed)                                               | No clean fix by design: the only offered remedy for the dev-only advisory chain is a major downgrade of the Angular CLI, disproportionate to a Windows-only dev-server advisory, and the production dependency tree is not in the chain.                                                                                                                                                                                                       |
+| **P2-2** | P2       | [P2 (documented, not fixed)](#p2-documented-not-fixed)                                               | Inherited from the baseline, and visible as gate 2's one warning in every round's gate table since. Fixing it means editing the budget - weakening a gate - or refactoring a stylesheet no finding scopes.                                                                                                                                                                                                                                     |
+| **P2-3** | P2       | [P2 (documented, not fixed)](#p2-documented-not-fixed)                                               | Out of scope by a ruling Review 0 made and every round since has kept: the fix adds a static element to `index.html` that no existing surface owns. A round that wants it needs a fresh scope ruling, not this sentence.                                                                                                                                                                                                                       |
+| **P2-4** | P2       | [P2 (documented, not fixed)](#p2-documented-not-fixed)                                               | No clean fix by design: GitHub Pages cannot set response headers, so the only available form is a `<meta>` CSP, which is hardening rather than a fix for a defect - the prior security pass records zero unsafe sinks and no third-party code.                                                                                                                                                                                                 |
+| **P2-5** | P2       | [P2 (documented, not fixed)](#p2-documented-not-fixed)                                               | The two published legal pages 404 offline. They are App Store URLs read online, and the app itself never links to them.                                                                                                                                                                                                                                                                                                                        |
+| **P2-6** | P2       | [P2 (documented, not fixed)](#p2-documented-not-fixed)                                               | Safe today: the system id is constrained to a member of the counting-systems data or to the default, which is a member. It becomes a crash only if the default is removed from the data.                                                                                                                                                                                                                                                       |
+| **P2-7** | P2       | [P2 (documented, not fixed)](#p2-documented-not-fixed)                                               | Self-inflicted, one user, one tab, recoverable by closing it.                                                                                                                                                                                                                                                                                                                                                                                  |
+
+Nothing in that table is new, and that is what it is for.
+After five rounds the whole open list is owner-blocked, blocked on infrastructure that does not
+exist yet, or documented and declined on a recorded scope ruling.
+No further round closes any of it by reading harder.
+
+## What round 5 actually changed
 
 Named per the inventory discipline the closing review's F5 established: a change gets recorded
 with its evidence rather than left to `git log`.
 
-| file                                                      | change                                                                                                                                                                                                                                                                                                                                                                                                   |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tools/check-records.mjs`                                 | rule 4 inverted per the K8 design (`100cb8f`); rule 3 reading transcripts through their containers, closing the five K9 holes (`c099b1e`); the moved-table comparison rebuilt as a history walk with renames followed, after the stage-1 review measured the shipped shortcut forgetting a moved table one covering commit after it landed and never seeing a renamed document (`7f7f536`)               |
-| `tools/check-records.spec.mjs`                            | fixtures pinning each of the above - including a set that drives the checker's real default git callbacks against throwaway repositories (the walk's two escape histories, a staged rename, a clean history accepted, a marker naming no real commit refused), where every earlier gate-table test had injected `previousOf` and left the shipped walk untested                                          |
-| `.github/workflows/ci.yml`, `.github/workflows/pages.yml` | `d986aff` bumped `actions/cache` to v6, `actions/upload-artifact` to v7, `actions/upload-pages-artifact` to v5 and `actions/deploy-pages` to v5, on the runner's node-20 deprecation notice. **The bumped versions have not yet executed on a runner**: the green runs the N1 and N5 rows cite ran the v4 actions at `main`'s tip, so the pipeline as now configured is unexercised until the next push. |
-| `.github/workflows/ci.yml`, `.github/workflows/pages.yml` | `fetch-depth: 0` on the checkouts of the two jobs that run lint (`validate` and the Pages `build`), answering stage-1 F5: `actions/checkout` defaults to a depth-1 clone, where the gate-table walk sees no history and the marker's commit lookup refuses `6dbd932` as unknown - measured red in a shallow clone at `ad3c987`. Unexercised on a runner for the same reason as the action bumps above.   |
-| `PROD-READINESS.md`                                       | the round-4 closing range restated as the history actually ran, the round-4 change inventory completed, K9 recorded as taken, the N1/N5 limits discharged, the K6 row and the closing headroom bullet restated as facts about their trees with pointers at where the moving value lives, and this section                                                                                                |
-| `reviews/PROPOSAL-round5-volatile-figures.md`             | the "Implemented in round 5" section recording the implementation's choices; the moved-table bullet corrected to the walk that actually shipped; closing F3's five-item enumeration restated whole with the two standing items named                                                                                                                                                                     |
-| `reviews/ARTIFACTS-round4.md`                             | the two re-resolution targets the merge had moved carried forward and pinned (closing F4)                                                                                                                                                                                                                                                                                                                |
-| `reviews/REVIEW-round4-closing.md`                        | frozen as an answered review, per the freezing principle                                                                                                                                                                                                                                                                                                                                                 |
-| `reviews/REVIEW-round5-stage1.md`                         | the round-5 stage-1 review, added by its reviewer                                                                                                                                                                                                                                                                                                                                                        |
+| file                                                      | change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tools/check-records.mjs`                                 | rule 4 inverted per the K8 design (`100cb8f`); rule 3 reading transcripts through their containers, closing the five K9 holes (`c099b1e`); the moved-table comparison rebuilt as a history walk with renames followed, after the stage-1 review measured the shipped shortcut forgetting a moved table one covering commit after it landed and never seeing a renamed document (`7f7f536`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `tools/check-records.spec.mjs`                            | fixtures pinning each of the above - including a set that drives the checker's real default git callbacks against throwaway repositories (the walk's two escape histories, a staged rename, a clean history accepted, a marker naming no real commit refused), where every earlier gate-table test had injected `previousOf` and left the shipped walk untested                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `.github/workflows/ci.yml`, `.github/workflows/pages.yml` | `d986aff` bumped `actions/cache` to v6, `actions/upload-artifact` to v7, `actions/upload-pages-artifact` to v5 and `actions/deploy-pages` to v5, on the runner's node-20 deprecation notice. **The bumped versions had not yet executed on a runner** when this row was written: the green runs the N1 and N5 rows cite ran the v4 actions at `main`'s tip, so the pipeline as then configured was unexercised until the next push. **Since exercised**, recorded 2026-08-18: the merge push ran the bumped actions green at `dd3691b` (CI run 31897725607 and Pages run 31897725602, 2026-08-15) and they ran green again at `c3f3db6` (CI run 32189457549 and Pages run 32189457590, 2026-08-18). The Pages `deploy` job failed in both runs on the pre-O4 404, which is the owner's step and not the bump; the log shows `actions/deploy-pages@v5` downloaded and executed, so the bumped action is what produced it. |
+| `.github/workflows/ci.yml`, `.github/workflows/pages.yml` | `fetch-depth: 0` on the checkouts of the two jobs that run lint (`validate` and the Pages `build`), answering stage-1 F5: `actions/checkout` defaults to a depth-1 clone, where the gate-table walk sees no history and the marker's commit lookup refuses `6dbd932` as unknown - measured red in a shallow clone at `ad3c987`. Unexercised on a runner, when this row was written, for the same reason as the action bumps above. **Since exercised**, recorded 2026-08-18: on both pushes above, `validate` and the Pages `build` job - the two jobs that run lint - checked out full history and passed the records gate, so the marker's commit lookup and the gate-table history walk have now run where they will run, and the shallow-clone red did not occur.                                                                                                                                                    |
+| `PROD-READINESS.md`                                       | the round-4 closing range restated as the history actually ran, the round-4 change inventory completed, K9 recorded as taken, the N1/N5 limits discharged, the K6 row and the closing headroom bullet restated as facts about their trees with pointers at where the moving value lives, this section, and - at the close - its status, regression, next-round, termination and gate-table apparatus                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `reviews/PROPOSAL-round5-volatile-figures.md`             | the "Implemented in round 5" section recording the implementation's choices; the moved-table bullet corrected to the walk that actually shipped; closing F3's five-item enumeration restated whole with the two standing items named                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `reviews/ARTIFACTS-round4.md`                             | the two re-resolution targets the merge had moved carried forward and pinned (closing F4)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `reviews/REVIEW-round4-closing.md`                        | frozen as an answered review, per the freezing principle                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `reviews/REVIEW-round5-stage1.md`                         | the round-5 stage-1 review, added by its reviewer; its remediation verdict and F5 appended by the same reviewer, and the file then frozen as an answered review, per the freezing principle                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
-No file under `src/`, `e2e/` or `ios/` changed in the round so far. No dependency changed and no
-registry was contacted.
+No file under `src/`, `e2e/` or `ios/` changed in the round. No dependency changed and no registry
+was contacted.
+
+Three commits sit on `main` between the merge and the tree the gate table below names, and they are
+named here rather than given rows above.
+`2c4ff4d` tracks the root `CLAUDE.md` working orientation; `16980bd` and `c3f3db6` annotate three
+statements in the launch checklist that the release's push to `origin` had made stale, and follow
+the resulting line shift in four of this ledger's pointers into that file.
+They are not round-5 work - they were authored on `main` after the merge, in a later session, and
+they correct statements round 5 did not write - so giving them inventory rows would misattribute
+them, while recording them nowhere would leave them to `git log`, which is the discipline the
+closing review's F5 established.
+This paragraph is the third option, and it is here because the gate table below measures the tree
+that contains them.
+
+## Termination: round 5's frozen work list
+
+The list was frozen at the brief's items, in the brief's order: the round-4 closing review's five
+findings, the K8 design, the five K9 holes, and the N1/N5 discharge.
+Every one was taken.
+Two items were added while the round ran and taken as well: the four workflow action bumps, on the
+runner's node-20 deprecation notice, and the stage-1 review's four findings.
+One finding was filed after the list had frozen - F5, on the remediation's own review - and it was
+taken rather than carried, because leaving it would have turned the next push red.
+Nothing was dropped, and nothing moved to ROUND 5 NEXT ROUND: that table carries only what earlier
+rounds had already left open.
+
+## Gates at the end of round 5
+
+Gates 1 to 6 re-run at `c3f3db6`, the tip of `main` and the tree these figures were measured
+against; the commits after it change this ledger and nothing else, which is the same relation round
+4's table has to the tree it names.
+Nothing else was running on the machine, and all six ran with the tool sandbox disabled - the
+`serve-dist` spec binds a listener, which the sandbox refuses.
+Gates 7 to 9 last ran at `4ad4d24`: nothing under `ios/` has changed since, re-verified at this tree
+by `git diff --name-only 4ad4d24..HEAD -- ios/` printing nothing, and swiftformat, swiftlint and
+xcodebuild read nothing else.
+Round 5 changed no file under `ios/` at all, so this is round 4's carry, one round further from its
+measurement and no weaker for it.
+
+Gate 1 has also, for the first time, run somewhere other than this machine: the `validate` job and
+the Pages `build` job ran it green on full-history checkouts at this same tree (CI run 32189457549
+and Pages run 32189457590, 2026-08-18), which is what closes F5 and what makes the marker below
+something a runner has actually resolved rather than something only this checkout can.
+
+<!-- gate-table: c3f3db6 -->
+
+| #   | gate              | exit | result                                                                    |
+| --- | ----------------- | ---- | ------------------------------------------------------------------------- |
+| 1   | lint              | 0    | `tsc` x3 projects + prettier + the records gate: 35 documents, no defects |
+| 2   | build             | 0    | the inherited chart-page budget warning (P2-2), unchanged                 |
+| 3   | unit tests        | 0    | 68 files, 1642 passed                                                     |
+| 4   | coverage gate     | 0    | 96.06 / 92.96 / 93.54 / 97.85                                             |
+| 5   | E2E               | 0    | `115 passed` in one fresh dist-lane run                                   |
+| 6   | parity anti-drift | 0    | 7 fixtures written, `git diff --exit-code -- ios/Fixtures` clean          |
+| 7   | swiftformat       | 0    | 0/105 files require formatting, at `4ad4d24`                              |
+| 8   | swiftlint         | 0    | 0 violations, 0 serious in 105 files, at `4ad4d24`                        |
+| 9   | iOS build + test  | 0    | `** TEST SUCCEEDED **`, 335 tests in 38 suites, at `4ad4d24`              |
+
+**Nine of nine green**, as at round 4's close.
+
+Every figure above is stated once, in that table, which names the tree it was measured at - the K8
+discipline the round implemented, applied to the round's own close.
+The gate-1 row's document count is the one figure the sweep does not treat as volatile; it moves
+only when a records document is added, and this closing commit adds none.
+No bullet under this table restates a figure from inside it, because restating them is what dragged
+round 4's closing section through three review cycles.
+
+Two live gate tables now stand in this ledger, round 4's and this one, where the design's stated
+discipline is one per round with a closed round's table sitting in a section marked historical.
+Round 4's section is not marked historical and this round did not mark it: its NEXT ROUND rows carry
+findings that are still open and that round 5 amended in place, and exempting them from rules 3 and
+4 to satisfy a table-counting convention would buy tidiness with the gate's coverage of live
+findings.
+The half of the discipline the gate actually enforces - a table names the tree it measured, and its
+body changes only in the commit that moves the marker - holds for both.
+
+### The limit, stated
+
+Round 4 stopped on an unreviewed remediation and said so.
+Round 5 stops in the same place by the same rule, and the shape is worth naming precisely, because
+it is now a pattern rather than an incident.
+This closing section is unreviewed: no reviewer has read the status table, the regression table, the
+carried-forward list or the gate table above.
+What stands behind it instead is narrow and checkable - nine gates green at a named tree, an empty
+`ios/` diff, four ACCEPT verdicts written by the reviewer who filed the findings, and four CI and
+Pages run IDs that resolve on GitHub to what this section says they show.
+What is **not** claimed is that these records are defect-free.
+Every adversarial review across these two rounds has found its blocking defects in the records or in
+the gate and never in `src/`, and nothing about a closing section written by the round it closes is
+exempt from that.
+
+The one thing this round would tell the next: F5 was not found by a gate, a spec or a fresh pair of
+eyes on the diff.
+It was found by asking where the code would run and then going and looking there.
+Every remaining item in ROUND 5 NEXT ROUND is blocked on exactly that kind of looking - a deployed
+site, a provisioned entitlement, an owner's address - and none of it will be closed from this
+checkout.
 
 # Citation bindings
 
