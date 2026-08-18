@@ -68,6 +68,8 @@ ios/build/
 # Untracked scratch report docs (point-in-time; intentionally not committed)
 /docs/codebase-docs-sync.md
 /docs/manual-testing-guide.md
+/docs/next-steps-agent-prompt.md
+/docs/owner-launch-memo-2026-08-18.md
 /docs/repo-current-state.md
 
 # Playwright MCP session artifacts
