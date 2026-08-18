@@ -7,22 +7,47 @@
   gap: 1.1rem;
 }
 
-.chart__header {
+// The three rows that lay their contents out on a centred line: the page
+// header, the rule chips, and each legend entry. Only the gaps differ.
+.chart__header,
+.chart__rules,
+.chart__legend li {
   display: flex;
   align-items: center;
+}
+
+.chart__header {
   gap: 1rem;
+}
+
+// Every control on this page is a bare button, so the browser's chrome comes
+// off once here instead of in five rules that each say it again. It sits first
+// because .chart__mode--on and the action fills below repaint the background at
+// the same specificity, and source order is what lets them win.
+.chart__back,
+.chart__settings,
+.chart__mode,
+.chart__rule-drill,
+.chart__cell--button {
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+// One focus ring for the controls that can take one. The grid's cell buttons
+// are the exception and keep their own, inset, below.
+:is(.chart__back, .chart__settings, .chart__mode, .chart__rule-drill):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .chart__back {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: none;
-  border: none;
   color: var(--muted);
   font-size: 0.88rem;
   padding: 0.35rem 0.5rem;
-  cursor: pointer;
   border-radius: 8px;
 
   &:hover {
@@ -38,14 +63,21 @@
 
 .chart__rules {
   margin: 0;
-  display: flex;
   flex-wrap: wrap;
-  align-items: center;
   gap: 0.4rem;
 }
 
-.chart__chip {
+// One hairline, drawn once: the rule chips, the mode switch, the section cards
+// and the two notices all take the same border.
+.chart__chip,
+.chart__modes,
+.chart__section,
+.chart__note--warn,
+.chart__note--off {
   border: 1px solid var(--hairline);
+}
+
+.chart__chip {
   border-radius: 999px;
   padding: 0.2rem 0.6rem;
   font-size: 0.72rem;
@@ -54,13 +86,10 @@
 }
 
 .chart__settings {
-  background: none;
-  border: none;
   padding: 0.2rem 0.3rem;
   font-size: 0.72rem;
   color: var(--accent-ink);
   text-decoration: underline;
-  cursor: pointer;
   border-radius: 6px;
 }
 
@@ -68,36 +97,26 @@
   display: flex;
   gap: 0.35rem;
   background: var(--surface);
-  border: 1px solid var(--hairline);
   border-radius: 10px;
   padding: 0.25rem;
 }
 
 .chart__mode {
   flex: 1;
-  background: none;
-  border: none;
   border-radius: 8px;
   padding: 0.45rem 0.5rem;
   font-size: 0.85rem;
   color: var(--ink-2);
-  cursor: pointer;
 
   &--on {
     background: var(--raised);
     color: var(--ink);
     font-weight: 600;
   }
-
-  &:focus-visible {
-    outline: 2px solid var(--focus);
-    outline-offset: 2px;
-  }
 }
 
 .chart__section {
   background: var(--surface);
-  border: 1px solid var(--hairline);
   border-radius: 14px;
   padding: 0.9rem 0.8rem 1rem;
 }
@@ -123,15 +142,21 @@
   border-spacing: 2px;
 }
 
+// A table's caption and the deviation list's column headings are the same kind
+// of label, and differ only in size and tracking.
+.chart__caption,
+.chart__table--rules thead th {
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
 .chart__caption {
   caption-side: top;
   text-align: left;
   padding: 0 0.2rem 0.55rem;
   font-size: 0.7rem;
   letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
-  font-weight: 600;
 }
 
 .chart__corner,
@@ -157,6 +182,13 @@
   padding-bottom: 0.2rem;
 }
 
+// The grid's cells and the deviation list's indices are both figures, and line
+// up column-wise for the same reason.
+.chart__cell,
+.chart__index {
+  font-variant-numeric: tabular-nums;
+}
+
 .chart__cell {
   text-align: center;
   border-radius: 5px;
@@ -164,7 +196,6 @@
   font-size: clamp(0.58rem, 2.4vw, 0.8rem);
   font-weight: 650;
   color: var(--ink);
-  font-variant-numeric: tabular-nums;
 }
 
 // The <td> is now only a slot: the cell itself is the button inside it, so the
@@ -176,23 +207,12 @@
 .chart__cell--button {
   display: block;
   width: 100%;
-  border: 0;
   font-family: inherit;
-  cursor: pointer;
-  background: transparent;
   // Every cell is a tap target now, so it owes the 24px minimum. Height is this
   // element's to give; width belongs to the table's columns, which a fixed
   // layout will not stretch — the narrow-screen rule below buys what room there
   // is by spending the page's own margins.
   min-height: 24px;
-
-  // A pointer that can hover; a finger cannot, and would otherwise leave the
-  // last cell tapped looking pressed.
-  @media (hover: hover) {
-    &:hover {
-      filter: brightness(0.94);
-    }
-  }
 
   // The page's own ring, not the browser's: a UA outline is a blue that has no
   // contrast guarantee against six action colours in two themes.
@@ -248,16 +268,13 @@
   // than the figures overlapping.
   min-width: max-content;
 
-  .chart__upcard,
-  .chart__hand,
-  .chart__corner {
+  :is(.chart__upcard, .chart__hand, .chart__corner) {
     font-size: 0.7rem;
     white-space: nowrap;
     width: auto;
   }
 
-  .chart__hand,
-  .chart__corner {
+  :is(.chart__hand, .chart__corner) {
     padding-right: 0.5rem;
   }
 }
@@ -282,8 +299,7 @@
   border-spacing: 0;
   font-size: 0.82rem;
 
-  th,
-  td {
+  :is(th, td) {
     text-align: left;
     padding: 0.32rem 0.4rem;
     border-bottom: 1px solid var(--hairline);
@@ -292,19 +308,14 @@
   thead th {
     font-size: 0.68rem;
     letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    font-weight: 600;
   }
 
-  tbody tr:last-child th,
-  tbody tr:last-child td {
+  tbody tr:last-child :is(th, td) {
     border-bottom: none;
   }
 }
 
 .chart__rule-hand {
-  width: auto;
   font-weight: 500;
   color: var(--ink);
 }
@@ -314,24 +325,13 @@
 // indices, which are what the list is for.
 .chart__rule-drill {
   padding: 0;
-  border: 0;
-  background: none;
   font: inherit;
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 0.15em;
   text-decoration-color: var(--muted);
-  cursor: pointer;
-
-  @media (hover: hover) {
-    &:hover {
-      text-decoration-color: var(--accent);
-    }
-  }
 
   &:focus-visible {
-    outline: 2px solid var(--focus);
-    outline-offset: 2px;
     border-radius: 4px;
   }
 }
@@ -349,16 +349,13 @@
   color: var(--muted);
 }
 
-.chart__index {
+.chart__index,
+.chart__play {
   white-space: nowrap;
-  font-variant-numeric: tabular-nums;
   color: var(--ink-2);
 }
 
 .chart__play {
-  white-space: nowrap;
-  color: var(--ink-2);
-
   .chart__cell {
     display: inline-block;
     min-width: 1.5rem;
@@ -378,8 +375,6 @@
   color: var(--ink-2);
 
   li {
-    display: flex;
-    align-items: center;
     gap: 0.4rem;
   }
 
@@ -403,16 +398,20 @@
 .chart__note--off {
   margin-top: 0.6rem;
   padding: 0.45rem 0.7rem;
-  border: 1px solid var(--hairline);
   border-radius: 8px;
   color: var(--ink-2);
 }
 
-.chart__back,
-.chart__settings {
-  &:focus-visible {
-    outline: 2px solid var(--focus);
-    outline-offset: 2px;
+// Both hover affordances in one query: a pointer that can hover gets them, and
+// a finger — which cannot — would otherwise leave the last cell tapped looking
+// pressed and the last rule drilled looking live.
+@media (hover: hover) {
+  .chart__cell--button:hover {
+    filter: brightness(0.94);
+  }
+
+  .chart__rule-drill:hover {
+    text-decoration-color: var(--accent);
   }
 }
 
