@@ -238,34 +238,45 @@ Take five minutes on the decisions above before the agent starts; two of them ch
 
 ### O2. Provision the iCloud capability _(only if D2 = ship iCloud)_
 
-> **Fix the launch-seed race before you do this. Provisioning turns sync on for the already-shipped
-> binary with no app update (D2 above), so the day you flip this switch, every copy already on a phone
-> starts running the path below.** Tracked as finding I1 in `PROD-READINESS.md`.
+> **The launch-seed race is fixed in the tree, and the build you ship must contain the fix before
+> you do this. Provisioning turns sync on for the already-shipped binary with no app update (D2
+> above), so the day you flip this switch, every copy already on a phone starts running whatever
+> version of this path it was built with.** Tracked as finding I1 in `PROD-READINESS.md`.
 >
-> `ios/BlackjackTrainer/Stores/CloudKeyValueStore.swift:63-72`: `synchronize()` does not wait for an
-> iCloud download. On a device whose KVS cache has not populated yet, `cloud.data(forKey:)` returns
-> `nil`, the `else` branch calls `pushToCloud()`, and this device's empty state is written over the
-> shared key. Adoption is last-writer-wins - `StatsStore.swift:78` replaces local state wholesale with
-> `stats = value` - so the wipe then propagates to every other device. Wiring is live for all nine
-> stores (`App/AppModel.swift:49-78`).
+> **Fixed 2026-08-18 in `3ca4716`.** What it was, kept because it is why the code looks the way it
+> does: `synchronize()` does not wait for an iCloud download, so on a device whose KVS cache has not
+> populated yet `cloud.data(forKey:)` returns `nil`, the launch pass read that as an empty cloud and
+> called `pushToCloud()`, and this device's empty state went over the shared key. Adoption is
+> last-writer-wins - `StatsStore.swift:78` replaces local state wholesale with `stats = value` - so
+> the wipe then propagated to every other device. Wiring is live for all nine stores
+> (`App/AppModel.swift:49-81`). Every write now passes through `InitialSyncGatedCloudStore`
+> (`ios/BlackjackTrainer/Stores/CloudKeyValueStore.swift:83-128`), which publishes nothing until
+> iCloud has delivered a change whose reason proves this install completed a round trip with the
+> server; the coordinator opens the gate on that arrival and then runs the adopt-or-seed pass it used
+> to run eagerly at launch (`CloudKeyValueStore.swift:134-206`). With the capability unprovisioned no
+> such change ever arrives, the gate never opens, and the app is local-only exactly as it is today.
 >
-> Three things to know before choosing a fix, each verified against this tree:
+> Three things the fix had to respect, each verified against this tree when the finding was written
+> and all three still load-bearing:
 >
 > 1. **Narrowing the launch seed alone is not enough.** `StatsStore.swift:63-65` calls `pushToCloud()`
 >    from `persist()`, i.e. on every recorded rep. Skipping the seed when local state is empty just
->    moves the race to the first hand the trainee plays.
+>    moves the race to the first hand the trainee plays. The gate sits on the seam every store already
+>    writes through, so it covers the per-rep pushes and not only the launch seed.
 > 2. **"Ignore an empty cloud value" is not a safe fix either.** The app has a user-facing **Reset
->    practice data** action (`Views/Flow/PracticeDataSection.swift:16` → `App/AppModel.swift:113`), so
+>    practice data** action (`Views/Flow/PracticeDataSection.swift:16` → `App/AppModel.swift:116`), so
 >    an empty record is a legitimate state a user asked to propagate. Suppressing it would break that
->    feature to paper over this one.
-> 3. What is left is the real work: merge semantics on adoption, or gating every push until the store
->    is known to have completed its initial sync (`NSUbiquitousKeyValueStoreInitialSyncChange` on the
->    external-change notification). Either changes user-visible sync behaviour, which is why two
->    successive production-readiness runs deferred it rather than guessing.
+>    feature to paper over this one. The gate decides _when_ a device may publish, never _what_, so a
+>    reset still propagates once sync is up.
+> 3. **Adoption is untouched and still last-writer-wins.** That is decision D5, and replacing it with
+>    merge semantics would have been a feature rather than a fix. If an initial sync lands after the
+>    trainee has already recorded reps on a device that had none, iCloud's copy still wins - the trade
+>    D5 records, now reached deliberately instead of by a race.
 >
-> None of this is testable in this repository: it needs two provisioned devices and Apple's servers
-> (recorded under CANNOT ASSESS). Do O11 on two real devices, with practice data already on one of
-> them, before you trust it.
+> **Still not verified, and this has not changed:** the fix is exercised only against the protocol
+> seam, by the fake cloud in `ios/BlackjackTrainerTests/CloudSyncTests.swift`. Real multi-device
+> iCloud behaviour needs two provisioned devices and Apple's servers (recorded under CANNOT ASSESS).
+> Do O11 on two real devices, with practice data already on one of them, before you trust it.
 
 Easiest path is through Xcode, which registers the App ID for you.
 
@@ -368,6 +379,7 @@ Everything so far has run in a simulator. Do this on your own iPhone before you 
 1. Install on two devices signed into the same Apple ID.
 2. Complete a drill on device A, wait, then open device B and confirm the stats appear.
 3. Practise on both while one is offline, then reconcile. Last writer wins by design; confirm nothing is corrupted, only superseded.
+4. **Added 2026-08-18, the two-device half of I1's fix:** with real practice data on device A, install fresh on device B and let it sit through its first launch and a few hands before A's data arrives. B must end up with A's stats, and A must still have them. This is the case only two provisioned devices can exercise; the unit tests simulate it at the protocol seam.
 
 ### O12. Submit for review
 

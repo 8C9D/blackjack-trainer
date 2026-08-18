@@ -783,6 +783,11 @@ explaining that the app degrades to local-only until the capability is provision
 
 **DEFERRED at P1**, carried forward unchanged. Nobody edited the store.
 
+_Since 2026-08-18: somebody did. `3ca4716` fixed I1 in the tree - every write to the cloud now
+passes through `InitialSyncGatedCloudStore` and waits for an observed initial sync, with adoption
+left last-writer-wins per D5. Three of the six citations above named lines the fix moved and are
+marked historical in the bindings below; what this round verified was true of the tree it read._
+
 <!-- prettier-ignore-start -->
 
 <!-- Citation bindings, machine-checked by tools/check-records.mjs (rule 2).
