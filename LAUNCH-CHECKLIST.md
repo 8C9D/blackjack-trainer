@@ -1,7 +1,7 @@
 # Launch checklist - Blackjack Trainer 1.0
 
 Target: **iOS App Store submission** of the trimmed v1 build (see `TRIM-REPORT.md`).
-The Angular web app is a secondary surface and is currently deployed nowhere; see decision D3.
+The Angular web app is a secondary surface and is currently deployed nowhere; see decision D3. **Superseded 2026-08-18:** it is deployed now, at `https://8c9d.github.io/blackjack-trainer/`, per O4.
 
 Every item is either **agent** work (`A*`, done by a coding agent against this repo) or **owner** work (`O*`, needs the Apple account, a device, or a legal attestation only you can make).
 Decisions (`D*`) gate some of both and are listed first.
@@ -38,14 +38,14 @@ Status legend: `[ ]` not started, `[~]` in progress, `[x]` done, `[-]` cut or no
 
 These stop a submission or produce a rejection. Everything else is quality.
 
-| #   | Item                                                                       | Lane                                                     |
-| --- | -------------------------------------------------------------------------- | -------------------------------------------------------- |
-| B1  | No `PrivacyInfo.xcprivacy` in a target that uses `UserDefaults` in 6 files | A1 — **resolved**                                        |
-| B2  | Screenshots predate the trim and show archived features                    | A8 — **resolved**                                        |
-| B3  | Store description promises unprovisioned iCloud sync                       | D2 / A9 — **resolved** (claim cut)                       |
-| B4  | `privacy.html` and `support.html` have unfilled placeholders and no host   | A10 done; **O4 hosts them** (one email placeholder each) |
-| B5  | App name not reserved                                                      | **open — O3**                                            |
-| B6  | Hard-20 chart drill is wrong on **both** platforms                         | A2 — **resolved**                                        |
+| #   | Item                                                                       | Lane                                                                                                                                                                        |
+| --- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B1  | No `PrivacyInfo.xcprivacy` in a target that uses `UserDefaults` in 6 files | A1 — **resolved**                                                                                                                                                           |
+| B2  | Screenshots predate the trim and show archived features                    | A8 — **resolved**                                                                                                                                                           |
+| B3  | Store description promises unprovisioned iCloud sync                       | D2 / A9 — **resolved** (claim cut)                                                                                                                                          |
+| B4  | `privacy.html` and `support.html` have unfilled placeholders and no host   | A10 done; **O4 hosts them** (one email placeholder each). **2026-08-18:** hosted - both load 200 from Pages; the email placeholder half is still open by the owner's choice |
+| B5  | App name not reserved                                                      | **open — O3**                                                                                                                                                               |
+| B6  | Hard-20 chart drill is wrong on **both** platforms                         | A2 — **resolved**                                                                                                                                                           |
 
 ---
 
@@ -58,6 +58,9 @@ What remains needs the Apple account, a device, or your signature:
 1. **Start the paid-app paperwork now (D5):** App Store Connect > Agreements, Tax, and Banking - it can take days to clear and blocks submission of a paid app.
 2. **O3 - reserve the name** and create the App Store Connect record (register the bundle ID via Xcode's automatic signing on your first device build, or manually at developer.apple.com, since O2 was cut).
 3. **O4 - turn on Pages:** repo Settings > Pages > Source = "GitHub Actions", push `main` (and the tag when ready), let the `Pages` workflow run, confirm `https://8c9d.github.io/blackjack-trainer/privacy.html` and `/support.html` load, and fill the one `CONTACT_EMAIL_HERE` placeholder in each page (or hand the address back to an agent).
+   **Done 2026-08-18, first half only:** Pages was enabled on your explicit authorization - `build_type=workflow` set through the API rather than through Settings, which is the same switch - and the deploy job of the `Pages` run that had been failing 404 was re-run and came back green.
+   The app root, `/privacy.html` and `/support.html` were each fetched and each returned 200.
+   The second half is deliberately **still open**: you chose to keep `CONTACT_EMAIL_HERE` in both pages for now, so they are published with the placeholder visible and finding D1 stays open.
 4. **O5 - paste the metadata** from `docs/app-store-submission.md`, using description **variant A** (no iCloud claim) and the "What's New" section; answer App Privacy = Data Not Collected.
 5. **O6 - answer the age rating fresh**; Simulated Gambling is your judgment call against Apple's current wording.
 6. **O7 - upload the six screenshots** from `ios/AppStore/screenshots-6.9/` (iPhone slot only; the app is iPhone-only per D1).
@@ -305,6 +308,11 @@ Do this early and independently of everything else. App Store names are unique a
 The record can sit unsubmitted indefinitely. Creating it holds the name for you.
 
 ### O4. Host the legal pages and hand back the URLs
+
+**Done 2026-08-18, steps 1-4.**
+Pages was enabled on your explicit authorization by setting `build_type=workflow` through the API, which is the same switch step 2 describes; the deploy job of the `Pages` run that had been failing 404 since 2026-08-14 was re-run and came back green, both jobs of that run finishing `success`.
+Step 4 was done by fetch rather than by eye: the app root, `https://8c9d.github.io/blackjack-trainer/privacy.html` and `https://8c9d.github.io/blackjack-trainer/support.html` each returned 200, and the app root served the `<app-root>` element the bundle boots into.
+Step 5 is **still yours**: the two URLs are the ones already recorded under A11, and you chose to keep the `CONTACT_EMAIL_HERE` placeholder rather than name a support address, so both pages are published with it visible.
 
 1. Wait for A10 and A11.
 2. In the GitHub repo: Settings > Pages > Build and deployment > Source: **GitHub Actions**.
