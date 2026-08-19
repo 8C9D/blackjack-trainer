@@ -62,7 +62,9 @@ Regenerate the project with `cd ios && xcodegen generate` after changing `ios/pr
 ## Status
 
 - Version 1.0.0, tagged `v1.0.0` and pushed. The nine-slice web roadmap in `docs/roadmap.md` is complete and closed.
-- `.github/workflows/pages.yml` builds and deploys the web app plus `privacy.html` and `support.html` on every push to `main`, but the site is **not live yet**: at the last recorded run (2026-08-14) the build job was green and the deploy step returned 404 because Pages is not enabled in repository Settings, which is owner step O4.
+- `.github/workflows/pages.yml` builds and deploys the web app plus `privacy.html` and `support.html` on every push to `main`, and the site is **live as of 2026-08-18** at `https://8c9d.github.io/blackjack-trainer/`.
+  Every deploy before that date failed 404 at the deploy step because Pages had never been enabled; owner step O4 is now done, Pages having been enabled with `build_type=workflow` through the API on the owner's explicit authorization, and the app, `/privacy.html` and `/support.html` all serve 200.
+  The other half of O4 stays open: both legal pages are published with the `CONTACT_EMAIL_HERE` placeholder intact, which the owner chose to keep for now (finding D1).
 - The iOS app is feature-complete for v1.0 and passes its own CI, but is **not submitted**. What remains is the owner lane in `LAUNCH-CHECKLIST.md`: reserving the App Store name, the paid-app banking paperwork, filling the `CONTACT_EMAIL_HERE` placeholder in the two legal pages, the real-device pass, TestFlight, and submission.
 - iCloud sync is declared as an entitlement but deliberately unprovisioned and inert (decision D2), and the store description was written to omit the claim.
   This is load-bearing: finding I1 in `PROD-READINESS.md` is an unfixed P1 data-loss race in `ios/BlackjackTrainer/Stores/CloudKeyValueStore.swift`, where a device whose KVS cache has not populated pushes its empty state over the shared key and last-writer-wins adoption propagates the wipe. Provisioning the capability turns that path on for already-shipped binaries with no app update, so I1 must be fixed before anyone flips that switch.
