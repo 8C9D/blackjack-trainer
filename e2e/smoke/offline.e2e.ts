@@ -92,4 +92,34 @@ test.describe('offline', () => {
     await page.goto('/progress');
     await expect(page.getByRole('heading', { name: 'Progress', level: 1 })).toBeVisible();
   });
+
+  test('the two legal pages the App Store links to serve offline', async ({ page, context }) => {
+    // The pages ship in the build (angular.json copies them beside the app from
+    // ios/AppStore) and sit in the worker's prefetched app group, so an
+    // installed copy can show its privacy policy with the network gone (P2-5).
+    // The beforeEach poll proves the cards group settled, not the app group, so
+    // wait for both pages to be cached before cutting the network.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(async () => {
+            let cached = 0;
+            for (const key of await caches.keys()) {
+              const cache = await caches.open(key);
+              const urls = (await cache.keys()).map((request) => request.url);
+              cached += urls.filter((url) => /\/(privacy|support)\.html$/.test(url)).length;
+            }
+            return cached;
+          }),
+        { timeout: 60_000 },
+      )
+      .toBeGreaterThanOrEqual(2);
+
+    await context.setOffline(true);
+    for (const path of ['/privacy.html', '/support.html'] as const) {
+      const response = await page.goto(path);
+      expect(response?.ok(), `${path} offline answered ${response?.status()}`).toBe(true);
+    }
+    await expect(page.getByRole('heading', { name: 'Support', level: 1 })).toBeVisible();
+  });
 });

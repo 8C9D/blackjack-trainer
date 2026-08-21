@@ -805,7 +805,7 @@ marked historical in the bindings below; what this round verified was true of th
 <!-- cite-historical: .github/workflows/ci.yml:48-50 - the CI E2E job before this round re-resolved it to 79-81; main's concurrency block later shifted it to 84-86, where the binding below pins it. -->
 <!-- cite-historical: tools/serve-dist.mjs:33-34 - the path-traversal comment before this round re-resolved it to line 40. -->
 
-<!-- cite: pages.yml:56 "cp ios/AppStore/privacy.html ios/AppStore/support.html site/" -->
+<!-- cite-historical: pages.yml:56 - P2-5 cited the workflow copy step that put the legal pages beside the app; the pages now ride in the build itself (angular.json assets) and the step is gone. -->
 <!-- cite: playwright.config.ts:29 "retries: process.env.CI ? 1 : 0," -->
 <!-- cite: .github/workflows/ci.yml:87-89 "E2E_SERVER: dist" -->
 <!-- cite-historical: CloudKeyValueStore.swift:63-72 - the seed loop as round 4 read it, quoted in the table above; the I1 fix gated it, and those lines now document the gate. -->

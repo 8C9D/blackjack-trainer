@@ -49,11 +49,10 @@ jobs:
         env:
           E2E_SERVER: dist
       - run: npm run build -- --base-href /blackjack-trainer/
-      - name: Assemble the site (app + legal pages + SPA fallback)
+      - name: Assemble the site (app + SPA fallback; the legal pages ride in the build)
         run: |
           mkdir -p site
           cp -R dist/blackjack-trainer/browser/. site/
-          cp ios/AppStore/privacy.html ios/AppStore/support.html site/
           cp site/index.html site/404.html
       - uses: actions/upload-pages-artifact@v5
         with:
