@@ -3,13 +3,18 @@ import { defineConfig } from 'vitest/config';
 // Loaded by the `ng test` Vitest runner (angular.json → test.options.runnerConfig).
 // This file owns the whole shape of a coverage run; the only thing outside it
 // is the opt-in switch (`ng test --coverage`, aliased as npm run test:coverage).
-// Threshold floors sit a couple of points under the measured baseline
-// (96.0% S / 94.2% B / 92.4% F / 98.0% L on 2026-08-03) so they catch
-// regressions without flaking on small refactors. Re-measure and lift them when
-// the gap grows: floors left behind a rising baseline stop being a gate — the
-// previous set was written against the 2026-07-23 baseline and had drifted four
-// points below, which is a whole feature's worth of coverage a regression could
-// have shed unnoticed.
+// Threshold floors sit a couple of points under the measured baseline: each is
+// the nearest integer to two points below its figure (96.07% S / 92.97% B /
+// 93.54% F / 97.85% L on 2026-08-20). Two points catch a regression while
+// absorbing small refactors and the branch figure's known jitter (round 4
+// measured twelve consecutive runs and saw one branch of difference).
+// Re-tuned 2026-08-20, closing finding K6: the previous floors were written
+// against a src/**-only baseline from 2026-08-03, before this report gained
+// the records checker below — which is why branch headroom had shrunk under a
+// point while function headroom had grown past three. Re-measure and re-tune
+// when the gap moves again: floors left behind a rising baseline stop being a
+// gate — one earlier set had drifted four points below its baseline, a whole
+// feature's worth of coverage a regression could have shed unnoticed.
 // What these percentages cover, stated because they are quoted as if they
 // covered the repository: they cover the files the test process loads. Measured
 // on 2026-08-12 — 75 files in the report, 1 of them under `tools/`.
@@ -35,8 +40,8 @@ export default defineConfig({
       reporter: ['text-summary'],
       thresholds: {
         statements: 94,
-        branches: 92,
-        functions: 90,
+        branches: 91,
+        functions: 92,
         lines: 96,
       },
     },
