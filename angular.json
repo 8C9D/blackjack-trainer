@@ -27,6 +27,14 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "privacy.html",
+                "input": "ios/AppStore"
+              },
+              {
+                "glob": "support.html",
+                "input": "ios/AppStore"
               }
             ],
             "styles": ["src/styles.scss"]
