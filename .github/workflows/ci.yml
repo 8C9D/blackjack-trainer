@@ -51,7 +51,7 @@ jobs:
         run: |
           set -e
           d=dist/blackjack-trainer/browser
-          grep -q '<base href="/blackjack-trainer/">' "$d/index.html"
+          grep -Eq '<base href="/blackjack-trainer/" ?/?>' "$d/index.html"
           # Every manifest URL must be relative, or an installed copy launches at
           # the origin root — which is a different project on this shared host.
           node -e '
