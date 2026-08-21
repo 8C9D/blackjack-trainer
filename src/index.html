@@ -2,6 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+
+    <!-- The strictest policy this app can honestly declare, as a meta tag because
+       GitHub Pages cannot set response headers (P2-4). Everything the app loads
+       is same-origin - no third-party script, style, font, or image - so every
+       fetch directive is 'self'. style-src carries 'unsafe-inline' because
+       Angular injects component styles as inline <style> elements at runtime
+       (and the noscript block below styles itself inline); scripts stay
+       'self'-only, which is why angular.json turns inlineCritical off - the
+       critical-CSS trick loads the stylesheet through an inline onload=
+       handler this policy refuses. Backup export is unaffected: an
+       <a download> to a blob: URL is a download, which CSP's fetch directives
+       do not govern.
+       frame-ancestors does not work in the meta form, so it is not claimed. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'"
+    />
+
     <title>Blackjack Trainer</title>
     <base href="/" />
 
