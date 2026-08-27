@@ -792,7 +792,13 @@ on a separate port - the arrangement K2's fix exists to allow, and load that can
 timing-sensitive suite more likely to fail, so green under it is the stronger result. The gate-5 row
 below is a fresh single run at the named remediation tree.
 
-<!-- gate-table: 6dbd932 -->
+The marker below names `e6db77b`, not the `6dbd932` this section's prose and the round-4 reviews
+name (reconstructed; the original stamp predated the rebase that reworded this history, so `6dbd932`
+no longer resolves in this checkout). `e6db77b` is that commit rewritten and carries its tree
+unchanged - `422af288c8b74dd5b2531355a610555eff9611f4` for both - so every figure below still
+describes the tree it was measured at.
+
+<!-- gate-table: e6db77b -->
 
 | #   | gate              | exit | result                                                                    |
 | --- | ----------------- | ---- | ------------------------------------------------------------------------- |
@@ -1139,7 +1145,13 @@ the Pages `build` job ran it green on full-history checkouts at this same tree (
 and Pages run 32189457590, 2026-08-18), which is what closes F5 and what makes the marker below
 something a runner has actually resolved rather than something only this checkout can.
 
-<!-- gate-table: c3f3db6 -->
+The marker below names `0afd44a`, not the `c3f3db6` this section's prose and the two runs above name
+(reconstructed; the same rebase reworded this commit too, so `c3f3db6` no longer resolves in this
+checkout). `0afd44a` is its rewritten form and carries its tree unchanged -
+`660873be1e45e3c6933640b0b455ea24251bc2a9` for both - and the runs cited above executed at that tree
+under its pre-rebase id.
+
+<!-- gate-table: 0afd44a -->
 
 | #   | gate              | exit | result                                                                    |
 | --- | ----------------- | ---- | ------------------------------------------------------------------------- |
