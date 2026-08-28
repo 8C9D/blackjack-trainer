@@ -532,9 +532,9 @@ Engine parity with the web app is enforced by fixtures: `npm run export:fixtures
 
 ## Tech stack
 
-- **Angular 21** (standalone components, signal-based inputs/outputs,
+- **Angular 22** (standalone components, signal-based inputs/outputs,
   `provideRouter`, `afterNextRender`)
-- **TypeScript 5.9**, strict mode
+- **TypeScript 6.0**, strict mode
 - **SCSS** for styles
 - **Vitest 4** with `jsdom` for unit tests
 - **Playwright** for the Chromium E2E smoke suite (`e2e/`)
