@@ -1,4 +1,4 @@
-import { cardHighValue, isAce, isTenValue, type Card } from '../../core/models/card.model';
+import { cardHighValue, isAce, isTenValue } from '../../core/models/card.model';
 import { H17_DEVIATIONS } from '../../data/h17-deviations';
 import { S17_DEVIATIONS } from '../../data/s17-deviations';
 import { classifyForDeviation, deviationsFor } from '../../core/services/deviation-engine.service';

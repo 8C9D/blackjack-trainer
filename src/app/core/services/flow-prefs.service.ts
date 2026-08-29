@@ -9,7 +9,7 @@ import {
   type DrillMode,
   type TrueCountSource,
 } from '../models/card-counting.model';
-import { modeAllowedFor, type CountingSystem } from '../models/counting-system.model';
+import { modeAllowedFor } from '../models/counting-system.model';
 import {
   CARDS_PER_DECK,
   DEFAULT_NUMBER_OF_DECKS,
