@@ -1,8 +1,8 @@
-# Publishes the web app plus the two App Store legal pages to GitHub Pages
-# (launch decision D3). The owner flips Settings > Pages > Source to
-# "GitHub Actions" once (O4); after that every push to main redeploys.
+# Publishes the web app plus the two App Store legal pages to GitHub Pages.
+# Run manually from the Actions tab (Settings > Pages > Source must be
+# "GitHub Actions", which needs a public repository or a paid plan).
 #
-# Published layout, under https://8c9d.github.io/blackjack-trainer/:
+# Published layout, under https://<owner>.github.io/blackjack-trainer/:
 #   /               the Angular app (built with the matching base href)
 #   /privacy.html   the App Store privacy policy URL
 #   /support.html   the App Store support URL
@@ -10,8 +10,6 @@
 name: Pages
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -29,9 +27,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-        with:
-          # The records gate walks file history; a depth-1 clone makes it red.
-          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: 22

@@ -9,11 +9,6 @@ site/
 # Dependencies
 node_modules/
 
-# Repository-local Codex/agent instructions are maintained as tool metadata,
-# not application source.
-.agents/
-.codex/
-
 # Test coverage
 coverage/
 
@@ -26,9 +21,6 @@ public/cards/
 # iOS subproject — governed by SwiftFormat/SwiftLint, not prettier.
 # (Includes the machine-written ios/Fixtures/*.json from the parity exporter.)
 ios/
-
-# Intentionally-untracked scratch file — never reformat or commit
-docs/repo-current-state.md
 
 # Playwright MCP session artifacts
 .playwright-mcp/

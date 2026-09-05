@@ -16,9 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-        with:
-          # The records gate walks file history; a depth-1 clone makes it red.
-          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -32,11 +29,9 @@ jobs:
           npm run export:fixtures
           git diff --exit-code -- ios/Fixtures
 
-  # The bundle that is actually deployed is the one built with a sub-path base
-  # href (pages.yml), and until this job existed no gate had ever looked at it:
-  # W1 — an installed PWA launching at another project's site on this shared
-  # Pages origin — reached round 1's closing table green because every gate
-  # built the root-href bundle instead.
+  # The deployed bundle is built with a sub-path base href (pages.yml); this
+  # job checks that bundle is relocatable, since an installed PWA with an
+  # absolute manifest URL would launch at the shared Pages origin root.
   pages-bundle:
     runs-on: ubuntu-latest
     steps:
