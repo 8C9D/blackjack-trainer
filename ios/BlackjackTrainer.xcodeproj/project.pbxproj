@@ -187,6 +187,7 @@
 		45B95CDB1F240EEC3FC88326 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		4C391C226F94DEFB8E908E8A /* COPYING.LESSER.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = COPYING.LESSER.txt; sourceTree = "<group>"; };
 		501FF9BB16087E1BE634AD19 /* DeckEstimateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckEstimateView.swift; sourceTree = "<group>"; };
+		506B68C485382F0A68B72962 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		5326BAF2B96AB8EC46186426 /* StrategyChartGridTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrategyChartGridTests.swift; sourceTree = "<group>"; };
 		56D03F7A78236CB3E5505245 /* HardwareKeyboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareKeyboard.swift; sourceTree = "<group>"; };
 		577C951192BCC781DBE8EBDD /* Strategy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Strategy.swift; sourceTree = "<group>"; };
@@ -264,13 +265,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
-		1AC42BD1ACA9B8854C397380 /* .claude */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = .claude;
-			sourceTree = "<group>";
-		};
 		3291CEFAE7AFDD8D91126C45 /* Fixtures */ = {
 			isa = PBXGroup;
 			children = (
@@ -283,6 +277,14 @@
 				E96987FAD78F068E0FF56D55 /* showdown-vectors.json */,
 			);
 			path = Fixtures;
+			sourceTree = "<group>";
+		};
+		33C9F6E43368E77AF41B0694 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				506B68C485382F0A68B72962 /* Base.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 		3B9DA7A0F74320A38AB4F2C5 /* Resources */ = {
@@ -308,6 +310,7 @@
 			children = (
 				BA5B6DC3783657AD2D507AEA /* BlackjackTrainer */,
 				60A14F20C405F6B0712C910B /* BlackjackTrainerTests */,
+				33C9F6E43368E77AF41B0694 /* Config */,
 				3291CEFAE7AFDD8D91126C45 /* Fixtures */,
 				3BF7F4E961B09E3B81401189 /* Products */,
 			);
@@ -459,7 +462,6 @@
 		BA5B6DC3783657AD2D507AEA /* BlackjackTrainer */ = {
 			isa = PBXGroup;
 			children = (
-				1AC42BD1ACA9B8854C397380 /* .claude */,
 				60F72B2CA0DA05BB01E12CB3 /* App */,
 				9AAE53BA5E1CF49B144A637F /* Engine */,
 				EB16135A4FED0E9C1CFCFED0 /* Flow */,
@@ -569,11 +571,9 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					29F08F9EE4597A6E8C6ECD80 = {
-						DevelopmentTeam = <team-id>;
 						ProvisioningStyle = Automatic;
 					};
 					6AF2030EE9EFE513F882230F = {
-						DevelopmentTeam = <team-id>;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -788,6 +788,7 @@
 		};
 		596354491307C5EADC017918 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 506B68C485382F0A68B72962 /* Base.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -824,7 +825,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = <team-id>;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -915,6 +915,7 @@
 		};
 		EE87213A05391B3EBBA29F94 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 506B68C485382F0A68B72962 /* Base.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -951,7 +952,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = <team-id>;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;

@@ -14,6 +14,7 @@ xcodegen generate
 ```
 
 `iPhone 16 Pro` is the simulator destination CI uses.
+Device builds and archives need a team: copy `Config/Signing.local.xcconfig.example` to `Config/Signing.local.xcconfig` (gitignored) and set `DEVELOPMENT_TEAM`; simulator builds and CI need nothing.
 Run `xcodegen generate` after changing `ios/project.yml` or adding files, because the `.xcodeproj` is generated and committed.
 
 ## Parity

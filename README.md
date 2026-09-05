@@ -63,6 +63,8 @@ xcodegen generate
 xcodebuild -scheme BlackjackTrainer -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build test
 ```
 
+Device builds need a signing team: copy `ios/Config/Signing.local.xcconfig.example` to `Signing.local.xcconfig` and set `DEVELOPMENT_TEAM`.
+
 ## Repository map
 
 ```
