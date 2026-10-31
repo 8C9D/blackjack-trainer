@@ -335,10 +335,9 @@ final class PracticeHistoryStore: CloudSyncable {
     }
 
     func pushToCloud() {
-        guard let cloud else { return }
-        guard let data = try? JSONSerialization.data(withJSONObject: Self.payload(days)) else {
-            return
-        }
+        guard let cloud,
+              let data = try? JSONSerialization.data(withJSONObject: Self.payload(days))
+        else { return }
         cloud.set(data, forKey: key)
     }
 

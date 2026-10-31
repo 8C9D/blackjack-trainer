@@ -1,3 +1,5 @@
+import type { Page } from '@playwright/test';
+
 import { expect, test } from '../fixtures/app.fixture';
 import { configureCounting, runCountingRound, standEveryBox } from '../fixtures/flows';
 
@@ -270,14 +272,18 @@ test.describe('post-count showdown', () => {
   });
 
   // The showdown is the one place a live count meets an actual hand, so the play
-  // is graded against the deviation chart laid over basic strategy. Seed 15
-  // deals a hard 16 vs a king off the top of an untouched shoe, where the true count is
-  // 0 — which is exactly the index for that cell, and the opposite of what basic
-  // strategy alone says.
-  test('the count decides the play, and the verdict names the index', async ({ page }) => {
+  // is graded against the deviation chart laid over basic strategy. On a one-deck
+  // shoe, seed 199 deals a hard 16 vs a ten at a true count of +1, which is past
+  // the index for that cell and the opposite of what basic strategy alone says.
+  const playIndexHand = async (page: Page) => {
     await configure(page, '1');
-    await runCountingRound(page, 85);
+    await page.getByLabel('Number of decks').selectOption('1');
+    await runCountingRound(page, 199);
     await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+  };
+
+  test('the count decides the play, and the verdict names the index', async ({ page }) => {
+    await playIndexHand(page);
 
     await page
       .getByRole('group', { name: 'Player actions' })
@@ -287,7 +293,7 @@ test.describe('post-count showdown', () => {
     // Basic strategy alone hits 16 vs 10; the index stands it, and says so.
     const coach = page.locator('.showdown__coach');
     await expect(coach).toContainText('Correct.');
-    await expect(coach).toContainText('0 or higher');
+    await expect(coach).toContainText('any positive true count');
     await expect(coach).toContainText('Basic strategy alone would hit');
     await expect(coach).not.toHaveClass(/showdown__coach--wrong/);
   });
@@ -295,9 +301,7 @@ test.describe('post-count showdown', () => {
   test('an index miss becomes a Deviations weak spot, not a basic-strategy one', async ({
     page,
   }) => {
-    await configure(page, '1');
-    await runCountingRound(page, 85);
-    await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
+    await playIndexHand(page);
 
     await page
       .getByRole('group', { name: 'Player actions' })
