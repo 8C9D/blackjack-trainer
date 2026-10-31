@@ -919,7 +919,7 @@
         "playerHandLabel": "Soft 19 (A,8)",
         "dealerUpcard": "6",
         "index": 0,
-        "direction": "at-or-below",
+        "direction": "negative",
         "basicAction": "D",
         "deviationAction": "S",
         "source": "BJA H17 Deviations chart — A,8 v 6 stand @ 0- (downgrade Ds → S; H17 only)"
@@ -955,7 +955,7 @@
         "playerHandLabel": "Hard 16",
         "dealerUpcard": "10",
         "index": 0,
-        "direction": "at-or-above",
+        "direction": "positive",
         "basicAction": "H",
         "deviationAction": "S",
         "source": "BJA H17 Deviations chart — 16 v 10 stand @ 0+"
@@ -1039,7 +1039,7 @@
         "playerHandLabel": "Hard 12",
         "dealerUpcard": "4",
         "index": 0,
-        "direction": "at-or-below",
+        "direction": "negative",
         "basicAction": "S",
         "deviationAction": "H",
         "source": "BJA H17 Deviations chart — 12 v 4 hit @ 0-"
@@ -1124,9 +1124,9 @@
         "dealerUpcard": "9",
         "index": -1,
         "direction": "at-or-below",
-        "basicAction": "H",
-        "deviationAction": "SUR",
-        "source": "BJA H17 Deviations chart — 16 v 9 surrender @ -1 and below"
+        "basicAction": "SUR",
+        "deviationAction": "H",
+        "source": "BJA H17 Deviations chart — 16 v 9 hit @ -1 and below, instead of surrendering (chart cell \"-1-\" over SUR)"
       },
       {
         "ruleSet": "H17",
@@ -1147,10 +1147,10 @@
         "playerHandLabel": "Hard 15",
         "dealerUpcard": "10",
         "index": 0,
-        "direction": "at-or-below",
-        "basicAction": "H",
-        "deviationAction": "SUR",
-        "source": "BJA H17 Deviations chart — 15 v 10 surrender @ 0-"
+        "direction": "negative",
+        "basicAction": "SUR",
+        "deviationAction": "H",
+        "source": "BJA H17 Deviations chart — 15 v 10 hit @ 0-, instead of surrendering (chart cell \"0-\" over SUR)"
       },
       {
         "ruleSet": "H17",
@@ -1158,11 +1158,11 @@
         "playerHand": "15",
         "playerHandLabel": "Hard 15",
         "dealerUpcard": "A",
-        "index": -1,
-        "direction": "at-or-above",
-        "basicAction": "H",
-        "deviationAction": "SUR",
-        "source": "BJA H17 Deviations chart — 15 v A surrender @ -1 and above (H17 only)"
+        "index": -2,
+        "direction": "at-or-below",
+        "basicAction": "SUR",
+        "deviationAction": "H",
+        "source": "BJA H17 Deviations chart — 15 v A hit below -1, instead of surrendering (chart cell \"-1+\"; H17 only)"
       }
     ],
     "S17": [
@@ -1281,7 +1281,7 @@
         "playerHandLabel": "Hard 16",
         "dealerUpcard": "10",
         "index": 0,
-        "direction": "at-or-above",
+        "direction": "positive",
         "basicAction": "H",
         "deviationAction": "S",
         "source": "BJA S17 Deviations chart — 16 v 10 stand @ 0+"
@@ -1341,7 +1341,7 @@
         "playerHandLabel": "Hard 12",
         "dealerUpcard": "4",
         "index": 0,
-        "direction": "at-or-below",
+        "direction": "negative",
         "basicAction": "S",
         "deviationAction": "H",
         "source": "BJA S17 Deviations chart — 12 v 4 hit @ 0-"
@@ -1438,9 +1438,9 @@
         "dealerUpcard": "9",
         "index": -1,
         "direction": "at-or-below",
-        "basicAction": "H",
-        "deviationAction": "SUR",
-        "source": "BJA S17 Deviations chart — 16 v 9 surrender @ -1 and below"
+        "basicAction": "SUR",
+        "deviationAction": "H",
+        "source": "BJA S17 Deviations chart — 16 v 9 hit @ -1 and below, instead of surrendering (chart cell \"-1-\" over SUR)"
       },
       {
         "ruleSet": "S17",
@@ -1461,10 +1461,10 @@
         "playerHandLabel": "Hard 15",
         "dealerUpcard": "10",
         "index": 0,
-        "direction": "at-or-below",
-        "basicAction": "H",
-        "deviationAction": "SUR",
-        "source": "BJA S17 Deviations chart — 15 v 10 surrender @ 0-"
+        "direction": "negative",
+        "basicAction": "SUR",
+        "deviationAction": "H",
+        "source": "BJA S17 Deviations chart — 15 v 10 hit @ 0-, instead of surrendering (chart cell \"0-\" over SUR)"
       },
       {
         "ruleSet": "S17",

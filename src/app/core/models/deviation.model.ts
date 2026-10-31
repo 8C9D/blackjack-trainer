@@ -26,8 +26,8 @@ export function deviationIndexNote(system: CountingSystem): string | null {
 //
 //   at-or-above — TC >= index  (typical "stand at +3" style entry)
 //   at-or-below — TC <= index  (typical "hit at -1" style entry)
-//   positive    — TC > 0       (chart says e.g. "0+" exclusive of 0)
-//   negative    — TC < 0       (chart says e.g. "0-" exclusive of 0)
+//   positive    — TC > 0       (the chart's "0+": any positive count)
+//   negative    — TC < 0       (the chart's "0-": any negative count)
 //
 // 'positive' and 'negative' ignore the `index` field; encode those entries
 // explicitly with direction rather than overloading at-or-above/below with

@@ -10,10 +10,10 @@
 // Notes (mirror the S17 file — H17-specific differences are called out below):
 //
 //   - The BJA chart legend says "0+" = "any positive running count" and
-//     "0-" = "any negative running count". We treat them inclusively here
-//     (TC >= 0 and TC <= 0 respectively) to align with the canonical
-//     Illustrious 18 framing. For integer true counts this only affects
-//     the boundary at TC = 0.
+//     "0-" = "any negative running count", so both are exclusive of zero and are
+//     encoded with the 'positive' and 'negative' directions. A neutral count is
+//     a basic-strategy hand: tools/ev measures 16 v 10 a hit, 12 v 4 a stand and
+//     A,8 v 6 a double at true count 0.
 //   - `basicAction` is the chart's pre-deviation play (informational only).
 //     For "Ds" cells we encode as 'D' because the Action type collapses
 //     Ds → D for two-card initial hands.
@@ -24,10 +24,10 @@
 //       * Hard 16 v A stand @ +3 (S17 chart shows H, no deviation).
 //       * Hard 15 v A stand @ +5 (S17 chart shows H, no deviation).
 //       * Hard 10 v A double @ +3 (S17 chart shows +4).
-//       * Soft A,8 v 6 reverts Ds → S at TC <= 0 (S17 chart shows +1, an
-//         upgrade from S → D). Basic strategy already differs: H17 basic
-//         is Ds at this cell, S17 basic is S.
-//       * Late Surrender 15 v A applies at TC >= -1 (S17 chart shows +2).
+//       * Soft A,8 v 6 reverts Ds → S at a negative count (S17 chart shows +1,
+//         an upgrade from S → D). Basic strategy already differs: H17 basic is
+//         Ds at this cell, S17 basic is S.
+//       * Late Surrender 15 v A holds at TC >= -1 (S17 chart shows +2).
 //       * 17 v A: basic LS surrender (no index in chart). Already covered
 //         by SUR_S in our basic strategy file; no deviation entry needed.
 //   - H17 omits the S17 11 v A double @ +1 rule because H17 basic strategy
@@ -35,11 +35,13 @@
 //   - The BJA H17 LS chart shows 16 v 10 and 16 v A as plain "SUR" basic
 //     cells (covered by SUR_H in basic strategy). 17 v A is also plain
 //     "SUR" (covered by SUR_S). No deviation entries needed for those.
-//   - A few SUR deviation rules below (e.g., 16 v 9 SUR @ -1-, 15 v 10
-//     SUR @ 0-, 15 v A SUR @ -1+) are encoded for chart faithfulness even
-//     though our basic strategy already returns SUR (via SUR_H) for the
-//     same hand when LS is enabled. The deviation entry is a no-op at
-//     runtime but documents the chart cell.
+//   - Red numbers mark where to deviate *from basic strategy*, and on the Late
+//     Surrender table basic strategy is whatever the cell's colour says. A green
+//     cell is a surrender, so its "-1-" on 16 v 9 and "0-" on 15 v 10 mean stop
+//     surrendering at that count and below: those hands are hit, which is what
+//     these rows encode. 15 v A prints the same fact from the other side: a
+//     white "-1+" over a surrender the H17 basic chart already makes, so it is
+//     encoded as the hit it implies at -2 and below.
 
 import type { DeviationRule } from '../core/models/deviation.model';
 
@@ -124,9 +126,9 @@ export const H17_DEVIATIONS: readonly DeviationRule[] = [
     source: `${SRC} — A,8 v 5 double @ +1 (chart cell "1+", Ds)`,
   },
   // H17 A,8 v 6: basic strategy is Ds (D for two-card hands). The chart
-  // index "0-" downgrades the play to S at TC <= 0 — fewer 10s remaining
-  // makes doubling less attractive on soft 19. basicAction is 'D' to mirror
-  // the engine's two-card Ds → D collapse.
+  // index "0-" downgrades the play to S at a negative count — fewer 10s
+  // remaining makes doubling less attractive on soft 19. basicAction is 'D' to
+  // mirror the engine's two-card Ds → D collapse.
   {
     ruleSet: 'H17',
     category: 'soft',
@@ -134,7 +136,7 @@ export const H17_DEVIATIONS: readonly DeviationRule[] = [
     playerHandLabel: 'Soft 19 (A,8)',
     dealerUpcard: '6',
     index: 0,
-    direction: 'at-or-below',
+    direction: 'negative',
     basicAction: 'D',
     deviationAction: 'S',
     source: `${SRC} — A,8 v 6 stand @ 0- (downgrade Ds → S; H17 only)`,
@@ -172,7 +174,7 @@ export const H17_DEVIATIONS: readonly DeviationRule[] = [
     playerHandLabel: 'Hard 16',
     dealerUpcard: '10',
     index: 0,
-    direction: 'at-or-above',
+    direction: 'positive',
     basicAction: 'H',
     deviationAction: 'S',
     source: `${SRC} — 16 v 10 stand @ 0+`,
@@ -258,7 +260,7 @@ export const H17_DEVIATIONS: readonly DeviationRule[] = [
     playerHandLabel: 'Hard 12',
     dealerUpcard: '4',
     index: 0,
-    direction: 'at-or-below',
+    direction: 'negative',
     basicAction: 'S',
     deviationAction: 'H',
     source: `${SRC} — 12 v 4 hit @ 0-`,
@@ -340,8 +342,6 @@ export const H17_DEVIATIONS: readonly DeviationRule[] = [
     deviationAction: 'SUR',
     source: `${SRC} — 16 v 8 surrender @ +4`,
   },
-  // See file-level note: basic strategy already returns SUR for 16 v 9
-  // when LS is enabled, so this rule is documentary.
   {
     ruleSet: 'H17',
     category: 'surrender',
@@ -350,9 +350,9 @@ export const H17_DEVIATIONS: readonly DeviationRule[] = [
     dealerUpcard: '9',
     index: -1,
     direction: 'at-or-below',
-    basicAction: 'H',
-    deviationAction: 'SUR',
-    source: `${SRC} — 16 v 9 surrender @ -1 and below`,
+    basicAction: 'SUR',
+    deviationAction: 'H',
+    source: `${SRC} — 16 v 9 hit @ -1 and below, instead of surrendering (chart cell "-1-" over SUR)`,
   },
   {
     ruleSet: 'H17',
@@ -366,7 +366,6 @@ export const H17_DEVIATIONS: readonly DeviationRule[] = [
     deviationAction: 'SUR',
     source: `${SRC} — 15 v 9 surrender @ +2`,
   },
-  // 15 v 10: documentary; basic strategy already returns SUR (SUR_H).
   {
     ruleSet: 'H17',
     category: 'surrender',
@@ -374,23 +373,21 @@ export const H17_DEVIATIONS: readonly DeviationRule[] = [
     playerHandLabel: 'Hard 15',
     dealerUpcard: '10',
     index: 0,
-    direction: 'at-or-below',
-    basicAction: 'H',
-    deviationAction: 'SUR',
-    source: `${SRC} — 15 v 10 surrender @ 0-`,
+    direction: 'negative',
+    basicAction: 'SUR',
+    deviationAction: 'H',
+    source: `${SRC} — 15 v 10 hit @ 0-, instead of surrendering (chart cell "0-" over SUR)`,
   },
-  // 15 v A: chart cell "-1+" means TC >= -1. Documentary because basic
-  // strategy already returns SUR for 15 v A in H17 with LS enabled.
   {
     ruleSet: 'H17',
     category: 'surrender',
     playerHand: '15',
     playerHandLabel: 'Hard 15',
     dealerUpcard: 'A',
-    index: -1,
-    direction: 'at-or-above',
-    basicAction: 'H',
-    deviationAction: 'SUR',
-    source: `${SRC} — 15 v A surrender @ -1 and above (H17 only)`,
+    index: -2,
+    direction: 'at-or-below',
+    basicAction: 'SUR',
+    deviationAction: 'H',
+    source: `${SRC} — 15 v A hit below -1, instead of surrendering (chart cell "-1+"; H17 only)`,
   },
 ];

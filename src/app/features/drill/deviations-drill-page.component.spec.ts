@@ -23,7 +23,7 @@ const scenarioOf = (c1: Rank, c2: Rank, up: Rank, trueCount: number): DeviationS
 
 // S17 fixtures (defaults: LS off, DAS off):
 //   Hard 16 (K+6) vs 10 stands at TC >= 0 (Illustrious 18), hits below.
-const SIXTEEN_V_TEN_TC0 = scenarioOf('K', '6', 'Q', 0);
+const SIXTEEN_V_TEN_AT_INDEX = scenarioOf('K', '6', 'Q', 1);
 const SIXTEEN_V_TEN_TC_NEG = scenarioOf('K', '6', 'Q', -2);
 //   Hard 16 (K+6) vs 8 surrenders at TC >= +4 — via the surrender overlay,
 //   which needs Late Surrender in the table rules, like any surrender.
@@ -114,7 +114,7 @@ describe('DeviationsDrillPageComponent', () => {
       (fixture.nativeElement.querySelector('[role="status"]') as HTMLElement).textContent!;
     expect(live()).toBe('');
 
-    deal(c, SIXTEEN_V_TEN_TC0);
+    deal(c, SIXTEEN_V_TEN_AT_INDEX);
     fixture.detectChanges();
     c.answer('S');
     fixture.detectChanges();
@@ -145,7 +145,7 @@ describe('DeviationsDrillPageComponent', () => {
   describe('deviation grading', () => {
     it('grades the deviation as correct when the threshold is met', () => {
       const { c } = createPage();
-      deal(c, SIXTEEN_V_TEN_TC0);
+      deal(c, SIXTEEN_V_TEN_AT_INDEX);
       c.answer('S');
       expect(c.result()!.correct).toBe(true);
       expect(c.result()!.deviationApplied).toBe(true);
@@ -163,7 +163,7 @@ describe('DeviationsDrillPageComponent', () => {
 
     it('shows the deviation explanation in place of the question on a miss', () => {
       const { fixture, c } = createPage();
-      deal(c, SIXTEEN_V_TEN_TC0);
+      deal(c, SIXTEEN_V_TEN_AT_INDEX);
       fixture.detectChanges();
       c.answer('H');
       fixture.detectChanges();
@@ -175,7 +175,7 @@ describe('DeviationsDrillPageComponent', () => {
 
     it('ignores a second answer after the hand has already been graded', () => {
       const { c } = createPage();
-      deal(c, SIXTEEN_V_TEN_TC0);
+      deal(c, SIXTEEN_V_TEN_AT_INDEX);
       c.answer('S');
       const firstResult = c.result();
 
@@ -211,7 +211,7 @@ describe('DeviationsDrillPageComponent', () => {
 
     it('offers insurance only against an ace and grades it by true count', () => {
       const { c } = createPage();
-      deal(c, SIXTEEN_V_TEN_TC0);
+      deal(c, SIXTEEN_V_TEN_AT_INDEX);
       expect(c.legalActions()).not.toContain('INS');
 
       deal(c, INSURANCE_TC3);
@@ -231,7 +231,7 @@ describe('DeviationsDrillPageComponent', () => {
 
     it('keeps hotkeys for illegal actions dead', () => {
       const { c } = createPage();
-      deal(c, SIXTEEN_V_TEN_TC0); // no ace up, non-pair
+      deal(c, SIXTEEN_V_TEN_AT_INDEX); // no ace up, non-pair
       c.onKeyDown(new KeyboardEvent('keydown', { key: 'i' }));
       c.onKeyDown(new KeyboardEvent('keydown', { key: 'p' }));
       expect(c.phase()).toBe('question');
@@ -240,7 +240,7 @@ describe('DeviationsDrillPageComponent', () => {
 
     it('rejects illegal actions even when called programmatically', () => {
       const { c } = createPage();
-      deal(c, SIXTEEN_V_TEN_TC0); // hard hand: Split and Insurance are illegal
+      deal(c, SIXTEEN_V_TEN_AT_INDEX); // hard hand: Split and Insurance are illegal
 
       c.answer('P');
       c.answer('INS');
@@ -254,7 +254,7 @@ describe('DeviationsDrillPageComponent', () => {
   describe('recording and session lifecycle', () => {
     it('tallies misses under the deviations trainer', () => {
       const { c } = createPage();
-      deal(c, SIXTEEN_V_TEN_TC0);
+      deal(c, SIXTEEN_V_TEN_AT_INDEX);
       c.answer('H');
       const weak = TestBed.inject(MissTallyService).weakSpotFor('deviations');
       expect(weak).toEqual(expect.objectContaining({ label: '16 vs 10', misses: 1 }));
@@ -265,7 +265,7 @@ describe('DeviationsDrillPageComponent', () => {
       TestBed.inject(FlowPrefsService).setDailyGoal(2);
       const { fixture, c } = createPage();
       for (let i = 0; i < 2; i++) {
-        deal(c, SIXTEEN_V_TEN_TC0);
+        deal(c, SIXTEEN_V_TEN_AT_INDEX);
         c.answer('S');
         vi.advanceTimersByTime(ADVANCE_MS);
       }
@@ -281,7 +281,7 @@ describe('DeviationsDrillPageComponent', () => {
     it('keeps "Drill my misses" inert when there is no weak spot to review', () => {
       TestBed.inject(FlowPrefsService).setDailyGoal(1);
       const { c } = createPage();
-      deal(c, SIXTEEN_V_TEN_TC0);
+      deal(c, SIXTEEN_V_TEN_AT_INDEX);
       c.answer('S');
       vi.advanceTimersByTime(ADVANCE_MS);
       expect(c.phase()).toBe('done');
@@ -303,8 +303,8 @@ describe('DeviationsDrillPageComponent', () => {
       TestBed.inject(FlowPrefsService).setDailyGoal(4);
       const { fixture, c } = createPage();
       for (let i = 0; i < 4; i++) {
-        deal(c, SIXTEEN_V_TEN_TC0);
-        c.answer('H'); // wrong at TC 0 — records 16 vs 10 as the weak spot
+        deal(c, SIXTEEN_V_TEN_AT_INDEX);
+        c.answer('H'); // wrong at TC +1 — records 16 vs 10 as the weak spot
         c.onKeyDown(new KeyboardEvent('keydown', { key: ' ' }));
       }
       fixture.detectChanges();
@@ -374,8 +374,8 @@ describe('DeviationsDrillPageComponent', () => {
   // this is the drill that teaches it.
   describe('playing the hand out', () => {
     // Hard 12 vs 10 hits at any count; the 4 makes it the hard 16 the
-    // Illustrious 18 stands at TC 0 or higher.
-    const TWELVE_V_TEN = scenarioOf('10', '2', 'Q', 0);
+    // Illustrious 18 stands at any positive count.
+    const TWELVE_V_TEN = scenarioOf('10', '2', 'Q', 1);
 
     function hitInto16(c: Internals): void {
       deal(c, TWELVE_V_TEN);
@@ -632,7 +632,7 @@ describe('DeviationsDrillPageComponent', () => {
   describe('keyboard safety', () => {
     it('ignores auto-repeated action keys', () => {
       const { c } = createPage();
-      deal(c, SIXTEEN_V_TEN_TC0);
+      deal(c, SIXTEEN_V_TEN_AT_INDEX);
 
       c.onKeyDown(new KeyboardEvent('keydown', { key: 's', repeat: true }));
 
@@ -642,7 +642,7 @@ describe('DeviationsDrillPageComponent', () => {
 
     it('ignores action keys from editable controls', () => {
       const { c } = createPage();
-      deal(c, SIXTEEN_V_TEN_TC0);
+      deal(c, SIXTEEN_V_TEN_AT_INDEX);
       const input = document.createElement('input');
       document.body.append(input);
 
@@ -674,7 +674,7 @@ describe('DeviationsDrillPageComponent', () => {
       expect(advisory(fixture)!.textContent).toContain('Hi-Lo');
 
       // Still up after answering, not a one-off shown on the first hand.
-      deal(c, SIXTEEN_V_TEN_TC0);
+      deal(c, SIXTEEN_V_TEN_AT_INDEX);
       fixture.detectChanges();
       c.answer('S');
       vi.advanceTimersByTime(ADVANCE_MS);

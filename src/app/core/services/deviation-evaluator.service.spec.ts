@@ -67,7 +67,7 @@ describe('DeviationEvaluatorService', () => {
 
   describe('playing deviation threshold met', () => {
     it('applies the 16 v 10 stand @ 0+ deviation', () => {
-      const r = evaluator.evaluate(scenarioOf('10', '6', '10', 0), 'S', ruleSet, options);
+      const r = evaluator.evaluate(scenarioOf('10', '6', '10', 1), 'S', ruleSet, options);
       expect(r.correct).toBe(true);
       expect(r.basicAction).toBe('H');
       expect(r.expectedAction).toBe('S');
@@ -75,11 +75,11 @@ describe('DeviationEvaluatorService', () => {
       expect(r.matchedRule?.category).toBe('hard');
       expect(r.source).toBe('playing');
       expect(r.explanation).toContain('Hi-Lo deviation');
-      expect(r.explanation).toContain('TC 0');
+      expect(r.explanation).toContain('TC +1');
     });
 
     it('marks the user wrong when they play basic instead of the deviation', () => {
-      const r = evaluator.evaluate(scenarioOf('10', '6', '10', 0), 'H', ruleSet, options);
+      const r = evaluator.evaluate(scenarioOf('10', '6', '10', 1), 'H', ruleSet, options);
       expect(r.correct).toBe(false);
       expect(r.basicAction).toBe('H');
       expect(r.expectedAction).toBe('S');
@@ -147,7 +147,7 @@ describe('DeviationEvaluatorService', () => {
     // An index is written against a total, so the hard-16 rule fires on a
     // three-card 16 exactly as it does on a two-card one.
     it('applies a hard-total index to a three-card hand', () => {
-      const r = evaluator.evaluatePlay(deep(['10', '2', '4'], '10', 0), 'S');
+      const r = evaluator.evaluatePlay(deep(['10', '2', '4'], '10', 1), 'S');
       expect(r.correct).toBe(true);
       expect(r.expectedAction).toBe('S');
       expect(r.basicAction).toBe('H');
@@ -157,7 +157,7 @@ describe('DeviationEvaluatorService', () => {
     });
 
     it('grades the same total the other way below the threshold', () => {
-      const r = evaluator.evaluatePlay(deep(['10', '2', '4'], '10', -1), 'S');
+      const r = evaluator.evaluatePlay(deep(['10', '2', '4'], '10', 0), 'S');
       expect(r.correct).toBe(false);
       expect(r.expectedAction).toBe('H');
       expect(r.deviationApplied).toBe(false);

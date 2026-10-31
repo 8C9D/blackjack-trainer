@@ -1614,8 +1614,8 @@ describe('ShowdownComponent', () => {
     });
 
     // The count carried in from the drill is the whole reason this table exists,
-    // and the Deviations trainer teaches standing 16 vs 10 at 0 or higher. A
-    // table that marked that wrong would be teaching two different games.
+    // and the Deviations trainer teaches standing 16 vs 10 at any positive count.
+    // A table that marked that wrong would be teaching two different games.
     describe('against the count', () => {
       // The same hand at two counts. Padded to leave exactly one deck behind, so
       // the true count equals the running count; the filler is 8s, worth zero in
@@ -1641,21 +1641,21 @@ describe('ShowdownComponent', () => {
       }
 
       it('stands 16 vs 10 at the index, and says which index and what basic would do', () => {
-        const { c } = atCount(1); // visible RC 0 over one deck → TC 0
+        const { c } = atCount(2); // visible RC +1 over one deck → TC +1
         c.onAction('S');
         expect(c.lastPlay()).toMatchObject({ correct: true, headline: 'Stand was the play.' });
-        expect(c.lastPlay()!.reason).toContain('0 or higher');
+        expect(c.lastPlay()!.reason).toContain('any positive true count');
         expect(c.lastPlay()!.reason).toContain('Basic strategy alone would hit');
       });
 
       it('hits the same hand one count lower, where the index does not fire', () => {
-        const { c } = atCount(0); // visible RC -1 → TC -1
+        const { c } = atCount(1); // visible RC 0 → TC 0
         c.onAction('S');
         expect(c.lastPlay()).toMatchObject({ correct: false, headline: 'Hit was the play.' });
       });
 
       it('names an index miss as such in the round’s misplays', () => {
-        const { c } = atCount(1);
+        const { c } = atCount(2);
         c.onAction('H');
         expect(c.roundMistakes()).toHaveLength(1);
         expect(c.roundMistakes()[0]).toContain('Stand, not Hit');
@@ -1665,7 +1665,7 @@ describe('ShowdownComponent', () => {
       // An index play is a Deviations question. Filing it under Basic Strategy
       // would seed that drill a hand whose chart answer the trainee got right.
       it('files an index miss as a Deviations weak spot, not a basic-strategy one', () => {
-        const { c } = atCount(1);
+        const { c } = atCount(2);
         c.onAction('H');
         const tallies = TestBed.inject(MissTallyService);
         expect(tallies.weakSpots('deviations')[0]).toMatchObject({
@@ -1678,10 +1678,10 @@ describe('ShowdownComponent', () => {
       // The count is what made it an index play, so it goes with the miss: the
       // Deviations trainer re-deals the hand at a count it was missed at.
       it('files the count the index play was made at', () => {
-        const { c } = atCount(1);
+        const { c } = atCount(2);
         c.onAction('H');
         expect(TestBed.inject(MissTallyService).weakSpots('deviations')[0].missedCounts).toEqual([
-          0,
+          1,
         ]);
       });
 

@@ -8,10 +8,10 @@
 // section the cell came from. Notes:
 //
 //   - The BJA chart legend says "0+" = "any positive running count" and
-//     "0-" = "any negative running count". We treat them inclusively here
-//     (TC >= 0 and TC <= 0 respectively) to align with the canonical
-//     Illustrious 18 framing (e.g., 16 v 10 standing at TC = 0). For integer
-//     true counts this only affects the boundary at TC = 0.
+//     "0-" = "any negative running count", so both are exclusive of zero and are
+//     encoded with the 'positive' and 'negative' directions. A neutral count is
+//     a basic-strategy hand: tools/ev measures 16 v 10 a hit and 12 v 4 a stand
+//     at true count 0.
 //   - `basicAction` is the chart's pre-deviation play and is informational
 //     only — the engine recomputes the live basic action from
 //     BasicStrategyEngineService so EngineOptions are honored. For soft
@@ -26,12 +26,11 @@
 //   - The BJA S17 LS chart shows 16 v 9, 16 v 10, and 16 v A as basic
 //     "SUR" cells (no index). All three are encoded as SUR_H in
 //     s17-basic-strategy.ts, so no deviation entry is needed for them.
-//   - A few SUR deviation rules below (e.g., 16 v 9 SUR @ -1-, 15 v 10
-//     SUR @ 0-) are encoded for chart faithfulness even though our basic
-//     strategy already returns SUR (via SUR_H) for the same hand when LS is
-//     enabled. In that case the engine's basic-strategy decision already
-//     covers the play; the deviation entry is a no-op but documents the
-//     chart cell.
+//   - Red numbers mark where to deviate *from basic strategy*, and on the Late
+//     Surrender table basic strategy is whatever the cell's colour says. A green
+//     cell is a surrender, so its "-1-" on 16 v 9 and "0-" on 15 v 10 mean stop
+//     surrendering at that count and below: those hands are hit, which is what
+//     these rows encode.
 
 import type { DeviationRule } from '../core/models/deviation.model';
 
@@ -163,7 +162,7 @@ export const S17_DEVIATIONS: readonly DeviationRule[] = [
     playerHandLabel: 'Hard 16',
     dealerUpcard: '10',
     index: 0,
-    direction: 'at-or-above',
+    direction: 'positive',
     basicAction: 'H',
     deviationAction: 'S',
     source: `${SRC} — 16 v 10 stand @ 0+`,
@@ -223,7 +222,7 @@ export const S17_DEVIATIONS: readonly DeviationRule[] = [
     playerHandLabel: 'Hard 12',
     dealerUpcard: '4',
     index: 0,
-    direction: 'at-or-below',
+    direction: 'negative',
     basicAction: 'S',
     deviationAction: 'H',
     source: `${SRC} — 12 v 4 hit @ 0-`,
@@ -320,9 +319,6 @@ export const S17_DEVIATIONS: readonly DeviationRule[] = [
     deviationAction: 'SUR',
     source: `${SRC} — 16 v 8 surrender @ +4`,
   },
-  // 16 v 9: BJA shows "-1-". Our basic strategy already returns SUR for
-  // 16 v 9 when LS is enabled (SUR_H), so this entry has no functional
-  // impact at runtime — it preserves the chart cell for the trainer UI.
   {
     ruleSet: 'S17',
     category: 'surrender',
@@ -331,9 +327,9 @@ export const S17_DEVIATIONS: readonly DeviationRule[] = [
     dealerUpcard: '9',
     index: -1,
     direction: 'at-or-below',
-    basicAction: 'H',
-    deviationAction: 'SUR',
-    source: `${SRC} — 16 v 9 surrender @ -1 and below`,
+    basicAction: 'SUR',
+    deviationAction: 'H',
+    source: `${SRC} — 16 v 9 hit @ -1 and below, instead of surrendering (chart cell "-1-" over SUR)`,
   },
   {
     ruleSet: 'S17',
@@ -347,8 +343,6 @@ export const S17_DEVIATIONS: readonly DeviationRule[] = [
     deviationAction: 'SUR',
     source: `${SRC} — 15 v 9 surrender @ +2`,
   },
-  // 15 v 10: BJA shows "0-". Basic strategy already returns SUR (SUR_H)
-  // when LS is enabled, so this entry is documentary; see comments above.
   {
     ruleSet: 'S17',
     category: 'surrender',
@@ -356,10 +350,10 @@ export const S17_DEVIATIONS: readonly DeviationRule[] = [
     playerHandLabel: 'Hard 15',
     dealerUpcard: '10',
     index: 0,
-    direction: 'at-or-below',
-    basicAction: 'H',
-    deviationAction: 'SUR',
-    source: `${SRC} — 15 v 10 surrender @ 0-`,
+    direction: 'negative',
+    basicAction: 'SUR',
+    deviationAction: 'H',
+    source: `${SRC} — 15 v 10 hit @ 0-, instead of surrendering (chart cell "0-" over SUR)`,
   },
   {
     ruleSet: 'S17',

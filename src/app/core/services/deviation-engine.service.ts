@@ -42,10 +42,11 @@ export interface PlayDeviationDecision extends StrategyDecision {
 // Resolution order in resolveDeviationDecision():
 //   1. Get the live basic-strategy action (honors EngineOptions for DAS / LS).
 //   2. Check the surrender overlay: surrender deviations live in a dedicated
-//      category and convert a non-surrender basic action to SUR when the
-//      true count threshold is met. They are checked first because a hard
-//      hand can have both a "regular" deviation and a surrender deviation
-//      (e.g. 16 v 9 has both a SUR-at-low-TC rule and a stand-at-+4 rule).
+//      category and move a hand onto or off a surrender when the true count
+//      threshold is met (16 v 8 surrenders at +4; 16 v 9, a surrender at a
+//      neutral count, is hit at -1 and below). They are checked first because
+//      a hard hand can have both a "regular" deviation and a surrender
+//      deviation (16 v 9 also has a stand-at-+4 rule).
 //      The overlay needs Late Surrender in the table rules, exactly as the
 //      chart's own SUR_* cells do: an index cannot buy back a play the table
 //      does not deal.

@@ -217,8 +217,14 @@ describe('DeviationEngineService', () => {
       expect(decision.matchedRule?.deviationAction).toBe('S');
     });
 
-    it('16 v 10 at TC 0 — deviation kicks in (boundary inclusive)', () => {
-      const decision = engine.resolveDeviationDecision(scenario('10', '6', '10'), 0);
+    // The chart's "0+" is any positive count, not zero and up: at a neutral count
+    // this is the basic-strategy hit, which the solver prices 0.4% better.
+    it('16 v 10 at TC 0 stays a hit, and the deviation starts above it', () => {
+      const neutral = engine.resolveDeviationDecision(scenario('10', '6', '10'), 0);
+      expect(neutral.finalAction).toBe('H');
+      expect(neutral.deviationApplied).toBe(false);
+
+      const decision = engine.resolveDeviationDecision(scenario('10', '6', '10'), 1);
       expect(decision.basicAction).toBe('H');
       expect(decision.finalAction).toBe('S');
       expect(decision.deviationApplied).toBe(true);
@@ -256,18 +262,19 @@ describe('DeviationEngineService', () => {
       expect(at3.finalAction).toBe('S');
     });
 
-    it('12 v 4 — at-or-below 0 (negative-side deviation)', () => {
-      // Basic strategy stands 12 v 4. At TC <= 0 the deviation says hit.
+    it('12 v 4 — hit at any negative count, and stand at a neutral one', () => {
+      // Basic strategy stands 12 v 4, and the chart's "0-" excludes zero.
       const at1 = engine.resolveDeviationDecision(scenario('7', '5', '4'), 1);
       expect(at1.basicAction).toBe('S');
       expect(at1.finalAction).toBe('S');
 
       const at0 = engine.resolveDeviationDecision(scenario('7', '5', '4'), 0);
-      expect(at0.finalAction).toBe('H');
-      expect(at0.deviationApplied).toBe(true);
+      expect(at0.finalAction).toBe('S');
+      expect(at0.deviationApplied).toBe(false);
 
       const atNegOne = engine.resolveDeviationDecision(scenario('7', '5', '4'), -1);
       expect(atNegOne.finalAction).toBe('H');
+      expect(atNegOne.deviationApplied).toBe(true);
     });
 
     it('13 v 2 — hit at TC <= -1', () => {
@@ -282,7 +289,7 @@ describe('DeviationEngineService', () => {
   // ─── Known common deviations called out by the brief ───────────────────
   describe('common deviations called out by the brief', () => {
     it('16 v 10 at 0+ — deviate to Stand', () => {
-      const decision = engine.resolveDeviationDecision(scenario('10', '6', '10'), 0);
+      const decision = engine.resolveDeviationDecision(scenario('10', '6', '10'), 1);
       expect(decision.finalAction).toBe('S');
     });
 
@@ -351,8 +358,8 @@ describe('DeviationEngineService', () => {
     });
 
     it('S17 and H17 share Illustrious 18 entries (16 v 10 stand @ 0+)', () => {
-      const s17 = engine.resolveDeviationDecision(scenario('10', '6', '10', 'S17'), 0);
-      const h17 = engine.resolveDeviationDecision(scenario('10', '6', '10', 'H17'), 0);
+      const s17 = engine.resolveDeviationDecision(scenario('10', '6', '10', 'S17'), 1);
+      const h17 = engine.resolveDeviationDecision(scenario('10', '6', '10', 'H17'), 1);
       expect(s17.finalAction).toBe('S');
       expect(h17.finalAction).toBe('S');
     });
@@ -435,7 +442,7 @@ describe('DeviationEngineService', () => {
       expect(s17?.direction).toBe('at-or-above');
       expect(h17?.deviationAction).toBe('S');
       expect(h17?.index).toBe(0);
-      expect(h17?.direction).toBe('at-or-below');
+      expect(h17?.direction).toBe('negative');
     });
   });
 
@@ -467,33 +474,69 @@ describe('DeviationEngineService', () => {
       expect(at.finalAction).toBe('SUR');
     });
 
-    // H17 charts 15 v A as a plain SUR_H basic cell as well as an index, so at
-    // an H17 table with surrender the hand is given up at any count. What the
-    // index marks is where the two agree — which is what deviationApplied says.
-    it('15 v A surrender @ -1+ (H17) — the index fires at TC >= -1', () => {
+    // H17 basic strategy surrenders 15 v A, and the chart's "-1+" is where that
+    // stops holding: below it the hand is hit.
+    it('15 v A (H17) surrenders down to -1 and hits below it', () => {
       const at = engine.resolveDeviationDecision(scenario('10', '5', 'A', 'H17', LS_ON), -1);
       expect(at.finalAction).toBe('SUR');
-      expect(at.deviationApplied).toBe(true);
-      expect(at.matchedRule?.category).toBe('surrender');
+      expect(at.deviationApplied).toBe(false);
       const below = engine.resolveDeviationDecision(scenario('10', '5', 'A', 'H17', LS_ON), -2);
       expect(below.basicAction).toBe('SUR');
-      expect(below.finalAction).toBe('SUR');
-      expect(below.deviationApplied).toBe(false);
+      expect(below.finalAction).toBe('H');
+      expect(below.deviationApplied).toBe(true);
+      expect(below.matchedRule?.category).toBe('surrender');
     });
 
-    it('16 v 9 surrender @ -1- — applies at TC <= -1 (negative-direction rule)', () => {
-      const at = engine.resolveDeviationDecision(scenario('10', '6', '9', 'S17', LS_ON), -1);
-      expect(at.finalAction).toBe('SUR');
+    // A surrender index printed over a green cell is the way off a surrender,
+    // not onto one: surrendering gets better as the count rises, and giving up
+    // these hands at a low count is exactly backwards.
+    it.each(['S17', 'H17'] as const)('16 v 9 (%s) is hit at -1 and below', (ruleSet) => {
+      const at = engine.resolveDeviationDecision(scenario('10', '6', '9', ruleSet, LS_ON), -1);
+      expect(at.basicAction).toBe('SUR');
+      expect(at.finalAction).toBe('H');
       expect(at.deviationApplied).toBe(true);
       expect(at.matchedRule?.category).toBe('surrender');
+      expect(
+        engine.resolveDeviationDecision(scenario('10', '6', '9', ruleSet, LS_ON), 0).finalAction,
+      ).toBe('SUR');
       // Above the threshold the chart's own SUR_H cell still stands: a stand
       // index does not downgrade a surrender the table is offering.
-      const above = engine.resolveDeviationDecision(scenario('10', '6', '9', 'S17', LS_ON), 4);
+      const above = engine.resolveDeviationDecision(scenario('10', '6', '9', ruleSet, LS_ON), 4);
       expect(above.finalAction).toBe('SUR');
       expect(above.deviationApplied).toBe(false);
       // With no surrender to make, that same hand stands on the +4 index.
-      const noSurrender = engine.resolveDeviationDecision(scenario('10', '6', '9'), 4);
+      const noSurrender = engine.resolveDeviationDecision(scenario('10', '6', '9', ruleSet), 4);
       expect(noSurrender.finalAction).toBe('S');
+    });
+
+    it.each(['S17', 'H17'] as const)('15 v 10 (%s) is hit at any negative count', (ruleSet) => {
+      const negative = engine.resolveDeviationDecision(
+        scenario('10', '5', '10', ruleSet, LS_ON),
+        -1,
+      );
+      expect(negative.basicAction).toBe('SUR');
+      expect(negative.finalAction).toBe('H');
+      expect(negative.deviationApplied).toBe(true);
+      const neutral = engine.resolveDeviationDecision(scenario('10', '5', '10', ruleSet, LS_ON), 0);
+      expect(neutral.finalAction).toBe('SUR');
+      expect(neutral.deviationApplied).toBe(false);
+    });
+
+    it('calls a surrender off through the table path too', () => {
+      const hand = {
+        ...play('10', '6', '9'),
+        options: { doubleAfterSplit: false, lateSurrender: true },
+        canSurrender: true,
+      };
+      expect(engine.resolvePlayDecision(hand, -1)).toMatchObject({
+        action: 'H',
+        deviationApplied: true,
+      });
+      expect(engine.resolvePlayDecision(hand, 0).action).toBe('SUR');
+      // Surrender gone: the chart's own fallback is a hit at any low count, and
+      // nothing is left for the index to call off.
+      const lapsed = engine.resolvePlayDecision({ ...hand, canSurrender: false }, -1);
+      expect(lapsed).toMatchObject({ action: 'H', deviationApplied: false });
     });
   });
 
@@ -568,7 +611,7 @@ describe('DeviationEngineService', () => {
     it('LS off: 16 v 10 at TC 0+ still applies the hard stand deviation', () => {
       const decision = engine.resolveDeviationDecision(
         scenario('10', '6', '10', 'S17', { lateSurrender: false }),
-        0,
+        1,
       );
       expect(decision.basicAction).toBe('H');
       expect(decision.finalAction).toBe('S');
@@ -631,16 +674,13 @@ describe('DeviationEngineService', () => {
     });
 
     it('applies a surrender deviation even when a hard deviation also matches', () => {
-      // 16 v 9: at TC = -1 the surrender rule (at-or-below -1) applies; at
+      // 16 v 9: at TC = -1 the surrender rule (hit, at-or-below -1) applies; at
       // TC = +4 only the hard stand rule (at-or-above +4) does. Read at a table
       // without surrender, where the chart's own SUR_H cell is out of the way
       // and both indices are visible on their own thresholds.
-      const surrendered = engine.resolveDeviationDecision(
-        scenario('10', '6', '9', 'S17', LS_ON),
-        -1,
-      );
-      expect(surrendered.finalAction).toBe('SUR');
-      expect(surrendered.matchedRule?.category).toBe('surrender');
+      const calledOff = engine.resolveDeviationDecision(scenario('10', '6', '9', 'S17', LS_ON), -1);
+      expect(calledOff.finalAction).toBe('H');
+      expect(calledOff.matchedRule?.category).toBe('surrender');
 
       const stood = engine.resolveDeviationDecision(
         scenario('10', '6', '9', 'S17', { lateSurrender: false }),
@@ -740,15 +780,15 @@ describe('DeviationEngineService', () => {
       expect(at.finalAction).toBe('D');
     });
 
-    it('H17 A,8 v 6 — basic Ds (D) downgrades to S at TC <= 0', () => {
+    it('H17 A,8 v 6 — basic Ds (D) downgrades to S at any negative count', () => {
       // H17 basic strategy for A,8 v 6 is Ds, which collapses to D for
-      // two-card hands. At TC <= 0 the BJA chart reverts to plain Stand.
-      const at = engine.resolveDeviationDecision(scenario('A', '8', '6', 'H17'), 0);
+      // two-card hands. At a negative count the BJA chart reverts to plain Stand.
+      const at = engine.resolveDeviationDecision(scenario('A', '8', '6', 'H17'), -1);
       expect(at.basicAction).toBe('D');
       expect(at.finalAction).toBe('S');
       expect(at.deviationApplied).toBe(true);
 
-      const above = engine.resolveDeviationDecision(scenario('A', '8', '6', 'H17'), 1);
+      const above = engine.resolveDeviationDecision(scenario('A', '8', '6', 'H17'), 0);
       expect(above.basicAction).toBe('D');
       expect(above.finalAction).toBe('D');
       expect(above.deviationApplied).toBe(false);
@@ -862,23 +902,23 @@ describe('DeviationEngineService', () => {
   // ─── resolvePlayDecision: the table's count-aware answer ──────────────
   describe('resolvePlayDecision', () => {
     it('applies the 16 v 10 index at the table, and not below it', () => {
-      expect(engine.resolvePlayDecision(play('10', '6', '10'), -1).action).toBe('H');
-      const at0 = engine.resolvePlayDecision(play('10', '6', '10'), 0);
-      expect(at0.action).toBe('S');
-      expect(at0.deviationApplied).toBe(true);
-      expect(at0.matchedRule?.source).toBeTruthy();
+      expect(engine.resolvePlayDecision(play('10', '6', '10'), 0).action).toBe('H');
+      const at1 = engine.resolvePlayDecision(play('10', '6', '10'), 1);
+      expect(at1.action).toBe('S');
+      expect(at1.deviationApplied).toBe(true);
+      expect(at1.matchedRule?.source).toBeTruthy();
       // The verdict names the index it fired on and what basic strategy alone
       // would have done, so the line teaches rather than just scores.
-      expect(at0.reason).toContain('0 or higher');
-      expect(at0.reason).toContain('hit');
+      expect(at1.reason).toContain('any positive true count');
+      expect(at1.reason).toContain('hit');
     });
 
     it('applies a hard-total index to a hand more than two cards deep', () => {
       // 5,4,7 is the same 16 v 10 the chart indexes; only the pair row needs
       // the hand to still be two cards.
       const input = { ...play('10', '6', '10'), player: [card('5'), card('4'), card('7')] };
-      expect(engine.resolvePlayDecision(input, 0).action).toBe('S');
-      expect(engine.resolvePlayDecision(input, -1).action).toBe('H');
+      expect(engine.resolvePlayDecision(input, 1).action).toBe('S');
+      expect(engine.resolvePlayDecision(input, 0).action).toBe('H');
     });
 
     it('leaves a deviation the felt is not offering alone', () => {

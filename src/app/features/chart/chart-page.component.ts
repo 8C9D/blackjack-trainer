@@ -164,6 +164,7 @@ interface DeviationSectionView {
   // Set where the table rules have taken the whole section off the felt: the
   // rows stay listed (the chart is the chart) and say they are not on offer.
   readonly unavailable: string | null;
+  readonly note: string | null;
 }
 
 // The chart the drills grade against, rendered rather than re-encoded: every
@@ -295,6 +296,9 @@ interface DeviationSectionView {
           <section class="chart__section" [class.chart__section--off]="section.unavailable">
             @if (section.unavailable; as note) {
               <p class="chart__note chart__note--off" role="note">{{ note }}</p>
+            }
+            @if (section.note; as note) {
+              <p class="chart__note" role="note">{{ note }}</p>
             }
             <table class="chart__table chart__table--rules">
               <caption class="chart__caption">
@@ -665,6 +669,13 @@ export class ChartPageComponent {
         id === 'surrender' && noSurrender
           ? 'Late Surrender is off in your table rules, so none of these are on offer. ' +
             'Those hands play off the chart above.'
+          : null,
+      // The list is otherwise a list of things to start doing, and a Hit under
+      // "Surrender" reads like a mistake unless something says what it stops.
+      note:
+        id === 'surrender' && !noSurrender
+          ? 'A Hit here calls off a surrender the basic chart makes. ' +
+            'Surrendering gets better as the count rises, so a low enough count takes it back.'
           : null,
     })).filter((section) => section.rows.length > 0);
   });

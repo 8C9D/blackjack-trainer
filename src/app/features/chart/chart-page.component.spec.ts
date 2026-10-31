@@ -263,7 +263,7 @@ describe('ChartPageComponent', () => {
       fixture.detectChanges();
     }
 
-    // "Hard 16 vs 10 | ≥ 0 | Stand" → the three cells as text.
+    // "Hard 16 vs 10 | > 0 | Stand" → the three cells as text.
     function ruleRow(fixture: ComponentFixture<ChartPageComponent>, hand: string): string[] {
       const row = [...fixture.nativeElement.querySelectorAll('.chart__table--rules tbody tr')].find(
         (tr) => tr.querySelector('.chart__rule-hand')!.textContent!.trim() === hand,
@@ -280,17 +280,29 @@ describe('ChartPageComponent', () => {
 
       showDeviations(fixture);
       expect(fixture.nativeElement.querySelector('.chart__table')).toBeTruthy();
-      expect(fixture.nativeElement.querySelectorAll('.chart__cell--h')).toHaveLength(2);
+      expect(fixture.nativeElement.querySelectorAll('.chart__cell--h')).toHaveLength(4);
       const captions = [...fixture.nativeElement.querySelectorAll('.chart__caption')].map((el) =>
         (el as HTMLElement).textContent!.trim(),
       );
       expect(captions).toEqual(['Insurance', 'Hard totals', 'Soft totals', 'Pairs', 'Surrender']);
     });
 
+    it('says what a Hit under Surrender is doing there', () => {
+      const prefs = TestBed.inject(FlowPrefsService);
+      prefs.setOptions({ doubleAfterSplit: false, lateSurrender: true });
+      const { fixture } = createPage();
+      showDeviations(fixture);
+      const rows = [...fixture.nativeElement.querySelectorAll('.chart__table--rules tbody tr')].map(
+        (row) => (row as HTMLElement).textContent!.replace(/\s+/g, ' ').trim(),
+      );
+      expect(rows).toContain('Hard 16 vs 9 ≤ -1H Hit');
+      expect(fixture.nativeElement.textContent).toContain('calls off a surrender');
+    });
+
     it('prints every rule as hand, threshold, and play', () => {
       const { fixture } = createPage();
       showDeviations(fixture);
-      expect(ruleRow(fixture, 'Hard 16 vs 10')).toEqual(['Hard 16 vs 10', '≥ 0', 'S Stand']);
+      expect(ruleRow(fixture, 'Hard 16 vs 10')).toEqual(['Hard 16 vs 10', '> 0', 'S Stand']);
       expect(ruleRow(fixture, 'Hard 13 vs 2')).toEqual(['Hard 13 vs 2', '≤ -1', 'H Hit']);
       expect(ruleRow(fixture, 'Dealer ace')).toEqual(['Dealer ace', '≥ +3', 'I Insurance']);
       expect(ruleRow(fixture, 'Pair of 10s vs 5')).toEqual(['Pair of 10s vs 5', '≥ +5', 'P Split']);

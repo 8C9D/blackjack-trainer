@@ -213,13 +213,13 @@ function rangeFor(
       if (wantMet) return [Math.max(i - SPREAD, minTc), Math.min(i, maxTc)];
       return [Math.max(i + 1, minTc), Math.min(i + SPREAD, maxTc)];
     }
-    case 'positive': {
-      if (wantMet) return [Math.max(1, minTc), maxTc];
-      return [minTc, Math.min(0, maxTc)];
-    }
-    case 'negative': {
-      if (wantMet) return [minTc, Math.min(-1, maxTc)];
-      return [Math.max(0, minTc), maxTc];
-    }
+    case 'positive':
+      return wantMet
+        ? [Math.max(1, minTc), Math.min(SPREAD, maxTc)]
+        : [Math.max(1 - SPREAD, minTc), Math.min(0, maxTc)];
+    case 'negative':
+      return wantMet
+        ? [Math.max(-SPREAD, minTc), Math.min(-1, maxTc)]
+        : [Math.max(0, minTc), Math.min(SPREAD - 1, maxTc)];
   }
 }
