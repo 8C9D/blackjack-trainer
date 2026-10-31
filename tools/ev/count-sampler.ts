@@ -127,6 +127,15 @@ export function countAtDecision(sampled: SampledShoe, cards: readonly number[]):
   return Math.trunc(runningCount / decksRemaining) + 0;
 }
 
+// How far past a range of decision counts the shoes must be sampled. The three
+// cards on the table move a count most where the fewest decks are left, and that
+// much further than one bin near the cut card, so a pool cut off at the range's
+// own edge would silently miss shoes the outermost bins are made of.
+export function decisionCountMargin(decks: number, maxDealt: number): number {
+  const cardsOnTable = 3;
+  return Math.ceil(cardsOnTable / (decks - maxDealt - cardsOnTable / 52));
+}
+
 export interface TwoCardForm {
   readonly a: number;
   readonly b: number;
@@ -205,20 +214,32 @@ export function valuesByCount(
 }
 
 // Insurance is a side bet on the hole card alone. Half a bet at 2:1, in units of
-// the original bet, at each count an ace can be showing at.
+// the original bet, at each count an ace can be showing at. The player's two cards
+// are not part of the bet but are part of the count, and of what is left for the
+// hole card, so every hand they could be is enumerated rather than averaged away.
 export function insuranceByCount(shoes: readonly SampledShoe[]): Map<number, number> {
   const sums = new Map<number, { w: number; value: number }>();
   for (const sampled of shoes) {
     if (sampled.shoe[ACE] === 0) continue;
-    const after = [...sampled.shoe];
-    after[ACE]--;
-    const p = after[TEN] / shoeSize(after);
-    const weight = sampled.weight * (sampled.shoe[ACE] / shoeSize(sampled.shoe));
-    const tc = countAtDecision(sampled, [ACE]);
-    const sum = sums.get(tc) ?? { w: 0, value: 0 };
-    sum.w += weight;
-    sum.value += (weight * (3 * p - 1)) / 2;
-    sums.set(tc, sum);
+    const upWeight = sampled.weight * (sampled.shoe[ACE] / shoeSize(sampled.shoe));
+    const shoe = [...sampled.shoe];
+    shoe[ACE]--;
+    for (let a = 1; a <= 10; a++) {
+      for (let b = a; b <= 10; b++) {
+        const dealt = dealChance(shoe, a, b);
+        if (dealt === 0) continue;
+        const after = [...shoe];
+        after[a]--;
+        after[b]--;
+        const p = naturalChance(after, ACE);
+        const weight = upWeight * dealt;
+        const tc = countAtDecision(sampled, [ACE, a, b]);
+        const sum = sums.get(tc) ?? { w: 0, value: 0 };
+        sum.w += weight;
+        sum.value += (weight * (3 * p - 1)) / 2;
+        sums.set(tc, sum);
+      }
+    }
   }
   return new Map([...sums].map(([tc, sum]) => [tc, sum.value / sum.w]));
 }

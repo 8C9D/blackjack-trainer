@@ -258,12 +258,12 @@ export class HandSolver {
     return dist;
   }
 
-  private scoped(extraKey: number, extra: Shoe): Scope {
-    return new Scope(this, extra, extraKey);
+  private scoped(extraKey: number): Scope {
+    return new Scope(this, extraKey);
   }
 
   values(hand: PlayerHand): ActionValues {
-    const scope = this.scoped(0, this.shoe);
+    const scope = this.scoped(0);
     const shoe = removeHand(this.shoe, hand);
     const split = pairRank(hand);
     return {
@@ -293,9 +293,11 @@ export class HandSolver {
       const { pairChance, withPair, withoutPair } = this.splitDraw(rank, hands);
       const canResplit = rank !== ACE && hands < maxHands;
       const resolved = (1 - pairChance) * (withoutPair + walk(hands, waiting - 1));
-      const another = canResplit
-        ? pairChance * walk(hands + 1, waiting + 1)
-        : pairChance * (withPair + walk(hands, waiting - 1));
+      // Paired again, the hand can still be played as the pair it is: a re-split
+      // is an option, and an option cannot lower a value.
+      const played = withPair + walk(hands, waiting - 1);
+      const another =
+        pairChance * (canResplit ? Math.max(walk(hands + 1, waiting + 1), played) : played);
       const value = resolved + another;
       memo.set(key, value);
       return value;
@@ -317,7 +319,7 @@ export class HandSolver {
     extra[rank] -= pairCards - 1;
     let extraKey = 0;
     for (let i = 0; i < pairCards - 1; i++) extraKey = keyAdd(extraKey, rank);
-    const scope = this.scoped(extraKey, extra);
+    const scope = this.scoped(extraKey);
 
     const base = handOf(rank);
     const shoe = removeHand(extra, base);
@@ -393,13 +395,13 @@ class Scope {
 
   constructor(
     private readonly solver: HandSolver,
-    private readonly base: Shoe,
     private readonly extraKey: number,
   ) {
     this.memo = solver.memoFor(extraKey);
   }
 
-  // `shoe` is always `base` minus this hand; callers have it to hand already.
+  // `shoe` is always this scope's base shoe minus the hand; callers have it to
+  // hand already.
   stand(hand: PlayerHand, shoe: Shoe): number {
     const { total } = totalOf(hand.hard, hand.aces);
     if (total > 21) return -1;

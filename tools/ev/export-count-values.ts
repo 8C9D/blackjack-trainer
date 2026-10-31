@@ -19,6 +19,7 @@ import { fileURLToPath } from 'node:url';
 import { H17_DEVIATIONS } from '../../src/app/data/h17-deviations';
 import { S17_DEVIATIONS } from '../../src/app/data/s17-deviations';
 import {
+  decisionCountMargin,
   hardForms,
   insuranceByCount,
   sampleShoes,
@@ -33,10 +34,9 @@ const ROOT = join(dirname(HERE), '..', '..');
 const OUT = join(ROOT, 'src', 'app', 'data', 'ev-by-count.generated.ts');
 
 const DECKS = 6;
-// The published range the drills deal, with a margin. The shoes are sampled wider
-// than this, so a hand's own cards cannot push the ends of it out of the pool.
-const MIN_COUNT = -7;
-const MAX_COUNT = 9;
+// The range the drills deal, with a little room. A count outside it clamps.
+const MIN_COUNT = -6;
+const MAX_COUNT = 8;
 const PER_BUCKET = 1500;
 const SEED = 20261031;
 const WORKERS = 6;
@@ -85,14 +85,18 @@ function formsOf(cell: Cell): readonly TwoCardForm[] {
   }
 }
 
+// A cut card at three quarters, and past the first round of a fresh shoe.
+const MIN_DEALT = 0.5;
+const MAX_DEALT = 4.5;
+
 function pool(): readonly SampledShoe[] {
+  const margin = decisionCountMargin(DECKS, MAX_DEALT);
   const buckets = sampleShoes({
     decks: DECKS,
-    // A cut card at three quarters, and past the first round of a fresh shoe.
-    minDealt: 0.5,
-    maxDealt: 4.5,
-    minCount: MIN_COUNT - 1,
-    maxCount: MAX_COUNT + 1,
+    minDealt: MIN_DEALT,
+    maxDealt: MAX_DEALT,
+    minCount: MIN_COUNT - margin,
+    maxCount: MAX_COUNT + margin,
     perBucket: PER_BUCKET,
     seed: SEED,
     maxDraws: 12_000_000,

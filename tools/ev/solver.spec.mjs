@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { countAtDecision, insuranceByCount, sampleShoes, seededRandom } from './count-sampler';
+import {
+  countAtDecision,
+  decisionCountMargin,
+  insuranceByCount,
+  sampleShoes,
+  seededRandom,
+} from './count-sampler';
 import {
   ACE,
   HandSolver,
@@ -228,6 +234,18 @@ describe('identities', () => {
     expect(fourHands).toBeGreaterThan(twoHands);
   });
 
+  // A re-split is an option. Forcing it re-splits tens against a ten, which is
+  // ruinous, and would have priced every split of tens far too low.
+  it('never lets the option to re-split lower a split', () => {
+    for (const rank of [TEN, 9, 4]) {
+      const shoe = makeShoe(6);
+      shoe[10]--;
+      const twoHands = new HandSolver(shoe, 10, { ...S17_DAS, maxHands: 2 }).split(rank);
+      const fourHands = new HandSolver(shoe, 10, S17_DAS).split(rank);
+      expect(fourHands).toBeGreaterThanOrEqual(twoHands);
+    }
+  });
+
   it('split aces take one card and may not re-split', () => {
     const shoe = makeShoe(6);
     shoe[6]--;
@@ -290,6 +308,29 @@ describe('sampled shoes', () => {
     const value = insuranceByCount([...buckets.values()].flat());
     expect(value.get(0)).toBeLessThan(0);
     expect(value.get(6)).toBeGreaterThan(0);
+  });
+
+  // Enumerated by hand: the player's two cards move both the count the bet is
+  // read at and what is left for the hole card.
+  it('price insurance across the hands it could be offered on', () => {
+    const shoe = [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 24];
+    const value = insuranceByCount([
+      { shoe, runningCount: 0, decksRemaining: 1.5, trueCount: 0, weight: 1 },
+    ]);
+    expect(value.get(-2)).toBeCloseTo(-0.0531034483, 9);
+    expect(value.get(-1)).toBeCloseTo(-0.0365517241, 9);
+    expect(value.get(0)).toBeCloseTo(-0.0272072072, 9);
+  });
+
+  // RC -14 over 78 cards is a pool count of -9, and dealing 4,5 v 2 out of it is
+  // a decision count of -7. A margin of one would never have sampled that shoe.
+  it('sample far enough past the range for the cards on the table', () => {
+    const margin = decisionCountMargin(6, 4.5);
+    expect(margin).toBeGreaterThanOrEqual(2);
+    const sampled = { runningCount: -14, decksRemaining: 1.5 };
+    const decision = countAtDecision(sampled, [4, 5, 2]);
+    expect(decision).toBe(-7);
+    expect(decision - margin).toBeLessThanOrEqual(Math.trunc(-14 / 1.5));
   });
 
   it('read the count at the decision, with the table cards in it', () => {
