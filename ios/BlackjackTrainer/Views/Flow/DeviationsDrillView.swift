@@ -50,14 +50,10 @@ struct DeviationsDrillView: View {
         .background(Theme.ground.ignoresSafeArea())
         .onDisappear { model.exit() }
         // The spoken verdict is VoiceOver's whole feedback loop (the web's
-        // sr-only status region); the count context is in the explanation.
-        .onChange(of: model.result) { _, result in
-            guard let result else { return }
-            AccessibilityNotification.Announcement(
-                result.correct
-                    ? "Correct: \(result.expectedAction.label)."
-                    : "Incorrect. Correct: \(result.expectedAction.label). \(model.explanation)"
-            ).post()
+        // sr-only status region).
+        .onChange(of: model.result) {
+            guard let verdict = model.verdict else { return }
+            AccessibilityNotification.Announcement(verdict).post()
         }
     }
 
@@ -97,7 +93,7 @@ struct DeviationsDrillView: View {
                 player: model.scenario.player.cards,
                 dealer: model.scenario.dealerUpcard
             ) {
-                DrillLineView(line: stageLine)
+                DrillLineView(line: stageLine, cost: model.missCost)
             }
             FlowActionsView(
                 legal: model.legalActions,

@@ -11,6 +11,15 @@ struct DataLayerTests {
         #expect(systems.count == 58)
     }
 
+    @Test func loadsTheValueTablesOnePerRuleSet() throws {
+        let file = try GameData.loadEvTables()
+        #expect(file.table.upcards == ChartKeys.dealerUpcards)
+        #expect(file.table.decks == file.byCount.decks)
+        #expect(file.table.rules[.h17].hit["hard-16"]?.count == file.table.upcards.count)
+        #expect(file.table.rules[.s17].hit["hard-16"]?.count == file.table.upcards.count)
+        #expect(file.byCount.insurance.count == file.byCount.maxCount - file.byCount.minCount + 1)
+    }
+
     @Test func integrityCheckIsClean() throws {
         let charts = try GameData.loadCharts()
         let systems = try GameData.loadCountingSystems()

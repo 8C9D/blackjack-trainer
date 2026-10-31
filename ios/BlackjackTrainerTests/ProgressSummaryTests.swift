@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import BlackjackTrainer
 
@@ -116,6 +117,38 @@ struct ProgressSummaryTests {
         #expect(ProgressSummary.spotDetail(spot([2, -1])) == "missed 3 of 7 at TC -1, +2")
     }
 
+    @Test func spotDetailEndsOnWhatAMissGivesUp() {
+        func spot(_ counts: [Int]) -> WeakSpot {
+            WeakSpot(
+                ref: ScenarioRef(kind: "hard", hand: "16", dealer: "10"),
+                label: "16 vs 10", misses: 3, attempts: 7, streak: 0, missedCounts: counts,
+                costPerMiss: 210
+            )
+        }
+        #expect(ProgressSummary.spotDetail(spot([])) == "missed 3 of 7 · at least 2.1% a miss")
+        #expect(ProgressSummary.spotDetail(spot([2, -1]))
+            == "missed 3 of 7 at TC -1, +2 · at least 2.1% a miss")
+    }
+
+    @Test func missCostLabelNamesTheFloorOfWhatAMissGivesUp() {
+        #expect(ProgressSummary.missCostLabel(costed(210)) == "at least 2.1% a miss")
+        #expect(ProgressSummary.missCostLabel(costed(10)) == "at least 0.1% a miss")
+    }
+
+    /// Naming a figure that small would only make a coin flip sound like a problem.
+    @Test func missCostLabelSaysNothingOfACoinFlipOrOfASpotWithNoPrice() {
+        #expect(ProgressSummary.missCostLabel(costed(9)) == nil)
+        #expect(ProgressSummary.missCostLabel(costed(nil)) == nil)
+        #expect(ProgressSummary.spotDetail(costed(9)) == "missed 1 of 1")
+    }
+
+    private func costed(_ cost: Double?) -> WeakSpot {
+        WeakSpot(
+            ref: ScenarioRef(kind: "hard", hand: "16", dealer: "10"),
+            label: "16 vs 10", misses: 1, attempts: 1, costPerMiss: cost
+        )
+    }
+
     /// A bad week can outstand thirty scenarios; listing them all buries the ones
     /// actually costing hands.
     @Test func aWeakGroupNamesTheWorstFewAndCountsTheRest() {
@@ -162,5 +195,65 @@ struct ProgressSummaryTests {
 
     @Test func paceTrendCallsAnUnchangedWeekLevel() {
         #expect(ProgressSummary.paceTrend(thisWeek: 3, weekBefore: 3)?.direction == .level)
+    }
+}
+
+/// The one figure accuracy cannot give: what the misses are worth at a table, read
+/// beside what the table takes from a player who makes none. Mirrors the web
+/// Progress screen's leak paragraph.
+struct ProgressLeakTests {
+    private func tally() -> MissTallyStore {
+        let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)") ?? .standard
+        return CostFixture.tally(defaults: defaults, prefs: FlowPrefsStore(defaults: defaults))
+    }
+
+    private func leak(_ tally: MissTallyStore) -> ProgressLeak? {
+        ProgressSummary.leak(
+            tally,
+            rules: FlowPrefs.default.playContext,
+            playCost: CostFixture.playCost
+        )
+    }
+
+    @Test func pricesTheOutstandingMissesAgainstTheHouseEdge() {
+        let s = tally()
+        s.record(
+            .basicStrategy,
+            ref: ScenarioRef(kind: "pair", hand: "10", dealer: "6"),
+            correct: false
+        )
+        #expect(leak(s) == ProgressLeak(leak: "under 0.1%", edge: "0.5%"))
+    }
+
+    @Test func callsARealLeakAFloor() throws {
+        let s = tally()
+        for dealer in ["2", "3", "4", "5", "6"] {
+            for _ in 0 ..< 4 {
+                s.record(
+                    .basicStrategy,
+                    ref: ScenarioRef(kind: "pair", hand: "10", dealer: dealer),
+                    correct: false
+                )
+            }
+        }
+        let figure = try #require(leak(s)?.leak)
+        #expect(figure.hasPrefix("at least "))
+    }
+
+    @Test func pricesNoFigureWhileNothingIsOutstanding() {
+        #expect(leak(tally()) == nil)
+    }
+
+    /// An indexed hand's frequency depends on how often its count comes up, which
+    /// is a different figure from how often it is dealt.
+    @Test func pricesBasicStrategyAloneWhoseHandsComeUpAsATableDealsThem() {
+        let s = tally()
+        s.record(
+            .deviations,
+            ref: ScenarioRef(kind: "hard", hand: "16", dealer: "10"),
+            correct: false,
+            trueCount: 2
+        )
+        #expect(leak(s) == nil)
     }
 }

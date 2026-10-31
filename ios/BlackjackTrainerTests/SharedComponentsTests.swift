@@ -31,4 +31,43 @@ struct SharedComponentsTests {
     @Test func fullTrainerSetMatchesWebDefault() {
         #expect(Action.fullTrainerSet == [.hit, .stand, .double, .split, .surrender, .insurance])
     }
+
+    // The Done screen's miss line, mirroring `flow-done.component.spec`.
+
+    private let weak = WeakSpot(
+        ref: ScenarioRef(kind: "hard", hand: "16", dealer: "10"),
+        label: "16 vs 10", misses: 3, attempts: 7
+    )
+
+    @MainActor
+    private func done(weakSpots: [WeakSpot] = []) -> FlowDoneView {
+        FlowDoneView(
+            hands: 20, target: 20, bestStreak: 7, accuracy: 86,
+            weakSpots: weakSpots, onAgain: {}, onExit: {}
+        )
+    }
+
+    @MainActor
+    @Test func saysWhatAMissOfTheQueuedWeaknessGivesUp() {
+        var spot = weak
+        spot.costPerMiss = 210
+        #expect(done().missLine(spot) == "missed 3 of 7 this week · at least 2.1% a miss")
+    }
+
+    @MainActor
+    @Test func keepsTheCostBetweenTheCountsAndTheRemainder() {
+        var spot = weak
+        spot.costPerMiss = 210
+        spot.missedCounts = [2, -1]
+        #expect(done(weakSpots: [spot, weak, weak]).missLine(spot)
+            == "missed 3 of 7 this week at TC -1, +2 · at least 2.1% a miss · +2 more")
+    }
+
+    @MainActor
+    @Test func leavesACoinFlipUnpriced() {
+        var spot = weak
+        spot.costPerMiss = 9
+        #expect(done().missLine(spot) == "missed 3 of 7 this week")
+        #expect(done().missLine(weak) == "missed 3 of 7 this week")
+    }
 }

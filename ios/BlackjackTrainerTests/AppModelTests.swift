@@ -24,6 +24,20 @@ struct AppModelTests {
         #expect(deviation.expectedAction == .stand) // I18 #1
     }
 
+    /// The tally learns the table from the prefs the Settings screen edits, so a
+    /// weak spot from the composition root arrives priced.
+    @MainActor
+    @Test func compositionRootPricesAWeakSpot() throws {
+        let model = AppModel()
+        let ref = ScenarioRef(kind: "hard", hand: "16", dealer: "10")
+        model.missTally.record(.basicStrategy, ref: ref, correct: false)
+        defer { model.resetPracticeData() }
+        #expect(model.missTally.weakSpotFor(.basicStrategy)?.costPerMiss
+            == model.playCost.cheapestMiss(ref, model.flowPrefs.prefs.playContext))
+        let cost = try #require(model.missTally.weakSpotFor(.basicStrategy)?.costPerMiss)
+        #expect(cost > 0)
+    }
+
     @MainActor
     @Test func resetPracticeDataClearsEveryStoreButTheSettings() {
         let model = AppModel()

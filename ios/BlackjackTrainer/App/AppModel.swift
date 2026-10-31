@@ -16,6 +16,8 @@ final class AppModel {
     /// it is held for the chart's deviation grid.
     let deviations: DeviationEngine
     let deviationEvaluator: DeviationEvaluator
+    /// Grading says right or wrong; this says how much.
+    let playCost: PlayCost
 
     let basicStrategyStats: SessionStatsStore
     let runningCountStats: SessionStatsStore
@@ -45,6 +47,7 @@ final class AppModel {
         basicStrategy = loaded.basicStrategy
         deviations = loaded.deviations
         deviationEvaluator = loaded.evaluator
+        playCost = loaded.playCost
 
         // Gated: nothing reaches iCloud until this install has been told its
         // initial download finished, so a cold KVS cache cannot publish its
@@ -68,7 +71,13 @@ final class AppModel {
         let practiceHistory = PracticeHistoryStore(cloud: cloud, goalSource: { [weak flowPrefs] in
             flowPrefs?.prefs.dailyGoal ?? 0
         })
-        let missTally = MissTallyStore(cloud: cloud)
+        // A weak spot is priced at the rules in force when it is read, wired here
+        // for the same reason: changing the table reprices every spot at once.
+        let missTally = MissTallyStore(
+            cloud: cloud,
+            playCost: loaded.playCost,
+            contextSource: { [weak flowPrefs] in flowPrefs?.prefs.playContext }
+        )
         let countDrift = CountDriftStore(cloud: cloud)
         self.flowPrefs = flowPrefs
         self.practiceHistory = practiceHistory
@@ -89,12 +98,14 @@ final class AppModel {
         let basicStrategy: BasicStrategyEngine
         let deviations: DeviationEngine
         let evaluator: DeviationEvaluator
+        let playCost: PlayCost
     }
 
     /// The data is bundled and its integrity is verified by tests + CI; a failure
     /// here means a broken build, so fail loudly.
     private static func loadEngines() -> LoadedEngines {
-        guard let loaded = try? GameData.loadValidated() else {
+        guard let loaded = try? GameData.loadValidated(),
+              let evTables = try? GameData.loadEvTables() else {
             preconditionFailure("bundled game data failed to load or validate")
         }
         let basicStrategy = BasicStrategyEngine(charts: loaded.charts)
@@ -104,7 +115,8 @@ final class AppModel {
             systems: loaded.systems,
             basicStrategy: basicStrategy,
             deviations: deviations,
-            evaluator: DeviationEvaluator(engine: deviations)
+            evaluator: DeviationEvaluator(engine: deviations),
+            playCost: PlayCost(evTables)
         )
     }
 

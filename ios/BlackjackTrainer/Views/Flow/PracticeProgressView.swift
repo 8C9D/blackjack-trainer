@@ -89,6 +89,11 @@ struct PracticeProgressView: View {
                     rows: rows,
                     driftShape: model.countDrift.shape(),
                     weakGroups: weakGroups,
+                    leak: ProgressSummary.leak(
+                        model.missTally,
+                        rules: model.flowPrefs.prefs.playContext,
+                        playCost: model.playCost
+                    ),
                     onDrillMisses: { router.go(.drill($0, review: true)) }
                 )
             }
@@ -127,6 +132,9 @@ struct ProgressBodyView: View {
     /// not yet a lean.
     var driftShape: DriftShape?
     let weakGroups: [ProgressWeakGroup]
+    /// The week's misses priced against the house edge. Nil with nothing
+    /// outstanding in Basic Strategy, the one trainer that has this figure.
+    var leak: ProgressLeak?
     /// Starts a review round in the named trainer. Naming a weakness on a
     /// read-only screen leaves the trainee to go and hope it comes up.
     var onDrillMisses: (TrainerId) -> Void = { _ in }
@@ -276,6 +284,7 @@ struct ProgressBodyView: View {
                     .font(.caption)
                     .foregroundStyle(Theme.muted)
             } else {
+                if group.drill == .basicStrategy { leakNote }
                 ForEach(group.shown, id: \.label) { spot in
                     HStack {
                         Text(spot.label)
@@ -285,6 +294,7 @@ struct ProgressBodyView: View {
                         Text(ProgressSummary.spotDetail(spot))
                             .font(.caption)
                             .foregroundStyle(Theme.muted)
+                            .multilineTextAlignment(.trailing)
                     }
                     .accessibilityElement(children: .combine)
                 }
@@ -370,6 +380,23 @@ extension ProgressBodyView {
                 .font(.caption)
                 .foregroundStyle(Theme.muted)
                 .padding(.top, 8)
+        }
+    }
+
+    /// Accuracy treats every miss alike and every hand as equally likely, and
+    /// neither is true at a table. This is the one figure that answers what the
+    /// misses are actually worth.
+    @ViewBuilder
+    var leakNote: some View {
+        if let leak {
+            (Text("At a real table these misses would cost ")
+                + Text(leak.leak).bold()
+                + Text(" of every hand, on top of the ")
+                + Text(leak.edge).bold()
+                + Text(" house edge at your rules."))
+                .font(.footnote)
+                .foregroundStyle(Theme.midInk)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

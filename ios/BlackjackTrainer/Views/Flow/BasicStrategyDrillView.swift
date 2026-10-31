@@ -52,13 +52,9 @@ struct BasicStrategyDrillView: View {
         // Grading shows as color and position on the action grid, which
         // announces as nothing — the spoken verdict is VoiceOver's whole
         // feedback loop (the web's sr-only status region).
-        .onChange(of: model.result) { _, result in
-            guard let result else { return }
-            AccessibilityNotification.Announcement(
-                result.correct
-                    ? "Correct: \(result.action.label)."
-                    : "Incorrect. Correct: \(result.action.label). \(result.reason)"
-            ).post()
+        .onChange(of: model.result) {
+            guard let verdict = model.verdict else { return }
+            AccessibilityNotification.Announcement(verdict).post()
         }
     }
 
@@ -91,7 +87,7 @@ struct BasicStrategyDrillView: View {
                 player: model.scenario.player,
                 dealer: model.scenario.dealerUpcard
             ) {
-                DrillLineView(line: stageLine)
+                DrillLineView(line: stageLine, cost: model.missCost)
             }
             FlowActionsView(
                 legal: model.legalActions,
@@ -135,15 +131,23 @@ struct BasicStrategyDrillView: View {
     }
 }
 
-/// Renders the composed question/rule line beneath the stage.
+/// Renders the composed question/rule line beneath the stage, and on a miss what
+/// that miss gave up.
 struct DrillLineView: View {
     let line: Text
+    var cost: String?
 
     var body: some View {
-        line
-            .font(.callout)
-            .foregroundStyle(Theme.midInk)
-            .multilineTextAlignment(.center)
-            .fixedSize(horizontal: false, vertical: true)
+        VStack(spacing: 6) {
+            line
+                .font(.callout)
+            if let cost {
+                Text(cost)
+                    .font(.footnote.weight(.semibold))
+            }
+        }
+        .foregroundStyle(Theme.midInk)
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }

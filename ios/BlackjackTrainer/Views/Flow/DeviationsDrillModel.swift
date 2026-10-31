@@ -15,6 +15,7 @@ final class DeviationsDrillModel {
     @ObservationIgnored private let prefs: FlowPrefsStore
     @ObservationIgnored private let history: PracticeHistoryStore
     @ObservationIgnored private let missTally: MissTallyStore
+    @ObservationIgnored private let playCost: PlayCost
     @ObservationIgnored private let scheduler: FlowAdvanceScheduler
     @ObservationIgnored private let advanceDelay: Duration
     /// The wall clock, injected so a spec can drive the decision timer. The
@@ -45,6 +46,7 @@ final class DeviationsDrillModel {
         prefs: FlowPrefsStore,
         history: PracticeHistoryStore,
         missTally: MissTallyStore,
+        playCost: PlayCost,
         systems: [CountingSystem] = [],
         scheduler: FlowAdvanceScheduler? = nil,
         advanceDelay: Duration = .milliseconds(500),
@@ -60,6 +62,7 @@ final class DeviationsDrillModel {
         self.prefs = prefs
         self.history = history
         self.missTally = missTally
+        self.playCost = playCost
         self.scheduler = scheduler ?? RealFlowAdvanceScheduler()
         self.advanceDelay = advanceDelay
         self.now = now
@@ -96,6 +99,7 @@ final class DeviationsDrillModel {
             prefs: app.flowPrefs,
             history: app.practiceHistory,
             missTally: app.missTally,
+            playCost: app.playCost,
             systems: app.countingSystems,
             scheduler: scheduler,
             advanceDelay: advanceDelay,
@@ -338,6 +342,29 @@ extension DeviationsDrillModel {
     var explanation: String {
         guard let result else { return "" }
         return DeviationFeedback.explanation(result, dealerAce: scenario.dealerUpcard.isAce)
+    }
+
+    /// Read at the count on screen: an index a count past its threshold is a real
+    /// mistake, and the same index right at it is a coin flip.
+    var missCost: String? {
+        guard let result, !result.correct else { return nil }
+        let cost = playCost.costOfPlay(
+            scenarioRefFor(scenario.player.cards, dealerUpcard: scenario.dealerUpcard),
+            played: result.userAction,
+            correct: result.expectedAction,
+            prefs.prefs.playContext.at(trueCount: scenario.trueCount)
+        )
+        return cost.map(costSentence)
+    }
+
+    /// The graded answer as VoiceOver speaks it, or nil before there is one. The
+    /// count context is in the explanation.
+    var verdict: String? {
+        guard let result else { return nil }
+        let correct = "Correct: \(result.expectedAction.label)."
+        if result.correct { return correct }
+        let cost = missCost.map { " \($0)" } ?? ""
+        return "Incorrect. \(correct) \(explanation)\(cost)"
     }
 
     /// The same six buttons the Basic Strategy drill offers, under the same table

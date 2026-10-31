@@ -66,6 +66,13 @@ struct ProgressWeakGroup: Identifiable {
     }
 }
 
+/// The week's misses priced against the house edge, as the two figures the leak
+/// paragraph sets in bold.
+struct ProgressLeak: Equatable {
+    let leak: String
+    let edge: String
+}
+
 /// The pure half of the Progress screen, mirroring the web
 /// `progress-page.component`'s helpers.
 enum ProgressSummary {
@@ -192,10 +199,40 @@ enum ProgressSummary {
         return "TC " + distinct.map(DeviationFeedback.formatTrueCount).joined(separator: ", ")
     }
 
-    /// "missed 3 of 7 at TC -1, +2". A deviation missed on both sides of its index
-    /// is two different mistakes, and the hand's label carries neither.
+    /// "at least 2.1% a miss", or nil where a miss costs next to nothing: naming a
+    /// figure that small would only make a coin flip sound like a problem. "At
+    /// least" because a tally knows that a hand was missed and not how. Mirrors
+    /// `missCostLabel`.
+    static func missCostLabel(_ spot: WeakSpot) -> String? {
+        guard let cost = spot.costPerMiss, cost >= 10 else { return nil }
+        return "at least \(formatBetShare(cost)) a miss"
+    }
+
+    /// "missed 3 of 7 at TC -1, +2 · at least 2.1% a miss". A deviation missed on
+    /// both sides of its index is two different mistakes, and the hand's label
+    /// carries neither. The cost is why the list runs in this order.
     static func spotDetail(_ spot: WeakSpot) -> String {
         let counts = missedCountsLabel(spot).map { " at \($0)" } ?? ""
-        return "missed \(spot.misses) of \(spot.attempts)\(counts)"
+        let cost = missCostLabel(spot).map { " · \($0)" } ?? ""
+        return "missed \(spot.misses) of \(spot.attempts)\(counts)\(cost)"
+    }
+
+    /// What this week's outstanding misses would give back at a table, beside what
+    /// the table takes from perfect play. Only Basic Strategy has one: an indexed
+    /// hand's frequency depends on how often its count comes up, which is a
+    /// different figure from how often it is dealt. Mirrors the web `leak`.
+    static func leak(
+        _ tally: MissTallyStore,
+        rules: PlayContext,
+        playCost: PlayCost
+    ) -> ProgressLeak? {
+        let spots = tally.weakSpots(.basicStrategy)
+        if spots.isEmpty { return nil }
+        let leak = playCost.tableLeak(spots)
+        return ProgressLeak(
+            // A floor, since a tally knows a hand was missed and not how.
+            leak: leak < 10 ? formatBetShare(leak) : "at least \(formatBetShare(leak))",
+            edge: formatBetShare(playCost.houseEdge(rules.ruleSet, rules.options))
+        )
     }
 }

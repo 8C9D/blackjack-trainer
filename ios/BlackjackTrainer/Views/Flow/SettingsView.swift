@@ -11,6 +11,10 @@ struct SettingsView: View {
         model.flowPrefs.prefs
     }
 
+    private var houseEdge: String {
+        formatBetShare(model.playCost.houseEdge(prefs.ruleSet, prefs.options))
+    }
+
     private var selectedSystem: CountingSystem? {
         model.countingSystems.first { $0.id == prefs.counting.systemId }
     }
@@ -90,6 +94,13 @@ struct SettingsView: View {
             }
             Toggle("Double After Split (DAS)", isOn: doubleAfterSplitBinding)
             Toggle("Late Surrender", isOn: lateSurrenderBinding)
+            // The toggles above read as preferences until they carry a price. Every
+            // one of them moves this number, which is why tables differ.
+            (Text("Perfect basic strategy at these rules gives the house ")
+                + Text(houseEdge).bold()
+                + Text(" of every hand, on a six-deck shoe."))
+                .font(.footnote)
+                .foregroundStyle(Theme.muted)
         }
     }
 

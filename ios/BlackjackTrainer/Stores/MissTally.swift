@@ -39,6 +39,10 @@ struct WeakSpot: Equatable {
     /// the Deviations trainer records them: there the count is half the question,
     /// and a re-deal that draws a fresh one asks something else.
     var missedCounts: [Int] = []
+    /// What one miss of this hand gives up at the least, in hundredths of a percent
+    /// of the bet, under the current table rules. Nil where the tables have no
+    /// value for the hand. Derived on every read and never stored.
+    var costPerMiss: Double?
 }
 
 /// How many missed true counts a scenario remembers. A hand can be missed on
@@ -160,16 +164,27 @@ final class MissTallyStore: CloudSyncable {
     @ObservationIgnored private let cloud: CloudKeyValueStore?
     /// Test seam mirroring the web `setNowSource`.
     @ObservationIgnored var now: () -> Date = { Date() }
+    /// The value tables a weak spot is priced from.
+    @ObservationIgnored private let playCost: PlayCost?
+    /// The table rules in force, read when a spot is priced rather than kept with
+    /// it: nothing about a cost is stored, so changing the rules reprices every
+    /// spot and the payload stays the one the web reads. Unset in a spec that does
+    /// not care, which leaves every spot unpriced.
+    @ObservationIgnored var contextSource: (() -> PlayContext?)?
     private(set) var state: [String: [String: ScenarioTally]]
 
     init(
         key: String = StatsKeys.missTally,
         defaults: UserDefaults = .standard,
-        cloud: CloudKeyValueStore? = nil
+        cloud: CloudKeyValueStore? = nil,
+        playCost: PlayCost? = nil,
+        contextSource: (() -> PlayContext?)? = nil
     ) {
         self.key = key
         self.defaults = defaults
         self.cloud = cloud
+        self.playCost = playCost
+        self.contextSource = contextSource
         state = [:]
         state = load(data: defaults.data(forKey: key))
     }
@@ -219,13 +234,19 @@ final class MissTallyStore: CloudSyncable {
         persist()
     }
 
-    /// Scenarios missed inside the window and not yet cleared, worst first
-    /// (most misses, then highest miss rate, then scenario key so the order is
-    /// stable). This is what adaptive selection draws from. Mirrors `weakSpots`.
+    /// Scenarios missed inside the window and not yet cleared, worst first. Worst
+    /// means what the misses cost, not how many there were: missing a coin flip
+    /// five times gives up less than splitting tens once, and whichever hand heads
+    /// this list is the one the next session opens on. Ties fall to most misses,
+    /// then the highest miss rate, then the scenario key so the order is stable.
+    /// This is what adaptive selection draws from. Mirrors `weakSpots`.
     func weakSpots(_ trainer: TalliedTrainer) -> [WeakSpot] {
         windowed(trainer)
             .filter { $0.spot.streak < clearStreak }
             .sorted { lhs, rhs in
+                let lhsCost = totalCost(lhs.spot)
+                let rhsCost = totalCost(rhs.spot)
+                if lhsCost != rhsCost { return lhsCost > rhsCost }
                 if lhs.spot.misses != rhs.spot.misses { return lhs.spot.misses > rhs.spot.misses }
                 let lhsRate = Double(lhs.spot.misses) / Double(lhs.spot.attempts)
                 let rhsRate = Double(rhs.spot.misses) / Double(rhs.spot.attempts)
@@ -278,11 +299,27 @@ final class MissTallyStore: CloudSyncable {
                     misses: misses,
                     attempts: attempts,
                     streak: tally.streak,
-                    missedCounts: tally.missedCounts
+                    missedCounts: tally.missedCounts,
+                    costPerMiss: costPerMiss(tally.ref, tally.missedCounts)
                 )
             ))
         }
         return spots
+    }
+
+    /// A deviation is worth what it was worth at the counts it was missed at; one
+    /// recorded without any, like every basic-strategy miss, at a full shoe.
+    private func costPerMiss(_ ref: ScenarioRef, _ missedCounts: [Int]) -> Double? {
+        guard let playCost, let context = contextSource?() else { return nil }
+        let atCounts = missedCounts.compactMap { trueCount in
+            playCost.cheapestMiss(ref, context.at(trueCount: trueCount))
+        }
+        if atCounts.isEmpty { return playCost.cheapestMiss(ref, context) }
+        return atCounts.reduce(0, +) / Double(atCounts.count)
+    }
+
+    private func totalCost(_ spot: WeakSpot) -> Double {
+        Double(spot.misses) * (spot.costPerMiss ?? 0)
     }
 
     private func cutoffDate() -> String {

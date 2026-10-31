@@ -116,6 +116,11 @@ extension FlowPrefs {
             penetration: ShoeConstants.defaultPenetration
         )
     )
+
+    /// The table these rules describe, as the value tables read it.
+    var playContext: PlayContext {
+        PlayContext(ruleSet: ruleSet, options: options)
+    }
 }
 
 /// Rounds and clamps a daily goal into [1, 200]; a non-finite value falls back

@@ -29,7 +29,7 @@ struct MissTallyStoreTests {
     }
 
     private func store(_ defaults: UserDefaults, now: @escaping () -> Date) -> MissTallyStore {
-        let store = MissTallyStore(defaults: defaults)
+        let store = CostFixture.tally(defaults: defaults, prefs: FlowPrefsStore(defaults: defaults))
         store.setNowSource(now)
         return store
     }
@@ -80,15 +80,18 @@ struct MissTallyStoreTests {
         #expect(s.weakSpotFor(.basicStrategy) == nil)
     }
 
-    @Test func accumulatesAttemptsAndMissesForAScenario() {
+    @Test func accumulatesAttemptsAndMissesForAScenario() throws {
         let s = store(freshDefaults(), now: { Self.base() })
         // Ends on a single correct answer, short of the clear streak that would
         // retire this scenario from the weak list.
         for correct in [false, true, false, true, true, false, true] {
             s.record(.basicStrategy, ref: hard16v10, correct: correct)
         }
-        #expect(s.weakSpotFor(.basicStrategy)
-            == WeakSpot(ref: hard16v10, label: "16 vs 10", misses: 3, attempts: 7, streak: 1))
+        let spot = try #require(s.weakSpotFor(.basicStrategy))
+        let cost = try #require(spot.costPerMiss)
+        #expect(spot == WeakSpot(
+            ref: hard16v10, label: "16 vs 10", misses: 3, attempts: 7, streak: 1, costPerMiss: cost
+        ))
     }
 
     // In the Deviations trainer the count is half the question, so the miss
@@ -169,21 +172,6 @@ struct MissTallyStoreTests {
         )
         let s = store(defaults, now: { Self.base() })
         #expect(s.weakSpotFor(.deviations)?.missedCounts == [])
-    }
-
-    @Test func picksTheScenarioWithTheMostMissesTiebreakingOnMissRate() {
-        let s = store(freshDefaults(), now: { Self.base() })
-        // 16v10: 2 misses of 4; A,7v9: 2 misses of 2 (higher rate).
-        s.record(.basicStrategy, ref: hard16v10, correct: false)
-        s.record(.basicStrategy, ref: hard16v10, correct: false)
-        s.record(.basicStrategy, ref: hard16v10, correct: true)
-        s.record(.basicStrategy, ref: hard16v10, correct: true)
-        s.record(.basicStrategy, ref: soft18v9, correct: false)
-        s.record(.basicStrategy, ref: soft18v9, correct: false)
-        #expect(s.weakSpotFor(.basicStrategy)?.ref == soft18v9)
-
-        s.record(.basicStrategy, ref: hard16v10, correct: false)
-        #expect(s.weakSpotFor(.basicStrategy)?.ref == hard16v10)
     }
 
     @Test func keepsTrainerTalliesIndependent() {
@@ -285,27 +273,6 @@ struct MissTallyStoreTests {
         #expect(weak.misses == 2)
         #expect(weak.streak == 0)
     }
-
-    // MARK: weakSpots ranking
-
-    @Test func ordersWeakSpotsByMissesThenRateThenAStableKey() {
-        let s = store(freshDefaults(), now: { Self.base() })
-        let pair8v10 = ScenarioRef(kind: "pair", hand: "8", dealer: "10")
-        // 16v10: 2 of 4. A,7v9: 2 of 2 — same misses, higher rate, so first.
-        s.record(.basicStrategy, ref: hard16v10, correct: false)
-        s.record(.basicStrategy, ref: hard16v10, correct: false)
-        s.record(.basicStrategy, ref: hard16v10, correct: true)
-        s.record(.basicStrategy, ref: hard16v10, correct: true)
-        s.record(.basicStrategy, ref: soft18v9, correct: false)
-        s.record(.basicStrategy, ref: soft18v9, correct: false)
-        // Pair 8s: 3 misses — the most, so it leads.
-        s.record(.basicStrategy, ref: pair8v10, correct: false)
-        s.record(.basicStrategy, ref: pair8v10, correct: false)
-        s.record(.basicStrategy, ref: pair8v10, correct: false)
-
-        #expect(s.weakSpots(.basicStrategy).map(\.label)
-            == ["8,8 vs 10", "A,7 vs 9", "16 vs 10"])
-    }
 }
 
 /// The backup file moves this payload between the phone and the browser, so the
@@ -322,9 +289,12 @@ struct MissTallyStoredShapeTests {
     private let hard16v10 = ScenarioRef(kind: "hard", hand: "16", dealer: "10")
     private let soft18v9 = ScenarioRef(kind: "soft", hand: "18", dealer: "9")
 
+    /// Priced, as the app's is: a cost is derived on every read, and pricing a spot
+    /// must not add a field to the payload.
     private func store() -> (MissTallyStore, UserDefaults) {
         let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)") ?? .standard
-        return (MissTallyStore(defaults: defaults), defaults)
+        let prefs = FlowPrefsStore(defaults: defaults)
+        return (CostFixture.tally(defaults: defaults, prefs: prefs), defaults)
     }
 
     @Test func writesExactlyTheFieldsTheWebStoreReads() throws {

@@ -71,7 +71,7 @@ enum DrillFixture {
         prefs.setDailyGoal(Double(dailyGoal))
         prefs.setOptions(options)
         let history = PracticeHistoryStore(defaults: defaults)
-        let missTally = MissTallyStore(defaults: defaults)
+        let missTally = CostFixture.tally(defaults: defaults, prefs: prefs)
         if let ref = seedWeak { missTally.record(.basicStrategy, ref: ref, correct: false) }
         let stats = SessionStatsStore(key: StatsKeys.basicStrategy, defaults: defaults)
         let scheduler = ManualFlowAdvanceScheduler()
@@ -83,6 +83,7 @@ enum DrillFixture {
             prefs: prefs,
             history: history,
             missTally: missTally,
+            playCost: CostFixture.playCost,
             scheduler: scheduler,
             advanceDelay: .zero,
             now: { testClock.date },

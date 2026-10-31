@@ -14,6 +14,7 @@ final class BasicStrategyDrillModel {
     @ObservationIgnored private let prefs: FlowPrefsStore
     @ObservationIgnored private let history: PracticeHistoryStore
     @ObservationIgnored private let missTally: MissTallyStore
+    @ObservationIgnored private let playCost: PlayCost
     @ObservationIgnored private let scheduler: FlowAdvanceScheduler
     @ObservationIgnored private let advanceDelay: Duration
     /// The wall clock, injected so a spec can drive the decision timer. The
@@ -42,6 +43,7 @@ final class BasicStrategyDrillModel {
         prefs: FlowPrefsStore,
         history: PracticeHistoryStore,
         missTally: MissTallyStore,
+        playCost: PlayCost,
         scheduler: FlowAdvanceScheduler? = nil,
         advanceDelay: Duration = .milliseconds(500),
         now: @escaping () -> Date = { Date() },
@@ -54,6 +56,7 @@ final class BasicStrategyDrillModel {
         self.prefs = prefs
         self.history = history
         self.missTally = missTally
+        self.playCost = playCost
         self.scheduler = scheduler ?? RealFlowAdvanceScheduler()
         self.advanceDelay = advanceDelay
         self.now = now
@@ -86,6 +89,7 @@ final class BasicStrategyDrillModel {
             prefs: app.flowPrefs,
             history: app.practiceHistory,
             missTally: app.missTally,
+            playCost: app.playCost,
             scheduler: scheduler,
             advanceDelay: advanceDelay,
             now: now,
@@ -122,6 +126,29 @@ final class BasicStrategyDrillModel {
 
     var correctAction: Action? {
         result?.action
+    }
+
+    /// Right or wrong says nothing of how much. A miss on a coin flip and a miss on
+    /// a split of tens both turn the same button red, and only this tells them
+    /// apart.
+    var missCost: String? {
+        guard let result, !result.correct else { return nil }
+        let cost = playCost.costOfPlay(
+            scenarioRefFor(scenario.player, dealerUpcard: scenario.dealerUpcard),
+            played: result.userAction,
+            correct: result.action,
+            prefs.prefs.playContext
+        )
+        return cost.map(costSentence)
+    }
+
+    /// The graded answer as VoiceOver speaks it, or nil before there is one.
+    var verdict: String? {
+        guard let result else { return nil }
+        let correct = "Correct: \(result.action.label)."
+        if result.correct { return correct }
+        let cost = missCost.map { " \($0)" } ?? ""
+        return "Incorrect. \(correct) \(result.reason)\(cost)"
     }
 
     var goalMet: Bool {

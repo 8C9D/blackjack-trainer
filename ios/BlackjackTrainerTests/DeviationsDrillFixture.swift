@@ -48,7 +48,8 @@ enum DeviationsFixture {
         missedAt: Int? = nil,
         draws: Rank? = nil,
         pinned: ScenarioRef? = nil,
-        lateSurrender: Bool = false
+        lateSurrender: Bool = false,
+        playCost: PlayCost = CostFixture.playCost
     ) -> Harness {
         let defaults = freshDefaults()
         let prefs = FlowPrefsStore(defaults: defaults)
@@ -66,7 +67,7 @@ enum DeviationsFixture {
             }
         }
         let history = PracticeHistoryStore(defaults: defaults)
-        let missTally = MissTallyStore(defaults: defaults)
+        let missTally = CostFixture.tally(defaults: defaults, prefs: prefs, playCost: playCost)
         // Seeded before the model is built: the opening hand is chosen in init.
         if let seedWeak {
             missTally.record(.deviations, ref: seedWeak, correct: false, trueCount: missedAt)
@@ -81,6 +82,7 @@ enum DeviationsFixture {
             prefs: prefs,
             history: history,
             missTally: missTally,
+            playCost: playCost,
             systems: TestEngines.shared.countingSystems,
             scheduler: scheduler,
             advanceDelay: .zero,

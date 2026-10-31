@@ -109,3 +109,88 @@ struct DeviationVectorRow: Decodable {
         TwoCardHand(card(handCard1), card(handCard2))
     }
 }
+
+// MARK: cost-vectors.json (columnar)
+
+struct CostVectorsFile: Decodable {
+    let columns: [String]
+    let count: Int
+    let costCases: [CostCase]
+    let shareCases: [ShareCase]
+    let leakCases: [LeakCase]
+    let houseEdgeCases: [HouseEdgeCase]
+    let rows: [CostVectorRow]
+}
+
+/// Every case prices hard 16 v 10 under S17 with neither optional rule, which
+/// the exporter fixes rather than repeats per case.
+struct CostCase: Decodable {
+    let played: String
+    let correct: String
+    let trueCount: Int?
+    let cost: Double?
+}
+
+struct ShareCase: Decodable {
+    let units: Double
+    let share: String
+    let sentence: String
+}
+
+struct LeakCase: Decodable {
+    let spots: [LeakCaseSpot]
+    let leak: Double
+}
+
+struct LeakCaseSpot: Decodable {
+    let ref: ScenarioRef
+    let misses: Int
+    let attempts: Int
+    let costPerMiss: Double?
+}
+
+struct HouseEdgeCase: Decodable {
+    let ruleSet: String
+    let das: Bool
+    let ls: Bool
+    let edge: Double
+}
+
+/// One columnar row, decoded positionally per `columns`. A nil value is a play the
+/// tables have nothing for; a nil count is a question with no count in it.
+struct CostVectorRow: Decodable {
+    let kind: String
+    let hand: String
+    let dealer: String
+    let ruleSet: String
+    let das: Bool
+    let lateSurrender: Bool
+    let trueCount: Int?
+    let hit: Double?
+    let stand: Double?
+    let double: Double?
+    let split: Double?
+    let surrender: Double?
+    let cheapestMiss: Double?
+
+    init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        kind = try container.decode(String.self)
+        hand = try container.decode(String.self)
+        dealer = try container.decode(String.self)
+        ruleSet = try container.decode(String.self)
+        das = try container.decode(Bool.self)
+        lateSurrender = try container.decode(Bool.self)
+        trueCount = try container.decodeIfPresent(Int.self)
+        hit = try container.decodeIfPresent(Double.self)
+        stand = try container.decodeIfPresent(Double.self)
+        double = try container.decodeIfPresent(Double.self)
+        split = try container.decodeIfPresent(Double.self)
+        surrender = try container.decodeIfPresent(Double.self)
+        cheapestMiss = try container.decodeIfPresent(Double.self)
+    }
+
+    var ref: ScenarioRef {
+        ScenarioRef(kind: kind, hand: hand, dealer: dealer)
+    }
+}

@@ -63,12 +63,14 @@ struct FlowDoneView: View {
         return others == 0 ? "" : " · +\(others) more"
     }
 
-    /// "missed 3 of 7 this week at TC -1, +2 · +2 more". The counts are the half
-    /// of a deviation the hand alone does not carry — the drill already re-deals
-    /// the spot at one of them, and this is where it says so.
-    private func missLine(_ weak: WeakSpot) -> String {
+    /// "missed 3 of 7 this week at TC -1, +2 · at least 2.1% a miss · +2 more". The
+    /// counts are the half of a deviation the hand alone does not carry — the drill
+    /// already re-deals the spot at one of them, and this is where it says so. The
+    /// cost is why this hand and not another heads the list.
+    func missLine(_ weak: WeakSpot) -> String {
         let counts = ProgressSummary.missedCountsLabel(weak).map { " at \($0)" } ?? ""
-        return "missed \(weak.misses) of \(weak.attempts) this week\(counts)\(othersLabel)"
+        let cost = ProgressSummary.missCostLabel(weak).map { " · \($0)" } ?? ""
+        return "missed \(weak.misses) of \(weak.attempts) this week\(counts)\(cost)\(othersLabel)"
     }
 
     /// "16 vs 10 · A,7 vs 9 · +2 more", or nil when nothing was cleared.
@@ -184,7 +186,8 @@ struct FlowDoneView: View {
             ref: ScenarioRef(kind: "hard", hand: "16", dealer: "10"),
             label: "16 vs 10",
             misses: 3,
-            attempts: 7
+            attempts: 7,
+            costPerMiss: 53
         ),
         weakSpots: [
             WeakSpot(

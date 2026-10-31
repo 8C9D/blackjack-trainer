@@ -1,12 +1,13 @@
 import Foundation
 
-/// Loads the bundled chart and counting-system JSON (the exported source of
-/// truth, per D2) and runs a startup integrity check mirroring the web app's
-/// structural specs.
+/// Loads the bundled chart, counting-system and value-table JSON (the exported
+/// source of truth, per D2) and runs a startup integrity check mirroring the web
+/// app's structural specs.
 enum GameData {
     private final class BundleToken {}
 
-    /// The app bundle that carries `charts.json` and `counting-systems.json`.
+    /// The app bundle that carries `charts.json`, `counting-systems.json` and
+    /// `ev-tables.json`.
     static var bundle: Bundle {
         Bundle(for: BundleToken.self)
     }
@@ -29,6 +30,10 @@ enum GameData {
 
     static func loadCountingSystems() throws -> [CountingSystem] {
         try decode(CountingSystemsFile.self, "counting-systems").systems
+    }
+
+    static func loadEvTables() throws -> EvTablesFile {
+        try decode(EvTablesFile.self, "ev-tables")
     }
 
     /// Loads both data sets and throws if the integrity check finds any problem.
