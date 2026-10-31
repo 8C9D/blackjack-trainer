@@ -15,6 +15,9 @@ coverage/
 # Lockfile (managed by npm)
 package-lock.json
 
+# Written by tools/ev/; one table row a line, which Prettier would explode.
+src/app/data/*.generated.ts
+
 # Vendored card SVGs — do not reformat
 public/cards/
 

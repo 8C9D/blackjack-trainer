@@ -1,0 +1,19 @@
+/* The EV solver and its exporter run under `tsx`, outside the app and spec
+   projects, so nothing else would typecheck them. Everything under `tools/ev/`
+   sits inside this one; the older tools keep the arrangement their specs
+   describe. */
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noImplicitReturns": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["tools/ev/**/*.ts"]
+}
