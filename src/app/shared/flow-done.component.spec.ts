@@ -11,6 +11,7 @@ const WEAK: WeakSpot = {
   attempts: 7,
   streak: 0,
   missedCounts: [],
+  costPerMiss: null,
 };
 
 const spot = (label: string, streak: number, misses = 1): WeakSpot => ({
@@ -20,6 +21,7 @@ const spot = (label: string, streak: number, misses = 1): WeakSpot => ({
   attempts: misses + streak,
   streak,
   missedCounts: [],
+  costPerMiss: null,
 });
 
 @Component({
@@ -123,6 +125,14 @@ describe('FlowDoneComponent', () => {
     fixture.detectChanges();
     const next = fixture.nativeElement.querySelector('.done__next')!.textContent as string;
     expect(next.replace(/\s+/g, ' ')).toContain('missed 3 of 7 this week at TC -1, +2');
+  });
+
+  it('says what a miss of the queued weakness gives up', () => {
+    const { fixture, host } = create();
+    host.weakSpot.set({ ...WEAK, costPerMiss: 210 });
+    fixture.detectChanges();
+    const next = fixture.nativeElement.querySelector('.done__next')!.textContent as string;
+    expect(next.replace(/\s+/g, ' ')).toContain('missed 3 of 7 this week · at least 2.1% a miss');
   });
 
   it('counts the other outstanding weak spots without naming them', () => {

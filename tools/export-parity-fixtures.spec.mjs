@@ -50,9 +50,11 @@ const CANONICAL_HANDS = 10 + 9 + 15;
 const ALL = [
   'basic-strategy-vectors',
   'charts',
+  'cost-vectors',
   'counting-systems',
   'counting-vectors',
   'deviation-vectors',
+  'ev-tables',
   'play-deviation-vectors',
   'showdown-vectors',
 ];
@@ -60,7 +62,7 @@ const ALL = [
 describe('ios/Fixtures (produced by tools/export-parity-fixtures.ts)', () => {
   it('has every fixture the exporter claims to write, each stamped with its origin', () => {
     // Read the directory rather than counting the list above, which would be
-    // comparing a literal with itself. `main()` logs "Wrote 7 parity fixtures";
+    // comparing a literal with itself. `main()` logs "Wrote 9 parity fixtures";
     // that number means nothing until something looks at what landed. `rmSync`
     // at the top of `main()` clears the directory first, so a fixture that stops
     // being written disappears rather than going stale.
@@ -84,6 +86,7 @@ describe('ios/Fixtures (produced by tools/export-parity-fixtures.ts)', () => {
     // disagreeing. Regenerating reproduces both, so the diff gate stays green.
     const cases = [
       ['basic-strategy-vectors', 'vectors'],
+      ['cost-vectors', 'rows'],
       ['counting-systems', 'systems'],
       ['deviation-vectors', 'rows'],
       ['play-deviation-vectors', 'deviations'],

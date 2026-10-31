@@ -109,6 +109,13 @@
   color: var(--muted);
 }
 
+.progress__leak {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
 .progress__week-note {
   margin: 0;
   font-size: 0.78rem;

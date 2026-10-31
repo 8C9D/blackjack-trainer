@@ -36,6 +36,7 @@ import {
 } from '../../core/services/flow-prefs.service';
 import { BackupService } from '../../core/services/backup.service';
 import { CHART_TAB_QUERY_PARAM } from '../chart/chart-page.component';
+import { formatBetShare, houseEdge } from '../../core/services/play-cost';
 import { PracticeDataService } from '../../core/services/practice-data.service';
 import { CountingSettingsComponent } from '../card-counting/counting-settings.component';
 
@@ -133,6 +134,12 @@ export const MAX_BACKUP_FILE_BYTES = 16 * 1024 * 1024;
           />
           Late Surrender
         </label>
+        <!-- The toggles above read as preferences until they carry a price. Every
+             one of them moves this number, which is why tables differ. -->
+        <p class="settings__hint">
+          Perfect basic strategy at these rules gives the house <b>{{ edge() }}</b> of every hand,
+          on a six-deck shoe.
+        </p>
       </section>
 
       <section class="settings__group" aria-label="Drills">
@@ -328,6 +335,10 @@ export class SettingsPageComponent {
   protected readonly penetrationPresets = PENETRATION_PRESETS;
 
   protected readonly prefs = this.prefsService.prefs;
+  protected readonly edge = computed(() => {
+    const { ruleSet, options } = this.prefs();
+    return formatBetShare(houseEdge(ruleSet, options));
+  });
 
   protected readonly trueCountAvailable = computed(() => this.selectedSystem()?.balanced ?? false);
 

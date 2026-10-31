@@ -1,12 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 
 import type { Card, Rank, Suit } from '../models/card.model';
+import { FlowPrefsService } from './flow-prefs.service';
 import { localDateKey } from './practice-history.service';
 import {
   CLEAR_STREAK,
   MISSED_COUNT_MEMORY,
   MISS_TALLY_KEY,
   MissTallyService,
+  missCostLabel,
   missedCountsLabel,
   scenarioKey,
   scenarioLabel,
@@ -110,6 +112,7 @@ describe('MissTallyService', () => {
         streak: 1,
         // Basic strategy has no count in its question, so nothing is remembered.
         missedCounts: [],
+        costPerMiss: expect.any(Number),
       });
     });
 
@@ -191,18 +194,18 @@ describe('MissTallyService', () => {
       });
     });
 
-    it('picks the scenario with the most misses, tiebreaking on miss rate', () => {
+    it('picks the scenario whose misses have cost the most', () => {
       const s = createService(() => current);
-      // 16v10: 2 misses of 4; A,7v9: 2 misses of 2 (higher rate).
+      // A,7 v 9 is a dear mistake and 16 v 10 a cheap one.
       s.record('basic-strategy', HARD_16_V_10, false);
       s.record('basic-strategy', HARD_16_V_10, false);
-      s.record('basic-strategy', HARD_16_V_10, true);
-      s.record('basic-strategy', HARD_16_V_10, true);
-      s.record('basic-strategy', SOFT_18_V_9, false);
       s.record('basic-strategy', SOFT_18_V_9, false);
       expect(s.weakSpotFor('basic-strategy')!.ref).toEqual(SOFT_18_V_9);
 
-      s.record('basic-strategy', HARD_16_V_10, false);
+      // Enough of a cheap mistake still adds up.
+      const [dear, cheap] = s.weakSpots('basic-strategy');
+      const overtakes = Math.ceil(dear.costPerMiss! / cheap.costPerMiss!);
+      for (let i = 0; i < overtakes; i++) s.record('basic-strategy', HARD_16_V_10, false);
       expect(s.weakSpotFor('basic-strategy')!.ref).toEqual(HARD_16_V_10);
     });
 
@@ -284,6 +287,7 @@ describe('MissTallyService', () => {
           misses: 3,
           streak: 0,
           missedCounts: [],
+          costPerMiss: expect.any(Number),
         },
       ]);
     });
@@ -346,29 +350,90 @@ describe('MissTallyService', () => {
   });
 
   describe('weakSpots ranking', () => {
-    it('orders by misses, then miss rate, then a stable key', () => {
+    // Five misses of a coin flip give up less than one split of tens, and the
+    // hand at the top of this list is the one the next session opens on.
+    it('leads with what the misses cost, not how many there were', () => {
       const s = createService(() => current);
-      // 16v10: 2 of 4. A,7v9: 2 of 2 — same misses, higher rate, so first.
-      s.record('basic-strategy', HARD_16_V_10, false);
-      s.record('basic-strategy', HARD_16_V_10, false);
-      s.record('basic-strategy', HARD_16_V_10, true);
-      s.record('basic-strategy', HARD_16_V_10, true);
-      s.record('basic-strategy', SOFT_18_V_9, false);
-      s.record('basic-strategy', SOFT_18_V_9, false);
-      // Pair 8s: 3 misses — the most, so it leads.
-      s.record('basic-strategy', PAIR_8S_V_10, false);
-      s.record('basic-strategy', PAIR_8S_V_10, false);
-      s.record('basic-strategy', PAIR_8S_V_10, false);
+      const tens: ScenarioRef = { kind: 'pair', hand: '10', dealer: '6' };
+      for (let i = 0; i < 5; i++) s.record('basic-strategy', HARD_16_V_10, false);
+      s.record('basic-strategy', tens, false);
 
       expect(s.weakSpots('basic-strategy').map((spot) => spot.label)).toEqual([
-        '8,8 vs 10',
-        'A,7 vs 9',
+        '10,10 vs 6',
         '16 vs 10',
       ]);
+      expect(s.weakSpotFor('basic-strategy')!.ref).toEqual(tens);
+    });
+
+    // Soft 21 is on no chart and in no table, so these tie on cost at nothing.
+    it('falls back to misses, then miss rate, then a stable key', () => {
+      const s = createService(() => current);
+      const unpriced = (dealer: ScenarioRef['dealer']): ScenarioRef => ({
+        kind: 'soft',
+        hand: '21',
+        dealer,
+      });
+      // 2: 2 of 4. 3: 2 of 2 — same misses, higher rate, so first.
+      s.record('basic-strategy', unpriced('2'), false);
+      s.record('basic-strategy', unpriced('2'), false);
+      s.record('basic-strategy', unpriced('2'), true);
+      s.record('basic-strategy', unpriced('2'), true);
+      s.record('basic-strategy', unpriced('3'), false);
+      s.record('basic-strategy', unpriced('3'), false);
+      // 4: 3 misses — the most, so it leads.
+      s.record('basic-strategy', unpriced('4'), false);
+      s.record('basic-strategy', unpriced('4'), false);
+      s.record('basic-strategy', unpriced('4'), false);
+
+      expect(s.weakSpots('basic-strategy').map((spot) => spot.ref.dealer)).toEqual(['4', '3', '2']);
+      expect(s.weakSpotFor('basic-strategy')!.costPerMiss).toBeNull();
+    });
+
+    it('reads a miss at the current table rules', () => {
+      const s = createService(() => current);
+      s.record('basic-strategy', HARD_16_V_10, false);
+      const without = s.weakSpotFor('basic-strategy')!.costPerMiss;
+      TestBed.inject(FlowPrefsService).setOptions({ doubleAfterSplit: false, lateSurrender: true });
+      expect(s.weakSpotFor('basic-strategy')!.costPerMiss).not.toBe(without);
+    });
+
+    // A deviation is the size of the mistake it was at the count it was made: an
+    // index missed at a count right beside it is a coin flip, and the same hand
+    // missed well past it is not.
+    it('prices a deviation at the counts it was missed at', () => {
+      const s = createService(() => current);
+      s.record('deviations', HARD_16_V_10, false, 8);
+      const far = s.weakSpotFor('deviations')!.costPerMiss!;
+      s.reset();
+      s.record('deviations', HARD_16_V_10, false, 0);
+      const near = s.weakSpotFor('deviations')!.costPerMiss!;
+      expect(far).toBeGreaterThan(near);
     });
   });
+  describe('missCostLabel', () => {
+    const spot = (costPerMiss: number | null) => ({
+      ref: HARD_16_V_10,
+      label: '16 vs 10',
+      misses: 1,
+      attempts: 1,
+      streak: 0,
+      missedCounts: [],
+      costPerMiss,
+    });
+
+    it('names the floor of what a miss gives up', () => {
+      expect(missCostLabel(spot(210))).toBe('at least 2.1% a miss');
+    });
+
+    it('says nothing of a miss that costs next to nothing, or of one with no price', () => {
+      expect(missCostLabel(spot(9))).toBeNull();
+      expect(missCostLabel(spot(null))).toBeNull();
+    });
+  });
+
   describe('missedCountsLabel', () => {
     const spot = (missedCounts: readonly number[]) => ({
+      costPerMiss: null,
       ref: HARD_16_V_10,
       label: '16 vs 10',
       misses: 1,

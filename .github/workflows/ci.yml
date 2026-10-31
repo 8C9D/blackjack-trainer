@@ -28,6 +28,12 @@ jobs:
         run: |
           npm run export:fixtures
           git diff --exit-code -- ios/Fixtures
+      # The table the charts are held to: regenerated from the rules of the game,
+      # so a solver change cannot leave a stale table behind it.
+      - name: Verify the EV table is up to date (anti-drift gate)
+        run: |
+          npm run export:ev
+          git diff --exit-code -- src/app/data/ev-table.generated.ts
 
   # The deployed bundle is built with a sub-path base href (pages.yml); this
   # job checks that bundle is relocatable, since an installed PWA with an

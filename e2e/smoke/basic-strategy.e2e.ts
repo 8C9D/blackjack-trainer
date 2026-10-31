@@ -39,6 +39,18 @@ test.describe('basic strategy drill', () => {
     ).toBeDisabled();
   });
 
+  // Right or wrong does not say how much. The same seeded hard 7 vs 10: standing
+  // is a miss, and the miss has a price.
+  test('a miss says what it gave up', async ({ page }) => {
+    await page.goto('/drill/basic-strategy?seed=9');
+    await expect(page.locator('.drill__question')).toContainText('7');
+
+    await page.keyboard.press('s');
+    await expect(page.locator('.drill__cost')).toHaveText(
+      /That play gives up [\d.]+% of your bet\./,
+    );
+  });
+
   // A split is the other correct answer that leaves decisions behind it, and
   // the two hands it makes are ones the drill has no other way to ask about.
   test('a correct split plays both hands out', async ({ page }) => {

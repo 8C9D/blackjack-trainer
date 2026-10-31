@@ -47,6 +47,16 @@
   color: var(--ink-2);
 }
 
+.drill__cost {
+  margin: 0.4rem 0 0;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  line-height: 1.4;
+  max-width: 42ch;
+}
+
 .drill__rule {
   margin: 1.4rem 0 0;
   text-align: center;

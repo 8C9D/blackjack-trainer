@@ -11,7 +11,11 @@ import {
 } from '@angular/core';
 
 import { shouldIgnoreKeyboardEvent } from '../core/keyboard';
-import { missedCountsLabel, type WeakSpot } from '../core/services/miss-tally.service';
+import {
+  missCostLabel,
+  missedCountsLabel,
+  type WeakSpot,
+} from '../core/services/miss-tally.service';
 import { GoalRingComponent } from './goal-ring.component';
 
 // How many cleared scenarios are named before the line collapses to a count.
@@ -91,15 +95,18 @@ export class FlowDoneComponent {
     return ` · +${others} more`;
   });
 
-  // "missed 3 of 7 this week at TC -1, +2 · +2 more". The counts are the half
-  // of a deviation the hand alone does not carry — the drill already re-deals
-  // the spot at one of them, and this is where it says so.
+  // "missed 3 of 7 this week at TC -1, +2 · at least 2.1% a miss · +2 more". The
+  // counts are the half of a deviation the hand alone does not carry — the drill
+  // already re-deals the spot at one of them, and this is where it says so. The
+  // cost is why this hand and not another heads the list.
   protected readonly missLine = computed(() => {
     const spot = this.weakSpot();
     if (spot === null) return '';
     const at = missedCountsLabel(spot);
     const counts = at === null ? '' : ` at ${at}`;
-    return `missed ${spot.misses} of ${spot.attempts} this week${counts}${this.othersLabel()}`;
+    const cost = missCostLabel(spot);
+    const costs = cost === null ? '' : ` · ${cost}`;
+    return `missed ${spot.misses} of ${spot.attempts} this week${counts}${costs}${this.othersLabel()}`;
   });
 
   // "16 vs 10 · A,7 vs 9 · +2 more", or '' when nothing was cleared.

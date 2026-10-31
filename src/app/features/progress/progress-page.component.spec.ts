@@ -334,7 +334,11 @@ describe('ProgressPageComponent', () => {
       const spots = [...fixture.nativeElement.querySelectorAll('.progress__spots li')].map((li) =>
         (li as HTMLElement).textContent!.replace(/\s+/g, ' ').trim(),
       );
-      expect(spots).toEqual(['16 vs 10missed 2 of 2', 'A,7 vs 9missed 1 of 1']);
+      // A,7 v 9 costs more on one miss than 16 v 10 does on two.
+      expect(spots).toEqual([
+        'A,7 vs 9missed 1 of 1 · at least 8.4% a miss',
+        '16 vs 10missed 2 of 2 · at least 0.5% a miss',
+      ]);
       expect(text(fixture, '.progress__cleared')).toBe('Cleared: 8,8 vs 10');
     });
 
@@ -348,7 +352,7 @@ describe('ProgressPageComponent', () => {
 
       const { fixture } = createPage();
       const spot = fixture.nativeElement.querySelector('.progress__spots li') as HTMLElement;
-      expect(spot.textContent!.replace(/\s+/g, ' ').trim()).toBe(
+      expect(spot.textContent!.replace(/\s+/g, ' ').trim()).toContain(
         '16 vs 10missed 3 of 3 at TC -1, +2',
       );
     });
@@ -379,18 +383,55 @@ describe('ProgressPageComponent', () => {
     // actually costing hands.
     it('lists only the worst few and counts the rest', () => {
       const tally = TestBed.inject(MissTallyService);
-      // Seven scenarios, the first missed most, so the order is unambiguous.
       for (let i = 0; i < 7; i++) {
         const ref: ScenarioRef = { kind: 'hard', hand: String(12 + i), dealer: '10' };
-        for (let m = 0; m <= 7 - i; m++) tally.record('basic-strategy', ref, false);
+        tally.record('basic-strategy', ref, false);
       }
 
       const { fixture } = createPage();
       const labels = [...fixture.nativeElement.querySelectorAll('.progress__spots li b')].map((b) =>
         (b as HTMLElement).textContent!.trim(),
       );
-      expect(labels).toEqual(['12 vs 10', '13 vs 10', '14 vs 10', '15 vs 10', '16 vs 10']);
+      expect(labels).toEqual(
+        tally
+          .weakSpots('basic-strategy')
+          .slice(0, 5)
+          .map((spot) => spot.label),
+      );
       expect(text(fixture, '.progress__more')).toBe('+2 more this week');
+    });
+
+    // The figure accuracy cannot give: what the misses are worth at a table, read
+    // beside what the table takes from a player who makes none.
+    it('prices the outstanding misses against the house edge', () => {
+      const tally = TestBed.inject(MissTallyService);
+      tally.record('basic-strategy', { kind: 'pair', hand: '10', dealer: '6' }, false);
+      const { fixture } = createPage();
+      expect(text(fixture, '.progress__leak')).toBe(
+        'At a real table these misses would cost under 0.1% of every hand, on top of the 0.5% house edge at your rules.',
+      );
+    });
+
+    it('calls a real leak a floor', () => {
+      const tally = TestBed.inject(MissTallyService);
+      for (const dealer of ['2', '3', '4', '5', '6'] as const) {
+        for (let i = 0; i < 4; i++) {
+          tally.record('basic-strategy', { kind: 'pair', hand: '10', dealer }, false);
+        }
+      }
+      const { fixture } = createPage();
+      expect(text(fixture, '.progress__leak')).toContain('at least');
+    });
+
+    it('prices no figure while nothing is outstanding', () => {
+      const { fixture } = createPage();
+      expect(fixture.nativeElement.querySelector('.progress__leak')).toBeNull();
+    });
+
+    it('prices Basic Strategy alone, whose hands come up as a table deals them', () => {
+      TestBed.inject(MissTallyService).record('deviations', SIXTEEN_V_TEN, false, 2);
+      const { fixture } = createPage();
+      expect(fixture.nativeElement.querySelector('.progress__leak')).toBeNull();
     });
 
     it('says nothing about a remainder when everything outstanding is listed', () => {

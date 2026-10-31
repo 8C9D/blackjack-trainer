@@ -33,6 +33,7 @@ import {
   scenarioRefFor,
   type WeakSpot,
 } from '../../core/services/miss-tally.service';
+import { costOfPlay, costSentence } from '../../core/services/play-cost';
 import { RANDOM_SOURCE } from '../../core/services/random-source';
 import {
   PracticeHistoryService,
@@ -112,6 +113,9 @@ type DrillPhase = 'question' | 'flash' | 'miss' | 'over' | 'done';
             <p class="drill__rule">
               <b>Correct: {{ labelFor(r.expectedAction) }}.</b> {{ r.explanation }}
             </p>
+            @if (missCost(); as cost) {
+              <p class="drill__cost">{{ cost }}</p>
+            }
           } @else if (phase() === 'over') {
             <p class="drill__rule">
               <b>{{ handOver() }}</b>
@@ -276,6 +280,22 @@ export class DeviationsDrillPageComponent {
     return this.missTally.clearedSpots('deviations');
   });
 
+  // Read at the count on screen: an index a count past its threshold is a real
+  // mistake, and the same index right at it is a coin flip.
+  protected readonly missCost = computed(() => {
+    const result = this.result();
+    if (result === null || result.correct) return null;
+    const { ruleSet, options } = this.prefs.prefs();
+    const scenario = this.scenario();
+    const cost = costOfPlay(
+      scenarioRefFor(this.hand(), scenario.dealerUpcard),
+      result.userAction,
+      result.expectedAction,
+      { ruleSet, options, trueCount: scenario.trueCount },
+    );
+    return cost === null ? null : costSentence(cost);
+  });
+
   protected readonly verdict = computed(() => {
     if (this.phase() === 'over') return this.handOver();
     const result = this.result();
@@ -284,7 +304,8 @@ export class DeviationsDrillPageComponent {
     if (result === null) return this.handLabel();
     const expected = ACTION_LABELS[result.expectedAction];
     if (result.correct) return `Correct: ${expected}.`;
-    return `Incorrect. Correct: ${expected}. ${result.explanation}`;
+    const cost = this.missCost();
+    return `Incorrect. Correct: ${expected}. ${result.explanation}${cost ? ` ${cost}` : ''}`;
   });
 
   // A review round drills only the weak list; an ordinary round mixes it in.

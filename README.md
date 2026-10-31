@@ -16,6 +16,7 @@ Both drill the same four skills against published Blackjack Apprenticeship chart
 - **Running count.** Count a card stream of configurable length and speed, across 58 counting systems (Hi-Lo, KO, Omega II, Wong Halves and the Blackjack Review comparison set).
 - **True count.** The same streams, answered as running count over decks remaining, from a fixed preset or a live, depleting shoe with deck estimation. A live-shoe round can roll into a showdown against the dealer.
 - **Deviations.** Hands against the Hi-Lo H17 and S17 index charts, with the true count drawn at random or entered by hand to drill exact thresholds, plus the insurance overlay when the dealer shows an ace.
+- **The cost of a mistake.** Every miss says what it gave up: a coin flip the chart happened to call reads as one, and a split of tens reads as an eighth of the bet. Weak spots rank by cost rather than by count, and Progress prices the week's misses against the house edge at your rules.
 - **The Flow shell.** A one-action home screen (continue, daily goal ring, 7-day streak), full-screen drills that auto-advance on correct answers and adapt to the hands you keep missing, a strategy-chart reference, and a progress page.
 
 ## How it is built
@@ -31,6 +32,12 @@ Both drill the same four skills against published Blackjack Apprenticeship chart
 **One set of engines, two platforms.** The TypeScript engines are the source of truth.
 `npm run export:fixtures` serialises their decisions into `ios/Fixtures/*.json`, the Swift parity tests replay those vectors, and CI fails if the exported fixtures drift from the committed ones.
 
+**Charts held to arithmetic.** `tools/ev/` is a combinatorial analyser that derives every play's value from the rules of the game and reads no chart.
+Stand, hit and double are exact for the shoe; a split is exact without re-splitting, with the standard approximation for sibling hands past that.
+It reproduces the published dealer tables and six-deck house edges, agrees with brute-force enumeration on small shoes, and agrees with 1.2 billion simulated hands played by the app's own engines.
+Every chart cell is tested against it, and CI regenerates its table and fails on a difference.
+The published deviation indices are held to depleted shoes sampled by true count, each solved exactly.
+
 **Deterministic sessions.** Every random draw goes through one seam (`RANDOM_SOURCE`).
 Appending `?seed=<integer>` to any URL replays a session exactly, which lets the end-to-end suite assert real outcomes rather than only that the flow advanced.
 
@@ -41,6 +48,7 @@ Backups are a declared key list rather than a `localStorage` prefix sweep, becau
 
 Charts come from [Blackjack Apprenticeship](https://www.blackjackapprenticeship.com/).
 True count truncates toward zero on both platforms.
+Values and costs are for a six-deck shoe.
 
 ## Run it
 
@@ -78,6 +86,7 @@ ios/               SwiftUI app (XcodeGen project), parity tests, App Store colla
 ios/Fixtures/      parity vectors exported from the TypeScript engines
 archived/          iOS features cut from the 1.0 build, with restore notes
 tools/             the fixture exporter and the static server the E2E dist lane uses
+tools/ev/          the solver, the true-count sampler and the value-table exporters
 ```
 
 ## License

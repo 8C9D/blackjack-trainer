@@ -58,10 +58,21 @@ import {
   playDealerHand,
   settle,
 } from '../src/app/core/models/showdown.model';
-import type { EngineOptions, RuleSet } from '../src/app/core/models/strategy.model';
+import type { Action, EngineOptions, RuleSet } from '../src/app/core/models/strategy.model';
 import { BasicStrategyEngineService } from '../src/app/core/services/basic-strategy-engine.service';
 import { CountingEngineService } from '../src/app/core/services/counting-engine.service';
 import { DeviationEngineService } from '../src/app/core/services/deviation-engine.service';
+import {
+  cheapestMiss,
+  costOfPlay,
+  costSentence,
+  formatBetShare,
+  houseEdge,
+  playValue,
+  tableLeak,
+} from '../src/app/core/services/play-cost';
+import { EV_BY_COUNT } from '../src/app/data/ev-by-count.generated';
+import { EV_TABLE } from '../src/app/data/ev-table.generated';
 
 // ─── engine instances (DI-free; DeviationEvaluator's inject() path is avoided
 // by composing the deviation engine directly, reproducing its expected-action) ──
@@ -861,6 +872,171 @@ function exportShowdownVectors(): void {
   });
 }
 
+// ─── 7. ev-tables.json ───────────────────────────────────────────────────────
+// Bundled into the app, as charts.json is: the two platforms read the same values
+// rather than each carrying a copy. They come out of `tools/ev/`, by way of the
+// generated data files, so this is a serialization and not a calculation.
+function exportEvTables(): void {
+  writeJson('ev-tables.json', {
+    schema: 'ev-tables/1',
+    generatedBy: 'tools/export-parity-fixtures.ts',
+    description:
+      'What every chart cell is worth at a full shoe, and what the indexed hands are ' +
+      'worth at each true count, in hundredths of a percent of the bet. Derived from ' +
+      'the rules of the game by tools/ev/.',
+    table: EV_TABLE,
+    byCount: EV_BY_COUNT,
+  });
+}
+
+// ─── 8. cost-vectors.json ────────────────────────────────────────────────────
+// Reading those tables is where the platforms could still differ: which row a hand
+// reads, what a hard 20 falls back to, how a count clamps. So the reads are pinned
+// here, over every row, upcard and rule set, at no count and at counts that land
+// on both sides of the indices.
+function exportCostVectors(): void {
+  const refs: { kind: 'hard' | 'soft' | 'pair'; hand: string }[] = [];
+  for (let total = 4; total <= 20; total++) refs.push({ kind: 'hard', hand: String(total) });
+  for (let total = 13; total <= 20; total++) refs.push({ kind: 'soft', hand: String(total) });
+  for (const rank of ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A']) {
+    refs.push({ kind: 'pair', hand: rank });
+  }
+  const dealers = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'] as const;
+  const trueCounts: readonly (number | null)[] = [null, -12, -3, 0, 1, 4, 12];
+  const plays: readonly Action[] = ['H', 'S', 'D', 'P', 'SUR'];
+
+  const rows: unknown[][] = [];
+  for (const { kind, hand } of refs) {
+    for (const dealer of dealers) {
+      const ref = { kind, hand, dealer };
+      for (const ruleSet of RULE_SETS) {
+        for (const das of BOOLS) {
+          // One rule flips each of the two columns it touches, so pairing them
+          // covers both without the whole cross-product.
+          const ls = das;
+          for (const trueCount of trueCounts) {
+            const context = {
+              ruleSet,
+              options: options(das, ls),
+              ...(trueCount === null ? {} : { trueCount }),
+            };
+            rows.push([
+              kind,
+              hand,
+              dealer,
+              ruleSet,
+              das,
+              ls,
+              trueCount,
+              ...plays.map((play) => playValue(ref, play, context)),
+              cheapestMiss(ref, context),
+            ]);
+          }
+        }
+      }
+    }
+  }
+
+  const hard16 = { kind: 'hard', hand: '16', dealer: '10' } as const;
+  const noRules = options(false, false);
+  const costCases = [
+    { played: 'S', correct: 'H', trueCount: null },
+    { played: 'H', correct: 'S', trueCount: 5 },
+    { played: 'S', correct: 'S', trueCount: 5 },
+    // The wrong way round: a mistake is never profitable.
+    { played: 'S', correct: 'H', trueCount: 8 },
+    { played: 'INS', correct: 'H', trueCount: null },
+    { played: 'INS', correct: 'H', trueCount: -2 },
+    { played: 'INS', correct: 'H', trueCount: 6 },
+    { played: 'H', correct: 'INS', trueCount: 6 },
+    { played: 'H', correct: 'INS', trueCount: -2 },
+  ].map(({ played, correct, trueCount }) => ({
+    played,
+    correct,
+    trueCount,
+    cost: costOfPlay(hard16, played as Action, correct as Action, {
+      ruleSet: 'S17',
+      options: noRules,
+      ...(trueCount === null ? {} : { trueCount }),
+    }),
+  }));
+
+  const shareCases = [0, 1, 9, 10, 25, 35, 49, 50, 75, 125, 340, 995, 999, 1000, 2875].map(
+    (units) => ({
+      units,
+      share: formatBetShare(units),
+      sentence: costSentence(units),
+    }),
+  );
+
+  const spot = (
+    ref: typeof hard16,
+    misses: number,
+    attempts: number,
+    costPerMiss: number | null,
+  ) => ({
+    ref,
+    label: '',
+    misses,
+    attempts,
+    streak: 0,
+    missedCounts: [] as number[],
+    costPerMiss,
+  });
+  const pairTens = { kind: 'pair', hand: '10', dealer: '6' } as const;
+  const leakCases = [
+    [spot(hard16, 3, 3, 400)],
+    [spot(hard16, 1, 1, 400), spot(pairTens as never, 2, 9, 2600)],
+    [spot(hard16, 1, 1, null)],
+  ].map((spots) => ({
+    spots: spots.map(({ ref, misses, attempts, costPerMiss }) => ({
+      ref,
+      misses,
+      attempts,
+      costPerMiss,
+    })),
+    leak: tableLeak(spots),
+  }));
+
+  const houseEdgeCases = RULE_SETS.flatMap((ruleSet) =>
+    BOOLS.flatMap((das) =>
+      BOOLS.map((ls) => ({ ruleSet, das, ls, edge: houseEdge(ruleSet, options(das, ls)) })),
+    ),
+  );
+
+  const columns = [
+    'kind',
+    'hand',
+    'dealer',
+    'ruleSet',
+    'das',
+    'lateSurrender',
+    'trueCount', // null = no count in the question: a full shoe
+    'hit',
+    'stand',
+    'double',
+    'split',
+    'surrender',
+    'cheapestMiss',
+  ];
+  writeFileSync(
+    join(OUT_DIR, 'cost-vectors.json'),
+    '{\n' +
+      '  "schema": "cost-vectors/1",\n' +
+      '  "generatedBy": "tools/export-parity-fixtures.ts",\n' +
+      '  "description": "How the value tables are read: every row, upcard and rule set at no count and across the index range, columnar per `columns`, plus the cost, formatting, table-leak and house-edge cases built on them.",\n' +
+      `  "columns": ${JSON.stringify(columns)},\n` +
+      `  "count": ${rows.length},\n` +
+      `  "costCases": ${JSON.stringify(costCases)},\n` +
+      `  "shareCases": ${JSON.stringify(shareCases)},\n` +
+      `  "leakCases": ${JSON.stringify(leakCases)},\n` +
+      `  "houseEdgeCases": ${JSON.stringify(houseEdgeCases)},\n` +
+      '  "rows": [\n' +
+      rows.map((r) => '    ' + JSON.stringify(r)).join(',\n') +
+      '\n  ]\n}\n',
+  );
+}
+
 // ─── main ────────────────────────────────────────────────────────────────────
 function main(): void {
   rmSync(OUT_DIR, { recursive: true, force: true });
@@ -872,8 +1048,10 @@ function main(): void {
   exportPlayDeviationVectors();
   exportCountingVectors();
   exportShowdownVectors();
+  exportEvTables();
+  exportCostVectors();
   // eslint-disable-next-line no-console
-  console.log(`Wrote 7 parity fixtures to ${OUT_DIR}`);
+  console.log(`Wrote 9 parity fixtures to ${OUT_DIR}`);
 }
 
 main();

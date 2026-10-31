@@ -1662,6 +1662,15 @@ describe('ShowdownComponent', () => {
         expect(c.roundMistakes()[0]).toContain('(index play)');
       });
 
+      // A table is where a misplay finally has a price, read at the count the
+      // hand was played at.
+      it('says what a misplay gave up', () => {
+        const { c } = atCount(2);
+        c.onAction('H');
+        expect(c.lastPlay()!.reason).toContain('of your bet');
+        expect(c.roundMistakes()[0]).toContain('of the bet');
+      });
+
       // An index play is a Deviations question. Filing it under Basic Strategy
       // would seed that drill a hand whose chart answer the trainee got right.
       it('files an index miss as a Deviations weak spot, not a basic-strategy one', () => {

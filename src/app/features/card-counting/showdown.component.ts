@@ -79,6 +79,7 @@ import { BetSpreadStatsService } from '../../core/services/bet-spread-stats.serv
 import { CardCountingStatsService } from '../../core/services/card-counting-stats.service';
 import { CountDriftService } from '../../core/services/count-drift.service';
 import { CountingEngineService } from '../../core/services/counting-engine.service';
+import { costOfPlay, costSentence, formatBetShare } from '../../core/services/play-cost';
 import { ShowdownPlayStatsService } from '../../core/services/showdown-play-stats.service';
 import { ShowdownStatsService } from '../../core/services/showdown-stats.service';
 import { CountAnswerFormComponent } from './count-answer-form.component';
@@ -854,18 +855,36 @@ export class ShowdownComponent implements OnInit {
     const wasRight = action === correct.action;
     this.playStats.recordAttempt(wasRight);
     this.tallyMisplay(hand.cards, upcard, correct, wasRight);
+    const cost = wasRight ? null : this.costOfMisplay(hand.cards, upcard, action, correct.action);
     this.lastPlay.set({
       correct: wasRight,
       headline: `${ACTION_LABELS[correct.action]} was the play.`,
-      reason: correct.reason,
+      reason: cost === null ? correct.reason : `${correct.reason} ${costSentence(cost)}`,
     });
     if (!wasRight) {
       const index = correct.deviationApplied ? ' (index play)' : '';
+      const price = cost === null ? '' : ` · ${formatBetShare(cost)} of the bet`;
       this.roundMistakes.update((list) => [
         ...list,
-        `${correct.handDescription} vs ${normalizeUpcardKey(upcard)}: ${ACTION_LABELS[correct.action]}, not ${ACTION_LABELS[action as Exclude<Action, 'INS'>]}${index}`,
+        `${correct.handDescription} vs ${normalizeUpcardKey(upcard)}: ${ACTION_LABELS[correct.action]}, not ${ACTION_LABELS[action as Exclude<Action, 'INS'>]}${index}${price}`,
       ]);
     }
+  }
+
+  // Read at the count where this table grades against one, so an index play is
+  // priced at the count it was played at.
+  private costOfMisplay(
+    cards: readonly Card[],
+    upcard: Card,
+    played: Action,
+    correct: Action,
+  ): number | null {
+    const basis = this.countBasis();
+    return costOfPlay(scenarioRefFor(cards, upcard), played, correct, {
+      ruleSet: this.ruleSet(),
+      options: this.options(),
+      trueCount: basis.kind === 'true-count' ? basis.trueCount : undefined,
+    });
   }
 
   // What this table calls correct. The count carried in from the drill is the

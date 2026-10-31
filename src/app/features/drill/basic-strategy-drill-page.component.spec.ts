@@ -254,6 +254,8 @@ describe('BasicStrategyDrillPageComponent', () => {
       const rule = fixture.nativeElement.querySelector('.drill__rule') as HTMLElement;
       expect(rule.textContent).toContain('Correct: Hit.');
       expect(rule.textContent).toContain('Hard 7 vs dealer 6 under S17: hit.');
+      const cost = fixture.nativeElement.querySelector('.drill__cost') as HTMLElement;
+      expect(cost.textContent).toMatch(/That play gives up [\d.]+% of your bet\./);
       expect(fixture.nativeElement.querySelector('.drill__question')).toBeNull();
       expect(actionButton(fixture, 'Stand').classList.contains('acts__btn--picked')).toBe(true);
       expect(actionButton(fixture, 'Hit').classList.contains('acts__btn--correct')).toBe(true);

@@ -167,6 +167,21 @@ describe('SettingsPageComponent', () => {
     expect(prefs.prefs().counting.mode).toBe('key-count');
   });
 
+  // The table rules read as preferences until they carry a price.
+  it('prices the table rules as they are changed', () => {
+    const { fixture, prefs } = createPage();
+    const line = () =>
+      (fixture.nativeElement.textContent as string).match(/gives the house ([\d.]+%)/)?.[1];
+    prefs.setRuleSet('S17');
+    prefs.setOptions({ doubleAfterSplit: true, lateSurrender: true });
+    fixture.detectChanges();
+    expect(line()).toBe('0.3%');
+    prefs.setRuleSet('H17');
+    prefs.setOptions({ doubleAfterSplit: false, lateSurrender: false });
+    fixture.detectChanges();
+    expect(line()).toBe('0.8%');
+  });
+
   describe('resetting practice data', () => {
     function button(
       fixture: ComponentFixture<SettingsPageComponent>,

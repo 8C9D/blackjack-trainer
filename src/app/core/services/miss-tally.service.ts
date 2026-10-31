@@ -1,10 +1,12 @@
-import { Injectable, signal, type Signal } from '@angular/core';
+import { Injectable, inject, signal, type Signal } from '@angular/core';
 
 import { formatSignedCount } from '../models/card-counting.model';
 import { cardHighValue, softNonAceValue, type Card } from '../models/card.model';
 import { handTotal, isSoftHand as isSoftNCardHand } from '../models/hand.model';
 import type { DealerUpcard } from '../models/strategy.model';
 import { classifyAsPair, isSoftHand, normalizeUpcardKey } from './basic-strategy-engine.service';
+import { FlowPrefsService } from './flow-prefs.service';
+import { cheapestMiss, formatBetShare } from './play-cost';
 import { isLocalDateKey, localDateKey } from './practice-history.service';
 import { readJson, writeJson } from './storage';
 
@@ -42,6 +44,10 @@ export interface WeakSpot {
   // the Deviations trainer records them: there the count is half the question,
   // and a re-deal that draws a fresh one asks something else.
   readonly missedCounts: readonly number[];
+  // What one miss of this hand gives up at the least, in hundredths of a percent
+  // of the bet, under the current table rules. Null where the tables have no
+  // value for the hand.
+  readonly costPerMiss: number | null;
 }
 
 // How many missed true counts a scenario remembers. A hand can be missed on
@@ -124,11 +130,20 @@ export function missedCountsLabel(spot: WeakSpot): string | null {
   return `TC ${distinct.map(formatSignedCount).join(', ')}`;
 }
 
+// "at least 2.1% a miss", or null where a miss costs next to nothing: naming a
+// figure that small would only make a coin flip sound like a problem. "At least"
+// because a tally knows that a hand was missed and not how.
+export function missCostLabel(spot: WeakSpot): string | null {
+  if (spot.costPerMiss === null || spot.costPerMiss < 10) return null;
+  return `at least ${formatBetShare(spot.costPerMiss)} a miss`;
+}
+
 // Per-scenario attempt/miss tallies over a rolling 7-day window, keyed by
 // trainer. Drives the Done screen's "Drill next: 16 vs 10 — missed 3 of 7
 // this week" card and the next session's opening hand.
 @Injectable({ providedIn: 'root' })
 export class MissTallyService {
+  private readonly prefs = inject(FlowPrefsService);
   private now: () => Date = () => new Date();
 
   private readonly _state = signal<TallyState>({});
@@ -172,14 +187,18 @@ export class MissTallyService {
     this.persist(next);
   }
 
-  // Scenarios missed inside the window and not yet cleared, worst first
-  // (most misses, then highest miss rate, then scenario key so the order is
-  // stable). This is what adaptive selection draws from.
+  // Scenarios missed inside the window and not yet cleared, worst first. Worst
+  // means what the misses cost, not how many there were: missing a coin flip five
+  // times gives up less than splitting tens once, and whichever hand heads this
+  // list is the one the next session opens on. Ties fall to most misses, then the
+  // highest miss rate, then the scenario key so the order is stable. This is what
+  // adaptive selection draws from.
   weakSpots(trainer: TalliedTrainer): readonly WeakSpot[] {
     return this.windowed(trainer)
       .filter((spot) => spot.streak < CLEAR_STREAK)
       .sort(
         (a, b) =>
+          totalCost(b) - totalCost(a) ||
           b.misses - a.misses ||
           b.misses / b.attempts - a.misses / a.attempts ||
           scenarioKey(a.ref).localeCompare(scenarioKey(b.ref)),
@@ -224,9 +243,22 @@ export class MissTallyService {
         attempts,
         streak: tally.streak,
         missedCounts: tally.missedCounts,
+        costPerMiss: this.costPerMiss(tally.ref, tally.missedCounts),
       });
     }
     return spots;
+  }
+
+  // A deviation is worth what it was worth at the counts it was missed at; one
+  // recorded without any, like every basic-strategy miss, at a full shoe.
+  private costPerMiss(ref: ScenarioRef, missedCounts: readonly number[]): number | null {
+    const { ruleSet, options } = this.prefs.prefs();
+    const context = { ruleSet, options };
+    const atCounts = missedCounts
+      .map((trueCount) => cheapestMiss(ref, { ...context, trueCount }))
+      .filter((cost): cost is number => cost !== null);
+    if (atCounts.length === 0) return cheapestMiss(ref, context);
+    return atCounts.reduce((sum, cost) => sum + cost, 0) / atCounts.length;
   }
 
   private cutoffDate(): string {
@@ -289,6 +321,10 @@ export class MissTallyService {
   private persist(state: TallyState): void {
     writeJson(MISS_TALLY_KEY, state);
   }
+}
+
+function totalCost(spot: WeakSpot): number {
+  return spot.misses * (spot.costPerMiss ?? 0);
 }
 
 function sanitizeScenarioTally(v: unknown): ScenarioTally | null {

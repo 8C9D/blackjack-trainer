@@ -16,10 +16,12 @@ import { FlowPrefsService } from '../../core/services/flow-prefs.service';
 import { KeyCountStatsService } from '../../core/services/key-count-stats.service';
 import {
   MissTallyService,
+  missCostLabel,
   missedCountsLabel,
   type TalliedTrainer,
   type WeakSpot,
 } from '../../core/services/miss-tally.service';
+import { formatBetShare, houseEdge, tableLeak } from '../../core/services/play-cost';
 import { countOf } from '../../core/text';
 import { REVIEW_QUERY_PARAM } from '../drill/drill-hand';
 import {
@@ -215,6 +217,15 @@ const SPOTS_SHOWN = 5;
         <section class="progress__card" [attr.aria-label]="group.trainer + ' weak spots'">
           <h2 class="progress__heading">{{ group.trainer }} — this week</h2>
           @if (group.outstanding.length > 0) {
+            <!-- Accuracy treats every miss alike and every hand as equally likely,
+                 and neither is true at a table. This is the one figure that
+                 answers what the misses are actually worth. -->
+            @if (group.id === 'basic-strategy' && leak(); as cost) {
+              <p class="progress__leak">
+                At a real table these misses would cost <b>{{ cost.leak }}</b> of every hand, on top
+                of the <b>{{ cost.edge }}</b> house edge at your rules.
+              </p>
+            }
             <ul class="progress__spots">
               @for (spot of group.shown; track spot.label) {
                 <li>
@@ -391,6 +402,23 @@ export class ProgressPageComponent {
       .filter((group) => group.outstanding.length > 0 || group.cleared.length > 0);
   });
 
+  // What this week's outstanding misses would give back at a table, beside what
+  // the table takes from perfect play. Only Basic Strategy has one: an indexed
+  // hand's frequency depends on how often its count comes up, which is a
+  // different figure from how often it is dealt.
+  protected readonly leak = computed(() => {
+    this.missTally.state();
+    const spots = this.missTally.weakSpots('basic-strategy');
+    if (spots.length === 0) return null;
+    const { ruleSet, options } = this.prefs.prefs();
+    const leak = tableLeak(spots);
+    return {
+      // A floor, since a tally knows a hand was missed and not how.
+      leak: leak < 10 ? formatBetShare(leak) : `at least ${formatBetShare(leak)}`,
+      edge: formatBetShare(houseEdge(ruleSet, options)),
+    };
+  });
+
   // The bars carry only height, so the screen-reader text is where a day's
   // numbers actually live.
   protected dayLabel(day: DayBar): string {
@@ -398,12 +426,14 @@ export class ProgressPageComponent {
     return day.accuracy === null ? hands : `${hands}, ${day.accuracy}% correct`;
   }
 
-  // "missed 3 of 7 at TC -1, +2". A deviation missed on both sides of its index
-  // is two different mistakes, and the hand's label carries neither.
+  // "missed 3 of 7 at TC -1, +2 · at least 2.1% a miss". A deviation missed on
+  // both sides of its index is two different mistakes, and the hand's label
+  // carries neither. The cost is why the list runs in this order.
   protected spotDetail(spot: WeakSpot): string {
     const at = missedCountsLabel(spot);
     const counts = at === null ? '' : ` at ${at}`;
-    return `missed ${spot.misses} of ${spot.attempts}${counts}`;
+    const cost = missCostLabel(spot);
+    return `missed ${spot.misses} of ${spot.attempts}${counts}${cost === null ? '' : ` · ${cost}`}`;
   }
 
   protected clearedLabel(cleared: readonly WeakSpot[]): string {

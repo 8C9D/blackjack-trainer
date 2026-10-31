@@ -13,10 +13,9 @@ import { S17_DEVIATIONS } from './s17-deviations';
 // IMPORTANT: these guard against *regressions*, not original transcription
 // errors. The golden constants below are a serialization of the current chart
 // data, so they catch any future drift from today's values — but they cannot
-// catch a value that was wrong when first transcribed from the BJA PDFs. Re-
-// verifying the charts against the published BJA source remains a periodic human
-// review task (see the open question in docs/repo-current-state.md), not an
-// automated one.
+// catch a value that was wrong when first transcribed from the BJA PDFs. That is
+// the job of `ev-table.spec.ts` and `ev-by-count.spec.ts`, which hold the charts
+// to values derived from the rules of the game.
 //
 // To intentionally change a chart value: make the edit, run this spec, and copy
 // the new serialization into the matching golden constant in the same commit.

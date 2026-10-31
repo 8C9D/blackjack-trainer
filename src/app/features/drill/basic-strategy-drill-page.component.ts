@@ -26,6 +26,7 @@ import {
   scenarioLabel,
   scenarioRefFor,
 } from '../../core/services/miss-tally.service';
+import { costOfPlay, costSentence } from '../../core/services/play-cost';
 import { RANDOM_SOURCE } from '../../core/services/random-source';
 import {
   PracticeHistoryService,
@@ -89,6 +90,9 @@ type DrillPhase = 'question' | 'flash' | 'miss' | 'over' | 'done';
             <p class="drill__rule">
               <b>Correct: {{ labelFor(r.action) }}.</b> {{ r.reason }}
             </p>
+            @if (missCost(); as cost) {
+              <p class="drill__cost">{{ cost }}</p>
+            }
           } @else if (phase() === 'over') {
             <p class="drill__rule">
               <b>{{ handOver() }}</b>
@@ -236,6 +240,21 @@ export class BasicStrategyDrillPageComponent {
     return this.missTally.clearedSpots('basic-strategy');
   });
 
+  // Right or wrong says nothing of how much. A miss on a coin flip and a miss on
+  // a split of tens both turn the same button red, and only this tells them apart.
+  protected readonly missCost = computed(() => {
+    const result = this.result();
+    if (result === null || result.correct) return null;
+    const { ruleSet, options } = this.prefs.prefs();
+    const cost = costOfPlay(
+      scenarioRefFor(this.hand(), this.scenario().dealerUpcard),
+      result.userAction,
+      result.action,
+      { ruleSet, options },
+    );
+    return cost === null ? null : costSentence(cost);
+  });
+
   protected readonly verdict = computed(() => {
     if (this.phase() === 'over') return this.handOver();
     const result = this.result();
@@ -244,7 +263,8 @@ export class BasicStrategyDrillPageComponent {
     if (result === null) return this.handLabel();
     const correctAction = ACTION_LABELS[result.action];
     if (result.correct) return `Correct: ${correctAction}.`;
-    return `Incorrect. Correct: ${correctAction}. ${result.reason}`;
+    const cost = this.missCost();
+    return `Incorrect. Correct: ${correctAction}. ${result.reason}${cost ? ` ${cost}` : ''}`;
   });
 
   // A review round drills only the weak list; an ordinary round mixes it in.

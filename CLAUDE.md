@@ -26,12 +26,15 @@ What the script names do not tell you:
 - `npm test` takes `CI=true` for a single non-watching run.
 - `E2E_SERVER=dist npm run e2e` runs Playwright against the production bundle, which it builds itself; the default lane runs against `ng serve`.
 - `npm run e2e:install` installs the Chromium build once before the first E2E run.
+- `npm run export:ev` regenerates `src/app/data/ev-table.generated.ts` from the solver in seconds, and CI fails if the result differs from the committed file.
+- `npm run export:ev-counts` regenerates `src/app/data/ev-by-count.generated.ts`. It deals tens of thousands of shoes across six processes, took two and a half hours on a loaded machine, and is run by hand, so settle any solver change before starting it.
 - iOS build, test and lint commands are in `ios/CLAUDE.md`.
 
 ## Traps worth knowing before you run anything
 
 - **Do not run `npx vitest run` directly.** The specs rely on globals the Angular unit-test builder injects, so a bare vitest invocation fails every file with `describe is not defined`. Always go through `npm test` / `ng test`.
 - **CI fails on parity-fixture drift.** Any change to the TypeScript engines must be followed by `npm run export:fixtures`, and the resulting `ios/Fixtures/*.json` committed. Fixtures for features archived out of the iOS build stay committed and unconsumed on purpose.
+- **`export:fixtures` wipes `ios/Fixtures` first**, so a fixture has to be written by that exporter. The value tables reach iOS that way, serialized from the generated data files.
 - **The `dist` E2E lane builds what it serves** and refuses to reuse a server it did not start, because a stale `dist/` once let the suite report green against a bundle from another commit. Use `E2E_PORT=4300` to run a second suite alongside the first.
 - Prettier ignores `ios/`, `public/cards/` and `package-lock.json`; see `.prettierignore` before reformatting anything.
 
@@ -39,6 +42,8 @@ What the script names do not tell you:
 
 - The engines in `src/app/core/services/` are pure: no Angular runtime dependency beyond the `@Injectable` decorator, so tests instantiate them directly.
 - In the `src/app/data/` charts, the `SUR_*` cells are an internal extension that encodes the published surrender footnotes inline.
+- `tools/ev/` is the independent check on those charts: it derives every value from the rules of the game and imports nothing from `src/` but the list of indexed hands, so a shared bug cannot hide. `ev-table.spec.ts` holds every chart cell to it and `ev-by-count.spec.ts` holds every index to it. Costs come from `core/services/play-cost.ts`.
+- Red numbers on the deviation charts mean deviate _from basic strategy_, which on the Late Surrender table is the cell's colour: a green `-1-` calls a surrender off. `0+` and `0-` exclude zero, so a neutral count is always a basic-strategy hand.
 - True count truncates toward zero (`Math.trunc`), which is this trainer's stated convention and is asserted across both platforms.
 - `RANDOM_SOURCE` in `core/services/random-source.ts` is the RNG seam. Appending `?seed=<integer>` to any URL pins every draw so a session replays exactly; the E2E suite depends on it.
 - `core/services/storage.ts` is the single tolerant `localStorage` reader/writer. A malformed payload degrades to defaults field by field, and a refused write raises a sticky, non-dismissible app-wide notice, because a silently dropped write means an evening of practice lost with nobody told.

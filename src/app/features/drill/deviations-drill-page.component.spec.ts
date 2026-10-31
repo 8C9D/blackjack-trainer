@@ -170,6 +170,8 @@ describe('DeviationsDrillPageComponent', () => {
       const rule = fixture.nativeElement.querySelector('.drill__rule') as HTMLElement;
       expect(rule.textContent).toContain('Correct: Stand.');
       expect(rule.textContent).toContain('16 v 10 stand @ 0+');
+      const cost = fixture.nativeElement.querySelector('.drill__cost') as HTMLElement;
+      expect(cost.textContent).toContain('gives up');
       expect(fixture.nativeElement.querySelector('.drill__question')).toBeNull();
     });
 
