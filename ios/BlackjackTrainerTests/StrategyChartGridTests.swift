@@ -137,7 +137,7 @@ struct StrategyChartGridTests {
     @Test func printsEachRuleAsHandThresholdAndPlay() throws {
         let sections = try deviations()
         let sixteen = deviationRow(sections, "Hard 16 vs 10")
-        #expect(sixteen?.threshold == "≥ 0")
+        #expect(sixteen?.threshold == "> 0")
         #expect(sixteen?.symbol == "S")
         #expect(sixteen?.label == "Stand")
 

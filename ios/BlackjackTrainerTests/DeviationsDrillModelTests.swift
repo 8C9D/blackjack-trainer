@@ -23,7 +23,7 @@ struct DeviationsDrillModelTests {
 
     @Test func gradesTheDeviationWhenTheThresholdIsMet() {
         let h = makeHarness()
-        h.model.deal(scenario(.king, .six, vs: .queen, tc: 0))
+        h.model.deal(scenario(.king, .six, vs: .queen, tc: 1))
         h.model.answer(.stand)
         #expect(h.model.result?.correct == true)
         #expect(h.model.result?.deviationApplied == true)
@@ -41,7 +41,7 @@ struct DeviationsDrillModelTests {
 
     @Test func showsTheDeviationExplanationOnAMiss() {
         let h = makeHarness()
-        h.model.deal(scenario(.king, .six, vs: .queen, tc: 0))
+        h.model.deal(scenario(.king, .six, vs: .queen, tc: 1))
         h.model.answer(.hit)
         #expect(h.model.correctAction == .stand)
         #expect(h.model.explanation.contains("deviation"))
@@ -90,7 +90,7 @@ struct DeviationsDrillModelTests {
 
     @Test func talliesMissesUnderTheDeviationsTrainer() {
         let h = makeHarness()
-        h.model.deal(scenario(.king, .six, vs: .queen, tc: 0))
+        h.model.deal(scenario(.king, .six, vs: .queen, tc: 1))
         h.model.answer(.hit)
         #expect(h.missTally.weakSpotFor(.deviations)?.label == "16 vs 10")
         #expect(h.missTally.weakSpotFor(.basicStrategy) == nil)
@@ -135,7 +135,7 @@ struct DeviationsDrillModelTests {
     @Test func reachesDoneAndOffersOneMoreRound() {
         let h = makeHarness(dailyGoal: 2)
         for _ in 0 ..< 2 {
-            h.model.deal(scenario(.king, .six, vs: .queen, tc: 0))
+            h.model.deal(scenario(.king, .six, vs: .queen, tc: 1))
             h.model.answer(.stand)
             h.scheduler.fire()
         }

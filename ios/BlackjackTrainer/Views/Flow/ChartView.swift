@@ -370,6 +370,9 @@ extension ChartGridView {
             if let unavailable = section.unavailable {
                 AdvisoryNoteView(text: unavailable, alignment: .leading)
             }
+            if let note = section.note {
+                AdvisoryNoteView(text: note, alignment: .leading)
+            }
 
             Text(section.title)
                 .font(.caption2.weight(.semibold))

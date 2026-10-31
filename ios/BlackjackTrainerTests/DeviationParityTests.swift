@@ -76,12 +76,28 @@ struct DeviationParityTests {
         let evaluator = try evaluator()
         let result = evaluator.evaluate(
             DeviationScenario(player: TwoCardHand(card("10"), card("6")), dealerUpcard: card("10"),
-                              trueCount: 0),
+                              trueCount: 1),
             userAction: .stand, ruleSet: .h17, options: .default
         )
-        // Illustrious 18 #1: 16 vs 10 stands at TC ≥ 0 (basic would hit).
+        // Illustrious 18 #1: 16 vs 10 stands at any positive count (basic would hit).
         #expect(result.expectedAction == .stand)
         #expect(result.deviationApplied)
         #expect(result.basicAction == .hit)
+    }
+
+    /// The chart's green "-1-" on 16 v 9 calls a surrender off rather than adding
+    /// one: surrender gets better as the count rises.
+    @Test func aLowCountCallsOffTheSurrender() throws {
+        let evaluator = try evaluator()
+        let options = EngineOptions(doubleAfterSplit: false, lateSurrender: true)
+        func expected(atCount trueCount: Int) -> Action {
+            evaluator.evaluate(
+                DeviationScenario(player: TwoCardHand(card("10"), card("6")),
+                                  dealerUpcard: card("9"), trueCount: trueCount),
+                userAction: .hit, ruleSet: .h17, options: options
+            ).expectedAction
+        }
+        #expect(expected(atCount: -1) == .hit)
+        #expect(expected(atCount: 0) == .surrender)
     }
 }

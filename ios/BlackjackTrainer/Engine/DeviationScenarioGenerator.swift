@@ -161,9 +161,13 @@ struct DeviationScenarioGenerator {
                 ? (max(index - spread, minTc), min(index, maxTc))
                 : (max(index + 1, minTc), min(index + spread, maxTc))
         case "positive":
-            return wantMet ? (max(1, minTc), maxTc) : (minTc, min(0, maxTc))
+            return wantMet
+                ? (max(1, minTc), min(spread, maxTc))
+                : (max(1 - spread, minTc), min(0, maxTc))
         case "negative":
-            return wantMet ? (minTc, min(-1, maxTc)) : (max(0, minTc), maxTc)
+            return wantMet
+                ? (max(-spread, minTc), min(-1, maxTc))
+                : (max(0, minTc), min(spread - 1, maxTc))
         default:
             return (minTc, maxTc)
         }

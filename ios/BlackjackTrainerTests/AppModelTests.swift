@@ -18,7 +18,7 @@ struct AppModelTests {
 
         let deviation = model.deviationEvaluator.evaluate(
             DeviationScenario(player: TwoCardHand(card("10"), card("6")), dealerUpcard: card("10"),
-                              trueCount: 0),
+                              trueCount: 1),
             userAction: .stand, ruleSet: .h17, options: .default
         )
         #expect(deviation.expectedAction == .stand) // I18 #1

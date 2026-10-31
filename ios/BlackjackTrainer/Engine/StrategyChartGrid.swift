@@ -87,6 +87,8 @@ struct DeviationSection: Identifiable {
     /// Set where the table rules have taken the whole section off the felt: the
     /// rows stay listed (the chart is the chart) and say they are not on offer.
     var unavailable: String?
+    /// What a section needs saying to read correctly. Mirrors the web list's `note`.
+    var note: String?
 }
 
 /// The pure half of the strategy-chart screen, mirroring the web
@@ -136,12 +138,19 @@ enum StrategyChartGrid {
                 .filter { $0.category == category.id }
                 .map { deviationRow($0, misses: misses) }
             guard !rows.isEmpty else { return nil }
+            // A Hit under "Surrender" reads like a mistake unless something says
+            // what it stops.
+            let note = category.id == "surrender" && lateSurrender
+                ? "A Hit here calls off a surrender the basic chart makes. "
+                + "Surrendering gets better as the count rises, so a low enough count takes it back."
+                : nil
             let unavailable = category.id == "surrender" && !lateSurrender
                 ? "Late Surrender is off in your table rules, so none of these are on offer. "
                 + "Those hands play off the chart above."
                 : nil
             return DeviationSection(
-                id: category.id, title: category.title, rows: rows, unavailable: unavailable
+                id: category.id, title: category.title, rows: rows, unavailable: unavailable,
+                note: note
             )
         }
     }
