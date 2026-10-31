@@ -4,6 +4,9 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/spec",
+    // The unit-test target also collects `tools/**/*.spec.mjs` (angular.json),
+    // and the builder hands those to the compiler as well.
+    "allowJs": true,
     "types": ["vitest/globals"]
   },
   // `**/*.test.ts` is collected by the unit-test target (angular.json, resolved
