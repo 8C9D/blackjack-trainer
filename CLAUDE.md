@@ -56,6 +56,7 @@ What the script names do not tell you:
 ## Status
 
 - The web app is at v1.0.0 (tagged). `.github/workflows/pages.yml` publishes it to GitHub Pages on manual dispatch.
+- Pages is not enabled on the repo as of 2026-10-31, so there is no live site and a dispatch fails at the deploy step until it is. Remove this line when Pages comes back.
 - The iOS app is feature-complete and has not been submitted to the App Store. Both legal pages carry a `mailto:CONTACT_EMAIL_HERE` placeholder.
 - iCloud sync is declared as an entitlement and deliberately left unprovisioned. Every cloud write is gated behind an initial-sync round trip (`InitialSyncGatedCloudStore`), and provisioning turns sync on for already-installed binaries with no app update, so it must only happen for builds carrying that gate.
 
