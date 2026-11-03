@@ -40,6 +40,7 @@ type Internals = {
   handLabel: () => string;
   splitAces: { (): boolean; set(v: boolean): void };
   atDeal: { (): boolean; set(v: boolean): void };
+  insured: { (): boolean; set(v: boolean): void };
   result: { (): DeviationTrainerResult | null };
   phase: { (): 'question' | 'flash' | 'miss' | 'over' | 'done' };
   target: { (): number };
@@ -70,6 +71,7 @@ function deal(c: Internals, scenario: DeviationScenario): void {
   c.activeIndex.set(0);
   c.splitAces.set(false);
   c.atDeal.set(true);
+  c.insured.set(false);
 }
 
 // Table rules are read when the page renders, so this runs before createPage.
@@ -221,6 +223,73 @@ describe('DeviationsDrillPageComponent', () => {
       c.answer('INS');
       expect(c.result()!.correct).toBe(true);
       expect(c.result()!.source).toBe('insurance');
+    });
+
+    // At a table insurance is a side bet ahead of the play, and the hand is
+    // still played after it. Grading insurance as the deal's only answer made
+    // every ace-up index — 10 v A doubles at +4 — a question nobody was asked.
+    describe('insurance, then the play', () => {
+      // 6,4 v A at +4 under S17: insurance pays, and so does the hand's index.
+      const TEN_V_ACE_TC4 = scenarioOf('6', '4', 'A', 4);
+
+      it('asks the play of the same two cards once insurance is taken', () => {
+        const { c } = createPage();
+        deal(c, TEN_V_ACE_TC4);
+        c.answer('INS');
+        expect(c.result()).toMatchObject({ correct: true, source: 'insurance' });
+        vi.advanceTimersByTime(ADVANCE_MS);
+        expect(c.phase()).toBe('question');
+        expect(c.hand()).toEqual(TEN_V_ACE_TC4.player);
+        expect(c.handLabel()).toBe('Insured');
+        expect(c.legalActions()).not.toContain('INS');
+        expect(c.legalActions()).toContain('D');
+        c.answer('D');
+        expect(c.result()).toMatchObject({
+          correct: true,
+          expectedAction: 'D',
+          source: 'playing',
+          deviationApplied: true,
+        });
+      });
+
+      it('asks it with hands not played out too, since it is the opening play', () => {
+        TestBed.inject(FlowPrefsService).setPlayHandsOut(false);
+        const { c } = createPage();
+        deal(c, TEN_V_ACE_TC4);
+        c.answer('INS');
+        vi.advanceTimersByTime(ADVANCE_MS);
+        expect(c.hand()).toEqual(TEN_V_ACE_TC4.player);
+        c.answer('H');
+        expect(c.result()).toMatchObject({ correct: false, expectedAction: 'D' });
+      });
+
+      it('files both opening decisions under the hand', () => {
+        const { c } = createPage();
+        deal(c, TEN_V_ACE_TC4);
+        c.answer('INS');
+        vi.advanceTimersByTime(ADVANCE_MS);
+        c.answer('H');
+        const [spot] = TestBed.inject(MissTallyService).weakSpots('deviations');
+        expect(spot).toMatchObject({ attempts: 2, misses: 1, missedCounts: [4] });
+      });
+
+      it('still marks a play pressed before insurance as the miss it is', () => {
+        const { c } = createPage();
+        deal(c, TEN_V_ACE_TC4);
+        c.answer('D');
+        expect(c.result()).toMatchObject({ correct: false, expectedAction: 'INS' });
+      });
+
+      it('deals the next hand uninsured', () => {
+        const { c } = createPage();
+        deal(c, TEN_V_ACE_TC4);
+        c.answer('INS');
+        vi.advanceTimersByTime(ADVANCE_MS);
+        c.answer('D');
+        vi.advanceTimersByTime(ADVANCE_MS * 4);
+        expect(c.insured()).toBe(false);
+        expect(c.handLabel()).toBe('');
+      });
     });
 
     it('declining insurance below +3 is the correct play', () => {

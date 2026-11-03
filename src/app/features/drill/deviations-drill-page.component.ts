@@ -211,7 +211,7 @@ export class DeviationsDrillPageComponent {
 
   protected readonly handLabel = computed(() => {
     const total = this.hands().length;
-    if (total < 2) return '';
+    if (total < 2) return this.insured() ? 'Insured' : '';
     return `Hand ${this.activeIndex() + 1} of ${total}`;
   });
 
@@ -246,14 +246,16 @@ export class DeviationsDrillPageComponent {
   // The same six buttons the Basic Strategy drill offers, under the same table
   // rules: with Late Surrender off there is no surrender to make, and the
   // surrender overlay no longer asks for one.
-  protected readonly legalActions = computed(() =>
-    legalActionsFor(
+  protected readonly legalActions = computed(() => {
+    const legal = legalActionsFor(
       this.hand(),
       this.scenario().dealerUpcard,
       this.prefs.prefs().options,
       this.splitContext(),
-    ),
-  );
+    );
+    // Insurance is offered once, before the play.
+    return this.insured() ? legal.filter((action) => action !== 'INS') : legal;
+  });
 
   protected readonly picked = computed<Action | null>(() => this.result()?.userAction ?? null);
   protected readonly correctAction = computed<Action | null>(
@@ -316,6 +318,11 @@ export class DeviationsDrillPageComponent {
   // the hand and a split replaces it; either way what follows is a different
   // question from the one the deal put up.
   private readonly atDeal = signal(true);
+
+  // Insurance was taken on this deal, at a count where it pays. The deal then
+  // asks its second opening question — the play of the same two cards — which
+  // is still the deal's, so it is timed and filed like the first.
+  protected readonly insured = signal(false);
 
   // When the question on screen was put up. A decision's own clock: the app
   // grades whether the answer was right and has never said how long it took,
@@ -399,7 +406,9 @@ export class DeviationsDrillPageComponent {
     // Every deviation deal is two cards today; the length guard keeps a deeper
     // deal graded at its N-card total rather than as its first two cards.
     if (atDeal && cards.length === 2) {
-      return this.evaluator.evaluate(this.scenario(), action, prefs.ruleSet, prefs.options);
+      return this.evaluator.evaluate(this.scenario(), action, prefs.ruleSet, prefs.options, {
+        insuranceSettled: this.insured(),
+      });
     }
     const split = this.splitContext();
     return this.evaluator.evaluatePlay(
@@ -417,12 +426,22 @@ export class DeviationsDrillPageComponent {
     );
   }
 
-  // A hit and a split are the two correct answers that leave another decision
-  // behind them: a hit draws the next card and asks again, a split turns one
+  // Insurance, a hit and a split are the correct answers that leave another
+  // decision behind them. For the last two: a hit draws the next card and asks again, a split turns one
   // hand into two and asks about each in turn — both at the same count, which
   // is the scenario's given rather than a live shoe's. Stand, double and
   // surrender finish the hand in front of you, as they would at a table.
   private afterCorrect(action: Action): void {
+    // Insurance is a side bet ahead of the play, not the play: the same two
+    // cards still want playing, and an ace-up index (10 v A doubles at +4) is
+    // only ever reachable here. Asked whether or not hands are played out,
+    // since it is the deal's own opening decision.
+    if (action === 'INS') {
+      this.insured.set(true);
+      this.atDeal.set(true);
+      this.ask();
+      return;
+    }
     if (!this.prefs.prefs().playHandsOut) {
       this.advance();
       return;
@@ -553,6 +572,7 @@ export class DeviationsDrillPageComponent {
     this.activeIndex.set(0);
     this.splitAces.set(false);
     this.atDeal.set(true);
+    this.insured.set(false);
     this.ask();
   }
 

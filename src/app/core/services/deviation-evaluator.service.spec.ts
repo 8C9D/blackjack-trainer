@@ -112,6 +112,20 @@ describe('DeviationEvaluatorService', () => {
       expect(r.explanation).toContain('+3');
     });
 
+    it("once insurance is settled, grades the play with the hand's own index", () => {
+      // 6,4 v A at +4: insurance pays, and S17's 10 v A doubles at +4.
+      const scenario = scenarioOf('6', '4', 'A', 4);
+      expect(evaluator.evaluate(scenario, 'D', ruleSet, options).expectedAction).toBe('INS');
+      const play = evaluator.evaluate(scenario, 'D', ruleSet, options, { insuranceSettled: true });
+      expect(play).toMatchObject({
+        correct: true,
+        expectedAction: 'D',
+        source: 'playing',
+        deviationApplied: true,
+      });
+      expect(play.matchedRule?.playerHand).toBe('10');
+    });
+
     it('dealer Ace below TC +3 — Insurance is incorrect; expected is the playing action', () => {
       // Hard 16 v A: S17 basic strategy hits (no LS); no Ace deviation.
       const r = evaluator.evaluate(scenarioOf('10', '6', 'A', 2), 'INS', ruleSet, options);

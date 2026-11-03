@@ -37,11 +37,17 @@ export class DeviationEvaluatorService {
   private readonly basicStrategy = inject(BasicStrategyEngineService);
   private readonly deviationEngine = inject(DeviationEngineService);
 
+  // `insuranceSettled` is the deal's second opening question: insurance has
+  // been answered (taken, at a count where it pays), and what is left is the
+  // play of the same two cards. At a table those are two decisions, and the
+  // hand's own index — 10 v A doubles at +4 — only has a question to answer
+  // once the side bet is out of the way.
   evaluate(
     scenario: DeviationScenario,
     userAction: Action,
     ruleSet: RuleSet,
     options: EngineOptions,
+    { insuranceSettled = false }: { readonly insuranceSettled?: boolean } = {},
   ): DeviationTrainerResult {
     // The deal's evaluation reads the opening two cards; callers route hands
     // deeper than two cards through `evaluatePlay`, which reads N-card totals.
@@ -56,14 +62,16 @@ export class DeviationEvaluatorService {
     const dealerAce = isAce(scenario.dealerUpcard);
     // Only consult the insurance overlay when the dealer shows an Ace. For
     // non-Ace upcards there is no insurance offer.
-    const insurance: DeviationDecision | null = dealerAce
-      ? this.deviationEngine.resolveInsuranceDecision(scenario.trueCount, ruleSet)
-      : null;
+    const insurance: DeviationDecision | null =
+      dealerAce && !insuranceSettled
+        ? this.deviationEngine.resolveInsuranceDecision(scenario.trueCount, ruleSet)
+        : null;
     const isDeviationCandidate = scenario.generatedAsDeviationCandidate === true;
 
     if (insurance && insurance.deviationApplied) {
-      // Insurance is offered before the playing decision and dominates when
-      // the threshold is met. Expected action is INS regardless of the hand.
+      // Insurance is offered before the playing decision, so at a count where
+      // it pays it is the question the deal asks first, whatever the hand. The
+      // play follows as its own question (`insuranceSettled`).
       const matchedRule = insurance.matchedRule;
       const expectedAction: Action = 'INS';
       const correct = userAction === expectedAction;
