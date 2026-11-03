@@ -128,11 +128,14 @@ final class DeviationsDrillModel {
         history.recordHand(correct: evaluation.correct, elapsedMs: elapsedMs)
         // The count goes in with the miss: here it is half the question, and a
         // hand re-dealt at a fresh count is a different one.
+        let ref = scenarioRefFor(scenario.player.cards, dealerUpcard: scenario.dealerUpcard)
         missTally.record(
             .deviations,
-            ref: scenarioRefFor(scenario.player.cards, dealerUpcard: scenario.dealerUpcard),
+            ref: ref,
             correct: evaluation.correct,
-            trueCount: scenario.trueCount
+            trueCount: scenario.trueCount,
+            countsTowardClear: evaluation.correct
+                && answersAMissedQuestion(ref, expected: evaluation.expectedAction)
         )
         session.record(evaluation.correct, elapsedMs: elapsedMs)
 
@@ -226,6 +229,25 @@ extension DeviationsDrillModel {
         result = nil
         phase = .question
         askedAt = now()
+    }
+
+    /// Whether a right answer re-answers a question this hand was missed on: the
+    /// same play is right at one of the counts it was missed at. A deviation has
+    /// two sides, and clearing 12 v 2 — missed at +4, where it stands — by hitting
+    /// it at −2 called it learned when the stand was never asked again.
+    private func answersAMissedQuestion(_ ref: ScenarioRef, expected: Action) -> Bool {
+        let counts = missTally.missedCounts(.deviations, ref: ref)
+        if counts.isEmpty { return true }
+        return counts.contains { trueCount in
+            evaluator.evaluate(
+                DeviationScenario(player: scenario.player, dealerUpcard: scenario.dealerUpcard,
+                                  trueCount: trueCount),
+                userAction: expected,
+                ruleSet: prefs.prefs.ruleSet,
+                options: prefs.prefs.options,
+                insuranceSettled: insured
+            ).expectedAction == expected
+        }
     }
 
     /// Insurance is settled; ask the play of the same two cards.

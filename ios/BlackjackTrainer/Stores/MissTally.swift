@@ -199,11 +199,16 @@ final class MissTallyStore: CloudSyncable {
     /// where the count is part of the question — the Deviations trainer. A miss
     /// remembers it so the scenario can come back as the question that was
     /// actually missed rather than the hand alone.
+    ///
+    /// `countsTowardClear` is false for a right answer to a question the scenario
+    /// was never missed on: 12 v 2 missed at +4, where it stands, is not learned
+    /// by hitting it at −2 three times. The attempt still counts; the streak waits.
     func record(
         _ trainer: TalliedTrainer,
         ref: ScenarioRef,
         correct: Bool,
-        trueCount: Int? = nil
+        trueCount: Int? = nil,
+        countsTowardClear: Bool = true
     ) {
         let today = localDateKey(now())
         let key = scenarioKey(ref)
@@ -223,7 +228,7 @@ final class MissTallyStore: CloudSyncable {
         forTrainer[key] = ScenarioTally(
             ref: ref,
             days: pruneDays(days),
-            streak: correct ? existing.streak + 1 : 0,
+            streak: correct ? existing.streak + (countsTowardClear ? 1 : 0) : 0,
             missedCounts: rememberMissedCount(
                 existing.missedCounts,
                 correct: correct,
@@ -266,6 +271,12 @@ final class MissTallyStore: CloudSyncable {
                 return lhs.key < rhs.key
             }
             .map(\.spot)
+    }
+
+    /// The counts a scenario was recently missed at, most recent first; empty for
+    /// a scenario never missed, or missed with no count in the question.
+    func missedCounts(_ trainer: TalliedTrainer, ref: ScenarioRef) -> [Int] {
+        state[trainer.rawValue]?[scenarioKey(ref)]?.missedCounts ?? []
     }
 
     /// The worst outstanding scenario, or nil when nothing is outstanding.

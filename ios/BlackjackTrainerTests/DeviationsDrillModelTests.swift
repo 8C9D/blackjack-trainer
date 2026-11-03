@@ -195,6 +195,32 @@ private func card(_ rank: Rank, _ suit: Suit = .spades) -> Card {
     DeviationsFixture.card(rank, suit)
 }
 
+/// A deviation has two sides. 12 v 2 stands from +3 under S17; missed at +4, it is
+/// not learned by hitting it at −2, however many times. Mirrors the web drill's
+/// "clearing a deviation weak spot".
+@MainActor
+struct DeviationWeakSpotClearingTests {
+    @Test func clearsOnlyOnTheSideOfTheIndexItWasMissedOn() {
+        let h = makeHarness()
+        func answer(at trueCount: Int, _ action: Action) {
+            h.model.deal(scenario(.ten, .two, vs: .two, tc: trueCount))
+            h.model.answer(action)
+        }
+        answer(at: 4, .hit)
+        #expect(h.model.result?.correct == false)
+        for _ in 0 ..< clearStreak {
+            answer(at: -2, .hit)
+        }
+        #expect(h.missTally.weakSpotFor(.deviations)?.streak == 0)
+        #expect(h.missTally.clearedSpots(.deviations).isEmpty)
+        for _ in 0 ..< clearStreak {
+            answer(at: 5, .stand)
+        }
+        #expect(h.missTally.weakSpotFor(.deviations) == nil)
+        #expect(h.missTally.clearedSpots(.deviations).map(\.label) == ["12 vs 2"])
+    }
+}
+
 private func scenario(_ a: Rank, _ b: Rank, vs upcard: Rank, tc: Int) -> DeviationScenario {
     DeviationsFixture.scenario(a, b, vs: upcard, tc: tc)
 }
