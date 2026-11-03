@@ -856,6 +856,36 @@ describe('CardCountingPageComponent', () => {
       ).toContain('cut card is out');
     });
 
+    // A round is only dealt on a whole round's reserve, not on the opening deal
+    // alone: one deck at 90% penetration, counted 20 cards deep, has 32 left and
+    // the cut card still in — enough to deal three boxes their first cards, and
+    // a round the old gate started and then ran dry in about one time in ten.
+    it('offers no showdown the shoe could not be sure of finishing, and says why', () => {
+      configureLiveShoe({ numberOfDecks: 1, numberOfCards: 20, penetration: 0.9 });
+      updateSetting('showdownSpots', 3);
+      const { fixture, c } = createPage();
+      toLiveShoeFeedback(c);
+
+      expect(c.shoe!.needsReshuffle).toBe(false);
+      expect(c.shoe!.cardsRemaining).toBe(32);
+      expect(c.showdownAvailable()).toBe(false);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.count__showdown-button')).toBeNull();
+      const note = (fixture.nativeElement.querySelector('.count__shoe-spent') as HTMLElement)
+        .textContent!;
+      expect(note).toContain('finishing a round with 3 boxes');
+      expect(note).toContain('fewer boxes');
+      expect(note).not.toContain('cut card');
+    });
+
+    it('still offers one box the round that three could not be sure of', () => {
+      configureLiveShoe({ numberOfDecks: 1, numberOfCards: 20, penetration: 0.9 });
+      updateSetting('showdownSpots', 1);
+      const { c } = createPage();
+      toLiveShoeFeedback(c);
+      expect(c.showdownAvailable()).toBe(true);
+    });
+
     it('enters the showdown and deals from the same persistent shoe', () => {
       configureLiveShoe({ numberOfDecks: 6, numberOfCards: 10 });
       const { fixture, c } = createPage();

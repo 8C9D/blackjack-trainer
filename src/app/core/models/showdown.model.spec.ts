@@ -81,10 +81,13 @@ describe('showdown.model', () => {
       expect(result.map((c) => c.rank)).toEqual(['A', '2', 'A', '4']);
     });
 
-    it('stops drawing when the shoe is exhausted', () => {
+    // An exhausted source hands back a hand that still wants a card. That is
+    // not a finished dealer hand, and the caller has to be able to tell.
+    it('stops drawing when the shoe is exhausted, leaving the hand unfinished', () => {
       // 10,2 (12) wants to hit but the draw source is empty.
       const result = playDealerHand([card('10'), card('2')], 'S17', () => undefined);
       expect(result.map((c) => c.rank)).toEqual(['10', '2']);
+      expect(dealerShouldHit(result, 'S17')).toBe(true);
     });
   });
 
@@ -173,16 +176,21 @@ describe('showdown.model', () => {
     });
   });
 
+  // Two cards a box plus the dealer's two is only the opening deal. A round
+  // started on that little could run dry mid-hand, and with one deck at 90%
+  // penetration and three boxes it did so roughly one round in ten. The reserve
+  // is what a whole round needs, figured by simulation in the model.
   describe('minCardsForSpots', () => {
-    it('needs two cards per box plus the dealer two', () => {
+    it('reserves eight cards a box plus eleven', () => {
       expect(minCardsForSpots(1)).toBe(MIN_SHOWDOWN_CARDS);
-      expect(minCardsForSpots(2)).toBe(6);
-      expect(minCardsForSpots(3)).toBe(8);
+      expect(MIN_SHOWDOWN_CARDS).toBe(19);
+      expect(minCardsForSpots(2)).toBe(27);
+      expect(minCardsForSpots(3)).toBe(35);
     });
 
     it('clamps its argument like clampSpots', () => {
-      expect(minCardsForSpots(0)).toBe(4);
-      expect(minCardsForSpots(99)).toBe(8);
+      expect(minCardsForSpots(0)).toBe(19);
+      expect(minCardsForSpots(99)).toBe(35);
     });
   });
 });

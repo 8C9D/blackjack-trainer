@@ -198,6 +198,17 @@ type DrillState =
                 The cut card is out — no hand to play off this shoe. The next round deals from a
                 fresh one.
               </p>
+            } @else if (usesLiveShoe() && shoeShortOfRound()) {
+              <p class="count__shoe-spent">
+                @if (showdownSpots() > 1) {
+                  Too few cards are left in this shoe to be sure of finishing a round with
+                  {{ showdownSpots() }} boxes, so no table would deal one. Keep counting to the
+                  reshuffle, or play fewer boxes in Settings.
+                } @else {
+                  Too few cards are left in this shoe to be sure of finishing a hand, so no table
+                  would deal one. Keep counting to the reshuffle.
+                }
+              </p>
             }
           }
 
@@ -716,15 +727,24 @@ export class CardCountingPageComponent {
   }
 
   // Whether a post-count showdown can be offered: a live shoe still short of
-  // its cut card, with enough cards to deal an opening round to every
-  // configured box. (`shoe` is mutated in place, so this is a method, re-read
-  // each change-detection pass rather than a memoized computed.)
+  // its cut card, holding a whole round's reserve for every configured box (see
+  // `minCardsForSpots`) — not merely the opening deal, which a round can need
+  // several times over. (`shoe` is mutated in place, so this is a method,
+  // re-read each change-detection pass rather than a memoized computed.)
   protected showdownAvailable(): boolean {
     return (
       this.shoe !== null &&
       !this.shoe.needsReshuffle &&
       this.shoe.cardsRemaining >= minCardsForSpots(this.showdownSpots())
     );
+  }
+
+  // The cut card is still in, but the shoe is short of the round's reserve.
+  // On one or two decks that can be most of a shoe, so the offer is not left to
+  // vanish without a word: the player is told why, and that fewer boxes may
+  // still be dealt.
+  protected shoeShortOfRound(): boolean {
+    return this.shoe !== null && !this.shoe.needsReshuffle && !this.showdownAvailable();
   }
 
   // The cut card surfaced during the round just counted, so there is no hand to

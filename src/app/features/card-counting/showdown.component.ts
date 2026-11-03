@@ -41,6 +41,7 @@ import { Shoe } from '../../core/models/shoe.model';
 import {
   clampSpots,
   countBasisFor,
+  dealerShouldHit,
   insuranceIsCorrect,
   trueCountFor,
   minCardsForSpots,
@@ -343,6 +344,10 @@ interface PlayVerdict {
                     <span class="showdown__payout">{{ signedChips(payout(h)) }}</span>
                   }
                 </p>
+              } @else if (roundVoid()) {
+                <p class="showdown__verdict showdown__verdict--push" role="status">
+                  No action — the shoe ran out.
+                </p>
               }
             </section>
           }
@@ -401,6 +406,15 @@ interface PlayVerdict {
 
         @if (phase() === 'resolved') {
           <section class="showdown__result" role="status">
+            @if (roundVoid()) {
+              <!-- The reserve makes this rare, not impossible. A hand settled
+                   against a dealer who never finished, or a hand that never got
+                   its card, would be a result no table deals. -->
+              <p class="showdown__exhausted">
+                The shoe ran out before this round could finish, so it is void. Hands still in play
+                are no action{{ betting() ? ', and their bets are returned' : '' }}.
+              </p>
+            }
             @if (roundMistakes().length > 0) {
               <div class="showdown__misplays">
                 <p class="showdown__misplays-head">
@@ -589,6 +603,9 @@ export class ShowdownComponent implements OnInit {
   // Mirror of the shoe's remaining card count, refreshed after every draw so the
   // "deal another" gate reacts to depletion.
   protected readonly remaining = signal(0);
+  // The round ran out of cards before it could finish and was voided. Hands
+  // settled before that keep their result; the rest are no action.
+  protected readonly roundVoid = signal(false);
 
   protected readonly activeHand = computed<PlayerHand | null>(
     () => this.hands()[this.activeIndex()] ?? null,
@@ -693,16 +710,20 @@ export class ShowdownComponent implements OnInit {
 
   // One-line tally of a finished multi-hand round ('2 won, 1 lost'). Empty for a
   // single hand, whose own verdict line already says everything.
+  // A voided round's unsettled hands are tallied as no action, so the line
+  // still accounts for every hand on the felt.
   protected readonly roundSummary = computed(() => {
+    const voided = this.roundVoid();
     const outcomes = this.hands()
-      .map((h) => h.settlement?.outcome)
-      .filter((o): o is ShowdownOutcome => o !== undefined);
+      .map((h) => h.settlement?.outcome ?? (voided ? 'void' : undefined))
+      .filter((o): o is ShowdownOutcome | 'void' => o !== undefined);
     if (outcomes.length < 2) return '';
-    const count = (o: ShowdownOutcome) => outcomes.filter((x) => x === o).length;
+    const count = (o: ShowdownOutcome | 'void') => outcomes.filter((x) => x === o).length;
     const parts: string[] = [];
     if (count('win')) parts.push(`${count('win')} won`);
     if (count('lose')) parts.push(`${count('lose')} lost`);
     if (count('push')) parts.push(`${count('push')} pushed`);
+    if (count('void')) parts.push(`${count('void')} no action`);
     return parts.join(', ');
   });
 
@@ -971,6 +992,9 @@ export class ShowdownComponent implements OnInit {
   // Deal a fresh opening round to every occupied box in casino order: one card
   // to each box, the dealer's upcard, a second card to each box, the dealer's
   // hole card. Naturals on either side resolve without any player action.
+  //
+  // Only on a whole round's reserve, which also covers the opening deal's own
+  // draws; see `minCardsForSpots`.
   private dealHand(): void {
     const spots = this.spots();
     if (this.shoe().cardsRemaining < minCardsForSpots(spots)) {
@@ -985,6 +1009,7 @@ export class ShowdownComponent implements OnInit {
 
     const bet = this.betting() ? this.bet() : 0;
     this.roundNet.set(0);
+    this.roundVoid.set(false);
     this.insuranceNet.set(null);
     this.lastPlay.set(null);
     this.roundMistakes.set([]);
@@ -1176,8 +1201,9 @@ export class ShowdownComponent implements OnInit {
     if (this.phase() !== 'player-turn') return;
     const card = this.draw();
     if (!card) {
-      // Shoe exhausted mid-hand — stand and settle with what's here.
-      this.finishActive();
+      // Standing the hand in its place would settle a hand on a decision the
+      // player did not make.
+      this.voidRound();
       return;
     }
     const i = this.activeIndex();
@@ -1195,11 +1221,13 @@ export class ShowdownComponent implements OnInit {
     if (!this.canDouble()) return;
     const i = this.activeIndex();
     const card = this.draw();
-    this.updateHand(i, (h) => ({
-      ...h,
-      doubled: true,
-      cards: card ? [...h.cards, card] : h.cards,
-    }));
+    // Offered only with a card left, so this is belt and braces: a double that
+    // never got its card is no double at all.
+    if (!card) {
+      this.voidRound();
+      return;
+    }
+    this.updateHand(i, (h) => ({ ...h, doubled: true, cards: [...h.cards, card] }));
     this.finishActive();
   }
 
@@ -1227,11 +1255,18 @@ export class ShowdownComponent implements OnInit {
 
   // Deal the second card to a one-card (freshly split) hand at `i`, then either
   // finish it (a split ace stands after one card) or leave it for the player.
+  //
+  // A split hand the shoe cannot complete is not a hand: playing on with one
+  // card would settle half a split against the dealer.
   private dealToFreshHand(i: number): void {
     const card = this.draw();
-    if (card) this.updateHand(i, (h) => ({ ...h, cards: [...h.cards, card] }));
+    if (!card) {
+      this.voidRound();
+      return;
+    }
+    this.updateHand(i, (h) => ({ ...h, cards: [...h.cards, card] }));
     const hand = this.hands()[i];
-    if (hand.isSplitAce || hand.cards.length < 2 || isBust(hand.cards)) {
+    if (hand.isSplitAce || isBust(hand.cards)) {
       this.finishHand(i);
     }
   }
@@ -1270,8 +1305,28 @@ export class ShowdownComponent implements OnInit {
     if (anyLive) {
       dealer = playDealerHand(dealer, this.ruleSet(), () => this.draw());
       this.dealerCards.set(dealer);
+      // A dealer the shoe could not finish has no total to settle against.
+      if (dealerShouldHit(dealer, this.ruleSet())) {
+        this.voidRound();
+        return;
+      }
     }
     this.hands().forEach((_, i) => this.settleHandAt(i, dealer));
+    this.resolveRound();
+  }
+
+  // The shoe ran out mid-round. What was already settled stands — a surrender
+  // or a natural owed the dealer nothing further — and so does a bust, which
+  // loses whatever the dealer would have made. Every other hand is no action:
+  // nothing is settled, recorded or paid, so its stake never leaves the
+  // bankroll. The hole card is turned over like any finished round's.
+  private voidRound(): void {
+    const dealer = this.dealerCards();
+    this.hands().forEach((h, i) => {
+      if (isBust(h.cards)) this.settleHandAt(i, dealer);
+    });
+    this.updateAllHands((h) => ({ ...h, done: true }));
+    this.roundVoid.set(true);
     this.resolveRound();
   }
 
@@ -1295,6 +1350,10 @@ export class ShowdownComponent implements OnInit {
 
   private updateHand(i: number, fn: (h: PlayerHand) => PlayerHand): void {
     this.hands.update((hs) => hs.map((h, idx) => (idx === i ? fn(h) : h)));
+  }
+
+  private updateAllHands(fn: (h: PlayerHand) => PlayerHand): void {
+    this.hands.update((hs) => hs.map(fn));
   }
 
   // Deal one card from the shoe and refresh the remaining-cards mirror.

@@ -2,7 +2,11 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 
 import type { Card, Rank, Suit } from '../../core/models/card.model';
 import { Shoe } from '../../core/models/shoe.model';
-import type { Settlement } from '../../core/models/showdown.model';
+import {
+  MAX_SHOWDOWN_SPOTS,
+  minCardsForSpots,
+  type Settlement,
+} from '../../core/models/showdown.model';
 import type { Action, EngineOptions, RuleSet } from '../../core/models/strategy.model';
 import type { ShowdownStats } from '../../core/services/showdown-stats.service';
 import type { SessionStats } from '../../core/services/stats-store';
@@ -58,6 +62,7 @@ type Internals = {
   remaining(): number;
   canDealAnother(): boolean;
   cutCardOut(): boolean;
+  roundVoid(): boolean;
   onAction(a: Action): void;
   onKeyDown(event: KeyboardEvent): void;
   dealAnother(): void;
@@ -83,8 +88,18 @@ type Internals = {
 // A shoe that deals the given ranks in order (no shuffle): the constructor takes
 // cards as-is, so dealing order is deterministic. Opening deal order is
 // player, dealer, player, dealer; subsequent draws follow.
-function makeShoe(ranks: readonly Rank[]): Shoe {
-  const cards: Card[] = ranks.map((rank) => ({ rank, suit: 'spades' as Suit }));
+//
+// A round is only dealt with a whole round's reserve in the shoe (see
+// `minCardsForSpots`), so a script shorter than the largest reserve is padded
+// out behind its last card with 8s — zero in Hi-Lo, so padding never moves a
+// count it is not drawn into. `exact` deals the script alone, for the specs
+// about how many cards the table needs.
+function makeShoe(ranks: readonly Rank[], { exact = false } = {}): Shoe {
+  const padding = exact ? 0 : Math.max(0, minCardsForSpots(MAX_SHOWDOWN_SPOTS) - ranks.length);
+  const cards: Card[] = [...ranks, ...Array<Rank>(padding).fill('8')].map((rank) => ({
+    rank,
+    suit: 'spades' as Suit,
+  }));
   return new Shoe(cards, 1);
 }
 
@@ -198,11 +213,13 @@ describe('ShowdownComponent', () => {
   });
 
   it('disables a second hand and goes exhausted when the shoe is too low', () => {
-    // 5 cards: opening deal uses 4, leaving 1 (< MIN). Both pat at the deal.
-    const { c } = createShowdown(makeShoe(['10', '10', '9', '8', '2']));
+    // Exactly the single-box reserve: the opening deal uses 4, leaving 15 — short
+    // of another round's reserve. Both pat at the deal.
+    const ranks: Rank[] = ['10', '10', '9', '8', ...Array<Rank>(15).fill('8')];
+    const { c } = createShowdown(makeShoe(ranks, { exact: true }));
     c.onAction('S'); // dealer 18 stands, player 19 wins; no dealer draw.
     expect(c.phase()).toBe('resolved');
-    expect(c.remaining()).toBe(1);
+    expect(c.remaining()).toBe(15);
     expect(c.canDealAnother()).toBe(false);
     c.dealAnother();
     expect(c.phase()).toBe('exhausted');
@@ -214,31 +231,34 @@ describe('ShowdownComponent', () => {
   // over a tenth of a deck reads as +20 — and grades bets and index plays
   // against counts no casino ever deals.
   describe('the cut card', () => {
-    // 12 cards, cut after 6: the first round of four is short of it, the second
-    // crosses it. Both rounds are pat (player 19, dealer 18), so no draw moves
-    // the boundary.
+    // 48 cards, cut after 6 (48 × 0.13 = 6.24): the first round of four is short
+    // of it, the second crosses it. Both rounds are pat (player 19, dealer 18),
+    // so no draw moves the boundary, and the 40 cards behind them are well over
+    // a round's reserve — it is the cut card that stops the deal, not the count
+    // of cards.
     function cutAfterSixCards(): Shoe {
       const ranks: readonly Rank[] = ['10', '10', '9', '8', '10', '10', '9', '8'];
-      const cards: Card[] = [...ranks, '5', '5', '5', '5'].map((rank) => ({
+      const cards: Card[] = [...ranks, ...Array<Rank>(40).fill('5')].map((rank) => ({
         rank: rank as Rank,
         suit: 'spades' as Suit,
       }));
-      return new Shoe(cards, 0.5);
+      return new Shoe(cards, 0.13);
     }
 
     it('deals the round the cut card falls in, and no round after it', () => {
       const { fixture, c } = createShowdown(cutAfterSixCards());
       c.onAction('S');
-      expect(c.remaining()).toBe(8); // four dealt, cut card still in the shoe
+      expect(c.remaining()).toBe(44); // four dealt, cut card still in the shoe
       expect(c.cutCardOut()).toBe(false);
       expect(c.canDealAnother()).toBe(true);
 
       c.dealAnother();
       c.onAction('S');
 
-      // Eight dealt, past the cut: four cards remain, enough to deal — and a
+      // Eight dealt, past the cut: forty cards remain, enough to deal — and a
       // table would not.
-      expect(c.remaining()).toBe(4);
+      expect(c.remaining()).toBe(40);
+      expect(c.remaining()).toBeGreaterThanOrEqual(minCardsForSpots(1));
       expect(c.cutCardOut()).toBe(true);
       expect(c.canDealAnother()).toBe(false);
       fixture.detectChanges();
@@ -248,13 +268,12 @@ describe('ShowdownComponent', () => {
     });
 
     it('still finishes the hand it is in when the cut card surfaces', () => {
-      // 6 cards, cut after 3: the opening deal alone crosses it, and the hand
-      // still plays out — a dealer stops at the cut, never mid-round.
-      const cards: Card[] = (['9', '10', '7', '6', '10', '5'] as Rank[]).map((rank) => ({
-        rank,
-        suit: 'spades' as Suit,
-      }));
-      const { c } = createShowdown(new Shoe(cards, 0.5));
+      // A round's reserve of 19 cards, cut after 3 (19 × 0.16 = 3.04): the
+      // opening deal alone crosses it, and the hand still plays out — a dealer
+      // stops at the cut, never mid-round.
+      const ranks: Rank[] = ['9', '10', '7', '6', '10', ...Array<Rank>(14).fill('5')];
+      const cards: Card[] = ranks.map((rank) => ({ rank, suit: 'spades' as Suit }));
+      const { c } = createShowdown(new Shoe(cards, 0.16));
       expect(c.cutCardOut()).toBe(true);
 
       c.onAction('H'); // 16 + 10 = 26, bust: the draw is served
@@ -262,6 +281,111 @@ describe('ShowdownComponent', () => {
       expect(c.phase()).toBe('resolved');
       expect(c.settlement()!.outcome).toBe('lose');
       expect(c.canDealAnother()).toBe(false);
+    });
+  });
+
+  // A real dealer never starts a round the shoe cannot finish. The table used
+  // to deal on two cards a box plus two, so a one-deck shoe at 90% penetration
+  // could start a round it ran out of mid-hand — and then settled it anyway:
+  // a hit with no card stood the hand, a split hand was left on one card, and
+  // a dealer short of cards stood on 16 and paid the table.
+  describe('a shoe too short for a whole round', () => {
+    // Exactly the single-box reserve: player 2,2 vs dealer 10 with a 6 in the
+    // hole, then fifteen aces. The player can hit every one of them without
+    // busting (2+2+15 = 19), which leaves nothing for the dealer's 16.
+    const reserveOfAces = (): Rank[] => ['2', '10', '2', '6', ...Array<Rank>(15).fill('A')];
+
+    it('deals no round on fewer cards than the reserve', () => {
+      const short = createShowdown(makeShoe(reserveOfAces().slice(1), { exact: true })).c;
+      expect(short.phase()).toBe('exhausted');
+      expect(short.remaining()).toBe(18);
+
+      const enough = createShowdown(makeShoe(reserveOfAces(), { exact: true })).c;
+      expect(enough.phase()).toBe('player-turn');
+    });
+
+    it('voids the round when the dealer needs a card the shoe does not have', () => {
+      const { fixture, c } = createShowdown(
+        makeShoe(reserveOfAces(), { exact: true }),
+        'S17',
+        1,
+        true,
+      );
+      c.setBet(10);
+      c.dealAfterBet();
+      for (let i = 0; i < 15; i++) c.onAction('H');
+      expect(c.remaining()).toBe(0);
+      c.onAction('S');
+
+      // Nothing is settled against a dealer left standing on 16.
+      expect(c.phase()).toBe('resolved');
+      expect(c.roundVoid()).toBe(true);
+      expect(c.hands()[0].settlement).toBeNull();
+      expect(c.dealerCards().map((x) => x.rank)).toEqual(['10', '6']);
+      expect(c.stats.stats().hands).toBe(0);
+      expect(c.bankrollService.state()).toEqual({ bankroll: 500, wagered: 0, net: 0 });
+      expect(c.roundNet()).toBe(0);
+      fixture.detectChanges();
+      const text = fixture.nativeElement.textContent as string;
+      expect(text).toContain('The shoe ran out');
+      expect(text).toContain('No action');
+      expect(text).not.toContain('You win');
+    });
+
+    it('voids the round when a hit finds the shoe empty', () => {
+      const { c } = createShowdown(makeShoe(reserveOfAces(), { exact: true }));
+      for (let i = 0; i < 15; i++) c.onAction('H');
+      c.onAction('H'); // no card left to give
+
+      expect(c.phase()).toBe('resolved');
+      expect(c.roundVoid()).toBe(true);
+      expect(c.hands()[0].cards).toHaveLength(17);
+      expect(c.hands()[0].settlement).toBeNull();
+      expect(c.stats.stats().hands).toBe(0);
+    });
+
+    it('voids the round rather than play a split hand on one card', () => {
+      // 2,2 vs a pat 17. The split's first hand takes every card that is left
+      // (2 + fifteen aces = 17), so the second half has none to be dealt.
+      const ranks: Rank[] = ['2', '10', '2', '7', ...Array<Rank>(15).fill('A')];
+      const { c } = createShowdown(makeShoe(ranks, { exact: true }));
+      c.onAction('P');
+      for (let i = 0; i < 14; i++) c.onAction('H');
+      expect(c.remaining()).toBe(0);
+      c.onAction('S');
+
+      expect(c.phase()).toBe('resolved');
+      expect(c.roundVoid()).toBe(true);
+      expect(c.hands().map((h) => h.cards.length)).toEqual([16, 1]);
+      expect(c.hands().every((h) => h.settlement === null)).toBe(true);
+      expect(c.stats.stats().hands).toBe(0);
+    });
+
+    it('keeps what was settled before the shoe ran out, and voids the rest', () => {
+      // Exactly the two-box reserve. Box 1 [10,6] surrenders; box 2 [2,2]
+      // splits, stands its first half on A,2 and hits the second half through
+      // every ace left until it busts — and the dealer's 16 has nothing to draw.
+      const ranks: Rank[] = ['10', '2', '10', '6', '2', '6', ...Array<Rank>(21).fill('A')];
+      const { c } = createShowdown(makeShoe(ranks, { exact: true }), 'S17', 2, true);
+      c.setBet(10);
+      c.dealAfterBet();
+      c.onAction('SUR');
+      c.onAction('P');
+      c.onAction('S');
+      for (let i = 0; i < 19; i++) c.onAction('H');
+
+      expect(c.phase()).toBe('resolved');
+      expect(c.roundVoid()).toBe(true);
+      const [surrendered, stood, busted] = c.hands();
+      // The surrender owed the dealer nothing, and a bust loses whatever the
+      // dealer would have made: both stand.
+      expect(surrendered.settlement!.outcome).toBe('lose');
+      expect(busted.settlement!.outcome).toBe('lose');
+      // The hand waiting on the dealer is the one with no answer.
+      expect(stood.settlement).toBeNull();
+      expect(c.bankrollService.state()).toEqual({ bankroll: 485, wagered: 20, net: -15 });
+      expect(c.stats.stats()).toMatchObject({ hands: 2, losses: 2 });
+      expect(c.roundSummary()).toBe('2 lost, 1 no action');
     });
   });
 
@@ -314,7 +438,15 @@ describe('ShowdownComponent', () => {
     });
 
     it('withholds Double when the shoe has no card left to supply it', () => {
-      const { c } = createShowdown(makeShoe(['5', '10', '6', '8']));
+      // 2,2 split against a pat 17 on exactly the reserve. The first half takes
+      // fourteen aces (16), and the second half's 9 is the shoe's last card —
+      // an 11 that would double, with nothing left to double into.
+      const ranks: Rank[] = ['2', '10', '2', '7', ...Array<Rank>(14).fill('A'), '9'];
+      const { c } = createShowdown(makeShoe(ranks, { exact: true }));
+      c.onAction('P');
+      for (let i = 0; i < 13; i++) c.onAction('H');
+      c.onAction('S');
+      expect(c.playerCards().map((x) => x.rank)).toEqual(['2', '9']);
       expect(c.remaining()).toBe(0);
       expect(c.playerActions()).not.toContain('D');
     });
@@ -367,10 +499,11 @@ describe('ShowdownComponent', () => {
   // 1-chip minimum.
   describe('bet sizing', () => {
     it('opens on the bet and deals nothing until the bet is placed', () => {
-      const { c } = createShowdown(makeShoe(['9', '10', '7', '6']), 'S17', 1, true);
+      const shoe = makeShoe(['9', '10', '7', '6']);
+      const { c } = createShowdown(shoe, 'S17', 1, true);
       expect(c.phase()).toBe('betting');
       expect(c.hands().length).toBe(0);
-      expect(c.remaining()).toBe(4);
+      expect(c.remaining()).toBe(shoe.size);
       expect(c.bet()).toBe(1);
     });
 
@@ -1150,11 +1283,14 @@ describe('ShowdownComponent', () => {
     });
 
     it('requires enough cards for every box before offering another round', () => {
-      // 6 cards deal the opening round for two boxes; 0 remain afterwards.
-      const { c } = createShowdown(makeShoe(['10', '9', '10', '10', '6', '9']), 'S17', 2);
+      // Exactly the two-box reserve. The round takes 6 and leaves 21: more than
+      // one box needs, short of what two do.
+      const ranks: Rank[] = ['10', '9', '10', '10', '6', '9', ...Array<Rank>(21).fill('8')];
+      const { c } = createShowdown(makeShoe(ranks, { exact: true }), 'S17', 2);
       c.onAction('S');
       c.onAction('S');
-      expect(c.remaining()).toBe(0);
+      expect(c.remaining()).toBe(21);
+      expect(c.remaining()).toBeGreaterThanOrEqual(minCardsForSpots(1));
       expect(c.canDealAnother()).toBe(false);
     });
 
@@ -1318,7 +1454,7 @@ describe('ShowdownComponent', () => {
     // Pressing Deal into a shoe that cannot serve the round leaves the table on
     // 'exhausted' with nothing dealt. There was no round to bet into.
     it('says nothing when the shoe was too low to deal the round', () => {
-      const { c } = createShowdown(makeShoe(['9', '10', '7']), 'S17', 1, true);
+      const { c } = createShowdown(makeShoe(['9', '10', '7'], { exact: true }), 'S17', 1, true);
       c.setBet(1);
       c.dealAfterBet();
       expect(c.phase()).toBe('exhausted');

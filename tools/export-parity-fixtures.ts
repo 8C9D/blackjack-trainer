@@ -799,8 +799,8 @@ function exportShowdownVectors(): void {
     };
   });
 
-  // Box-count clamping and the opening-round card requirement, so the two
-  // implementations of the multi-box gate cannot drift.
+  // Box-count clamping and the cards a round needs in the shoe before it is
+  // dealt, so the two implementations of the multi-box gate cannot drift.
   const spotsCases = [-1, 0, 1, 2, 3, 4, 99].map((spots) => ({
     spots,
     clamped: clampSpots(spots),
@@ -878,8 +878,8 @@ function exportShowdownVectors(): void {
     description:
       'Pure dealer-play and settlement cases: dealerShouldHit (H17/S17 soft-17), ' +
       'playDealerHand draw loops, settle() outcomes (3:2 naturals, bust ' +
-      'ordering, totals, pushes), the multi-box spot clamp / opening-round ' +
-      'card requirement, and the betting math (payouts, bet clamping, ' +
+      'ordering, totals, pushes), the multi-box spot clamp / per-round ' +
+      'card reserve, and the betting math (payouts, bet clamping, ' +
       'insurance, and surrender). Suits are arbitrary.',
     dealerShouldHitCases,
     playCases,

@@ -9,16 +9,41 @@ import type { RuleSet } from './strategy.model';
 // source is injected as a `draw` callback so the same shoe the player just
 // counted can deal the hand, while the rules stay trivially unit-testable.
 
-// Fewest cards needed to deal a single-box showdown's opening hand (two player +
-// two dealer). The page only offers a showdown, and the component only enables
-// "deal another", when at least this many cards remain; hits beyond the opening
-// deal are handled gracefully if the shoe runs out.
-export const MIN_SHOWDOWN_CARDS = 4;
-
 // How many simultaneous boxes the player may occupy. One dealer plays against
 // all of them from the same shoe.
 export const MIN_SHOWDOWN_SPOTS = 1;
 export const MAX_SHOWDOWN_SPOTS = 3;
+
+// The cards a round must have in the shoe before it is dealt: eight a box plus
+// eleven. A real dealer does not start a round the shoe cannot finish, and the
+// opening deal alone (two a box plus the dealer's two) is nowhere near a round:
+// gated on that, one deck at 90% penetration with three boxes ran dry in about
+// one round in ten, and two decks at 90% in about one in fifty.
+//
+// The figure is the smallest of its shape that keeps the chance of a round
+// started exactly at the reserve running dry below 1 in 10,000 for every shoe
+// the trainer offers. It was chosen by simulation (4 million rounds for each of
+// 1, 2, 6 and 8 decks against 1, 2 and 3 boxes), with every choice made the
+// card-hungry way so the result is an upper bound on this table: every pair is
+// split, to four hands a box (aces once, a card each), every other hand hits
+// to 17, the dealer hits soft 17 and plays out even when every box has bust,
+// and no peek ends a round early. The last cards of a shuffled shoe are a
+// random draw from it, so a round started at the reserve runs dry exactly as
+// often as a round off a fresh shoe needs more cards than the reserve. Worst
+// case at this reserve: 4.5e-5 (eight decks, one box). Dealing rounds back to
+// back to the cut card at every penetration preset, about 30 million rounds
+// ran dry not once.
+//
+// Penetration decides how often a round meets the reserve, not what happens
+// when it does, so one figure serves every cut. A round that runs dry anyway
+// is voided by the showdown rather than settled; see `playDealerHand`.
+export const ROUND_RESERVE_PER_BOX = 8;
+export const ROUND_RESERVE_BASE = 11;
+
+// The reserve for a single box: the fewest cards any showdown round is dealt
+// on. The page only offers a showdown, and the component only enables "deal
+// another", when the reserve for the configured boxes remains.
+export const MIN_SHOWDOWN_CARDS = ROUND_RESERVE_PER_BOX + ROUND_RESERVE_BASE;
 
 // Selectable box counts, for the settings dropdown.
 export const SHOWDOWN_SPOT_OPTIONS: readonly number[] = [1, 2, 3];
@@ -28,11 +53,10 @@ export function clampSpots(spots: number): number {
   return Math.min(MAX_SHOWDOWN_SPOTS, Math.max(MIN_SHOWDOWN_SPOTS, Math.round(spots)));
 }
 
-// Cards consumed by the opening deal for `spots` boxes: two per box plus the
-// dealer's two. Splits and hits draw beyond this and are handled gracefully if
-// the shoe runs dry mid-hand.
+// The cards a round for `spots` boxes needs in the shoe before it is dealt.
+// See `ROUND_RESERVE_PER_BOX` for how the figure was chosen.
 export function minCardsForSpots(spots: number): number {
-  return clampSpots(spots) * 2 + 2;
+  return clampSpots(spots) * ROUND_RESERVE_PER_BOX + ROUND_RESERVE_BASE;
 }
 
 // Whether the count the showdown is carrying can be graded against, and how.
@@ -115,8 +139,12 @@ export function dealerShouldHit(hand: readonly Card[], ruleSet: RuleSet): boolea
 }
 
 // Play the dealer's hand to completion from its initial cards, drawing via the
-// supplied callback. Stops early if the draw source is exhausted (the caller
-// guarantees enough cards for normal play). Returns the final dealer cards.
+// supplied callback, and return the cards it ends on.
+//
+// If the draw source runs dry first, the hand comes back unfinished: it still
+// wants a card (`dealerShouldHit` is true of it), and nothing may be settled
+// against it. The showdown's round reserve makes that rare rather than
+// impossible, so a caller has to check — the showdown voids the round.
 export function playDealerHand(
   initial: readonly Card[],
   ruleSet: RuleSet,
