@@ -213,6 +213,12 @@ export interface BetSpreadDrillResult {
   // The ramp the round was graded against, kept on the result so the feedback
   // can show the whole spread without re-reading prefs.
   readonly ramp: BetRamp;
+  // The bet is for the next hand. When this round brought out the cut card,
+  // that hand comes off a freshly shuffled shoe, so the bet is graded at a
+  // fresh shoe's true count rather than this round's — and the feedback has to
+  // name the count it actually used.
+  readonly freshShoe: boolean;
+  readonly betTrueCount: number;
   readonly correctUnits: number;
   readonly userUnits: number;
   readonly betCorrect: boolean;

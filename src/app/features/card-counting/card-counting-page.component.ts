@@ -178,6 +178,14 @@ type DrillState =
           }
 
           @if (state() === 'betting') {
+            <!-- The stream never shows the cut card, so the bet question has to:
+                 the hand this bet is for is not dealt off the shoe just counted. -->
+            @if (betIsForFreshShoe()) {
+              <p class="count__fresh-shoe" role="status">
+                The cut card came out during this round, so the hand you are betting on is the first
+                off a freshly shuffled shoe.
+              </p>
+            }
             <app-count-answer-form question="bet" (answer)="onBet($event)" />
           }
 
@@ -675,6 +683,7 @@ export class CardCountingPageComponent {
       this.system(),
       s.betRamp,
       live ? this.shoeRunningCount() : 0,
+      { freshShoe: this.betIsForFreshShoe() },
     );
     const estimate = live ? this.deckEstimate() : null;
     const withinBand = estimate !== null && this.engine.scoreDeckEstimate(estimate, decks);
@@ -694,6 +703,14 @@ export class CardCountingPageComponent {
       this.shoeRunningCount.set(evaluated.correctRunningCount);
     }
     this.state.set('feedback');
+  }
+
+  // Whether the bet being asked for is for a hand off a fresh shoe: the round
+  // just counted brought out the cut card, so it was this shoe's last and the
+  // next hand comes after a reshuffle. Only a live shoe has a cut card. (A
+  // method, not a computed: `shoe` is mutated in place.)
+  protected betIsForFreshShoe(): boolean {
+    return this.liveShoeBetSpread() && this.shoe !== null && this.shoe.needsReshuffle;
   }
 
   // Grade a live-shoe true-count answer against the shoe's actual decks

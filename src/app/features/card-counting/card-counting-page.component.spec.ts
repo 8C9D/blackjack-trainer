@@ -7,13 +7,15 @@ import type {
   CountingDrillSettings,
 } from '../../core/models/card-counting.model';
 import type { CountingSystem } from '../../core/models/counting-system.model';
-import { Shoe } from '../../core/models/shoe.model';
+import { betUnitsForTrueCount } from '../../core/models/bet-ramp.model';
+import { Shoe, buildShoeCards } from '../../core/models/shoe.model';
 import { HI_LO } from '../../data/counting-systems';
 import { CountDriftService } from '../../core/services/count-drift.service';
 import { CountingEngineService } from '../../core/services/counting-engine.service';
 import { FlowPrefsService, type CountingPrefs } from '../../core/services/flow-prefs.service';
 import { PracticeHistoryService } from '../../core/services/practice-history.service';
 import { RANDOM_SOURCE, mulberry32 } from '../../core/services/random-source';
+import { ShoeService } from '../../core/services/shoe.service';
 import { CardCountingPageComponent } from './card-counting-page.component';
 
 // The page component exposes its signals and methods as `protected` for
@@ -1404,6 +1406,82 @@ describe('CardCountingPageComponent', () => {
       expect(c.showdownAvailable()).toBe(true);
       fixture.detectChanges();
       expect(fixture.nativeElement.querySelector('.count__showdown-button')).not.toBeNull();
+    });
+
+    // The round that brings out the cut card is the shoe's last, so the hand the
+    // bet is for comes off a freshly shuffled shoe. The stream never shows the
+    // cut card, so the bet question has to — and grading the bet at this shoe's
+    // true count, divided by a sliver of a deck, would score a bet for a hand
+    // no table deals. The showdown settled the same question in f0d9c33.
+    describe('a round that brings out the cut card', () => {
+      // One deck, cut at half. The round deals 30 cards: every 2-6 (+20 in
+      // Hi-Lo) and ten of the 7-9s, leaving 22 cards — a true count of +47
+      // that the bet used to be graded at.
+      function scriptedOneDeck(): Card[] {
+        const deck = buildShoeCards(1);
+        const low = deck.filter((x) => ['2', '3', '4', '5', '6'].includes(x.rank));
+        const mid = deck.filter((x) => ['7', '8', '9'].includes(x.rank));
+        const high = deck.filter((x) => ['10', 'J', 'Q', 'K', 'A'].includes(x.rank));
+        return [...low, ...mid, ...high];
+      }
+
+      function toBetQuestion() {
+        TestBed.overrideProvider(ShoeService, {
+          useValue: { create: (_: number, pen: number) => new Shoe(scriptedOneDeck(), pen) },
+        });
+        configureBetSpread();
+        updateSetting('numberOfDecks', 1);
+        updateSetting('penetration', 0.5);
+        updateSetting('numberOfCards', 30);
+        const page = createPage();
+        page.c.start();
+        streamToEnd(page.c);
+        page.c.onEstimate(0.5);
+        page.c.onAnswer(47);
+        return page;
+      }
+
+      it('says so on the bet question', () => {
+        const { fixture, c } = toBetQuestion();
+        expect(c.state()).toBe('betting');
+        expect(c.shoe!.needsReshuffle).toBe(true);
+        fixture.detectChanges();
+        const notice = fixture.nativeElement.querySelector('.count__fresh-shoe') as HTMLElement;
+        expect(notice.textContent).toContain('The cut card came out');
+        expect(notice.textContent).toContain('fresh');
+      });
+
+      it('grades the bet at a fresh shoe, and the count exactly as before', () => {
+        const { c } = toBetQuestion();
+        const ramp = c.settings().betRamp;
+        c.onBet(betUnitsForTrueCount(0, ramp));
+        const r = c.result();
+        if (!r || r.mode !== 'bet-spread') throw new Error('expected a bet-spread result');
+        expect(r.correctTrueCount).toBe(47);
+        expect(r.countCorrect).toBe(true);
+        expect(r.freshShoe).toBe(true);
+        expect(r.betTrueCount).toBe(0);
+        expect(r.correctUnits).toBe(betUnitsForTrueCount(0, ramp));
+        expect(r.betCorrect).toBe(true);
+        expect(r.isCorrect).toBe(true);
+      });
+
+      it('says nothing of a fresh shoe while the cut card is still in', () => {
+        configureBetSpread();
+        const { fixture, c } = createPage();
+        c.start();
+        streamToEnd(c);
+        c.onEstimate(5);
+        c.onAnswer(0);
+        fixture.detectChanges();
+        expect(c.state()).toBe('betting');
+        expect(fixture.nativeElement.querySelector('.count__fresh-shoe')).toBeNull();
+        c.onBet(1);
+        const r = c.result();
+        if (!r || r.mode !== 'bet-spread') throw new Error('expected a bet-spread result');
+        expect(r.freshShoe).toBe(false);
+        expect(r.betTrueCount).toBe(r.correctTrueCount);
+      });
     });
 
     it('ignores a bet outside the betting state', () => {

@@ -103,6 +103,7 @@ export class CountingEngineService {
     system: CountingSystem,
     ramp: BetRamp,
     priorRunningCount = 0,
+    { freshShoe = false }: { freshShoe?: boolean } = {},
   ): BetSpreadDrillResult {
     const counted = this.evaluateTrueCount(
       cards,
@@ -111,13 +112,21 @@ export class CountingEngineService {
       system,
       priorRunningCount,
     );
-    const correctUnits = betUnitsForTrueCount(counted.correctTrueCount, ramp);
+    // The bet is for the next hand. A round that brought out the cut card was
+    // its shoe's last, so that hand is the first off a freshly shuffled shoe —
+    // where a balanced count, the only kind this drill runs, stands at 0. This
+    // round's true count is the wrong one to bet on, and near the cut card it is
+    // a count divided by a sliver of a deck.
+    const betTrueCount = freshShoe ? 0 : counted.correctTrueCount;
+    const correctUnits = betUnitsForTrueCount(betTrueCount, ramp);
     const betCorrect = userUnits === correctUnits;
     return {
       ...counted,
       mode: 'bet-spread',
       countCorrect: counted.isCorrect,
       ramp,
+      freshShoe,
+      betTrueCount,
       correctUnits,
       userUnits,
       betCorrect,

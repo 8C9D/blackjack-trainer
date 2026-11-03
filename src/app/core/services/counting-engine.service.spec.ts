@@ -1,5 +1,5 @@
 import type { Card, Rank, Suit } from '../models/card.model';
-import { DEFAULT_BET_RAMP } from '../models/bet-ramp.model';
+import { DEFAULT_BET_RAMP, betUnitsForTrueCount } from '../models/bet-ramp.model';
 import { MAX_CARDS_PER_DRILL, type CountingDrillSettings } from '../models/card-counting.model';
 import type { CountingSystem } from '../models/counting-system.model';
 import { HI_LO, KO, OMEGA_II, WONG_HALVES } from '../../data/counting-systems';
@@ -511,6 +511,30 @@ describe('CountingEngineService', () => {
       const flat = [1, 1, 1, 1, 1];
       const result = engine.evaluateBetSpread(round, 5, 1, 1, HI_LO, flat);
       expect(result.correctUnits).toBe(1);
+      expect(result.isCorrect).toBe(true);
+    });
+
+    it('names the true count the bet was graded at: the round’s own', () => {
+      const result = engine.evaluateBetSpread(round, 5, 12, 1, HI_LO, DEFAULT_BET_RAMP);
+      expect(result.freshShoe).toBe(false);
+      expect(result.betTrueCount).toBe(result.correctTrueCount);
+    });
+
+    // A round that brings out the cut card is the shoe's last. The hand its bet
+    // is for comes off a freshly shuffled shoe, so grading it at this shoe's
+    // true count — +5 over a quarter deck reads +20 — marks a correct bet wrong.
+    it('grades a bet for a hand off a fresh shoe at a fresh shoe’s count', () => {
+      const result = engine.evaluateBetSpread(round, 20, 1, 0.25, HI_LO, DEFAULT_BET_RAMP, 0, {
+        freshShoe: true,
+      });
+      // The count question is graded exactly as before.
+      expect(result.correctTrueCount).toBe(20);
+      expect(result.countCorrect).toBe(true);
+      // The bet is graded at a balanced count's fresh-shoe true count.
+      expect(result.freshShoe).toBe(true);
+      expect(result.betTrueCount).toBe(0);
+      expect(result.correctUnits).toBe(betUnitsForTrueCount(0, DEFAULT_BET_RAMP));
+      expect(result.betCorrect).toBe(true);
       expect(result.isCorrect).toBe(true);
     });
   });

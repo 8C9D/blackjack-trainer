@@ -78,6 +78,8 @@ function makeBetSpreadResult(overrides: Partial<BetSpreadDrillResult> = {}): Bet
     countCorrect: true,
     priorRunningCount: 1,
     ramp: DEFAULT_BET_RAMP,
+    betTrueCount: 3,
+    freshShoe: false,
     correctUnits: 4,
     userUnits: 4,
     betCorrect: true,
@@ -515,6 +517,49 @@ describe('CountFeedbackPanelComponent', () => {
       const text = (fixture.nativeElement.textContent ?? '').replace(/\s+/g, ' ');
       expect(text).toContain('Your estimate: 6 ÷ 3 decks = true count 2');
       expect(text).toContain('Your spread bets 2 units there, not 4 units.');
+    });
+
+    // The round that brought out the cut card: +6 over a quarter deck is true
+    // count +24, but the bet was for the first hand of a fresh shoe.
+    describe('when the bet was for a hand off a fresh shoe', () => {
+      const freshShoeRound = (overrides: Partial<BetSpreadDrillResult> = {}) =>
+        makeBetSpreadResult({
+          correctRunningCount: 6,
+          decksRemaining: 0.25,
+          correctTrueCount: 24,
+          userTrueCount: 24,
+          betTrueCount: 0,
+          freshShoe: true,
+          correctUnits: 1,
+          userUnits: 1,
+          ...overrides,
+        });
+
+      it('names the true count the bet was graded at, and why', () => {
+        const fixture = createPanel(freshShoeRound());
+        const text = (fixture.nativeElement.textContent ?? '').replace(/\s+/g, ' ');
+        expect(text).toContain('= true count 24.');
+        expect(text).toContain('The cut card came out this round');
+        expect(text).toContain('fresh shoe');
+        expect(text).toContain('true count 0, the TC ≤ +1 band of your spread');
+        expect(text).not.toContain('true count 24, which is the');
+      });
+
+      it('marks the fresh shoe’s band on the spread, not this shoe’s', () => {
+        const fixture = createPanel(freshShoeRound());
+        const active = (
+          Array.from(fixture.nativeElement.querySelectorAll('.feedback__band')) as HTMLElement[]
+        ).filter((b) => b.classList.contains('feedback__band--active'));
+        expect(active).toHaveLength(1);
+        expect(active[0].textContent).toContain('TC ≤ +1');
+      });
+
+      it('prices no estimate in units, since the estimate did not move this bet', () => {
+        const fixture = createPanel(
+          freshShoeRound({ deckEstimate: 0.5, deckEstimateWithinBand: true, userTrueCount: 12 }),
+        );
+        expect(fixture.nativeElement.textContent).not.toContain('Your spread bets');
+      });
     });
 
     it('prices nothing when the moved count still bets the same units', () => {

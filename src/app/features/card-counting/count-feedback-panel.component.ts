@@ -147,12 +147,28 @@ interface RampBand {
           <dt>Your spread says</dt>
           <dd>{{ units(bs.correctUnits) }}</dd>
         </dl>
-        <p class="feedback__formula">
-          Running count {{ bs.correctRunningCount }} ÷
-          {{ countOf(bs.decksRemaining, 'deck', formatDecks(bs.decksRemaining)) }} = true count
-          {{ bs.correctTrueCount }}, which is the {{ rampBandLabel(bs.correctTrueCount) }} band of
-          your spread.
-        </p>
+        @if (bs.freshShoe) {
+          <!-- The bet is for the next hand, and this round brought out the cut
+               card: that hand is off a fresh shoe, so the band named is the
+               one the bet was actually graded at. -->
+          <p class="feedback__formula">
+            Running count {{ bs.correctRunningCount }} ÷
+            {{ countOf(bs.decksRemaining, 'deck', formatDecks(bs.decksRemaining)) }} = true count
+            {{ bs.correctTrueCount }}.
+          </p>
+          <p class="feedback__formula">
+            The cut card came out this round, so the bet was for the first hand of a fresh shoe:
+            true count {{ formatSigned(bs.betTrueCount) }}, the
+            {{ rampBandLabel(bs.betTrueCount) }} band of your spread.
+          </p>
+        } @else {
+          <p class="feedback__formula">
+            Running count {{ bs.correctRunningCount }} ÷
+            {{ countOf(bs.decksRemaining, 'deck', formatDecks(bs.decksRemaining)) }} = true count
+            {{ bs.correctTrueCount }}, which is the {{ rampBandLabel(bs.correctTrueCount) }} band of
+            your spread.
+          </p>
+        }
         @if (estimateEffect(); as est) {
           <p class="feedback__formula">
             {{ estimateLine(bs.correctRunningCount, est) }}
@@ -303,12 +319,14 @@ export class CountFeedbackPanelComponent {
     );
   });
 
-  // The whole spread, with the band this round landed in marked — the feedback
-  // shows the table so a missed bet reads as "that count was this band".
+  // The whole spread, with the band the bet was graded in marked — the feedback
+  // shows the table so a missed bet reads as "that count was this band". That
+  // is this round's true count, except when the bet was for a hand off a fresh
+  // shoe.
   protected readonly rampBands = computed<readonly RampBand[]>(() => {
     const bs = this.betSpreadResult();
     if (!bs) return [];
-    const active = betRampBandIndex(bs.correctTrueCount);
+    const active = betRampBandIndex(bs.betTrueCount);
     return bs.ramp.map((units, index) => ({
       label: BET_RAMP_BAND_LABELS[index],
       units,
@@ -395,12 +413,13 @@ export class CountFeedbackPanelComponent {
 
   // What that count would have bet, when the ramp says something different
   // there. Null when both land in bands holding the same units, since then the
-  // estimate cost no bet even though it moved the count.
+  // estimate cost no bet even though it moved the count — and null when the bet
+  // was for a hand off a fresh shoe, which no estimate of this one could move.
   protected estimateBetLine(
     result: BetSpreadDrillResult,
     effect: DeckEstimateEffect,
   ): string | null {
-    if (effect.matchesActual) return null;
+    if (effect.matchesActual || result.freshShoe) return null;
     const implied = betUnitsForTrueCount(effect.impliedTrueCount, result.ramp);
     if (implied === result.correctUnits) return null;
     return `Your spread bets ${this.units(implied)} there, not ${this.units(result.correctUnits)}.`;

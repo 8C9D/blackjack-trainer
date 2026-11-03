@@ -119,7 +119,11 @@
     }
   }
 
-  &__reshuffle {
+  // The reshuffle notice, and the bet question's word that the hand it is for
+  // comes off a fresh shoe: both are things the player must read before
+  // answering.
+  &__reshuffle,
+  &__fresh-shoe {
     margin: 0 0 1rem;
     padding: 0.5rem 0.85rem;
     text-align: center;
