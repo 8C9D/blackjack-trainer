@@ -13,6 +13,7 @@ import { CountDriftService } from '../../core/services/count-drift.service';
 import { CountingEngineService } from '../../core/services/counting-engine.service';
 import { FlowPrefsService, type CountingPrefs } from '../../core/services/flow-prefs.service';
 import { PracticeHistoryService } from '../../core/services/practice-history.service';
+import { RANDOM_SOURCE, mulberry32 } from '../../core/services/random-source';
 import { CardCountingPageComponent } from './card-counting-page.component';
 
 // The page component exposes its signals and methods as `protected` for
@@ -417,6 +418,45 @@ describe('CardCountingPageComponent', () => {
       const { c } = createPage();
       expect(c.settings().mode).toBe('running-count');
       expect(c.fractionalAnswers()).toBe(true);
+    });
+
+    it('allows fractional answers for Wong Halves in deck-speed mode', () => {
+      // The 51 cards left after a burn sum to the full-deck constant less the
+      // burned card's tag, and a half-point tag leaves a half: the answer the
+      // drill grades correct has to be one the form will take.
+      updateSetting('systemId', 'wong-halves');
+      updateSetting('mode', 'deck-speed');
+      const { c } = createPage();
+      expect(c.fractionalAnswers()).toBe(true);
+    });
+
+    it('lets a deck-speed round with a half-point burn card be answered right', () => {
+      TestBed.overrideProvider(RANDOM_SOURCE, { useValue: mulberry32(1) });
+      updateSetting('systemId', 'wong-halves');
+      updateSetting('mode', 'deck-speed');
+      const { fixture, c } = createPage();
+      const engine = new CountingEngineService();
+      // Deal until the burned card leaves a half: 16 of Wong Halves' 52 tags do.
+      let correct = 0;
+      for (let round = 0; round < 40; round++) {
+        c.start();
+        while (c.state() === 'flipping') c.flipNext();
+        correct = engine.runningCount([...c.cards()], c.system());
+        if (!Number.isInteger(correct)) break;
+        c.onAnswer(correct);
+      }
+      expect(Number.isInteger(correct)).toBe(false);
+      fixture.detectChanges();
+      const input = fixture.nativeElement.querySelector('app-count-answer-form input');
+      input.value = String(correct);
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      const submit = fixture.nativeElement.querySelector('app-count-answer-form button');
+      expect(submit.disabled).toBe(false);
+      submit.click();
+      const r = c.result();
+      expect(r?.mode).toBe('deck-speed');
+      expect(r?.isCorrect).toBe(true);
     });
 
     it('does not allow fractional answers for Wong Halves in true-count mode', () => {

@@ -12,6 +12,7 @@ import { Router, RouterLink } from '@angular/router';
 import { shouldIgnoreKeyboardEvent } from '../../core/keyboard';
 import type { Card } from '../../core/models/card.model';
 import {
+  asksTrueCount,
   DRILL_MODE_LABELS,
   formatSignedCount,
   type CountingDrillResult,
@@ -318,10 +319,12 @@ export class CardCountingPageComponent {
   protected readonly goalMet = computed(() => this.handsToday() >= this.prefs.prefs().dailyGoal);
 
   // Fractional systems (Wong Halves) produce half-point running counts, so
-  // the answer form must accept decimal input. True counts are always whole
-  // numbers (Math.trunc), so this only applies in running-count mode.
+  // the answer form must accept decimal input wherever the answer is a running
+  // count: the running-count drill, deck speed (the 51 cards left after a
+  // half-point burn card sum to a half), and key count. True counts are always
+  // whole numbers (Math.trunc), so the two modes that ask one stay integer.
   protected readonly fractionalAnswers = computed(
-    () => this.settings().mode === 'running-count' && this.engine.isFractionalSystem(this.system()),
+    () => !asksTrueCount(this.settings().mode) && this.engine.isFractionalSystem(this.system()),
   );
 
   // True when the drill is a balanced-system true-count drill reading a live,
