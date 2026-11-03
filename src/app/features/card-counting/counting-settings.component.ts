@@ -16,6 +16,7 @@ import {
   type TrueCountSource,
 } from '../../core/models/card-counting.model';
 import { metricsParts, type CountingSystem } from '../../core/models/counting-system.model';
+import { chartDeckNote } from '../../core/models/shoe.model';
 import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.model';
 
 @Component({
@@ -159,6 +160,10 @@ import { SHOWDOWN_SPOT_OPTIONS, clampSpots } from '../../core/models/showdown.mo
           </label>
         }
       </div>
+      <!-- Said where the shoe size is chosen, so the choice is made knowing it. -->
+      @if (usesLiveShoe() && deckNote(); as note) {
+        <p class="settings__note settings__deck-note">{{ note }}</p>
+      }
       @if (mode() === 'bet-spread') {
         <div class="settings__ramp" role="group" aria-label="Bet spread">
           <p class="settings__note">
@@ -320,6 +325,15 @@ export class CountingSettingsComponent {
   }
   protected readonly minUnits = MIN_BET_UNITS;
   protected readonly maxUnits = MAX_BET_UNITS;
+
+  // What a one- or two-deck shoe does to the showdown that is dealt from it,
+  // or null for the shoe sizes the charts are written for.
+  protected readonly deckNote = computed(() => {
+    const note = chartDeckNote(this.numberOfDecks());
+    return note === null
+      ? null
+      : `${note} The showdown after a count grades its hands against them.`;
+  });
 
   protected readonly rampBands = computed(() =>
     this.betRamp().map((units, index) => ({

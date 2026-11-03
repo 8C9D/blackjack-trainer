@@ -308,6 +308,28 @@ describe('CountingSettingsComponent', () => {
       expect(received).toBe(8);
     });
 
+    // The shoe size is chosen here, before any hand is graded against charts
+    // written for four to eight decks.
+    it('says what one or two decks do to the showdown’s grading', () => {
+      const one = createSettings({ mode: 'true-count', numberOfDecks: 1 });
+      const oneNote = one.nativeElement.querySelector('.settings__deck-note') as HTMLElement;
+      expect(oneNote.textContent).toContain('four to eight decks');
+      expect(oneNote.textContent).toContain('9 vs 2 and A,2 vs 4 double');
+      expect(oneNote.textContent).toContain('showdown');
+
+      const two = createSettings({ mode: 'true-count', numberOfDecks: 2 });
+      expect(two.nativeElement.querySelector('.settings__deck-note').textContent).toContain(
+        '9 vs 2 doubles',
+      );
+    });
+
+    it('says nothing about shoe sizes the charts are written for', () => {
+      for (const numberOfDecks of [6, 8]) {
+        const fixture = createSettings({ mode: 'true-count', numberOfDecks });
+        expect(fixture.nativeElement.querySelector('.settings__deck-note')).toBeNull();
+      }
+    });
+
     it('renders penetration options as percentages', () => {
       const fixture = createSettings({ mode: 'true-count', trueCountSource: 'live-shoe' });
       const options = Array.from(

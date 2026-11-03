@@ -37,7 +37,7 @@ import { cardHighValue, isAce, type Card } from '../../core/models/card.model';
 import { cardCountValue, type CountingSystem } from '../../core/models/counting-system.model';
 import { deviationIndexNote } from '../../core/models/deviation.model';
 import { handTotal, isBlackjack, isBust } from '../../core/models/hand.model';
-import { Shoe } from '../../core/models/shoe.model';
+import { chartDeckNote, DEFAULT_NUMBER_OF_DECKS, Shoe } from '../../core/models/shoe.model';
 import {
   clampSpots,
   countBasisFor,
@@ -182,6 +182,12 @@ interface PlayVerdict {
            same advisory the Deviations drill, the chart and Settings carry. -->
       @if (indexNote(); as note) {
         <p class="showdown__index-note">{{ note }}</p>
+      }
+
+      <!-- The same honesty about the shoe: one and two decks are dealt here,
+           and graded against charts written for four to eight. -->
+      @if (deckNote(); as note) {
+        <p class="showdown__deck-note">{{ note }}</p>
       }
 
       @if (betting()) {
@@ -508,6 +514,9 @@ export class ShowdownComponent implements OnInit {
   // The persistent shoe the player just counted; the showdown deals from it so
   // its depletion carries back to the counting drill.
   readonly shoe = input.required<Shoe>();
+  // How many decks that shoe was built from. The charts every play here is
+  // graded against are written for four to eight.
+  readonly decks = input(DEFAULT_NUMBER_OF_DECKS);
   readonly ruleSet = input.required<RuleSet>();
   // Player-action availability follows the same DAS / LS table rules as the
   // strategy trainers. Initial-hand doubling and splitting remain available;
@@ -575,6 +584,16 @@ export class ShowdownComponent implements OnInit {
         ? ` Hands here are graded on basic strategy, and the insurance call against ${this.system().name}'s own running-count trigger.`
         : ' Hands here are graded on basic strategy alone, and the insurance call is left ungraded.';
     return note + graded;
+  });
+
+  // What this table cannot say about a one- or two-deck shoe. Every play is
+  // graded against the four-to-eight-deck charts — the index plays and the
+  // misplay costs too — and the app has no chart of its own for fewer decks,
+  // so the honest thing is to say so once, before the first hand.
+  protected readonly deckNote = computed(() => {
+    const note = chartDeckNote(this.decks());
+    if (note === null) return null;
+    return `${note} Every play here, index plays and misplay costs included, is graded against those charts, so a play that is right for this shoe can be marked wrong.`;
   });
 
   // The true count the bet is graded on — this system's own, not Hi-Lo's.

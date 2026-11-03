@@ -1670,6 +1670,33 @@ describe('ShowdownComponent', () => {
     });
   });
 
+  // The plays, the indices and the mistake costs are all four-to-eight-deck
+  // numbers, and the live shoe also deals one and two decks.
+  describe('the size of the shoe', () => {
+    function atDecks(decks: number) {
+      const created = createShowdown(makeShoe(['9', '10', '7', '6']));
+      created.fixture.componentRef.setInput('decks', decks);
+      created.fixture.detectChanges();
+      return created.fixture.nativeElement.querySelector('.showdown__deck-note') as HTMLElement;
+    }
+
+    it('says a one-deck shoe is graded against the multi-deck charts', () => {
+      const note = atDecks(1);
+      expect(note.textContent).toContain('four to eight decks');
+      expect(note.textContent).toContain('9 vs 2 and A,2 vs 4 double');
+      expect(note.textContent).toContain('misplay costs');
+    });
+
+    it('names the hand that differs at two decks', () => {
+      expect(atDecks(2).textContent).toContain('9 vs 2 doubles');
+    });
+
+    it('says nothing at the deck counts the charts are written for', () => {
+      expect(atDecks(6)).toBeNull();
+      expect(atDecks(8)).toBeNull();
+    });
+  });
+
   describe('grading the play against basic strategy', () => {
     // A dealt round with chips on, for the cases where the bankroll is what
     // withholds an action.

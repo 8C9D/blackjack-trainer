@@ -1,6 +1,12 @@
 import type { Card, Rank } from './card.model';
 import { ALL_RANKS, ALL_SUITS } from './card.model';
-import { CARDS_PER_DECK, Shoe, buildShoeCards } from './shoe.model';
+import {
+  CARDS_PER_DECK,
+  SHOE_DECK_OPTIONS,
+  Shoe,
+  buildShoeCards,
+  chartDeckNote,
+} from './shoe.model';
 
 // Stable key for comparing card multisets regardless of order.
 const key = (c: Card): string => `${c.rank}-${c.suit}`;
@@ -135,5 +141,33 @@ describe('Shoe', () => {
     // CARDS_PER_DECK is a sanity anchor for the deck math used above.
     expect(CARDS_PER_DECK).toBe(52);
     expect(sortedKeys(cards)).toEqual(before);
+  });
+});
+
+// The live shoe offers one and two decks, and every chart the app grades
+// against is written for four to eight. Said on the surface, not hidden.
+describe('chartDeckNote', () => {
+  it('says nothing about a shoe the charts are written for', () => {
+    expect(chartDeckNote(6)).toBeNull();
+    expect(chartDeckNote(8)).toBeNull();
+  });
+
+  it('names a hand that plays differently at one deck', () => {
+    const note = chartDeckNote(1)!;
+    expect(note).toContain('four to eight decks');
+    expect(note).toContain('one deck');
+    expect(note).toContain('9 vs 2 and A,2 vs 4 double');
+  });
+
+  it('names one at two decks', () => {
+    const note = chartDeckNote(2)!;
+    expect(note).toContain('two decks');
+    expect(note).toContain('9 vs 2 doubles');
+  });
+
+  it('has something to say about every shoe size offered below four decks', () => {
+    for (const decks of SHOE_DECK_OPTIONS) {
+      expect(chartDeckNote(decks) === null).toBe(decks >= 4);
+    }
   });
 });

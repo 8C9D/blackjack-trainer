@@ -901,6 +901,16 @@ describe('CardCountingPageComponent', () => {
       expect(c.shoe!.cardsRemaining).toBe(before - 4);
     });
 
+    it('tells the showdown how many decks its shoe holds', () => {
+      configureLiveShoe({ numberOfDecks: 1, numberOfCards: 3 });
+      const { fixture, c } = createPage();
+      toLiveShoeFeedback(c);
+      c.enterShowdown();
+      fixture.detectChanges();
+      const note = fixture.nativeElement.querySelector('.showdown__deck-note') as HTMLElement;
+      expect(note.textContent).toContain('one deck');
+    });
+
     it('exitShowdown returns to the count feedback', () => {
       configureLiveShoe({ numberOfDecks: 6, numberOfCards: 10 });
       const { c } = createPage();

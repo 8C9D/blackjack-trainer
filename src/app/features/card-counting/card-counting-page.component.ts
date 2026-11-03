@@ -223,6 +223,7 @@ type DrillState =
           @if (state() === 'showdown') {
             <app-showdown
               [shoe]="shoe!"
+              [decks]="settings().numberOfDecks"
               [ruleSet]="ruleSet()"
               [options]="tableOptions()"
               [spots]="showdownSpots()"
