@@ -64,22 +64,23 @@ test.describe('post-count showdown', () => {
     await expect(page.getByRole('button', { name: /Deal another round/ })).toBeVisible();
   });
 
-  // The exit this test names is the one taken mid-hand, which is the only phase
-  // that leaves the table directly: once a round is over the same button opens
-  // the count check first and the region stays up by design (the walk-away spec
-  // below covers that path). So the shoe is pinned to a guaranteed player turn —
-  // seed 1 opens Q+8, 9+A vs dealer 3+8. Unseeded, this test asserted a phase it
-  // had not pinned: an opening deal that settles every box before any player
-  // action — a dealer natural (seed 56), or a natural in every box (seed 35) —
-  // ends the round, and the assertion below then times out on a count check that
-  // is working correctly. Measured at 2 of 60 seeds, and at 33 of 600 unseeded
-  // runs across three independent samples (6/200, 14/200, 13/200).
+  // A round in play has its bets out and its hole card face down, so the table
+  // is only left between rounds; mid-round it says how to get there instead.
+  // Seed 1 opens Q+8, 9+A vs dealer 3+8, a guaranteed player turn, so the walk
+  // sees the way out withheld before it sees it offered. The count check is off
+  // because this test is about the drill carrying on; the walk-away spec below
+  // covers the check.
   test('returning to counting keeps the drill going', async ({ page }) => {
     await configure(page, '2');
+    await page.getByLabel('Ask for the count on the way out').uncheck();
     await runCountingRound(page, 1);
     await page.getByRole('button', { name: 'Play 2 hands vs the dealer' }).click();
 
-    await expect(page.getByRole('region', { name: 'Showdown vs dealer' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Player actions' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Back to counting' })).toBeHidden();
+    await expect(page.locator('.showdown')).toContainText('Play the round out to leave the table');
+
+    await standEveryBox(page);
     await page.getByRole('button', { name: 'Back to counting' }).click();
 
     // Back on the count feedback, with the graded rep still counted.
@@ -197,11 +198,11 @@ test.describe('post-count showdown', () => {
     await expect(page.locator('.count__shoe-spent')).toContainText('cut card is out');
   });
 
-  // Walking away before the peek. The hole card is dealt but never turned over,
-  // so it is in neither the tally of what came out nor the count that leaves
-  // with the trainee — the table says so rather than moving their count by a
-  // card it never showed them.
-  test('leaving before the peek leaves the hole card out of the count', async ({ page }) => {
+  // The insurance decision comes with the bets already out and the hole card
+  // still down. Leaving there used to drop the round as if it had never been
+  // dealt; the way out now waits for the round to be played. Seed 41 deals an
+  // ace over a safe hole card, so declining leads to a player turn.
+  test('the table cannot be left with a bet in play', async ({ page }) => {
     await configureCounting(page, '1', true);
     await runCountingRound(page, 41);
     await page.getByRole('button', { name: 'Play a hand vs the dealer' }).click();
@@ -209,17 +210,12 @@ test.describe('post-count showdown', () => {
     await page.getByRole('button', { name: /^Deal/ }).click();
     await expect(page.getByRole('group', { name: 'Insurance' })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Back to counting' }).click();
+    await expect(page.getByRole('button', { name: 'Back to counting' })).toBeHidden();
+    await expect(page.locator('.showdown')).toContainText('a bet in play cannot be taken back');
 
-    // Four cards were dealt to one box; the hole card is not one of the three
-    // the trainee is being asked to have counted.
-    const check = page.locator('.showdown__count-check');
-    await expect(check).toContainText('3 cards came out');
-    await expect(page.locator('.showdown__count-note')).toContainText('never turned over');
-
-    await page.getByLabel('What is the running count?').fill('99');
-    await page.getByRole('button', { name: /^Submit/ }).click();
-    await expect(page.locator('.showdown__coach')).toContainText('over 3 cards');
+    await page.getByRole('button', { name: 'No insurance' }).click();
+    await standEveryBox(page);
+    await expect(page.getByRole('button', { name: 'Back to counting' })).toBeVisible();
   });
 
   // Insurance is the one decision at this table that is purely about the count,

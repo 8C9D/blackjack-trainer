@@ -1058,69 +1058,148 @@ describe('ShowdownComponent', () => {
   });
 
   it('emits exit with the cards it turned face up when "Back to counting" is clicked', () => {
-    const { fixture } = createShowdown(makeShoe(['9', '10', '7', '6']));
+    // Player 16 stands; the dealer turns over the 6 and draws the 10.
+    const { fixture, c } = createShowdown(
+      makeShoe(['9', '10', '7', '6', '10']),
+      'S17',
+      1,
+      false,
+      undefined,
+      { countCheck: false },
+    );
     let emitted: readonly Card[] | undefined;
     fixture.componentInstance.exit.subscribe((cards) => (emitted = cards));
+    c.onAction('S');
+    fixture.detectChanges();
     (fixture.nativeElement.querySelector('.showdown__exit') as HTMLButtonElement).click();
-    expect(emitted).toBeDefined();
-    // The opening deal drew all four cards, and they carry back so the drill can
-    // fold their count into the shoe — all but the hole card, which this
-    // abandoned round never turned over. See the block below.
-    expect(emitted!.map((c) => c.rank)).toEqual(['9', '10', '7']);
+    // Every card the round dealt carries back so the drill can fold its count
+    // into the shoe — the hole card included, because the round turned it over.
+    expect(emitted!.map((x) => x.rank)).toEqual(['9', '10', '7', '6', '10']);
   });
 
-  // A round left mid-hand still took its cards out of the shoe, but the one
-  // face down was never shown. Handing it back moved the drill's carried count
-  // by a card the table never showed, so the next count answer — correct for
-  // everything the trainee could see — was marked wrong for it.
-  describe('a hole card the table never turned over', () => {
-    // Player 9+7 = 16 vs dealer 10; the 6 in the hole is worth +1 in Hi-Lo, so
-    // carrying it back would move the count a full point.
-    const midHand: readonly Rank[] = ['9', '10', '7', '6'];
+  // A dealer takes a busted bet the moment it busts. Busts used to settle only
+  // when the whole round did, so the loss sat unbooked while the other boxes
+  // were played — and a player who left mid-round took it with them.
+  describe('a bust', () => {
+    // Two boxes at 12: box 1 [10,8] doubles into an 8 (26) while box 2 [10,9]
+    // has yet to act; the dealer holds [10,7].
+    const doubledBust: readonly Rank[] = ['10', '10', '10', '8', '9', '7', '8'];
 
-    it('stays out of the cards that leave with the player', () => {
-      const { fixture, c } = createShowdown(makeShoe(midHand));
-      let emitted: readonly Card[] | undefined;
-      fixture.componentInstance.exit.subscribe((cards) => (emitted = cards));
+    function doubledIntoABust() {
+      const created = createShowdown(makeShoe(doubledBust), 'S17', 2, true);
+      created.c.setBet(12);
+      created.c.dealAfterBet();
+      created.c.onAction('D');
+      return created;
+    }
+
+    it('is booked the moment it busts, doubled stake and all', () => {
+      const { c } = doubledIntoABust();
+
       expect(c.phase()).toBe('player-turn');
-
-      c.returnToCounting();
-
-      // Mid-hand there is no count check, so this leaves at once.
-      expect(emitted!.map((x) => x.rank)).toEqual(['9', '10', '7']);
+      expect(c.activeIndex()).toBe(1);
+      expect(c.hands()[0].settlement!.outcome).toBe('lose');
+      expect(c.bankrollService.state()).toEqual({ bankroll: 476, wagered: 24, net: -24 });
+      expect(c.roundNet()).toBe(-24);
+      expect(c.stats.stats()).toMatchObject({ hands: 1, losses: 1 });
+      // Its chips have left the felt: only box 2's 12 is still riding.
+      expect(c.committed()).toBe(12);
     });
 
+    it('is recorded once, however the round then ends', () => {
+      const { c } = doubledIntoABust();
+      c.onAction('S'); // box 2's 19 beats the dealer's 17
+
+      expect(c.phase()).toBe('resolved');
+      expect(c.stats.stats()).toMatchObject({ hands: 2, wins: 1, losses: 1 });
+      expect(c.bankrollService.state()).toEqual({ bankroll: 488, wagered: 36, net: -12 });
+      expect(c.roundNet()).toBe(-12);
+    });
+
+    it('settles a split hand that busts before its partner is played', () => {
+      // 8,8 vs dealer 10,7. The first half draws a 5 (13) and hits a 10 (23).
+      const { c } = createShowdown(
+        makeShoe(['8', '10', '8', '7', '5', '10', '10']),
+        'S17',
+        1,
+        true,
+      );
+      c.setBet(10);
+      c.dealAfterBet();
+      c.onAction('P');
+      c.onAction('H');
+
+      expect(c.activeIndex()).toBe(1);
+      expect(c.hands()[0].settlement!.outcome).toBe('lose');
+      expect(c.bankrollService.bankroll()).toBe(490);
+      expect(c.committed()).toBe(10);
+    });
+  });
+
+  // At a table a bet in play cannot be taken back. The way out used to be on
+  // offer mid-hand, and leaving through it dropped every hand still on the
+  // felt — a box already bust included — as if the round had never been dealt.
+  describe('leaving the table', () => {
+    it('is not offered while a hand is being played', () => {
+      const { fixture, c } = createShowdown(makeShoe(['9', '10', '7', '6']));
+      let emitted = false;
+      fixture.componentInstance.exit.subscribe(() => (emitted = true));
+      expect(c.phase()).toBe('player-turn');
+      expect(fixture.nativeElement.querySelector('.showdown__exit')).toBeNull();
+      expect(fixture.nativeElement.textContent).toContain('Play the round out to leave the table');
+
+      c.returnToCounting();
+      expect(emitted).toBe(false);
+      expect(c.phase()).toBe('player-turn');
+    });
+
+    it('is not offered on the insurance decision, with the bets already out', () => {
+      const { fixture, c } = createShowdown(makeShoe(['9', 'A', '7', '6']), 'S17', 1, true);
+      c.setBet(10);
+      c.dealAfterBet();
+      fixture.detectChanges();
+      expect(c.phase()).toBe('insurance');
+      expect(fixture.nativeElement.querySelector('.showdown__exit')).toBeNull();
+      expect(fixture.nativeElement.textContent).toContain('a bet in play cannot be taken back');
+
+      c.returnToCounting();
+      expect(c.phase()).toBe('insurance');
+    });
+
+    it('is offered once the round is over, and between rounds', () => {
+      const { fixture, c } = createShowdown(makeShoe(['10', '10', '9', '8']), 'S17', 1, true);
+      fixture.detectChanges();
+      expect(c.phase()).toBe('betting');
+      expect(fixture.nativeElement.querySelector('.showdown__exit')).not.toBeNull();
+
+      c.setBet(10);
+      c.dealAfterBet();
+      c.onAction('S');
+      fixture.detectChanges();
+      expect(c.phase()).toBe('resolved');
+      expect(fixture.nativeElement.querySelector('.showdown__exit')).not.toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('Play the round out');
+    });
+  });
+
+  // The dealer's hole card is dealt face down, and the count this table keeps
+  // leaves it out until the round turns it over: insurance is decided before
+  // it is seen, and grading against a card the player cannot see would be
+  // grading a different game.
+  describe('the hole card', () => {
     it('is counted once the round resolves and shows it', () => {
-      const { fixture, c } = createShowdown(makeShoe([...midHand, '10']));
+      const { fixture, c } = createShowdown(makeShoe(['9', '10', '7', '6', '10']));
       let emitted: readonly Card[] | undefined;
       fixture.componentInstance.exit.subscribe((cards) => (emitted = cards));
       c.onAction('S'); // dealer 16 draws the 10 and busts
       c.returnToCounting();
-      c.onCountCheck(0);
+      expect(c.cardsSeen()).toBe(5);
+      // In Hi-Lo the 9 and 7 are 0, the two 10s −2 and the hole 6 +1.
+      c.onCountCheck(-1);
+      expect(c.countVerdict()).toMatchObject({ correct: true });
       c.leaveTable();
 
       expect(emitted!.map((x) => x.rank)).toEqual(['9', '10', '7', '6', '10']);
-    });
-
-    it('is named at the count check, which does not count it either', () => {
-      // Betting on so a dealer ace pauses on insurance — a phase that asks for
-      // the count with the hole card still face down.
-      const { fixture, c } = createShowdown(makeShoe(['9', 'A', '7', '6']), 'S17', 1, true);
-      c.setBet(10);
-      c.dealAfterBet();
-      expect(c.phase()).toBe('insurance');
-
-      c.returnToCounting();
-      fixture.detectChanges();
-
-      expect(c.phase()).toBe('count-check');
-      expect(c.cardsSeen()).toBe(3);
-      expect(
-        (fixture.nativeElement.querySelector('.showdown__count-note') as HTMLElement).textContent,
-      ).toContain('never turned over');
-      // 9 + A + 7 = -1 in Hi-Lo; the unseen 6 would have made it 0.
-      c.onCountCheck(-1);
-      expect(c.countVerdict()).toMatchObject({ correct: true });
     });
   });
 
@@ -1193,8 +1272,7 @@ describe('ShowdownComponent', () => {
       expect(c.countStats.stats().attempts).toBe(0);
     });
 
-    // Mid-hand the dealer's hole card is dealt but face down, so there is no
-    // single count both sides could agree is right.
+    // Mid-hand there is no way out to ask on: the round has to be played out.
     it('does not ask in the middle of a hand', () => {
       const { c } = createShowdown(makeShoe(round));
       c.returnToCounting();

@@ -205,14 +205,6 @@ interface PlayVerdict {
           <p class="showdown__bet-prompt">
             {{ countOf(cardsSeen(), 'card') }} came out at this table. Take the count with you.
           </p>
-          @if (holeCardUnseen()) {
-            <!-- Leaving before the peek: the hole card was dealt but never
-                 turned over, so it is out of this number and out of the count
-                 that leaves with you — a burn card, in effect. -->
-            <p class="showdown__count-note">
-              The dealer's hole card was never turned over, so it is in neither.
-            </p>
-          }
           @if (countVerdict(); as v) {
             <p
               class="showdown__coach"
@@ -467,7 +459,17 @@ interface PlayVerdict {
         }
       }
 
-      @if (phase() !== 'count-check') {
+      <!-- A bet in play cannot be taken back at a table, and leaving mid-round
+           used to drop every hand still on the felt, as if it had never been
+           dealt. So the way out is offered between rounds, and mid-round the
+           table says how to reach it rather than letting it vanish. -->
+      @if (roundInPlay()) {
+        <p class="showdown__note">
+          Play the round out to leave the table{{
+            betting() ? ' — a bet in play cannot be taken back' : ''
+          }}.
+        </p>
+      } @else if (phase() !== 'count-check') {
         <button type="button" class="showdown__exit" (click)="returnToCounting()">
           Back to counting
         </button>
@@ -609,6 +611,12 @@ export class ShowdownComponent implements OnInit {
 
   protected readonly activeHand = computed<PlayerHand | null>(
     () => this.hands()[this.activeIndex()] ?? null,
+  );
+
+  // A round is in play from the deal until it resolves: the insurance decision
+  // and the player's turns. Its bets are out, and its cards are not all face up.
+  protected readonly roundInPlay = computed(
+    () => this.phase() === 'player-turn' || this.phase() === 'insurance',
   );
 
   // Chips still riding on the felt this round. Only the bankroll's free chips
@@ -1282,8 +1290,14 @@ export class ShowdownComponent implements OnInit {
     this.finishHand(this.activeIndex());
   }
 
+  // A hand that finishes bust is settled there and then, as a dealer takes a
+  // busted bet the moment it busts: the loss is booked whatever becomes of the
+  // rest of the round, and its chips leave `committed`. It needs nothing from
+  // the dealer — the peek has already ruled out a natural, and a bust loses to
+  // any total — so the dealer's two cards are all it is settled against.
   private finishHand(i: number): void {
     this.updateHand(i, (h) => ({ ...h, done: true }));
+    if (isBust(this.hands()[i].cards)) this.settleHandAt(i, this.dealerCards());
     this.activateNextOrResolve();
   }
 
@@ -1304,9 +1318,10 @@ export class ShowdownComponent implements OnInit {
   // Reveal the dealer's hole card, play it out once (only if a hand can still
   // win — every hand busted or already settled means no draw), then settle the
   // hands still open. A split hand never counts as a natural, so its two-card
-  // 21 pays even money.
+  // 21 pays even money. A bust was settled when it busted, so any hand still
+  // unsettled here is one standing on a total.
   private resolveAll(): void {
-    const anyLive = this.hands().some((h) => !h.settlement && !isBust(h.cards));
+    const anyLive = this.hands().some((h) => !h.settlement);
     let dealer = this.dealerCards();
     if (anyLive) {
       dealer = playDealerHand(dealer, this.ruleSet(), () => this.draw());
@@ -1322,15 +1337,11 @@ export class ShowdownComponent implements OnInit {
   }
 
   // The shoe ran out mid-round. What was already settled stands — a surrender
-  // or a natural owed the dealer nothing further — and so does a bust, which
-  // loses whatever the dealer would have made. Every other hand is no action:
-  // nothing is settled, recorded or paid, so its stake never leaves the
+  // or a natural owed the dealer nothing further, and a bust was booked when it
+  // busted, losing whatever the dealer would have made. Every other hand is no
+  // action: nothing is settled, recorded or paid, so its stake never leaves the
   // bankroll. The hole card is turned over like any finished round's.
   private voidRound(): void {
-    const dealer = this.dealerCards();
-    this.hands().forEach((h, i) => {
-      if (isBust(h.cards)) this.settleHandAt(i, dealer);
-    });
     this.updateAllHands((h) => ({ ...h, done: true }));
     this.roundVoid.set(true);
     this.resolveRound();
@@ -1398,10 +1409,12 @@ export class ShowdownComponent implements OnInit {
   // kept, and the trainee was never asked for theirs. So the way out runs
   // through it, once, on the count as they could see it.
   //
-  // Only between rounds: mid-hand the dealer's hole card is dealt but face
-  // down, so there is no single count both sides can agree is right.
+  // Only between rounds. A round in play has bets out that a table would never
+  // hand back, and a hole card still face down, so there is neither a way to
+  // leave it honestly nor a single count both sides could agree is right.
   protected returnToCounting(): void {
-    if (this.countCheck() && this.dealt.length > 0 && this.phase() !== 'player-turn') {
+    if (this.roundInPlay()) return;
+    if (this.countCheck() && this.dealt.length > 0) {
       this.countVerdict.set(null);
       this.phase.set('count-check');
       return;
@@ -1415,12 +1428,11 @@ export class ShowdownComponent implements OnInit {
     this.exit.emit(this.seenCards());
   }
 
-  // What leaves with the player: every card this table turned face up. A round
-  // walked away from mid-hand leaves the dealer's hole card dealt but never
-  // shown — it is gone from the shoe, but a counter who never saw it cannot
-  // have it in their count, exactly as a burn card is gone and uncounted.
-  // Handing it back would move the drill's carried count by a card the table
-  // never showed, and mark the next answer wrong for it.
+  // What leaves with the player: every card this table turned face up. The
+  // table can only be left between rounds, when every dealt card has been, but
+  // the hole card stays excluded while it is down so that holds by
+  // construction: a card a counter never saw cannot be in their count, and
+  // handing it back would move the drill's carried count by it.
   private seenCards(): readonly Card[] {
     const hole = this.pendingHoleIndex;
     return hole === null ? this.dealt : this.dealt.filter((_, i) => i !== hole);
@@ -1430,12 +1442,6 @@ export class ShowdownComponent implements OnInit {
   // round is dealt but not shown, so it is not one of them.
   protected cardsSeen(): number {
     return this.seenCards().length;
-  }
-
-  // Whether the round being left still holds a face-down hole card, so the
-  // count check can say why it is not in the number it is asking for.
-  protected holeCardUnseen(): boolean {
-    return this.pendingHoleIndex !== null;
   }
 
   // Wong Halves and friends run on half-points, so the answer box has to take
