@@ -107,10 +107,10 @@ export function generateScenarioForDeviationRule(args: {
 // ─── internal helpers ──────────────────────────────────────────────────
 
 // Generates a non-pair two-card combo summing to `total`. Same-rank pairs
-// are filtered out because they would route through the pair lookup and
-// miss the hard/surrender rule we're targeting. (None of the encoded hard
-// deviation totals require a same-rank fallback — 8, 9, 10, 11, 12, 13, 15, 16
-// all have a non-pair option.)
+// are filtered out because a pair the chart splits (6,6 v 2 with DAS) asks the
+// split question rather than the total's, and the surrender overlay reads only
+// hard hands. (None of the encoded hard deviation totals require a same-rank
+// fallback — 8, 9, 10, 11, 12, 13, 15, 16 all have a non-pair option.)
 function makeHardTotalCards(total: number, random: () => number): readonly [Card, Card] {
   const options: Array<[number, number]> = [];
   for (let a = 2; a <= 10; a++) {

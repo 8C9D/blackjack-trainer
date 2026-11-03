@@ -753,6 +753,69 @@ describe('DeviationEngineService', () => {
     });
   });
 
+  // A pair the chart does not split is played as its total, so the total's index
+  // is its index. These were once looked up only as pairs, where no rule exists
+  // for anything but tens, so 5,5 v 10 hit at +4 while 6,4 doubled.
+  describe('a pair the chart does not split reads its total', () => {
+    it.each([
+      ['5', '5', '10', 'S17', {}, 4, 'D', 3, 'H'],
+      ['5', '5', 'A', 'S17', {}, 4, 'D', 3, 'H'],
+      ['5', '5', 'A', 'H17', {}, 3, 'D', 2, 'H'],
+      ['6', '6', '2', 'S17', {}, 3, 'S', 2, 'H'],
+      ['4', '4', '6', 'H17', {}, 2, 'D', 1, 'H'],
+    ] as const)(
+      '%s,%s v %s under %s plays its total: %s at %s',
+      (c1, c2, up, ruleSet, options, at, deviation, below, basic) => {
+        const met = engine.resolveDeviationDecision(scenario(c1, c2, up, ruleSet, options), at);
+        expect(met.finalAction).toBe(deviation);
+        expect(met.deviationApplied).toBe(true);
+        expect(met.matchedRule?.category).toBe('hard');
+        const short = engine.resolveDeviationDecision(
+          scenario(c1, c2, up, ruleSet, options),
+          below,
+        );
+        expect(short.finalAction).toBe(basic);
+        expect(short.deviationApplied).toBe(false);
+        // The candidate is still named, so the miss can say which index it was.
+        expect(short.matchedRule?.category).toBe('hard');
+      },
+    );
+
+    it('agrees with the same total dealt as two different cards', () => {
+      for (const tc of [-2, 0, 3, 4, 6]) {
+        expect(engine.resolveDeviationDecision(scenario('5', '5', '10'), tc).finalAction).toBe(
+          engine.resolveDeviationDecision(scenario('6', '4', '10'), tc).finalAction,
+        );
+      }
+    });
+
+    it('leaves a pair the chart splits on the split question', () => {
+      // With DAS, 6,6 v 2 and 4,4 v 6 are splits, so the total's index is moot.
+      const das = { doubleAfterSplit: true };
+      expect(engine.resolveDeviationDecision(scenario('6', '6', '2', 'S17', das), 5)).toMatchObject(
+        { finalAction: 'P', deviationApplied: false },
+      );
+      expect(engine.resolveDeviationDecision(scenario('4', '4', '6', 'S17', das), 5)).toMatchObject(
+        { finalAction: 'P', deviationApplied: false },
+      );
+      // And the tens keep their own pair rule.
+      expect(
+        engine.resolveDeviationDecision(scenario('10', '10', '6'), 4).matchedRule?.category,
+      ).toBe('pair');
+    });
+
+    it('gives the same answer at a table whether or not the split is on offer', () => {
+      const offered = engine.resolvePlayDecision(play('5', '5', '10'), 4);
+      const declined = engine.resolvePlayDecision({ ...play('5', '5', '10'), canSplit: false }, 4);
+      expect(offered).toMatchObject({ action: 'D', deviationApplied: true });
+      expect(declined).toMatchObject({ action: 'D', deviationApplied: true });
+      expect(engine.resolvePlayDecision(play('6', '6', '2'), 3).action).toBe('S');
+      // A double the felt is not offering is not graded against.
+      const noDouble = engine.resolvePlayDecision({ ...play('5', '5', '10'), canDouble: false }, 4);
+      expect(noDouble).toMatchObject({ action: 'H', deviationApplied: false });
+    });
+  });
+
   // ─── Soft deviations (BJA soft-totals overlay) ────────────────────────
   describe('soft deviations', () => {
     it('A,8 v 4 — Ds at +3 (basic S becomes D)', () => {

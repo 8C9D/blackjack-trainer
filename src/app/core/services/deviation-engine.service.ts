@@ -153,13 +153,42 @@ export class DeviationEngineService {
       };
     }
 
+    // A pair the chart does not split is played as its total, so the total's
+    // index is its index too: 5,5 v 10 doubles at +4 exactly as 6,4 does.
+    const totalRule =
+      category === 'pair' && basicAction !== 'P'
+        ? this.totalRuleForUnsplitPair(input.player, input.ruleSet, dealerKey)
+        : undefined;
+    if (totalRule && this.isDeviationThresholdMet(totalRule, trueCount)) {
+      return {
+        basicAction,
+        finalAction: totalRule.deviationAction,
+        deviationApplied: true,
+        matchedRule: totalRule,
+        trueCount,
+      };
+    }
+
     return {
       basicAction,
       finalAction: basicAction,
       deviationApplied: false,
-      matchedRule: rule, // surface the candidate (below threshold) for UI hints
+      // Surface the candidate (below threshold) for UI hints.
+      matchedRule: rule ?? totalRule,
       trueCount,
     };
+  }
+
+  // The index for a two-card pair's total, read as the hand is played when it
+  // is not split: a hard total, or soft 12 for aces.
+  private totalRuleForUnsplitPair(
+    player: readonly Card[],
+    ruleSet: RuleSet,
+    dealerUpcard: DealerUpcard,
+  ): DeviationRule | undefined {
+    const total = classifyPlayForDeviation(player, false);
+    if (total === null) return undefined;
+    return this.findDeviationRule({ ruleSet, ...total, dealerUpcard });
   }
 
   // The same question as resolveDeviationDecision, asked at a table instead of
@@ -216,7 +245,21 @@ export class DeviationEngineService {
       rule && this.isDeviationThresholdMet(rule, trueCount) ? deviationPlay(rule, input) : null;
     if (rule && play !== null) return deviated(basic, rule, play, trueCount);
 
-    return { ...basic, deviationApplied: false, matchedRule: rule };
+    // A pair the chart does not split is played as its total, whether or not
+    // the split was on offer. Without this the index fired only when the split
+    // was unavailable, so offering a split the player should decline flipped
+    // the answer. Same reading as the trainer's path above.
+    const totalRule =
+      classified.category === 'pair' && basic.action !== 'P'
+        ? this.totalRuleForUnsplitPair(input.player, input.ruleSet, dealerKey)
+        : undefined;
+    const totalPlay =
+      totalRule && this.isDeviationThresholdMet(totalRule, trueCount)
+        ? deviationPlay(totalRule, input)
+        : null;
+    if (totalRule && totalPlay !== null) return deviated(basic, totalRule, totalPlay, trueCount);
+
+    return { ...basic, deviationApplied: false, matchedRule: rule ?? totalRule };
   }
 
   // Insurance is offered before the playing decision and has no player-hand
