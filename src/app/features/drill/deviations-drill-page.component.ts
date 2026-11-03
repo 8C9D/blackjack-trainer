@@ -31,6 +31,7 @@ import {
   MissTallyService,
   scenarioLabel,
   scenarioRefFor,
+  type ScenarioRef,
   type WeakSpot,
 } from '../../core/services/miss-tally.service';
 import { costOfPlay, costSentence } from '../../core/services/play-cost';
@@ -371,11 +372,13 @@ export class DeviationsDrillPageComponent {
     // The count goes in with the miss: here it is half the question, and a hand
     // re-dealt at a fresh count is a different one.
     if (atDeal) {
+      const ref = scenarioRefFor(this.scenario().player, this.scenario().dealerUpcard);
       this.missTally.record(
         'deviations',
-        scenarioRefFor(this.scenario().player, this.scenario().dealerUpcard),
+        ref,
         result.correct,
         this.scenario().trueCount,
+        result.correct && this.answersAMissedQuestion(ref, result.expectedAction),
       );
     }
     this.session.record(result.correct, elapsedMs);
@@ -390,6 +393,23 @@ export class DeviationsDrillPageComponent {
       this.phase.set('miss');
       this.suppressNextContinueClick = true;
     }
+  }
+
+  // Whether a right answer re-answers a question this hand was missed on: the
+  // same play is right at one of the counts it was missed at. A deviation has
+  // two sides, and clearing 12 v 2 — missed at +4, where it stands — by hitting
+  // it at −2 three times called it learned when the stand was never asked again.
+  // A hand missed with no count recorded has only one question to clear.
+  private answersAMissedQuestion(ref: ScenarioRef, expected: Action): boolean {
+    const counts = this.missTally.missedCountsFor('deviations', ref);
+    if (counts.length === 0) return true;
+    const { ruleSet, options } = this.prefs.prefs();
+    return counts.some(
+      (trueCount) =>
+        this.evaluator.evaluate({ ...this.scenario(), trueCount }, expected, ruleSet, options, {
+          insuranceSettled: this.insured(),
+        }).expectedAction === expected,
+    );
   }
 
   // The deal's question takes every action on the table and the insurance

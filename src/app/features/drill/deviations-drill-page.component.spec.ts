@@ -47,6 +47,7 @@ type Internals = {
   handsToday: () => number;
   legalActions: () => readonly Action[];
   answer(action: Action): void;
+  ask(): void;
   reviewMisses(): void;
   onKeyDown(event: KeyboardEvent): void;
 };
@@ -319,6 +320,31 @@ describe('DeviationsDrillPageComponent', () => {
       expect(c.phase()).toBe('question');
       expect(c.result()).toBeNull();
       expect(c.handsToday()).toBe(0);
+    });
+  });
+
+  // A deviation has two sides. 12 v 2 stands from +3 under S17; missed at +4,
+  // it is not learned by hitting it at -2, however many times.
+  describe('clearing a deviation weak spot', () => {
+    const at = (trueCount: number) => scenarioOf('10', '2', '2', trueCount);
+
+    function answerAt(c: Internals, trueCount: number, action: Action): void {
+      deal(c, at(trueCount));
+      c.ask();
+      c.answer(action);
+    }
+
+    it('clears only on the side of the index it was missed on', () => {
+      const { c } = createPage();
+      const tally = TestBed.inject(MissTallyService);
+      answerAt(c, 4, 'H');
+      expect(c.result()!.correct).toBe(false);
+      for (let i = 0; i < 3; i++) answerAt(c, -2, 'H');
+      expect(tally.weakSpotFor('deviations')).toMatchObject({ label: '12 vs 2', streak: 0 });
+      expect(tally.clearedSpots('deviations')).toEqual([]);
+      for (let i = 0; i < 3; i++) answerAt(c, 5, 'S');
+      expect(tally.weakSpotFor('deviations')).toBeNull();
+      expect(tally.clearedSpots('deviations').map((spot) => spot.label)).toEqual(['12 vs 2']);
     });
   });
 

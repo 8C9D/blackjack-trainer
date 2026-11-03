@@ -308,6 +308,19 @@ describe('MissTallyService', () => {
       expect(s.clearedSpots('basic-strategy').map((spot) => spot.label)).toEqual(['16 vs 10']);
     });
 
+    it('counts a right answer to a question never missed as an attempt, not a clear', () => {
+      const s = createService(() => current);
+      s.record('deviations', HARD_16_V_10, false, 2);
+      expect(s.missedCountsFor('deviations', HARD_16_V_10)).toEqual([2]);
+      for (let i = 0; i < CLEAR_STREAK; i++) {
+        s.record('deviations', HARD_16_V_10, true, -1, false);
+      }
+      const spot = s.weakSpotFor('deviations')!;
+      expect(spot).toMatchObject({ attempts: CLEAR_STREAK + 1, misses: 1, streak: 0 });
+      expect(s.clearedSpots('deviations')).toEqual([]);
+      expect(s.missedCountsFor('basic-strategy', HARD_16_V_10)).toEqual([]);
+    });
+
     it('a single miss un-clears a cleared scenario', () => {
       const s = createService(() => current);
       s.record('basic-strategy', HARD_16_V_10, false);

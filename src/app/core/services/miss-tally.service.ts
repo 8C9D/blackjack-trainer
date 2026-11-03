@@ -162,7 +162,17 @@ export class MissTallyService {
   // where the count is part of the question — the Deviations trainer, and the
   // showdown's index plays. A miss remembers it so the scenario can come back
   // as the question that was actually missed rather than the hand alone.
-  record(trainer: TalliedTrainer, ref: ScenarioRef, correct: boolean, trueCount?: number): void {
+  //
+  // `countsTowardClear` is false for a right answer to a question the scenario
+  // was never missed on: 12 v 2 missed at +4, where it stands, is not learned by
+  // hitting it at −2 three times. The attempt still counts; the streak waits.
+  record(
+    trainer: TalliedTrainer,
+    ref: ScenarioRef,
+    correct: boolean,
+    trueCount?: number,
+    countsTowardClear = true,
+  ): void {
     const today = localDateKey(this.now());
     const key = scenarioKey(ref);
     const state = this._state();
@@ -179,7 +189,7 @@ export class MissTallyService {
     forTrainer[key] = {
       ref,
       days: this.pruneDays(days),
-      streak: correct ? existing.streak + 1 : 0,
+      streak: correct ? existing.streak + (countsTowardClear ? 1 : 0) : 0,
       missedCounts: rememberMissedCount(existing.missedCounts, correct, trueCount),
     };
     const next: TallyState = { ...state, [trainer]: this.pruneScenarios(forTrainer) };
@@ -212,6 +222,12 @@ export class MissTallyService {
     return this.windowed(trainer)
       .filter((spot) => spot.streak >= CLEAR_STREAK)
       .sort((a, b) => b.streak - a.streak || scenarioKey(a.ref).localeCompare(scenarioKey(b.ref)));
+  }
+
+  // The counts a scenario was recently missed at, most recent first; empty for a
+  // scenario never missed, or missed with no count in the question.
+  missedCountsFor(trainer: TalliedTrainer, ref: ScenarioRef): readonly number[] {
+    return this._state()[trainer]?.[scenarioKey(ref)]?.missedCounts ?? [];
   }
 
   // The worst outstanding scenario, or null when nothing is outstanding.
