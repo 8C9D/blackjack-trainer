@@ -1006,7 +1006,19 @@ export class ShowdownComponent implements OnInit {
     // actually missed at rather than a fresh one.
     const trueCount =
       trainer === 'deviations' && basis.kind === 'true-count' ? basis.trueCount : undefined;
-    this.missTally.record(trainer, scenarioRefFor(player, upcard), wasRight, trueCount);
+    const ref = scenarioRefFor(player, upcard);
+    // A right answer clears a Deviations weak spot only where it re-answers the
+    // question that was missed: 16 v 10 missed at −1, where it hits, is not
+    // learned by standing it at +1. Same rule as the Deviations drill.
+    const missedAt = trainer === 'deviations' ? this.missTally.missedCountsFor(trainer, ref) : [];
+    const clears =
+      wasRight &&
+      (missedAt.length === 0 ||
+        missedAt.some(
+          (count) =>
+            this.deviations.resolveDeviationDecision(input, count).finalAction === unrestricted,
+        ));
+    this.missTally.record(trainer, ref, wasRight, trueCount, clears);
   }
 
   // Between rounds, betting returns to the bet: the count has moved on, so the

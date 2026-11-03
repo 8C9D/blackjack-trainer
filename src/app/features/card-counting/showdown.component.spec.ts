@@ -2009,6 +2009,25 @@ describe('ShowdownComponent', () => {
         ]);
       });
 
+      // A deviation has two sides. 16 v 10 missed at −1, where it hits, is not
+      // learned by standing it at +1, so that answer does not count toward
+      // clearing it; one missed at +2 is.
+      it('clears an index weak spot only on the side it was missed on', () => {
+        const tallies = TestBed.inject(MissTallyService);
+        const ref = { kind: 'hard', hand: '16', dealer: '10' } as const;
+        tallies.record('deviations', ref, false, -1);
+        const { c } = atCount(2);
+        c.onAction('S');
+        expect(c.lastPlay()!.correct).toBe(true);
+        expect(tallies.weakSpots('deviations')[0]).toMatchObject({ attempts: 2, streak: 0 });
+
+        tallies.reset();
+        tallies.record('deviations', ref, false, 2);
+        const again = atCount(2);
+        again.c.onAction('S');
+        expect(tallies.weakSpots('deviations')[0]).toMatchObject({ attempts: 2, streak: 1 });
+      });
+
       it('files no count with an ordinary basic-strategy miss', () => {
         const { c } = atCount(0);
         c.onAction('S');
