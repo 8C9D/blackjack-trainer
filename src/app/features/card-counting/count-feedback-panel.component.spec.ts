@@ -200,6 +200,33 @@ describe('CountFeedbackPanelComponent', () => {
   });
 
   describe('true-count mode', () => {
+    // 177 cards is 3.4038 decks. Printed to two places, "17 ÷ 3.4 decks" comes
+    // out 5, not the 4 the line reports and the round graded.
+    it('prints decks precisely enough for its own division to come out', () => {
+      const fixture = createPanel(
+        makeTrueCountResult({
+          correctRunningCount: 17,
+          decksRemaining: 177 / 52,
+          correctTrueCount: 4,
+        }),
+      );
+      const formula = (fixture.nativeElement.querySelector('.feedback__formula') as HTMLElement)
+        .textContent!.replace(/\s+/g, ' ')
+        .trim();
+      expect(formula).toBe('Running count 17 ÷ 3.404 decks = true count 4');
+      // Where two places already divide right, two places it stays.
+      const plain = createPanel(
+        makeTrueCountResult({
+          correctRunningCount: 5,
+          decksRemaining: 177 / 52,
+          correctTrueCount: 1,
+        }),
+      );
+      expect(plain.nativeElement.querySelector('.feedback__formula').textContent).toContain(
+        '3.4 decks',
+      );
+    });
+
     it('renders the true-count fields', () => {
       const fixture = createPanel(
         makeTrueCountResult({
@@ -633,6 +660,15 @@ describe('CountFeedbackPanelComponent', () => {
       const text = fixture.nativeElement.textContent ?? '';
       expect(text).toContain('Incorrect');
       expect(text).not.toContain('New personal best');
+    });
+
+    // A stopwatch reads 29.96 seconds as 29.9, and rounding it to "30.0s" put
+    // the time beside "under the 30-second benchmark".
+    it('cuts a time to the tenth rather than rounding it over the benchmark', () => {
+      const fixture = createPanel(makeDeckSpeedResult({ elapsedMs: 29_960, isPersonalBest: true }));
+      const text = fixture.nativeElement.textContent ?? '';
+      expect(text).toContain('29.9s');
+      expect(text).toContain('30-second benchmark');
     });
 
     it('mentions the benchmark only under 30 seconds', () => {

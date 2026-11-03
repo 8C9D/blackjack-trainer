@@ -14,6 +14,7 @@ import {
   countDriftLabel,
   deckEstimateEffect,
   formatSignedCount,
+  truncateTrueCount,
   type BetSpreadDrillResult,
   type CountingDrillResult,
   type DeckEstimateEffect,
@@ -90,7 +91,14 @@ interface RampBand {
         </dl>
         <p class="feedback__formula">
           Running count {{ tc.correctRunningCount }} ÷
-          {{ countOf(tc.decksRemaining, 'deck', formatDecks(tc.decksRemaining)) }} = true count
+          {{
+            countOf(
+              tc.decksRemaining,
+              'deck',
+              formulaDecks(tc.correctRunningCount, tc.decksRemaining, tc.correctTrueCount)
+            )
+          }}
+          = true count
           {{ tc.correctTrueCount }}
         </p>
         @if (estimateEffect(); as est) {
@@ -153,7 +161,14 @@ interface RampBand {
                one the bet was actually graded at. -->
           <p class="feedback__formula">
             Running count {{ bs.correctRunningCount }} ÷
-            {{ countOf(bs.decksRemaining, 'deck', formatDecks(bs.decksRemaining)) }} = true count
+            {{
+              countOf(
+                bs.decksRemaining,
+                'deck',
+                formulaDecks(bs.correctRunningCount, bs.decksRemaining, bs.correctTrueCount)
+              )
+            }}
+            = true count
             {{ bs.correctTrueCount }}.
           </p>
           <p class="feedback__formula">
@@ -164,7 +179,14 @@ interface RampBand {
         } @else {
           <p class="feedback__formula">
             Running count {{ bs.correctRunningCount }} ÷
-            {{ countOf(bs.decksRemaining, 'deck', formatDecks(bs.decksRemaining)) }} = true count
+            {{
+              countOf(
+                bs.decksRemaining,
+                'deck',
+                formulaDecks(bs.correctRunningCount, bs.decksRemaining, bs.correctTrueCount)
+              )
+            }}
+            = true count
             {{ bs.correctTrueCount }}, which is the {{ rampBandLabel(bs.correctTrueCount) }} band of
             your spread.
           </p>
@@ -425,10 +447,26 @@ export class CountFeedbackPanelComponent {
     return `Your spread bets ${this.units(implied)} there, not ${this.units(result.correctUnits)}.`;
   }
 
+  // Decks as the formula prints them: two decimals, or as many more as it takes
+  // for the printed division to come out at the true count it reports. 177
+  // cards is 3.4038 decks, and "17 ÷ 3.4 decks = true count 4" is arithmetic
+  // that comes out 5 — on a band boundary, the bet it names.
+  protected formulaDecks(runningCount: number, decks: number, trueCount: number): string {
+    for (let places = 2; places < 6; places++) {
+      const shown = trimDecimals(decks.toFixed(places));
+      if (truncateTrueCount(runningCount, Number(shown)) === trueCount) return shown;
+    }
+    return trimDecimals(decks.toFixed(6));
+  }
+
   // Whole decks render as "5"; fractional decks as up to two decimals with
   // trailing zeros trimmed (e.g. 5.6153… → "5.62", 2.5 → "2.5").
   protected formatDecks(value: number): string {
     if (Number.isInteger(value)) return String(value);
     return value.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
   }
+}
+
+function trimDecimals(fixed: string): string {
+  return fixed.includes('.') ? fixed.replace(/0+$/, '').replace(/\.$/, '') : fixed;
 }

@@ -37,7 +37,9 @@ export interface DeckSpeedDrillResult {
 }
 
 // Elapsed time as seconds with one decimal ("24.5s"). Minutes are not worth a
-// format: a deck that takes over a minute reads fine as "72.4s".
+// format: a deck that takes over a minute reads fine as "72.4s". Cut to the
+// tenth rather than rounded, as a stopwatch reads: rounded, 29.96 seconds
+// printed "30.0s" beside "That is under the 30-second benchmark".
 export function formatDuration(ms: number): string {
-  return `${(ms / 1000).toFixed(1)}s`;
+  return `${(Math.floor(ms / 100) / 10).toFixed(1)}s`;
 }
