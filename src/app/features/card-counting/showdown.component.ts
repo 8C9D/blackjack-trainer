@@ -611,10 +611,16 @@ export class ShowdownComponent implements OnInit {
     () => this.hands()[this.activeIndex()] ?? null,
   );
 
-  // Chips already committed to the felt this round. Only the bankroll's free
-  // chips can back another bet, so a double or split has to fit inside them.
+  // Chips still riding on the felt this round. Only the bankroll's free chips
+  // can back another bet, so a double or split has to fit inside them.
+  //
+  // One rule: a settled hand's money is already in the bankroll. A surrender's
+  // half bet, a bust's whole stake and a natural's 3:2 were booked the moment
+  // they settled, so counting their stakes here as well would charge them twice
+  // and withhold a double or split the stack can in fact back. Only the hands
+  // still waiting on a result hold chips back.
   protected readonly committed = computed(() =>
-    this.hands().reduce((sum, h) => sum + stakeFor(h.bet, h.doubled), 0),
+    this.hands().reduce((sum, h) => (h.settlement ? sum : sum + stakeFor(h.bet, h.doubled)), 0),
   );
   private canPostAnotherBet(h: PlayerHand): boolean {
     if (!this.betting()) return true;

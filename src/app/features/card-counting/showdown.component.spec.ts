@@ -799,6 +799,31 @@ describe('ShowdownComponent', () => {
       expect(c.roundSummary()).toBe('1 won, 1 lost');
     });
 
+    // A surrendered box's half-bet loss is already out of the bankroll. Counting
+    // its stake as still on the felt as well charged the box twice, and a
+    // double the stack could back was withheld from the box beside it.
+    it('frees a surrendered box’s stake for a double on the next', () => {
+      // 17 chips, two boxes at 5. Box 1 [10,6] vs 10 surrenders (17 → 14.5);
+      // box 2 [6,5] = 11 then has 9.5 free chips — enough to double its 5.
+      TestBed.inject(BankrollService).record(0, -483);
+      const { c } = createShowdown(
+        makeShoe(['10', '6', '10', '6', '5', '8', '10']),
+        'S17',
+        2,
+        true,
+      );
+      c.setBet(5);
+      c.dealAfterBet();
+      c.onAction('SUR');
+
+      expect(c.bankrollService.bankroll()).toBe(14.5);
+      expect(c.committed()).toBe(5);
+      expect(c.playerActions()).toContain('D');
+      c.onAction('D');
+      // Doubling 11 vs 10 is the chart's play, offered and graded as such.
+      expect(c.lastPlay()).toMatchObject({ correct: true, headline: 'Double was the play.' });
+    });
+
     it("the 'r' key surrenders", () => {
       const { c } = createShowdown(makeShoe(['10', '10', '6', '9']));
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' }));
