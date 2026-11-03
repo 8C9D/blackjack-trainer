@@ -202,13 +202,14 @@ export const MAX_BACKUP_FILE_BYTES = 16 * 1024 * 1024;
         @if (prefs().deviations.trueCountSource === 'manual') {
           <label class="settings__field">
             <span>Practice true count</span>
+            <!-- No inputmode: the count goes negative, and the iPhone's numeric
+                 keypad has no minus key. -->
             <input
               class="settings__manual-tc"
               type="number"
               [min]="MIN_TC"
               [max]="MAX_TC"
               step="1"
-              inputmode="numeric"
               [value]="prefs().deviations.manualTrueCount"
               (change)="onManualTrueCountChange($event)"
             />

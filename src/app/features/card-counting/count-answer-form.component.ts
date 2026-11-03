@@ -17,6 +17,11 @@ import { CountingEngineService } from '../../core/services/counting-engine.servi
 
 @Component({
   selector: 'app-count-answer-form',
+  // No inputmode on a count: a count goes negative, and the iPhone's numeric
+  // and decimal keypads have no minus key, so either one would leave half of
+  // all counts impossible to type. A bare number field gets the keyboard's
+  // numbers-and-punctuation layer there, minus included. A bet is never
+  // negative, so it keeps the bigger digit pad.
   template: `
     <form class="answer" (submit)="onSubmit($event)">
       <label class="answer__label">
@@ -27,7 +32,7 @@ import { CountingEngineService } from '../../core/services/counting-engine.servi
           [attr.step]="allowFractions() ? '0.5' : '1'"
           [attr.min]="question() === 'bet' ? minUnits : null"
           [attr.max]="question() === 'bet' ? maxUnits : null"
-          [attr.inputmode]="allowFractions() ? 'decimal' : 'numeric'"
+          [attr.inputmode]="question() === 'bet' ? 'numeric' : null"
           [value]="raw()"
           (input)="onInput($event)"
         />

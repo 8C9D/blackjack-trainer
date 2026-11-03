@@ -152,6 +152,36 @@ describe('CountAnswerFormComponent', () => {
     });
   });
 
+  describe('the on-screen keyboard', () => {
+    // The iPhone's numeric and decimal keypads have no minus key, and half of
+    // all counts are negative.
+    function inputMode(fixture: ComponentFixture<CountAnswerFormComponent>): string | null {
+      return (fixture.nativeElement.querySelector('input') as HTMLInputElement).getAttribute(
+        'inputmode',
+      );
+    }
+
+    it('asks for no minus-less keypad on a whole-number count', () => {
+      const fixture = TestBed.createComponent(CountAnswerFormComponent);
+      fixture.detectChanges();
+      expect(inputMode(fixture)).toBeNull();
+    });
+
+    it('asks for no minus-less keypad on a half-point count', () => {
+      const fixture = TestBed.createComponent(CountAnswerFormComponent);
+      fixture.componentRef.setInput('allowFractions', true);
+      fixture.detectChanges();
+      expect(inputMode(fixture)).toBeNull();
+    });
+
+    it('keeps the digit pad for a bet, which is never negative', () => {
+      const fixture = TestBed.createComponent(CountAnswerFormComponent);
+      fixture.componentRef.setInput('question', 'bet');
+      fixture.detectChanges();
+      expect(inputMode(fixture)).toBe('numeric');
+    });
+  });
+
   describe('the bet question', () => {
     function createBetForm(): ComponentFixture<CountAnswerFormComponent> {
       const fixture = TestBed.createComponent(CountAnswerFormComponent);

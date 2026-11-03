@@ -108,6 +108,17 @@ describe('SettingsPageComponent', () => {
     expect(prefs.prefs().deviations.manualTrueCount).toBe(4);
   });
 
+  it('takes a negative manual true count, keyboard included', () => {
+    const { fixture, prefs } = createPage();
+    labelledControl(fixture, 'Manual true count').click();
+    fixture.detectChanges();
+    // The iPhone's numeric keypad has no minus key, so asking for it would make
+    // every negative count impossible to type.
+    expect(input(fixture, '.settings__manual-tc').getAttribute('inputmode')).toBeNull();
+    setNumber(input(fixture, '.settings__manual-tc'), '-3');
+    expect(prefs.prefs().deviations.manualTrueCount).toBe(-3);
+  });
+
   it('rejects out-of-range manual true counts, keeping the stored value', () => {
     const { fixture, prefs } = createPage();
     labelledControl(fixture, 'Manual true count').click();
