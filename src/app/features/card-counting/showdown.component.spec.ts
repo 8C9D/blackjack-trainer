@@ -1587,6 +1587,55 @@ describe('ShowdownComponent', () => {
       expect(c.betSpreadStats.stats().attempts).toBe(0);
     });
 
+    // A natural on either side settles the round at the deal, before the bet is
+    // graded — so a bankroll read then is one the bet was not placed against.
+    // Whether the spread's bet was affordable is a question about the stack
+    // the player was looking at when they chose.
+    describe('against the bankroll the bet was placed from', () => {
+      it('skips a called bet that was out of reach, even after a natural pays', () => {
+        // 10 chips. TC +5 calls for 12, a rung offered disabled; the player bets
+        // 8 and is dealt A,K — paid 3:2 at the deal, taking the stack to 22.
+        TestBed.inject(BankrollService).record(0, -490);
+        const created = createShowdown(
+          makeShoe(oneDeckLeft(['A', '9', 'K', '7'])),
+          'S17',
+          1,
+          true,
+          undefined,
+          { entryRunningCount: 5 },
+        );
+        const { c } = created;
+        c.setBet(8);
+        c.dealAfterBet();
+        expect(c.bankrollService.bankroll()).toBe(22);
+        expect(c.lastPlay()).toBeNull();
+        expect(c.roundMistakes()).toEqual([]);
+        expect(c.betSpreadStats.stats().attempts).toBe(0);
+      });
+
+      it('grades a called bet that was affordable, even after a dealer natural', () => {
+        // 10 chips. TC +4 calls for 8, which the stack could back; the player
+        // bets 4 into a dealer 10 with an ace in the hole, which takes it to 6.
+        TestBed.inject(BankrollService).record(0, -490);
+        const { c } = createShowdown(
+          makeShoe(oneDeckLeft(['9', '10', '7', 'A'])),
+          'S17',
+          1,
+          true,
+          undefined,
+          { entryRunningCount: 4 },
+        );
+        c.setBet(4);
+        c.dealAfterBet();
+        expect(c.bankrollService.bankroll()).toBe(6);
+        expect(c.lastPlay()).toMatchObject({
+          correct: false,
+          headline: '8 units was the bet, not 4.',
+        });
+        expect(c.betSpreadStats.stats()).toMatchObject({ attempts: 1, correct: 0 });
+      });
+    });
+
     // The hole card is face up on the felt the moment the round pays, so a
     // counter has it in their count before the next bet goes out. Grading that
     // bet against a count still missing it marks a correctly-sized bet wrong.

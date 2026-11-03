@@ -833,16 +833,19 @@ export class ShowdownComponent implements OnInit {
   protected dealAfterBet(): void {
     if (this.phase() !== 'betting') return;
     if (!this.canBackRound()) return;
-    // Snapshot the count before a card is turned: the bet was decided on what
-    // the player could see at that moment, and dealing moves the count.
+    // Snapshot the count and the bankroll before a card is turned: the bet was
+    // decided on what the player could see at that moment. Dealing moves the
+    // count, and a natural on either side settles the round at the deal, so
+    // either one read afterwards belongs to a different moment.
     const trueCount = this.betTrueCount();
     const bet = this.bet();
+    const bankroll = this.bankrollService.bankroll();
     this.dealHand();
     // A shoe too low to serve the round leaves the table on 'exhausted' with
     // nothing dealt. There is no round to have bet into, so there is nothing to
     // grade — and the round's misplay list was never cleared either.
     if (this.phase() === 'exhausted') return;
-    this.gradeBet(trueCount, bet);
+    this.gradeBet(trueCount, bet, bankroll);
   }
 
   protected resetBankroll(): void {
@@ -1098,15 +1101,16 @@ export class ShowdownComponent implements OnInit {
   //
   // Skipped when the bankroll could not have covered the called bet: that rung
   // is offered disabled, so marking it wrong would score a bet the table never
-  // let the player place.
-  private gradeBet(trueCount: number | null, bet: number): void {
+  // let the player place. `bankroll` is the stack the bet was placed from, not
+  // whatever an opening natural has since made of it.
+  private gradeBet(trueCount: number | null, bet: number, bankroll: number): void {
     if (trueCount === null) return;
     // A shrinking bankroll clamps the carried bet to whatever it can still back,
     // which need not land on a rung. The ladder is the only way to place a bet,
     // so a figure that is not on it is one the player never chose.
     if (!this.betOptions().includes(bet)) return;
     const called = betUnitsForTrueCount(trueCount, this.betRamp());
-    if (called * this.spots() > this.bankrollService.bankroll()) return;
+    if (called * this.spots() > bankroll) return;
     const correct = bet === called;
     this.betSpreadStats.recordAttempt(correct);
     const band = BET_RAMP_BAND_LABELS[betRampBandIndex(trueCount)];
