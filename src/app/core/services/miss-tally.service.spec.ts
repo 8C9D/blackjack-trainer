@@ -362,6 +362,62 @@ describe('MissTallyService', () => {
     });
   });
 
+  // The counts are kept once each, so a count missed before the window used to
+  // ride along with this week's misses and read as "missed this week at" it.
+  describe('dating the missed counts', () => {
+    const daysLater = (n: number) => {
+      const d = new Date(BASE);
+      d.setDate(d.getDate() + n);
+      return d;
+    };
+
+    it('drops a count whose miss has left the window', () => {
+      const s = createService(() => current);
+      s.record('deviations', HARD_16_V_10, false, -3);
+      current = daysLater(9);
+      s.record('deviations', HARD_16_V_10, false, 2);
+      expect(s.weakSpotFor('deviations')!.missedCounts).toEqual([2]);
+      expect(s.missedCountsFor('deviations', HARD_16_V_10)).toEqual([2]);
+      const stored = JSON.parse(localStorage.getItem(MISS_TALLY_KEY)!);
+      expect(stored.deviations[scenarioKey(HARD_16_V_10)].missedCounts).toEqual([2]);
+    });
+
+    it('keeps a count missed again inside the window, at its new date', () => {
+      const s = createService(() => current);
+      s.record('deviations', HARD_16_V_10, false, -3);
+      current = daysLater(4);
+      s.record('deviations', HARD_16_V_10, false, -3);
+      current = daysLater(9);
+      s.record('deviations', HARD_16_V_10, false, 2);
+      expect(s.weakSpotFor('deviations')!.missedCounts).toEqual([2, -3]);
+    });
+
+    it('dates an undated count by the latest day it could have been missed', () => {
+      const missedDay = localDateKey(current);
+      localStorage.setItem(
+        MISS_TALLY_KEY,
+        JSON.stringify({
+          deviations: {
+            [scenarioKey(HARD_16_V_10)]: {
+              ref: HARD_16_V_10,
+              days: [{ date: missedDay, attempts: 2, misses: 1 }],
+              streak: 0,
+              missedCounts: [1, 'x', 1, 4],
+            },
+          },
+        }),
+      );
+      const s = createService(() => current);
+      expect(s.weakSpotFor('deviations')!.missedCounts).toEqual([1, 4]);
+      s.record('deviations', HARD_16_V_10, true, 1);
+      const stored = JSON.parse(localStorage.getItem(MISS_TALLY_KEY)!);
+      expect(stored.deviations[scenarioKey(HARD_16_V_10)].missedCountDates).toEqual([
+        missedDay,
+        missedDay,
+      ]);
+    });
+  });
+
   describe('weakSpots ranking', () => {
     // Five misses of a coin flip give up less than one split of tens, and the
     // hand at the top of this list is the one the next session opens on.
@@ -515,7 +571,14 @@ describe('MissTallyService', () => {
 
       expect(Object.keys(stored)).toEqual(['deviations']);
       const tally = stored.deviations[scenarioKey(HARD_16_V_10)];
-      expect(Object.keys(tally).sort()).toEqual(['days', 'missedCounts', 'ref', 'streak']);
+      expect(Object.keys(tally).sort()).toEqual([
+        'days',
+        'missedCountDates',
+        'missedCounts',
+        'ref',
+        'streak',
+      ]);
+      expect(tally.missedCountDates).toEqual([localDateKey(current)]);
       expect(Object.keys(tally.ref).sort()).toEqual(['dealer', 'hand', 'kind']);
       expect(Object.keys(tally.days[0]).sort()).toEqual(['attempts', 'date', 'misses']);
     });
@@ -528,8 +591,15 @@ describe('MissTallyService', () => {
       s.record('basic-strategy', HARD_16_V_10, false);
       const stored = JSON.parse(localStorage.getItem(MISS_TALLY_KEY)!);
       const tally = stored['basic-strategy'][scenarioKey(HARD_16_V_10)];
-      expect(Object.keys(tally).sort()).toEqual(['days', 'missedCounts', 'ref', 'streak']);
+      expect(Object.keys(tally).sort()).toEqual([
+        'days',
+        'missedCountDates',
+        'missedCounts',
+        'ref',
+        'streak',
+      ]);
       expect(tally.missedCounts).toEqual([]);
+      expect(tally.missedCountDates).toEqual([]);
     });
 
     // The trainer keys are the other half of the contract: they are the object

@@ -74,6 +74,10 @@ interface ScenarioTally {
   readonly streak: number;
   // The true counts the scenario was missed at, most recent first.
   readonly missedCounts: readonly number[];
+  // The day each of those counts was last missed, index for index. The counts
+  // are kept once each, so without a date a count missed nine days ago read as
+  // "missed this week at TC -3" beside this week's attempts.
+  readonly missedCountDates: readonly string[];
 }
 
 type TallyState = Partial<Record<TalliedTrainer, Record<string, ScenarioTally>>>;
@@ -177,7 +181,13 @@ export class MissTallyService {
     const key = scenarioKey(ref);
     const state = this._state();
     const forTrainer = { ...(state[trainer] ?? {}) };
-    const existing = forTrainer[key] ?? { ref, days: [], streak: 0, missedCounts: [] };
+    const existing = forTrainer[key] ?? {
+      ref,
+      days: [],
+      streak: 0,
+      missedCounts: [],
+      missedCountDates: [],
+    };
     const day = existing.days.find((d) => d.date === today);
     const days = day
       ? existing.days.map((d) =>
@@ -190,7 +200,7 @@ export class MissTallyService {
       ref,
       days: this.pruneDays(days),
       streak: correct ? existing.streak + (countsTowardClear ? 1 : 0) : 0,
-      missedCounts: rememberMissedCount(existing.missedCounts, correct, trueCount),
+      ...rememberMissedCount(existing, correct, trueCount, today),
     };
     const next: TallyState = { ...state, [trainer]: this.pruneScenarios(forTrainer) };
     this._state.set(next);
@@ -227,7 +237,8 @@ export class MissTallyService {
   // The counts a scenario was recently missed at, most recent first; empty for a
   // scenario never missed, or missed with no count in the question.
   missedCountsFor(trainer: TalliedTrainer, ref: ScenarioRef): readonly number[] {
-    return this._state()[trainer]?.[scenarioKey(ref)]?.missedCounts ?? [];
+    const tally = this._state()[trainer]?.[scenarioKey(ref)];
+    return tally ? countsSince(tally, this.cutoffDate()).missedCounts : [];
   }
 
   // The worst outstanding scenario, or null when nothing is outstanding.
@@ -252,14 +263,15 @@ export class MissTallyService {
         }
       }
       if (misses === 0) continue;
+      const { missedCounts } = countsSince(tally, cutoff);
       spots.push({
         ref: tally.ref,
         label: scenarioLabel(tally.ref),
         misses,
         attempts,
         streak: tally.streak,
-        missedCounts: tally.missedCounts,
-        costPerMiss: this.costPerMiss(tally.ref, tally.missedCounts),
+        missedCounts,
+        costPerMiss: this.costPerMiss(tally.ref, missedCounts),
       });
     }
     return spots;
@@ -299,6 +311,7 @@ export class MissTallyService {
   // out, so the stored map cannot grow without bound.
   private pruneScenarios(forTrainer: Record<string, ScenarioTally>): Record<string, ScenarioTally> {
     const out: Record<string, ScenarioTally> = {};
+    const cutoff = this.cutoffDate();
     for (const [key, tally] of Object.entries(forTrainer)) {
       const days = this.pruneDays(tally.days);
       if (days.length > 0) {
@@ -306,7 +319,7 @@ export class MissTallyService {
           ref: tally.ref,
           days,
           streak: tally.streak,
-          missedCounts: tally.missedCounts,
+          ...countsSince(tally, cutoff),
         };
       }
     }
@@ -364,40 +377,83 @@ function sanitizeScenarioTally(v: unknown): ScenarioTally | null {
     const misses = Math.min(attempts, (previous?.misses ?? 0) + candidate.misses);
     byDate.set(candidate.date, { date: candidate.date, attempts, misses });
   }
+  const days = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
   return {
     ref: t.ref,
-    days: [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date)),
+    days,
     // Payloads written before clear-streak tracking have no streak; a fresh 0
     // just means those scenarios must earn it again.
     streak: Number.isSafeInteger(t.streak) && (t.streak ?? -1) >= 0 ? t.streak! : 0,
     // Likewise for the missed counts: a scenario stored before they were kept
     // (or by the Basic Strategy trainer, which has no count) simply has none,
     // and comes back at a fresh count exactly as it used to.
-    missedCounts: sanitizeMissedCounts(t.missedCounts),
+    ...sanitizeMissedCounts(t.missedCounts, t.missedCountDates, days),
   };
 }
 
+type MissedCounts = Pick<ScenarioTally, 'missedCounts' | 'missedCountDates'>;
+
 // Newest first, capped, and only for a miss — a correct answer leaves the list
-// alone, since it is the record of what went wrong.
+// alone, since it is the record of what went wrong. A count missed again moves
+// to the front with today's date.
 function rememberMissedCount(
-  existing: readonly number[],
+  existing: MissedCounts,
   correct: boolean,
   trueCount: number | undefined,
-): readonly number[] {
-  if (correct || trueCount === undefined || !Number.isInteger(trueCount)) return existing;
-  if (Math.abs(trueCount) > MAX_STORED_TRUE_COUNT) return existing;
-  return [trueCount, ...existing.filter((c) => c !== trueCount)].slice(0, MISSED_COUNT_MEMORY);
+  today: string,
+): MissedCounts {
+  const kept = { missedCounts: existing.missedCounts, missedCountDates: existing.missedCountDates };
+  if (correct || trueCount === undefined || !Number.isInteger(trueCount)) return kept;
+  if (Math.abs(trueCount) > MAX_STORED_TRUE_COUNT) return kept;
+  const others = existing.missedCounts
+    .map((count, i) => [count, existing.missedCountDates[i]] as const)
+    .filter(([count]) => count !== trueCount);
+  const pairs = [[trueCount, today] as const, ...others].slice(0, MISSED_COUNT_MEMORY);
+  return {
+    missedCounts: pairs.map(([count]) => count),
+    missedCountDates: pairs.map(([, date]) => date),
+  };
 }
 
-function sanitizeMissedCounts(value: unknown): readonly number[] {
-  if (!Array.isArray(value)) return [];
+// The counts missed on or after `cutoff`: the ones that belong to the window
+// the attempts and misses are read over.
+function countsSince(tally: MissedCounts, cutoff: string): MissedCounts {
+  const keep = tally.missedCountDates.map((date) => date >= cutoff);
+  return {
+    missedCounts: tally.missedCounts.filter((_, i) => keep[i]),
+    missedCountDates: tally.missedCountDates.filter((_, i) => keep[i]),
+  };
+}
+
+// A count stored without a usable date — every payload written before the dates
+// were kept — takes the scenario's latest missed day: it was missed no later
+// than that, so it ages out with the miss it most likely came from rather than
+// lingering, and never earlier than the evidence allows.
+function sanitizeMissedCounts(
+  counts: unknown,
+  dates: unknown,
+  days: readonly DayTally[],
+): MissedCounts {
+  const out: MissedCounts = { missedCounts: [], missedCountDates: [] };
+  if (!Array.isArray(counts)) return out;
+  const missed = days.filter((d) => d.misses > 0);
+  const fallback = (missed.length > 0 ? missed : days).at(-1)?.date;
+  const dated = Array.isArray(dates) && dates.length === counts.length ? dates : [];
   const seen: number[] = [];
-  for (const candidate of value) {
-    if (typeof candidate !== 'number' || !Number.isInteger(candidate)) continue;
-    if (Math.abs(candidate) > MAX_STORED_TRUE_COUNT) continue;
-    if (!seen.includes(candidate)) seen.push(candidate);
-  }
-  return seen.slice(0, MISSED_COUNT_MEMORY);
+  const seenDates: string[] = [];
+  counts.forEach((candidate: unknown, i) => {
+    if (typeof candidate !== 'number' || !Number.isInteger(candidate)) return;
+    if (Math.abs(candidate) > MAX_STORED_TRUE_COUNT || seen.includes(candidate)) return;
+    const raw: unknown = dated[i];
+    const date = typeof raw === 'string' && isLocalDateKey(raw) ? raw : fallback;
+    if (date === undefined) return;
+    seen.push(candidate);
+    seenDates.push(date);
+  });
+  return {
+    missedCounts: seen.slice(0, MISSED_COUNT_MEMORY),
+    missedCountDates: seenDates.slice(0, MISSED_COUNT_MEMORY),
+  };
 }
 
 function isScenarioRef(value: unknown): value is ScenarioRef {
