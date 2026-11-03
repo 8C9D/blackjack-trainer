@@ -90,7 +90,16 @@ struct PlayCost {
         let values = offeredPlays(ref, context.options)
             .compactMap { playValue(ref, $0, context) }
             .sorted(by: >)
-        return values.count < 2 ? nil : values[0] - values[1]
+        let nextBest = values.count < 2 ? nil : values[0] - values[1]
+        // Against an ace a hand can also be missed by insuring it, which costs the
+        // side bet and nothing else. A miss may have been that, so the floor is
+        // the cheaper of the two: priced as the next-best play, insuring 10,9 v A
+        // read "at least 101% a miss" for a 3.7% mistake.
+        guard ref.dealer == "A", !(ref.kind == "hard" && ref.hand == "20") else {
+            return nextBest
+        }
+        let insuring = max(0, -insuranceValue(context.trueCount))
+        return nextBest.map { min($0, insuring) } ?? insuring
     }
 
     /// How often a scenario comes up at a table, as a share of hands.

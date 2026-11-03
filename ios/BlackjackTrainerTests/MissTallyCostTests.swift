@@ -99,13 +99,16 @@ struct MissTallyCostTests {
         #expect(near == 30)
     }
 
-    @Test func averagesADeviationOverEveryCountItWasMissedAt() {
+    /// The counts are kept once each, not once a miss, so a mean of them weighs a
+    /// count missed once like one missed four times. The figure says "at least",
+    /// so it is the cheapest of them.
+    @Test func pricesADeviationAtTheCheapestCountItWasMissedAt() {
         let (s, _) = harness(playCost: CostFixture.counted(
             ["hard-16-v-10": CostFixture.hard16Cell]
         ))
         s.record(.deviations, ref: hard16v10, correct: false, trueCount: 2)
         s.record(.deviations, ref: hard16v10, correct: false, trueCount: 1)
-        #expect(s.weakSpotFor(.deviations)?.costPerMiss == 1500)
+        #expect(s.weakSpotFor(.deviations)?.costPerMiss == 1000)
     }
 
     /// Recorded before the counts were kept, or by a miss with none to keep.

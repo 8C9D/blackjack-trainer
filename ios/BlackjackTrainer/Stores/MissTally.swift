@@ -309,13 +309,16 @@ final class MissTallyStore: CloudSyncable {
 
     /// A deviation is worth what it was worth at the counts it was missed at; one
     /// recorded without any, like every basic-strategy miss, at a full shoe.
+    ///
+    /// The cheapest of those counts, not their mean: the counts are kept once
+    /// each, not once a miss, so a mean weighs a count missed once like one
+    /// missed four times. The figure is labelled a floor, so it has to be one.
     private func costPerMiss(_ ref: ScenarioRef, _ missedCounts: [Int]) -> Double? {
         guard let playCost, let context = contextSource?() else { return nil }
         let atCounts = missedCounts.compactMap { trueCount in
             playCost.cheapestMiss(ref, context.at(trueCount: trueCount))
         }
-        if atCounts.isEmpty { return playCost.cheapestMiss(ref, context) }
-        return atCounts.reduce(0, +) / Double(atCounts.count)
+        return atCounts.min() ?? playCost.cheapestMiss(ref, context)
     }
 
     private func totalCost(_ spot: WeakSpot) -> Double {
