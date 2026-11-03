@@ -123,7 +123,7 @@ struct DeckEstimateEffect: Equatable {
     /// off an estimate that cannot be divided by.
     init?(runningCount: Double, estimate: Double?, correctTrueCount: Int, userTrueCount: Int) {
         guard let estimate, estimate.isFinite, estimate > 0 else { return nil }
-        let implied = Int((runningCount / estimate).rounded(.towardZero))
+        let implied = CountingEngine.truncatedTrueCount(runningCount, over: estimate)
         self.estimate = estimate
         impliedTrueCount = implied
         matchesActual = implied == correctTrueCount

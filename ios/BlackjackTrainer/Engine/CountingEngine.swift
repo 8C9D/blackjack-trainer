@@ -18,9 +18,26 @@ struct CountingEngine {
     }
 
     /// True count = running count / decks remaining, truncated toward zero
-    /// (e.g. −5 over 2 decks → −2, not −3). Mirrors `Math.trunc`.
+    /// (e.g. −5 over 2 decks → −2, not −3). Mirrors `truncateTrueCount`.
     func trueCount(runningCount: Double, decksRemaining: Double) -> Int {
-        Int((runningCount / decksRemaining).rounded(.towardZero))
+        Self.truncatedTrueCount(runningCount, over: decksRemaining)
+    }
+
+    /// A quotient within this of a whole number is that whole number. A live
+    /// shoe's decks remaining is cards / 52, which a `Double` cannot hold
+    /// exactly, so a division that is whole on paper (27 over 108 cards is 13)
+    /// lands a hair under and would truncate one low. Tags are quarter points at
+    /// the finest and a shoe holds at most 416 cards, so a quotient that really
+    /// is fractional sits at least 1/1664 from a whole number.
+    private static let wholeTolerance = 1e-9
+
+    /// Running count over decks, truncated toward zero, with the whole-number
+    /// snap above. Mirrors `truncateTrueCount` in `card-counting.model.ts`.
+    static func truncatedTrueCount(_ runningCount: Double, over decks: Double) -> Int {
+        let quotient = runningCount / decks
+        let whole = quotient.rounded()
+        if abs(quotient - whole) < wholeTolerance { return Int(whole) }
+        return Int(quotient.rounded(.towardZero))
     }
 
     /// Whether a decks-remaining estimate is within the tolerance band of the

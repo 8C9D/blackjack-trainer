@@ -63,6 +63,16 @@ struct CountingParityTests {
         #expect(engine.trueCount(runningCount: -1, decksRemaining: 2) == 0)
     }
 
+    @Test func wholeQuotientOverALiveShoeIsNotTruncatedLow() {
+        // cards / 52 is inexact, so 27 over 108 cards divides to a hair under 13.
+        #expect(engine.trueCount(runningCount: 27, decksRemaining: 108.0 / 52) == 13)
+        #expect(engine.trueCount(runningCount: -27, decksRemaining: 108.0 / 52) == -13)
+        #expect(engine.trueCount(runningCount: 13.5, decksRemaining: 54.0 / 52) == 13)
+        // A quotient that is merely near a whole number still truncates.
+        #expect(engine.trueCount(runningCount: 25, decksRemaining: 108.0 / 52) == 12)
+        #expect(engine.trueCount(runningCount: 26.5, decksRemaining: 54.0 / 52) == 25)
+    }
+
     @Test func onlyKOCarriesASchedule() throws {
         let systems = try GameData.loadCountingSystems()
         #expect(systems.filter { $0.keyCounts != nil }.map(\.id) == ["ko"])
