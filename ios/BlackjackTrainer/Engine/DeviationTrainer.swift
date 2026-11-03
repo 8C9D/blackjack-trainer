@@ -92,7 +92,21 @@ enum DeviationFeedback {
                 + "\(result.expectedAction.label) instead of basic \(result.basicAction.label)."
         }
 
-        if result.matchedRule != nil {
+        // A surrender the chart already calls for comes first, so an index for the
+        // hand's total has nothing to say. Saying "no deviation" hid the reason.
+        if result.expectedAction == .surrender, result.matchedRule?.category != "surrender" {
+            return "Basic strategy surrenders this hand, and a surrender on offer comes "
+                + "before any index for it."
+        }
+
+        if let rule = result.matchedRule {
+            // The count is on the index's side, but its play is gone. Blaming the
+            // count for that taught the wrong lesson.
+            if DeviationEngine.thresholdMet(rule, trueCount: result.trueCount),
+               let calledFor = Action(rawValue: rule.deviationAction) {
+                return "At TC \(tcLabel) the index for this hand calls for \(calledFor.label), "
+                    + "which this hand can no longer take; play \(result.expectedAction.label)."
+            }
             return "No deviation at TC \(tcLabel); basic strategy plays "
                 + "\(result.expectedAction.label). (A deviation for this hand exists but only "
                 + "fires at a different count.)"

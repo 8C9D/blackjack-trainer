@@ -22,6 +22,12 @@ struct DeviationEngine {
     }
 
     func isThresholdMet(_ rule: DeviationRule, trueCount: Int) -> Bool {
+        Self.thresholdMet(rule, trueCount: trueCount)
+    }
+
+    /// Whether a count is on the rule's side of its index. The one reading of
+    /// `direction`, shared by the engine and the sentences that explain it.
+    static func thresholdMet(_ rule: DeviationRule, trueCount: Int) -> Bool {
         switch rule.direction {
         case "at-or-above": trueCount >= rule.index
         case "at-or-below": trueCount <= rule.index

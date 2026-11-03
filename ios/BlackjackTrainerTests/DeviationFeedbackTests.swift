@@ -72,12 +72,35 @@ struct DeviationFeedbackTests {
                 expected: .hit,
                 trueCount: 1,
                 deviationApplied: false,
-                matchedRule: rule()
+                matchedRule: rule(index: 3)
             ),
             dealerAce: false
         )
         #expect(text.contains("No deviation at TC +1"))
         #expect(text.contains("only fires at a different count."))
+    }
+
+    /// The count is on the index's side; the play is what is gone. Mirrors the web
+    /// evaluator's "says the play is gone, not the count".
+    @Test func saysThePlayIsGoneNotTheCountWhenAnIndexCannotBeTaken() {
+        let text = DeviationFeedback.explanation(
+            result(user: .stand, expected: .hit, trueCount: 4, deviationApplied: false,
+                   matchedRule: rule(playerHand: "10", label: "Hard 10", index: 4,
+                                     deviationAction: "D")),
+            dealerAce: false
+        )
+        #expect(text == "At TC +4 the index for this hand calls for Double, which this hand "
+            + "can no longer take; play Hit.")
+    }
+
+    /// A surrender the chart calls for outranks an index for the hand's total.
+    @Test func saysASurrenderOnOfferComesFirst() {
+        let text = DeviationFeedback.explanation(
+            result(user: .stand, expected: .surrender, basic: .surrender, trueCount: 2,
+                   deviationApplied: false),
+            dealerAce: false
+        )
+        #expect(text.contains("surrender on offer comes before any index"))
     }
 
     @Test func explainsInsuranceTaken() {
