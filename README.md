@@ -15,7 +15,7 @@ Both drill the same four skills against published Blackjack Apprenticeship chart
 - **Basic strategy.** Hands against the H17 and S17 charts, played out from the deal: a correct hit deals the next card and asks again, and a correct split plays both hands.
 - **Running count.** Count a card stream of configurable length and speed, across 58 counting systems (Hi-Lo, KO, Omega II, Wong Halves and the Blackjack Review comparison set).
 - **True count.** The same streams, answered as running count over decks remaining, from a fixed preset or a live, depleting shoe with deck estimation. A live-shoe round can roll into a showdown against the dealer.
-- **Deviations.** Hands against the Hi-Lo H17 and S17 index charts, with the true count drawn at random or entered by hand to drill exact thresholds, plus the insurance overlay when the dealer shows an ace.
+- **Deviations.** Hands against the Hi-Lo H17 and S17 index charts, with the true count drawn at random or entered by hand to drill exact thresholds, plus insurance when the dealer shows an ace, asked before the play as a table asks it, so the ace-up indices get their own question.
 - **The cost of a mistake.** Every miss says what it gave up: a coin flip the chart happened to call reads as one, and a split of tens reads as an eighth of the bet. Weak spots rank by cost rather than by count, and Progress prices the week's misses against the house edge at your rules.
 - **The Flow shell.** A one-action home screen (continue, daily goal ring, 7-day streak), full-screen drills that auto-advance on correct answers and adapt to the hands you keep missing, a strategy-chart reference, and a progress page.
 
