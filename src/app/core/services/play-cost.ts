@@ -185,9 +185,13 @@ export function formatBetShare(units: number): string {
 // saying: a trainee should spend their attention elsewhere.
 const CLOSE_CALL = 50;
 
-// The sentence a miss earns.
+// The sentence a miss earns. Judged on the figure the sentence prints rather
+// than the raw one, so 0.5% is never a close call on one miss and a real
+// mistake on the next: 46 and 50 hundredths both read "0.5%".
 export function costSentence(units: number): string {
   const share = formatBetShare(units);
-  if (units < CLOSE_CALL) return `A close call: that play gives up ${share} of your bet.`;
+  if (Math.round(units / 10) * 10 < CLOSE_CALL) {
+    return `A close call: that play gives up ${share} of your bet.`;
+  }
   return `That play gives up ${share} of your bet.`;
 }

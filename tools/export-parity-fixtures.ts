@@ -981,7 +981,7 @@ function exportCostVectors(): void {
     }),
   }));
 
-  const shareCases = [0, 1, 9, 10, 25, 35, 49, 50, 75, 125, 340, 995, 999, 1000, 2875].map(
+  const shareCases = [0, 1, 9, 10, 25, 35, 44, 45, 49, 50, 75, 125, 340, 995, 999, 1000, 2875].map(
     (units) => ({
       units,
       share: formatBetShare(units),

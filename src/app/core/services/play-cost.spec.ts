@@ -221,4 +221,12 @@ describe('costSentence', () => {
   it('prices a real mistake plainly', () => {
     expect(costSentence(340)).toBe('That play gives up 3.4% of your bet.');
   });
+
+  // Judged on the printed figure: 46 and 50 hundredths both print 0.5%, and one
+  // reading "a close call" while the other did not was two verdicts on one number.
+  it('gives the same verdict to every cost that prints the same', () => {
+    expect(costSentence(44)).toBe('A close call: that play gives up 0.4% of your bet.');
+    expect(costSentence(46)).toBe('That play gives up 0.5% of your bet.');
+    expect(costSentence(50)).toBe('That play gives up 0.5% of your bet.');
+  });
 });
