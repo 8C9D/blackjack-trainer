@@ -6,6 +6,7 @@ import { formatSignedCount } from '../models/card-counting.model';
 import { cardHighValue, softNonAceValue, type Card } from '../models/card.model';
 import {
   describeDeviationThreshold,
+  deviationThresholdMet,
   type DeviationCategory,
   type DeviationDecision,
   type DeviationHandKey,
@@ -78,16 +79,7 @@ export class DeviationEngineService {
   }
 
   isDeviationThresholdMet(rule: DeviationRule, trueCount: number): boolean {
-    switch (rule.direction) {
-      case 'at-or-above':
-        return trueCount >= rule.index;
-      case 'at-or-below':
-        return trueCount <= rule.index;
-      case 'positive':
-        return trueCount > 0;
-      case 'negative':
-        return trueCount < 0;
-    }
+    return deviationThresholdMet(rule, trueCount);
   }
 
   resolveDeviationDecision(input: EngineInput, trueCount: number): DeviationDecision {

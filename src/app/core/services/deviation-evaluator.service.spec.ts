@@ -101,6 +101,17 @@ describe('DeviationEvaluatorService', () => {
     });
   });
 
+  describe('a surrender the chart calls for', () => {
+    // S17 16 v 10 is a surrender cell, and it outranks the stand-at-any-positive
+    // index: that index is for a table with no surrender.
+    it('says surrender comes first rather than that there is no index', () => {
+      const ls = { ...options, lateSurrender: true };
+      const r = evaluator.evaluate(scenarioOf('10', '6', '10', 2), 'S', ruleSet, ls);
+      expect(r.expectedAction).toBe('SUR');
+      expect(r.explanation).toContain('surrender on offer comes before any index');
+    });
+  });
+
   describe('insurance overlay', () => {
     it('dealer Ace at TC +3 — Insurance is correct', () => {
       const r = evaluator.evaluate(scenarioOf('10', '6', 'A', 3), 'INS', ruleSet, options);
@@ -168,6 +179,15 @@ describe('DeviationEvaluatorService', () => {
       expect(r.deviationApplied).toBe(true);
       expect(r.handDescription).toBe('Hard 16');
       expect(r.explanation).toContain('Hi-Lo deviation');
+    });
+
+    // The count is on the index's side; the play is what is gone. Saying the
+    // index "only fires at a different count" blamed the wrong thing.
+    it('says the play is gone, not the count, when an index cannot be taken', () => {
+      const r = evaluator.evaluatePlay(deep(['4', '2', '4'], '10', 4), 'S');
+      expect(r.expectedAction).toBe('H');
+      expect(r.explanation).toContain('calls for Double, which this hand can no longer take');
+      expect(r.explanation).not.toContain('different count');
     });
 
     it('grades the same total the other way below the threshold', () => {

@@ -2,10 +2,11 @@ import { Injectable, inject } from '@angular/core';
 
 import { formatSignedCount } from '../models/card-counting.model';
 import { isAce, type Card } from '../models/card.model';
-import type {
-  DeviationDecision,
-  DeviationScenario,
-  DeviationTrainerResult,
+import {
+  deviationThresholdMet,
+  type DeviationDecision,
+  type DeviationScenario,
+  type DeviationTrainerResult,
 } from '../models/deviation.model';
 import {
   ACTION_LABELS,
@@ -198,7 +199,21 @@ export function explainPlaying(args: {
     return `Hi-Lo deviation: ${playing.matchedRule.source}. At TC ${tcLabel}, play ${ACTION_LABELS[playing.finalAction]} instead of basic ${ACTION_LABELS[playing.basicAction]}.`;
   }
 
+  // A surrender the chart already calls for comes first, so an index for the
+  // hand's total has nothing to say — 16 v 10 stands at any positive count only
+  // where surrender is not on offer. Saying "no deviation" there hid the reason.
+  if (playing.finalAction === 'SUR' && playing.matchedRule?.category !== 'surrender') {
+    return 'Basic strategy surrenders this hand, and a surrender on offer comes before any index for it.';
+  }
+
   if (playing.matchedRule) {
+    const rule = playing.matchedRule;
+    // The count is on the index's side, but its play is gone: a double or a
+    // surrender after a hit, a split past the cap, a double out of a split
+    // without DAS. Blaming the count for that taught the wrong lesson.
+    if (deviationThresholdMet(rule, trueCount)) {
+      return `At TC ${tcLabel} the index for this hand calls for ${ACTION_LABELS[rule.deviationAction]}, which this hand can no longer take; play ${ACTION_LABELS[playing.finalAction]}.`;
+    }
     // Rule exists but threshold not met — surface it as a learning hint.
     return `No deviation at TC ${tcLabel}; basic strategy plays ${ACTION_LABELS[playing.finalAction]}. (A deviation for this hand exists but only fires at a different count.)`;
   }

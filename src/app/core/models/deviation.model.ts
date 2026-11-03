@@ -87,6 +87,21 @@ export function describeDeviationThreshold(rule: DeviationRule): string {
   }
 }
 
+// Whether a count is on the rule's side of its index. The one reading of
+// `direction`, shared by the engine and the sentences that explain it.
+export function deviationThresholdMet(rule: DeviationRule, trueCount: number): boolean {
+  switch (rule.direction) {
+    case 'at-or-above':
+      return trueCount >= rule.index;
+    case 'at-or-below':
+      return trueCount <= rule.index;
+    case 'positive':
+      return trueCount > 0;
+    case 'negative':
+      return trueCount < 0;
+  }
+}
+
 export interface DeviationDecision {
   readonly basicAction: Action;
   readonly finalAction: Action;
