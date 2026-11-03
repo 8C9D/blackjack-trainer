@@ -306,7 +306,9 @@ struct MissTallyStoredShapeTests {
         let tally = try #require(
             (root["deviations"] as? [String: Any])?[scenarioKey(hard16v10)] as? [String: Any]
         )
-        #expect(tally.keys.sorted() == ["days", "missedCounts", "ref", "streak"])
+        #expect(tally.keys.sorted()
+            == ["days", "missedCountDates", "missedCounts", "ref", "streak"])
+        #expect(tally["missedCountDates"] as? [String] == [localDateKey(Date())])
         let ref = try #require(tally["ref"] as? [String: Any])
         #expect(ref.keys.sorted() == ["dealer", "hand", "kind"])
         let day = try #require((tally["days"] as? [[String: Any]])?.first)
@@ -323,8 +325,10 @@ struct MissTallyStoredShapeTests {
         let tally = try #require(
             (root["basic-strategy"] as? [String: Any])?[scenarioKey(hard16v10)] as? [String: Any]
         )
-        #expect(tally.keys.sorted() == ["days", "missedCounts", "ref", "streak"])
+        #expect(tally.keys.sorted()
+            == ["days", "missedCountDates", "missedCounts", "ref", "streak"])
         #expect(tally["missedCounts"] as? [Int] == [])
+        #expect(tally["missedCountDates"] as? [String] == [])
     }
 
     /// The trainer keys are the other half of the contract: they are the object

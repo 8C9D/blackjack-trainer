@@ -69,43 +69,102 @@ struct ScenarioTally: Codable, Equatable {
     var streak: Int = 0
     /// The true counts the scenario was missed at, most recent first.
     var missedCounts: [Int] = []
+    /// The day each of those counts was last missed, index for index. The counts
+    /// are kept once each, so without a date a count missed nine days ago read as
+    /// "missed this week at TC -3" beside this week's attempts.
+    var missedCountDates: [String] = []
 
-    init(ref: ScenarioRef, days: [DayTally], streak: Int = 0, missedCounts: [Int] = []) {
+    init(ref: ScenarioRef, days: [DayTally], streak: Int = 0, missed: MissedCounts = .none) {
         self.ref = ref
         self.days = days
         self.streak = streak
-        self.missedCounts = missedCounts
+        missedCounts = missed.counts
+        missedCountDates = missed.dates
     }
 
     /// Hand-rolled so payloads written before clear-streak tracking still decode; a
     /// fresh 0 just means those scenarios must earn it again. Likewise for the
     /// missed counts: a scenario stored before they were kept (or by the Basic
-    /// Strategy trainer, which has no count) simply has none.
+    /// Strategy trainer, which has no count) simply has none, and one stored
+    /// before they were dated takes the latest day it could have been missed.
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         ref = try container.decode(ScenarioRef.self, forKey: .ref)
         days = try container.decode([DayTally].self, forKey: .days)
         streak = try max(0, container.decodeIfPresent(Int.self, forKey: .streak) ?? 0)
         let stored = try container.decodeIfPresent([Int].self, forKey: .missedCounts) ?? []
-        missedCounts = sanitizeMissedCounts(stored)
+        let dates = try container.decodeIfPresent([String].self, forKey: .missedCountDates)
+        let missed = sanitizeMissedCounts(stored, dates: dates, days: days)
+        missedCounts = missed.counts
+        missedCountDates = missed.dates
+    }
+
+    var missed: MissedCounts {
+        MissedCounts(counts: missedCounts, dates: missedCountDates)
+    }
+}
+
+/// A scenario's missed counts with the day each was last missed, index for index.
+struct MissedCounts: Equatable {
+    let counts: [Int]
+    let dates: [String]
+
+    static let none = MissedCounts(counts: [], dates: [])
+
+    /// The counts missed on or after `cutoff`: the ones that belong to the window
+    /// the attempts and misses are read over.
+    func since(_ cutoff: String) -> MissedCounts {
+        let kept = zip(counts, dates).filter { $0.1 >= cutoff }
+        return MissedCounts(counts: kept.map(\.0), dates: kept.map(\.1))
     }
 }
 
 /// Newest first, capped, and only for a miss — a correct answer leaves the list
-/// alone, since it is the record of what went wrong. Mirrors
-/// `rememberMissedCount`.
-func rememberMissedCount(_ existing: [Int], correct: Bool, trueCount: Int?) -> [Int] {
+/// alone, since it is the record of what went wrong. A count missed again moves
+/// to the front with today's date. Mirrors `rememberMissedCount`.
+func rememberMissedCount(
+    _ existing: MissedCounts,
+    correct: Bool,
+    trueCount: Int?,
+    today: String
+) -> MissedCounts {
     guard !correct, let trueCount, abs(trueCount) <= maxStoredTrueCount else { return existing }
-    return Array(([trueCount] + existing.filter { $0 != trueCount }).prefix(missedCountMemory))
+    let pairs = [(trueCount, today)] + zip(existing.counts, existing.dates)
+        .filter { $0.0 != trueCount }
+    let kept = pairs.prefix(missedCountMemory)
+    return MissedCounts(counts: kept.map(\.0), dates: kept.map(\.1))
 }
 
-/// Drops implausible values and duplicates out of a restored list.
-func sanitizeMissedCounts(_ values: [Int]) -> [Int] {
+/// Drops implausible values and duplicates out of a restored list. A count with
+/// no usable date — every payload written before the dates were kept — takes the
+/// scenario's latest missed day: it was missed no later than that, so it ages
+/// out with the miss it most likely came from. Mirrors `sanitizeMissedCounts`.
+func sanitizeMissedCounts(_ values: [Int], dates: [String]?, days: [DayTally]) -> MissedCounts {
+    let missedDays = days.filter { $0.misses > 0 }
+    let fallback = (missedDays.isEmpty ? days : missedDays).map(\.date).max()
+    let dated = dates.flatMap { $0.count == values.count ? $0 : nil } ?? []
     var seen: [Int] = []
-    for value in values where abs(value) <= maxStoredTrueCount && !seen.contains(value) {
+    var seenDates: [String] = []
+    for (index, value) in values.enumerated()
+        where abs(value) <= maxStoredTrueCount && !seen.contains(value) {
+        let stored = index < dated.count && isDateKey(dated[index]) ? dated[index] : nil
+        guard let date = stored ?? fallback else { continue }
         seen.append(value)
+        seenDates.append(date)
     }
-    return Array(seen.prefix(missedCountMemory))
+    return MissedCounts(
+        counts: Array(seen.prefix(missedCountMemory)),
+        dates: Array(seenDates.prefix(missedCountMemory))
+    )
+}
+
+/// `YYYY-MM-DD`, the shape `localDateKey` writes.
+private func isDateKey(_ value: String) -> Bool {
+    let chars = Array(value)
+    guard chars.count == 10, chars[4] == "-", chars[7] == "-" else { return false }
+    return chars.enumerated().allSatisfy { index, char in
+        index == 4 || index == 7 || char.isASCII && char.isNumber
+    }
 }
 
 /// The `ScenarioRef` for a graded hand. Mirrors the web `scenarioRefFor`.
@@ -229,10 +288,11 @@ final class MissTallyStore: CloudSyncable {
             ref: ref,
             days: pruneDays(days),
             streak: correct ? existing.streak + (countsTowardClear ? 1 : 0) : 0,
-            missedCounts: rememberMissedCount(
-                existing.missedCounts,
+            missed: rememberMissedCount(
+                existing.missed,
                 correct: correct,
-                trueCount: trueCount
+                trueCount: trueCount,
+                today: today
             )
         )
         state[trainer.rawValue] = pruneScenarios(forTrainer)
@@ -276,7 +336,7 @@ final class MissTallyStore: CloudSyncable {
     /// The counts a scenario was recently missed at, most recent first; empty for
     /// a scenario never missed, or missed with no count in the question.
     func missedCounts(_ trainer: TalliedTrainer, ref: ScenarioRef) -> [Int] {
-        state[trainer.rawValue]?[scenarioKey(ref)]?.missedCounts ?? []
+        state[trainer.rawValue]?[scenarioKey(ref)]?.missed.since(cutoffDate()).counts ?? []
     }
 
     /// The worst outstanding scenario, or nil when nothing is outstanding.
@@ -302,6 +362,7 @@ final class MissTallyStore: CloudSyncable {
             if misses == 0 {
                 continue
             }
+            let inWindow = tally.missed.since(cutoff).counts
             spots.append((
                 key: key,
                 spot: WeakSpot(
@@ -310,8 +371,8 @@ final class MissTallyStore: CloudSyncable {
                     misses: misses,
                     attempts: attempts,
                     streak: tally.streak,
-                    missedCounts: tally.missedCounts,
-                    costPerMiss: costPerMiss(tally.ref, tally.missedCounts)
+                    missedCounts: inWindow,
+                    costPerMiss: costPerMiss(tally.ref, inWindow)
                 )
             ))
         }
@@ -361,7 +422,7 @@ final class MissTallyStore: CloudSyncable {
                     ref: tally.ref,
                     days: days,
                     streak: tally.streak,
-                    missedCounts: tally.missedCounts
+                    missed: tally.missed.since(cutoffDate())
                 )
             }
         }
@@ -400,7 +461,7 @@ final class MissTallyStore: CloudSyncable {
                     ref: tally.ref,
                     days: pruneDays(tally.days),
                     streak: tally.streak,
-                    missedCounts: tally.missedCounts
+                    missed: tally.missed
                 )
             }
             out[trainer.rawValue] = pruneScenarios(valid)

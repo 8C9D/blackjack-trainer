@@ -150,3 +150,53 @@ struct MissTallyCostTests {
         ])
     }
 }
+
+/// The counts are kept once each, so a count missed before the window used to ride
+/// along with this week's misses and read as "missed this week at" it. Mirrors
+/// `miss-tally.service.spec.ts` → "dating the missed counts".
+struct MissTallyCountDatingTests {
+    private let hard16v10 = ScenarioRef(kind: "hard", hand: "16", dealer: "10")
+
+    private static func day(_ offset: Int) -> Date {
+        let base = Calendar.current.date(
+            from: DateComponents(year: 2026, month: 7, day: 10, hour: 18)
+        ) ?? .distantPast
+        return Calendar.current.date(byAdding: .day, value: offset, to: base) ?? base
+    }
+
+    private func store(_ defaults: UserDefaults, now: @escaping () -> Date) -> MissTallyStore {
+        let store = CostFixture.tally(defaults: defaults, prefs: FlowPrefsStore(defaults: defaults))
+        store.setNowSource(now)
+        return store
+    }
+
+    @Test func dropsACountWhoseMissHasLeftTheWindow() {
+        let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)") ?? .standard
+        var now = Self.day(0)
+        let s = store(defaults) { now }
+        s.record(.deviations, ref: hard16v10, correct: false, trueCount: -3)
+        now = Self.day(9)
+        s.record(.deviations, ref: hard16v10, correct: false, trueCount: 2)
+        #expect(s.weakSpotFor(.deviations)?.missedCounts == [2])
+        #expect(s.missedCounts(.deviations, ref: hard16v10) == [2])
+    }
+
+    @Test func datesAnUndatedCountByTheLatestDayItCouldHaveBeenMissed() throws {
+        let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)") ?? .standard
+        let today = localDateKey(Self.day(0))
+        let legacy = """
+        {"deviations":{"hard-16-v-10":{"ref":{"kind":"hard","hand":"16","dealer":"10"},\
+        "days":[{"date":"\(today)","attempts":2,"misses":1}],"streak":0,"missedCounts":[1,4]}}}
+        """
+        defaults.set(Data(legacy.utf8), forKey: StatsKeys.missTally)
+        let s = store(defaults) { Self.day(0) }
+        #expect(s.weakSpotFor(.deviations)?.missedCounts == [1, 4])
+        s.record(.deviations, ref: hard16v10, correct: true, trueCount: 1)
+        let data = try #require(defaults.data(forKey: StatsKeys.missTally))
+        let root = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let tally = try #require(
+            (root["deviations"] as? [String: Any])?["hard-16-v-10"] as? [String: Any]
+        )
+        #expect(tally["missedCountDates"] as? [String] == [today, today])
+    }
+}
