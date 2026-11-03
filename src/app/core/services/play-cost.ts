@@ -129,7 +129,19 @@ export function cheapestMiss(ref: ScenarioRef, context: PlayContext): number | n
     .map((play) => playValue(ref, play, context))
     .filter((value): value is number => value !== null)
     .sort((a, b) => b - a);
-  return values.length < 2 ? null : values[0] - values[1];
+  const nextBest = values.length < 2 ? null : values[0] - values[1];
+  // Against an ace a hand can also be missed by insuring it, which costs the
+  // side bet and nothing else. A miss may have been that, so the floor is the
+  // cheaper of the two: priced as the next-best play, insuring 10,9 v A read
+  // "at least 101% a miss" for a 3.7% mistake.
+  if (ref.dealer !== 'A' || !insurable(ref)) return nextBest;
+  const insuring = Math.max(0, -insuranceValue(context.trueCount));
+  return nextBest === null ? insuring : Math.min(nextBest, insuring);
+}
+
+// Insurance is offered on the dealt two cards; a played-out hard 20 is past it.
+function insurable(ref: ScenarioRef): boolean {
+  return !(ref.kind === 'hard' && ref.hand === '20');
 }
 
 // How often a scenario comes up at a table, as a share of hands.

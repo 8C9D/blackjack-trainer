@@ -113,6 +113,28 @@ describe('cheapestMiss', () => {
     expect(cheapestMiss(ref, context)).toBe(Math.abs(gap));
   });
 
+  // A tally knows a hand was missed, not how, and against an ace one way to miss
+  // it is to insure it. Priced as the next-best play, insuring 10,10 v A read as
+  // a 50% mistake; the side bet it was costs 3.7%.
+  it('counts insuring the hand as a way to miss it against an ace', () => {
+    expect(cheapestMiss(pair('10', 'A'), S17)).toBe(-EV_TABLE.insurance);
+    const atZero = EV_BY_COUNT.insurance[0 - EV_BY_COUNT.minCount];
+    expect(cheapestMiss(pair('10', 'A'), { ...S17, trueCount: 0 })).toBe(-atZero);
+    // Where the next-best play is cheaper still, that is the floor.
+    const ref = hard(11, 'A');
+    const gap = Math.abs(
+      (playValue(ref, 'H', S17) as number) - (playValue(ref, 'D', S17) as number),
+    );
+    expect(gap).toBeLessThan(-EV_TABLE.insurance);
+    expect(cheapestMiss(ref, S17)).toBe(gap);
+  });
+
+  it('does not offer insurance to a played-out hand', () => {
+    const ref = hard(20, 'A');
+    const values = (['H', 'S'] as const).map((play) => playValue(ref, play, S17) as number);
+    expect(cheapestMiss(ref, S17)).toBe(Math.abs(values[0] - values[1]));
+  });
+
   it('only counts surrender where the table offers one', () => {
     const ref = hard(16, '10');
     const without = cheapestMiss(ref, S17) as number;

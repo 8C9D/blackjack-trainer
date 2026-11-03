@@ -409,6 +409,18 @@ describe('MissTallyService', () => {
       const near = s.weakSpotFor('deviations')!.costPerMiss!;
       expect(far).toBeGreaterThan(near);
     });
+
+    // The counts are kept once each, not once a miss, so a mean of them weighs a
+    // count missed once like one missed four times. The figure says "at least".
+    it('prices a hand missed at several counts at the cheapest of them', () => {
+      const s = createService(() => current);
+      for (let i = 0; i < 4; i++) s.record('deviations', HARD_16_V_10, false, 0);
+      s.record('deviations', HARD_16_V_10, false, 8);
+      const both = s.weakSpotFor('deviations')!.costPerMiss!;
+      s.reset();
+      s.record('deviations', HARD_16_V_10, false, 0);
+      expect(both).toBe(s.weakSpotFor('deviations')!.costPerMiss!);
+    });
   });
   describe('missCostLabel', () => {
     const spot = (costPerMiss: number | null) => ({

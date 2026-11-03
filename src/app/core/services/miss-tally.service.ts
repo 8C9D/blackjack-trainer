@@ -251,6 +251,12 @@ export class MissTallyService {
 
   // A deviation is worth what it was worth at the counts it was missed at; one
   // recorded without any, like every basic-strategy miss, at a full shoe.
+  //
+  // The cheapest of those counts, not their mean. The counts are kept once each,
+  // not once a miss, so a mean weighs a count missed once the same as one missed
+  // four times, and 16 v 10 missed four times at 0 and once at +4 read "at least
+  // 1.5% a miss" when the misses that happened average 0.7%. The figure is
+  // labelled a floor, so it has to be one.
   private costPerMiss(ref: ScenarioRef, missedCounts: readonly number[]): number | null {
     const { ruleSet, options } = this.prefs.prefs();
     const context = { ruleSet, options };
@@ -258,7 +264,7 @@ export class MissTallyService {
       .map((trueCount) => cheapestMiss(ref, { ...context, trueCount }))
       .filter((cost): cost is number => cost !== null);
     if (atCounts.length === 0) return cheapestMiss(ref, context);
-    return atCounts.reduce((sum, cost) => sum + cost, 0) / atCounts.length;
+    return Math.min(...atCounts);
   }
 
   private cutoffDate(): string {
