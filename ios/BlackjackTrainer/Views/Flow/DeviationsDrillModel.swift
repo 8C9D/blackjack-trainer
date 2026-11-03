@@ -146,7 +146,11 @@ final class DeviationsDrillModel {
             // reachable on that second question.
             let insuring = action == .insurance
             scheduler.schedule(after: advanceDelay) { [weak self] in
-                if insuring { self?.askThePlay() } else { self?.advance() }
+                if insuring {
+                    self?.askThePlay()
+                } else {
+                    self?.advance()
+                }
             }
         } else {
             phase = .miss
