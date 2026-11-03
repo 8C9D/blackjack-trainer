@@ -205,6 +205,9 @@ describe('parseScenarioKey', () => {
     expect(parseScenarioKey('soft-12-v-6')).toBeNull(); // A,A is a pair, not soft 12
     expect(parseScenarioKey('soft-21-v-6')).toBeNull();
     expect(parseScenarioKey('pair-J-v-6')).toBeNull();
+    // Hard 5, but spelled no way the app spells it: it pinned "05 vs 2".
+    expect(parseScenarioKey('hard-05-v-2')).toBeNull();
+    expect(parseScenarioKey('soft-013-v-2')).toBeNull();
   });
 });
 

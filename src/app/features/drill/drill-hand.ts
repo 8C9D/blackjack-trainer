@@ -175,6 +175,9 @@ export function parseScenarioKey(value: string | null): ScenarioRef | null {
   const total = Number(hand);
   const range = kind === 'soft' ? SOFT_TOTALS : HARD_TOTALS;
   if (!Number.isInteger(total) || total < range.min || total > range.max) return null;
+  // Spelled as the app spells it: `hard-05-v-2` is hard 5 written in a way no
+  // link of ours writes, and it would pin a round labelled "05 vs 2".
+  if (String(total) !== hand) return null;
   return { kind: kind as ScenarioRef['kind'], hand, dealer };
 }
 
