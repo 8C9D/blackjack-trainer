@@ -1,4 +1,5 @@
 import type { Card } from './card.model';
+import { truncateTrueCount } from './card-counting.model';
 import type { CountingSystem } from './counting-system.model';
 import { DEVIATION_INDEX_SYSTEM_ID } from './deviation.model';
 import { handTotal, isBlackjack, isBust, isSoftHand } from './hand.model';
@@ -59,7 +60,7 @@ export function trueCountFor(
   decksRemaining: number,
 ): number | null {
   if (!system.balanced || decksRemaining <= 0) return null;
-  return Math.trunc(runningCount / decksRemaining);
+  return truncateTrueCount(runningCount, decksRemaining);
 }
 
 export function countBasisFor(
@@ -71,7 +72,7 @@ export function countBasisFor(
     // A shoe dealt to the felt has no decks left to divide by; nothing is
     // dealt from it either, so the value is never actually consumed.
     if (decksRemaining <= 0) return { kind: 'ungraded' };
-    return { kind: 'true-count', trueCount: Math.trunc(runningCount / decksRemaining) };
+    return { kind: 'true-count', trueCount: truncateTrueCount(runningCount, decksRemaining) };
   }
   const insuranceAt = system.keyCounts?.insuranceCount;
   if (insuranceAt !== undefined) {

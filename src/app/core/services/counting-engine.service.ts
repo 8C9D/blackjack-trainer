@@ -6,6 +6,7 @@ import {
   MAX_CARDS_PER_DRILL,
   MIN_MILLISECONDS_BETWEEN_CARDS,
   asksTrueCount,
+  truncateTrueCount,
   usesLiveShoe,
   type BetSpreadDrillResult,
   type CountingDrillSettings,
@@ -40,9 +41,10 @@ export class CountingEngineService {
 
   // True count = running count / decks remaining, truncated toward zero.
   // Truncation (not floor) is the standard convention: a running count of
-  // -5 over 2 decks should round to -2, not -3.
+  // -5 over 2 decks should round to -2, not -3. See `truncateTrueCount` for
+  // why it is not a bare `Math.trunc`.
   trueCount(runningCount: number, decksRemaining: number): number {
-    return Math.trunc(runningCount / decksRemaining);
+    return truncateTrueCount(runningCount, decksRemaining);
   }
 
   // Compare the user's claimed running count to the true count for the

@@ -485,6 +485,13 @@ function fullDeck(): Card[] {
 // Fixed sequences applied to every system; their per-system running/true counts
 // exercise color overrides (mixed suits), fractional systems (Wong Halves), and
 // truncation toward zero (the ±odd/2 cases below resolve to e.g. -5/2 → -2).
+// Twenty-seven cards from 2 to 6 across all four suits: Hi-Lo +27.
+function twentySevenLowCards(): Card[] {
+  const ranks: Rank[] = ['2', '3', '4', '5', '6'];
+  const suits: Suit[] = ['spades', 'hearts', 'diamonds', 'clubs'];
+  return Array.from({ length: 27 }, (_, i) => card(ranks[i % 5], suits[i % 4]));
+}
+
 function countingSequences(): { label: string; cards: Card[]; decksRemaining: number }[] {
   const c = (rank: Rank, suit: Suit) => card(rank, suit);
   return [
@@ -524,6 +531,19 @@ function countingSequences(): { label: string; cards: Card[]; decksRemaining: nu
         c('9', 'hearts'),
       ],
       decksRemaining: 1.5,
+    },
+    // A live shoe divides by cards / 52, which a double cannot hold exactly. On
+    // these the division is whole on paper and a bare truncation lands one low:
+    // Hi-Lo counts +27 here, which is 13 over 108 cards and 26 over 54.
+    {
+      label: 'whole-quotient-over-108-cards',
+      cards: twentySevenLowCards(),
+      decksRemaining: 108 / 52,
+    },
+    {
+      label: 'whole-quotient-over-54-cards',
+      cards: twentySevenLowCards(),
+      decksRemaining: 54 / 52,
     },
     {
       label: 'all-four-sevens', // exercises per-color tags (2 red, 2 black sevens)

@@ -303,6 +303,26 @@ describe('CountingEngineService', () => {
     it('fractional decks scale up: running 3 / 0.5 decks => 6', () => {
       expect(engine.trueCount(3, 0.5)).toBe(6);
     });
+
+    // A live shoe's decks remaining is cards / 52, which a double cannot hold
+    // exactly, so a quotient that is whole on paper can land a hair under it.
+    it.each([
+      [27, 108, 13], // 27 / (108/52) is 13; the bare division gives 12.999999999999998
+      [-27, 108, -13],
+      [27, 54, 26], // Omega II reaches this
+      [13.5, 54, 13], // and Wong Halves this
+    ])('a running count of %d over %d cards that divides exactly gives %d', (rc, cards, tc) => {
+      expect(Math.trunc(rc / (cards / 52))).not.toBe(tc);
+      expect(engine.trueCount(rc, cards / 52)).toBe(tc);
+    });
+
+    it('still truncates a quotient that is only near a whole number', () => {
+      // 25 over 108 cards is 12.04: whole-number snapping must not reach it.
+      expect(engine.trueCount(25, 108 / 52)).toBe(12);
+      expect(engine.trueCount(-25, 108 / 52)).toBe(-12);
+      // And a half-point count: 26.5 over 54 cards is 25.52.
+      expect(engine.trueCount(26.5, 54 / 52)).toBe(25);
+    });
   });
 
   describe('evaluateTrueCount()', () => {

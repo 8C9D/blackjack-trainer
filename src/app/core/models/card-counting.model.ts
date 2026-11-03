@@ -53,6 +53,24 @@ export const DRILL_MODE_LABELS: Readonly<Record<DrillMode, string>> = {
   'deck-speed': 'Deck speed',
 };
 
+// Running count over decks remaining, truncated toward zero: this trainer's
+// stated convention, so −5 over 2 decks is −2, not −3.
+//
+// A quotient a hair from a whole number is that whole number. Decks remaining
+// off a live shoe is cards ÷ 52, which a double cannot hold exactly, so a
+// division that is exact on paper — 27 over the 108 cards of 2 1/13 decks is
+// 13 — comes back 12.999999999999998 and would truncate to 12, marking wrong
+// the player who divided right. Tags are quarter points at the finest and a
+// shoe holds at most 416 cards, so a quotient that really is fractional sits
+// at least 1/1664 from a whole number: nothing honest is this close.
+const WHOLE_TOLERANCE = 1e-9;
+
+export function truncateTrueCount(runningCount: number, decksRemaining: number): number {
+  const quotient = runningCount / decksRemaining;
+  const whole = Math.round(quotient);
+  return Math.abs(quotient - whole) < WHOLE_TOLERANCE ? whole : Math.trunc(quotient);
+}
+
 // Signed count rendering ("+2", "-4", "0") — the web mirror of the Swift
 // CountFormat.signedCount, shared by the feedback panel and the reshuffle
 // notice.
@@ -101,7 +119,7 @@ export function deckEstimateEffect(
   userTrueCount: number,
 ): DeckEstimateEffect | null {
   if (estimate === undefined || !Number.isFinite(estimate) || estimate <= 0) return null;
-  const impliedTrueCount = Math.trunc(runningCount / estimate);
+  const impliedTrueCount = truncateTrueCount(runningCount, estimate);
   return {
     estimate,
     impliedTrueCount,
