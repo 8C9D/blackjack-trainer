@@ -194,10 +194,29 @@ enum CountFormat {
 
     /// Decks: whole as "5"; fractional to ≤2 decimals, trailing zeros trimmed.
     static func decks(_ value: Double) -> String {
+        decks(value, places: 2)
+    }
+
+    /// Decks as the true-count formula prints them: two decimals, or as many more
+    /// as it takes for the printed division to come out at the true count it
+    /// reports. 177 cards is 3.4038 decks, and "17 ÷ 3.4 decks = true count 4" is
+    /// arithmetic that comes out 5. Mirrors the web panel's `formulaDecks`.
+    static func formulaDecks(runningCount: Double, decks value: Double, trueCount: Int) -> String {
+        for places in 2 ..< 6 {
+            let shown = decks(value, places: places)
+            if let printed = Double(shown),
+               CountingEngine.truncatedTrueCount(runningCount, over: printed) == trueCount {
+                return shown
+            }
+        }
+        return decks(value, places: 6)
+    }
+
+    private static func decks(_ value: Double, places: Int) -> String {
         if let whole = Int(exactly: value.rounded()), value == value.rounded() {
             return String(whole)
         }
-        var text = String(format: "%.2f", value)
+        var text = String(format: "%.\(places)f", value)
         while text.hasSuffix("0") {
             text.removeLast()
         }

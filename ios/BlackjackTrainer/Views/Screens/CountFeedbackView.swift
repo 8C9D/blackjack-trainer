@@ -117,8 +117,16 @@ struct CountFeedbackView: View {
             }
             Text(
                 "Running count \(CountFormat.count(trueCount.correctRunningCount)) ÷ "
-                    + "\(decksLabel(trueCount.decksRemaining)) = "
-                    + "true count \(trueCount.correctTrueCount)"
+                    + countOf(
+                        trueCount.decksRemaining,
+                        "deck",
+                        display: CountFormat.formulaDecks(
+                            runningCount: trueCount.correctRunningCount,
+                            decks: trueCount.decksRemaining,
+                            trueCount: trueCount.correctTrueCount
+                        )
+                    )
+                    + " = true count \(trueCount.correctTrueCount)"
             )
             .font(.footnote)
             .foregroundStyle(Theme.muted)

@@ -82,6 +82,15 @@ struct CountingModelTests {
         #expect(CountFormat.signedCount(1e20) == "+1e+20")
     }
 
+    /// 177 cards is 3.4038 decks. Printed to two places, "17 ÷ 3.4 decks" comes
+    /// out 5, not the 4 the line reports and the round graded.
+    @Test func printsFormulaDecksPreciselyEnoughToDivideRight() {
+        #expect(CountFormat.formulaDecks(runningCount: 17, decks: 177.0 / 52, trueCount: 4)
+            == "3.404")
+        #expect(CountFormat.formulaDecks(runningCount: 5, decks: 177.0 / 52, trueCount: 1) == "3.4")
+        #expect(CountFormat.formulaDecks(runningCount: 6, decks: 2, trueCount: 3) == "2")
+    }
+
     @Test func anAbsurdStoredPaceStillStartsStreamingInsteadOfTrapping() async throws {
         let model = try make(random: { 0 })
         model.settings.numberOfCards = 3
