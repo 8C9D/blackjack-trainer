@@ -216,9 +216,13 @@ func formatBetShare(_ units: Double) -> String {
     return "\(tenths / 10).\(tenths % 10)%"
 }
 
-/// The sentence a miss earns. Mirrors `costSentence`.
+/// The sentence a miss earns, judged on the figure it prints rather than the raw
+/// one, so 0.5% is never a close call on one miss and a real mistake on the
+/// next. Mirrors `costSentence`.
 func costSentence(_ units: Double) -> String {
     let share = formatBetShare(units)
-    if units < closeCall { return "A close call: that play gives up \(share) of your bet." }
+    if (units / 10).rounded(.toNearestOrAwayFromZero) * 10 < closeCall {
+        return "A close call: that play gives up \(share) of your bet."
+    }
     return "That play gives up \(share) of your bet."
 }

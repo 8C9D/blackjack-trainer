@@ -178,7 +178,14 @@ struct PlayCostFormattingTests {
 
     @Test func callsAThinMarginWhatItIs() {
         #expect(costSentence(30) == "A close call: that play gives up 0.3% of your bet.")
-        #expect(costSentence(49) == "A close call: that play gives up 0.5% of your bet.")
+        #expect(costSentence(44) == "A close call: that play gives up 0.4% of your bet.")
+    }
+
+    /// Judged on the printed figure: 46 and 50 hundredths both print 0.5%, and one
+    /// reading "a close call" while the other did not was two verdicts on one number.
+    @Test func givesEveryCostThatPrintsTheSameTheSameVerdict() {
+        #expect(costSentence(46) == "That play gives up 0.5% of your bet.")
+        #expect(costSentence(49) == "That play gives up 0.5% of your bet.")
     }
 
     @Test func pricesARealMistakePlainly() {
