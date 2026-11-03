@@ -76,8 +76,24 @@ struct DeviationEngine {
                                      trueCount: trueCount)
         }
 
+        // A pair the chart does not split is played as its total, so the total's
+        // index is its index too: 5,5 v 10 doubles at +4 exactly as 6,4 does.
+        var totalRule: DeviationRule?
+        if category == "pair", basicAction != .split {
+            let total = Self.totalForUnsplitPair(input.player)
+            totalRule = findRule(ruleSet: input.ruleSet, category: total.category,
+                                 playerHand: total.playerHand, dealerUpcard: dealerKey)
+        }
+        if let totalRule, isThresholdMet(totalRule, trueCount: trueCount) {
+            return DeviationDecision(basicAction: basicAction,
+                                     finalAction: Self.action(totalRule.deviationAction),
+                                     deviationApplied: true, matchedRule: totalRule,
+                                     trueCount: trueCount)
+        }
+
         return DeviationDecision(basicAction: basicAction, finalAction: basicAction,
-                                 deviationApplied: false, matchedRule: rule, trueCount: trueCount)
+                                 deviationApplied: false, matchedRule: rule ?? totalRule,
+                                 trueCount: trueCount)
     }
 
     /// Insurance overlay (dealer Ace only). Declines unless the insurance rule's
@@ -109,6 +125,14 @@ struct DeviationEngine {
         if HandClassification.isSoftTwoCard(player) {
             return ("soft", String(11 + softNonAceValue(player)))
         }
+        return ("hard", String(player.first.highValue + player.second.highValue))
+    }
+
+    /// The (category, playerHand) a two-card pair is played as when it is not
+    /// split: its hard total, or soft 12 for aces.
+    static func totalForUnsplitPair(_ player: TwoCardHand)
+        -> (category: String, playerHand: String) {
+        if player.first.isAce { return ("soft", "12") }
         return ("hard", String(player.first.highValue + player.second.highValue))
     }
 

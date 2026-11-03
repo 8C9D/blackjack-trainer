@@ -85,6 +85,24 @@ struct DeviationParityTests {
         #expect(result.basicAction == .hit)
     }
 
+    /// A pair the chart does not split is played as its total, so it takes the
+    /// total's index: 5,5 v 10 doubles at +4 exactly as 6,4 does.
+    @Test func anUnsplitPairTakesItsTotalsIndex() throws {
+        let evaluator = try evaluator()
+        func expected(_ first: String, _ second: String, _ dealer: String,
+                      atCount trueCount: Int) -> Action {
+            evaluator.evaluate(
+                DeviationScenario(player: TwoCardHand(card(first), card(second)),
+                                  dealerUpcard: card(dealer), trueCount: trueCount),
+                userAction: .hit, ruleSet: .s17, options: .default
+            ).expectedAction
+        }
+        #expect(expected("5", "5", "10", atCount: 4) == .double)
+        #expect(expected("5", "5", "10", atCount: 3) == .hit)
+        #expect(expected("6", "6", "2", atCount: 3) == .stand)
+        #expect(expected("4", "4", "6", atCount: 2) == .double)
+    }
+
     /// The chart's green "-1-" on 16 v 9 calls a surrender off rather than adding
     /// one: surrender gets better as the count rises.
     @Test func aLowCountCallsOffTheSurrender() throws {
