@@ -80,6 +80,27 @@ struct DeviationsDrillModelTests {
         #expect(h.model.result?.source == .insurance)
     }
 
+    /// Insurance is a side bet ahead of the play, and the hand is still played
+    /// after it: 6,4 v A at +4 insures, then doubles on S17's 10 v A index.
+    @Test func asksThePlayOfTheSameHandOnceInsuranceIsTaken() {
+        let h = makeHarness()
+        let tenVsAce = scenario(.six, .four, vs: .ace, tc: 4)
+        h.model.deal(tenVsAce)
+        h.model.answer(.insurance)
+        #expect(h.model.result?.correct == true)
+        h.scheduler.fire()
+        #expect(h.model.phase == .question)
+        #expect(h.model.insured)
+        #expect(h.model.scenario == tenVsAce)
+        #expect(!h.model.legalActions.contains(.insurance))
+        h.model.answer(.double)
+        #expect(h.model.result?.correct == true)
+        #expect(h.model.result?.source == .playing)
+        #expect(h.model.result?.deviationApplied == true)
+        h.scheduler.fire()
+        #expect(!h.model.insured)
+    }
+
     @Test func decliningInsuranceBelowThreeIsCorrect() {
         let h = makeHarness()
         h.model.deal(scenario(.three, .four, vs: .ace, tc: 0))

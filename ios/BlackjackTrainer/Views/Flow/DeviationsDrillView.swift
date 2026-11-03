@@ -122,7 +122,11 @@ struct DeviationsDrillView: View {
                 + Text(model.explanation).foregroundStyle(Theme.midInk)
         }
         let question = model.question
-        let prefix = question.prefix.isEmpty ? Text("") : Text("\(question.prefix) ")
+        let insured = model.insured
+            ? Text("Insured · ").foregroundStyle(Theme.muted)
+            : Text("")
+        let prefix = insured
+            + (question.prefix.isEmpty ? Text("") : Text("\(question.prefix) "))
         return prefix
             + Text(question.value).bold().foregroundStyle(Theme.inkStrong)
             + Text(" vs ")

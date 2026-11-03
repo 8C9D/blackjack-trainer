@@ -30,6 +30,10 @@ final class DeviationsDrillModel {
     private(set) var scenario: DeviationScenario
     private(set) var result: DeviationTrainerResult?
     private(set) var target = 0
+    /// Insurance was taken on this deal, at a count where it pays. The deal then
+    /// asks its second opening question — the play of the same two cards — which
+    /// is still the deal's, so it is timed and filed like the first.
+    private(set) var insured = false
     let session = DrillSession()
 
     /// A review round drills only the weak list; an ordinary round mixes it in.
@@ -115,7 +119,8 @@ final class DeviationsDrillModel {
             scenario,
             userAction: action,
             ruleSet: prefs.prefs.ruleSet,
-            options: prefs.prefs.options
+            options: prefs.prefs.options,
+            insuranceSettled: insured
         )
         result = evaluation
         stats.recordAttempt(correct: evaluation.correct)
@@ -133,7 +138,13 @@ final class DeviationsDrillModel {
 
         if evaluation.correct {
             phase = .flash
-            scheduler.schedule(after: advanceDelay) { [weak self] in self?.advance() }
+            // Insurance is a side bet ahead of the play, not the play: the same
+            // two cards still want playing, and an ace-up index is only ever
+            // reachable on that second question.
+            let insuring = action == .insurance
+            scheduler.schedule(after: advanceDelay) { [weak self] in
+                if insuring { self?.askThePlay() } else { self?.advance() }
+            }
         } else {
             phase = .miss
         }
@@ -211,6 +222,15 @@ extension DeviationsDrillModel {
     /// Load a scenario and reset to the question phase (transition + test seam).
     func deal(_ scenario: DeviationScenario) {
         self.scenario = scenario
+        insured = false
+        result = nil
+        phase = .question
+        askedAt = now()
+    }
+
+    /// Insurance is settled; ask the play of the same two cards.
+    func askThePlay() {
+        insured = true
         result = nil
         phase = .question
         askedAt = now()
@@ -371,11 +391,13 @@ extension DeviationsDrillModel {
     /// rules: with Late Surrender off there is no surrender to make, and the
     /// surrender overlay no longer asks for one.
     var legalActions: [Action] {
-        legalActionsFor(
+        let legal = legalActionsFor(
             scenario.player.cards,
             dealerUpcard: scenario.dealerUpcard,
             options: prefs.prefs.options
         )
+        // Insurance is offered once, before the play.
+        return insured ? legal.filter { $0 != .insurance } : legal
     }
 
     var picked: Action? {

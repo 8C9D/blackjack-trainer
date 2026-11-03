@@ -154,16 +154,20 @@ struct DeviationEvaluator {
         self.engine = engine
     }
 
+    /// `insuranceSettled` is the deal's second opening question: insurance has
+    /// been taken at a count where it pays, and what is left is the play of the
+    /// same two cards, graded with the hand's own index (10 v A doubles at +4).
     func evaluate(
         _ scenario: DeviationScenario,
         userAction: Action,
         ruleSet: RuleSet,
-        options: EngineOptions
+        options: EngineOptions,
+        insuranceSettled: Bool = false
     ) -> DeviationTrainerResult {
         let input = EngineInput(player: scenario.player, dealerUpcard: scenario.dealerUpcard,
                                 ruleSet: ruleSet, options: options)
         let playing = engine.resolveDeviationDecision(input, trueCount: scenario.trueCount)
-        let insurance = scenario.dealerUpcard.isAce
+        let insurance = scenario.dealerUpcard.isAce && !insuranceSettled
             ? engine.resolveInsuranceDecision(trueCount: scenario.trueCount, ruleSet: ruleSet)
             : nil
 
